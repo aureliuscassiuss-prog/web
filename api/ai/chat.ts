@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getDb } from '../../lib/mongodb';
+import { getDb } from '../../lib/mongodb.js';
 import { Groq } from 'groq-sdk';
 import jwt from 'jsonwebtoken';
 import { ObjectId } from 'mongodb';
