@@ -1,9 +1,5 @@
 {
-    "framework": "vite",
-    "buildCommand": "npm run build && npm run build:api",
-    "devCommand": "npm run dev",
-    "installCommand": "npm install",
-    "outputDirectory": "dist",
+    "buildCommand": "npm run build:api",
     "rewrites": [
         {
             "source": "/api/(.*)",
