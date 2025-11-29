@@ -65,7 +65,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 id: user._id,
                 name: user.name,
                 email: user.email,
-                reputation: user.reputation || 0
+                reputation: user.reputation || 0,
+                avatar: user.avatar,
+                phone: user.phone,
+                semester: user.semester,
+                college: user.college,
+                branch: user.branch,
+                year: user.year,
+                role: user.role || 'user'
             }
         });
     } catch (error) {

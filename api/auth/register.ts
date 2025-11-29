@@ -84,7 +84,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 id: result.insertedId,
                 name,
                 email,
-                reputation: 0
+                reputation: 0,
+                avatar: 'avatar1',
+                phone: '',
+                semester: 1,
+                college: 'Medicaps University',
+                branch: '',
+                year: 1,
+                role: 'user'
             }
         });
     } catch (error) {
