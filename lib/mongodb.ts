@@ -9,6 +9,8 @@ if (!uri) {
 const options = {
     maxPoolSize: 10,
     minPoolSize: 1,
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 45000,
 };
 
 let client: MongoClient;
