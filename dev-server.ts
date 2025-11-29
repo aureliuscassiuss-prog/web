@@ -41,6 +41,11 @@ app.post('/api/upload/test', adaptHandler(uploadTestHandler));
 import uploadResourceHandler from './api/upload/resource.ts';
 app.post('/api/upload/resource', adaptHandler(uploadResourceHandler));
 
+// Profile Update Route (skip JSON parsing for multipart form data)
+// @ts-ignore
+import profileUpdateHandler from './api/profile/update.ts';
+app.put('/api/profile/update', adaptHandler(profileUpdateHandler));
+
 // Now apply JSON parsing for other routes
 app.use(express.json());
 
@@ -88,10 +93,7 @@ app.post('/api/auth/login', adaptHandler(loginHandler));
 
 // Profile Routes
 // @ts-ignore
-import profileUpdateHandler from './api/profile/update.ts';
-// @ts-ignore
 import profileUploadsHandler from './api/profile/uploads.ts';
-app.put('/api/profile/update', adaptHandler(profileUpdateHandler));
 app.get('/api/profile/uploads', adaptHandler(profileUploadsHandler));
 
 // Enhanced AI Route with memory

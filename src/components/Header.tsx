@@ -68,6 +68,11 @@ export default function Header({ onUploadClick, onAuthClick, onProfileClick, onM
                             <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-black dark:border-white shadow-lg">
                                 <AvatarComponent className="w-full h-full" />
                             </div>
+                        ) : user.avatar && user.avatar.length > 20 ? (
+                            // Assuming custom avatars are long URLs/Base64 strings
+                            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-black dark:border-white shadow-lg">
+                                <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                            </div>
                         ) : (
                             <div className="w-10 h-10 rounded-full bg-black dark:bg-white flex items-center justify-center text-white dark:text-black font-semibold shadow-lg">
                                 {user.name[0]}
