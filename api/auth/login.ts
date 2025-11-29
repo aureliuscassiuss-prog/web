@@ -1,0 +1,50 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { getDb } from '../../lib/mongodb';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+    if (req.method !== 'POST') {
+        return res.status(405).json({ message: 'Method not allowed' });
+    }
+
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ message: 'Email and password are required' });
+        }
+
+        const db = await getDb();
+        const user = await db.collection('users').findOne({ email });
+
+        if (!user) {
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
+        const isValidPassword = await bcrypt.compare(password, user.password);
+
+        if (!isValidPassword) {
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
+        const token = jwt.sign(
+            { userId: user._id },
+            process.env.JWT_SECRET!,
+            { expiresIn: '7d' }
+        );
+
+        res.status(200).json({
+            token,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                reputation: user.reputation || 0
+            }
+        });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+}
