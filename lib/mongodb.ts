@@ -28,7 +28,7 @@ if (!global._mongoClientPromise) {
 }
 clientPromise = global._mongoClientPromise;
 
-export async function getDb(): Promise<Db> {
+async function getDb(): Promise<Db> {
     try {
         const client = await clientPromise;
         return client.db('uninotes');
@@ -38,4 +38,5 @@ export async function getDb(): Promise<Db> {
     }
 }
 
+module.exports = { getDb };
 export default clientPromise;
