@@ -11,6 +11,8 @@ const options = {
     minPoolSize: 1,
     serverSelectionTimeoutMS: 5000,
     socketTimeoutMS: 45000,
+    tls: true,
+    tlsAllowInvalidCertificates: true, // Temporary fix for SSL handshake issue
 };
 
 let client: MongoClient;
