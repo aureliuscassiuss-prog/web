@@ -5,6 +5,13 @@ interface User {
     name: string
     email: string
     reputation: number
+    avatar?: string
+    phone?: string
+    semester?: number
+    college?: string
+    branch?: string
+    year?: number
+    role?: 'user' | 'admin'
 }
 
 interface AuthContextType {
@@ -13,6 +20,7 @@ interface AuthContextType {
     login: (email: string, password: string) => Promise<void>
     register: (name: string, email: string, password: string) => Promise<void>
     logout: () => void
+    updateUser: (updatedUser: User) => void
     isLoading: boolean
 }
 
@@ -94,8 +102,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem('user')
     }
 
+    const updateUser = (updatedUser: User) => {
+        setUser(updatedUser)
+        localStorage.setItem('user', JSON.stringify(updatedUser))
+    }
+
     return (
-        <AuthContext.Provider value={{ user, token, login, register, logout, isLoading }}>
+        <AuthContext.Provider value={{ user, token, login, register, logout, updateUser, isLoading }}>
             {children}
         </AuthContext.Provider>
     )

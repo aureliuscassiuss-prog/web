@@ -1,67 +1,109 @@
-import { Home, BarChart3, BookOpen, GraduationCap } from 'lucide-react'
+import { NavLink } from 'react-router-dom'
+import { Home, BarChart3, Upload, ShieldCheck, BookOpen, ChevronDown } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
+import { useState } from 'react'
+import { getSubjectsByBranchAndYear } from '../data/academicStructure'
 
 interface SidebarProps {
-    currentView: string
-    onViewChange: (view: string) => void
+    isMobileMenuOpen?: boolean
+    onMobileMenuClose?: () => void
 }
 
-export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
+export default function Sidebar({ onMobileMenuClose }: SidebarProps) {
+    const { user } = useAuth()
+    const [isProgramOpen, setIsProgramOpen] = useState(true)
+
     const navItems = [
-        { id: 'home', label: 'Home', icon: Home },
-        { id: 'leaderboard', label: 'Leaderboard', icon: BarChart3 },
-        { id: 'papers', label: 'AI Papers', icon: BookOpen },
+        { path: '/', label: 'Home', icon: Home },
+        { path: '/leaderboard', label: 'Leaderboard', icon: BarChart3 },
+        { path: '/uploads', label: 'My Uploads', icon: Upload },
     ]
 
-    return (
-        <aside className="w-[280px] bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 h-screen sticky top-0 flex flex-col p-4 transition-colors duration-200">
-            <div className="mb-8 px-2">
-                <a href="#" className="flex items-center gap-3 font-bold text-xl text-gray-900 dark:text-white">
-                    <GraduationCap className="w-8 h-8 text-red-600" />
-                    <span>MediNotes</span>
-                </a>
-            </div>
+    if (user?.role === 'admin') {
+        navItems.push({ path: '/admin', label: 'Admin Panel', icon: ShieldCheck })
+    }
 
-            <nav className="flex-1">
-                <div className="mb-6">
-                    <div className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-3 px-3 tracking-wider">
-                        Menu
-                    </div>
+    // Common classes for links
+    const linkClass = "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+    const activeClass = "bg-gray-900 text-white dark:bg-gray-50 dark:text-gray-900 shadow-sm"
+    const inactiveClass = "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-50"
+
+    // Sub-item link styles
+    const subLinkClass = "block w-full text-left px-3 py-2 rounded-md text-xs font-medium transition-colors duration-200 ml-4 border-l border-gray-200 dark:border-gray-800 pl-4"
+    const subActive = "text-gray-900 dark:text-white font-semibold border-l-2 border-black dark:border-white bg-gray-50 dark:bg-gray-800/50"
+    const subInactive = "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600"
+
+    // Get some example subjects to show in sidebar
+    const firstYearSubjects = getSubjectsByBranchAndYear('cse', 1).slice(0, 3) // Show first 3 subjects from CSE 1st year
+
+    return (
+        <nav className="h-full w-full py-2 space-y-6">
+            {/* Main Navigation */}
+            <div>
+                <div className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-2 px-3 tracking-wider">
+                    Menu
+                </div>
+                <div className="space-y-1">
                     {navItems.map((item) => {
                         const Icon = item.icon
-                        const isActive = currentView === item.id
                         return (
-                            <button
-                                key={item.id}
-                                onClick={() => onViewChange(item.id)}
-                                className={`
-                  w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-all duration-200
-                  ${isActive
-                                        ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
-                                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
-                                    }
-                `}
+                            <NavLink
+                                key={item.path}
+                                to={item.path}
+                                onClick={onMobileMenuClose}
+                                className={({ isActive }) =>
+                                    `${linkClass} ${isActive ? activeClass : inactiveClass}`
+                                }
                             >
-                                <Icon className="w-5 h-5" />
-                                {item.label}
-                            </button>
+                                <Icon className="w-4 h-4" />
+                                <span>{item.label}</span>
+                            </NavLink>
                         )
                     })}
                 </div>
+            </div>
 
-                <div>
-                    <div className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-3 px-3 tracking-wider">
-                        Program
-                    </div>
-                    <div className="px-3 py-2 text-gray-600 dark:text-gray-300 font-medium flex items-center">
-                        <BookOpen className="w-5 h-5 mr-3" />
-                        B.Tech
-                    </div>
-                    <div className="pl-11 mt-2 space-y-1">
-                        <button className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white block py-1 transition-colors">1st Year</button>
-                        <button className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white block py-1 transition-colors">CSE</button>
+            {/* Resources Section (Accordion Style) */}
+            <div>
+                <div className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-2 px-3 tracking-wider">
+                    Quick Links
+                </div>
+                {/* Collapsible Group */}
+                <div className="space-y-1">
+                    <button
+                        onClick={() => setIsProgramOpen(!isProgramOpen)}
+                        className={`w-full ${linkClass} ${inactiveClass} justify-between group`}
+                    >
+                        <div className="flex items-center gap-3">
+                            <BookOpen className="w-4 h-4" />
+                            <span>Popular Subjects</span>
+                        </div>
+                        <ChevronDown
+                            className={`w-4 h-4 opacity-50 transition-transform duration-300 ${isProgramOpen ? 'rotate-0' : '-rotate-90'
+                                }`}
+                        />
+                    </button>
+
+                    {/* Sub-items with animation - Dynamic subject links */}
+                    <div
+                        className={`overflow-hidden transition-all duration-300 ease-in-out ${isProgramOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                            }`}
+                    >
+                        <div className="space-y-1 mt-1">
+                            {firstYearSubjects.map((subject) => (
+                                <NavLink
+                                    key={subject.id}
+                                    to={`/resources/btech/1st-year/${subject.id}`}
+                                    onClick={onMobileMenuClose}
+                                    className={({ isActive }) => `${subLinkClass} ${isActive ? subActive : subInactive}`}
+                                >
+                                    {subject.name}
+                                </NavLink>
+                            ))}
+                        </div>
                     </div>
                 </div>
-            </nav>
-        </aside>
+            </div>
+        </nav>
     )
 }

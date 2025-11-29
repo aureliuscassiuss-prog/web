@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const { getDb } = require('../../lib/mongodb');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+import { getDb } from '../../lib/mongodb';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Set CORS headers

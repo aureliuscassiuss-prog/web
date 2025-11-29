@@ -38,5 +38,5 @@ async function getDb(): Promise<Db> {
     }
 }
 
-module.exports = { getDb };
+export { getDb };
 export default clientPromise;

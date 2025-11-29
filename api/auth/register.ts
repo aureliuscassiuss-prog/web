@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const { getDb } = require('../../lib/mongodb');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+import { getDb } from '../../lib/mongodb';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Set CORS headers
@@ -45,12 +45,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Create user
+        // Create user with extended profile
         const result = await db.collection('users').insertOne({
             name,
             email,
             password: hashedPassword,
             reputation: 0,
+            avatar: 'avatar1', // Default premium avatar
+            phone: '',
+            semester: 1,
+            college: 'Medicaps University',
+            branch: '',
+            year: 1,
+            uploads: [],
             createdAt: new Date()
         });
 
