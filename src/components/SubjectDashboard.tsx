@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
-    Home, ChevronRight, FileText, Download, ThumbsUp, ThumbsDown,
-    Share2, Sparkles, Trash2, Copy, Mic, ArrowUp,
+    Home, ChevronRight, FileText, Download,
+    Share2, Sparkles, Trash2, Mic, ArrowUp,
     FileQuestion, RefreshCcw, Loader2
 } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { BRANCHES, getSubjectsByBranchAndYear } from '../data/academicStructure'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function SubjectDashboard() {
     const { course, year, subject } = useParams<{ course: string; year: string; subject: string }>()
+    const { token } = useAuth()
     const [activeTab, setActiveTab] = useState<'notes' | 'pyqs' | 'formula' | 'ai'>('notes')
     const [chatInput, setChatInput] = useState('')
     const [notesData, setNotesData] = useState<any[]>([])
@@ -16,6 +18,12 @@ export default function SubjectDashboard() {
     const [formulaData, setFormulaData] = useState<any[]>([])
     const [isLoading, setIsLoading] = useState(false)
     const [subjectInfo, setSubjectInfo] = useState<{ name: string; code: string } | null>(null)
+
+    // AI Chat State
+    const [messages, setMessages] = useState<{ text: string; sender: 'user' | 'bot' }[]>([])
+    const [isChatLoading, setIsChatLoading] = useState(false)
+    const [conversationHistory, setConversationHistory] = useState<any[]>([])
+    const chatEndRef = useRef<HTMLDivElement>(null)
 
     // Find subject info from academicStructure
     useEffect(() => {
@@ -64,6 +72,51 @@ export default function SubjectDashboard() {
 
         fetchData()
     }, [subject, year, activeTab])
+
+    // Scroll to bottom of chat
+    useEffect(() => {
+        if (activeTab === 'ai') {
+            chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
+        }
+    }, [messages, activeTab])
+
+    const handleSendMessage = async () => {
+        if (!chatInput.trim()) return
+
+        const userMessage = chatInput
+        setMessages(prev => [...prev, { text: userMessage, sender: 'user' }])
+        setChatInput('')
+        setIsChatLoading(true)
+
+        try {
+            const response = await fetch('/api/ai/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify({
+                    question: userMessage,
+                    conversationHistory,
+                    systemPrompt: `You are an expert tutor for the subject: ${subjectInfo?.name || subject}. Course: ${course}, Year: ${year}. Help the student understand concepts, solve problems, and provide examples related to this subject.`
+                })
+            })
+
+            const data = await response.json()
+
+            if (response.ok) {
+                setMessages(prev => [...prev, { text: data.answer, sender: 'bot' }])
+                setConversationHistory(data.conversationHistory || [])
+            } else {
+                setMessages(prev => [...prev, { text: "Sorry, I encountered an error. Please try again.", sender: 'bot' }])
+            }
+        } catch (error) {
+            console.error(error)
+            setMessages(prev => [...prev, { text: "Network error. Please check your connection.", sender: 'bot' }])
+        } finally {
+            setIsChatLoading(false)
+        }
+    }
 
     // --- HELPER COMPONENT: FILE CARD ---
     const FileCard = ({ file }: { file: any }) => (
@@ -290,25 +343,50 @@ export default function SubjectDashboard() {
 
                     {/* Chat Header Actions */}
                     <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-end">
-                        <button className="flex items-center gap-2 text-xs text-gray-400 hover:text-red-500 transition-colors">
+                        <button
+                            onClick={() => {
+                                setMessages([])
+                                setConversationHistory([])
+                            }}
+                            className="flex items-center gap-2 text-xs text-gray-400 hover:text-red-500 transition-colors"
+                        >
                             <Trash2 className="w-3.5 h-3.5" />
                             Clear Chat
                         </button>
                     </div>
 
                     {/* Chat Messages Area */}
-                    <div className="flex-1 p-6 overflow-y-auto">
+                    <div className="flex-1 p-6 overflow-y-auto space-y-4">
                         {/* Bot Welcome Message */}
-                        <div className="flex flex-col gap-2">
-                            <p className="text-gray-800 dark:text-gray-200 leading-relaxed text-sm">
-                                Hi! I'm your AI tutor for {subjectInfo?.name || 'this subject'}. I can help you with concepts, solve problems, explain topics, and answer questions related to this subject. What would you like to learn about today?
-                            </p>
-                            <div className="flex gap-4 mt-1">
-                                <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><Copy className="w-3.5 h-3.5" /></button>
-                                <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><ThumbsUp className="w-3.5 h-3.5" /></button>
-                                <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><ThumbsDown className="w-3.5 h-3.5" /></button>
+                        {messages.length === 0 && (
+                            <div className="flex flex-col gap-2">
+                                <p className="text-gray-800 dark:text-gray-200 leading-relaxed text-sm">
+                                    Hi! I'm your AI tutor for {subjectInfo?.name || 'this subject'}. I can help you with concepts, solve problems, explain topics, and answer questions related to this subject. What would you like to learn about today?
+                                </p>
                             </div>
-                        </div>
+                        )}
+
+                        {messages.map((msg, idx) => (
+                            <div key={idx} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${msg.sender === 'user'
+                                    ? 'bg-black text-white dark:bg-white dark:text-black rounded-tr-none'
+                                    : 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100 rounded-tl-none border border-gray-200 dark:border-gray-700'
+                                    }`}>
+                                    {msg.text}
+                                </div>
+                            </div>
+                        ))}
+
+                        {isChatLoading && (
+                            <div className="flex justify-start">
+                                <div className="flex items-center gap-1 rounded-2xl rounded-tl-none bg-gray-100 px-4 py-3 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                                    <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.3s]"></div>
+                                    <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.15s]"></div>
+                                    <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400"></div>
+                                </div>
+                            </div>
+                        )}
+                        <div ref={chatEndRef} />
                     </div>
 
                     {/* Chat Input Area */}
@@ -319,14 +397,20 @@ export default function SubjectDashboard() {
                                     type="text"
                                     value={chatInput}
                                     onChange={(e) => setChatInput(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                                     placeholder="Ask anything..."
-                                    className="w-full pl-6 pr-24 py-4 rounded-3xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-gray-300 dark:focus:border-gray-600 focus:ring-0 shadow-sm transition-all"
+                                    disabled={isChatLoading}
+                                    className="w-full pl-6 pr-24 py-4 rounded-3xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-gray-300 dark:focus:border-gray-600 focus:ring-0 shadow-sm transition-all disabled:opacity-50"
                                 />
                                 <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                                     <button className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
                                         <Mic className="w-5 h-5" />
                                     </button>
-                                    <button className="p-2 bg-gray-200 dark:bg-gray-700 rounded-full text-gray-500 dark:text-gray-300 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
+                                    <button
+                                        onClick={handleSendMessage}
+                                        disabled={!chatInput.trim() || isChatLoading}
+                                        className="p-2 bg-black dark:bg-white rounded-full text-white dark:text-black hover:opacity-80 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
                                         <ArrowUp className="w-5 h-5" />
                                     </button>
                                 </div>

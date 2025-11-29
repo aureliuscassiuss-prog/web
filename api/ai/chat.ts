@@ -16,7 +16,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        const { question, conversationHistory = [] } = req.body;
+        const { question, conversationHistory = [], systemPrompt } = req.body;
 
         if (!process.env.GROQ_API_KEY && !process.env.VITE_GROQ_API_KEY) {
             return res.status(500).json({ message: 'Groq API key not configured' });
@@ -38,7 +38,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const messages: any[] = [
             {
                 role: 'system',
-                content: 'You are MediNotes AI, a helpful educational assistant for college students. You help with studying, creating flashcards, answering questions, and providing study tips. Keep answers concise and helpful. When creating flashcards or quizzes, remember the context of previous questions and answers in the conversation.'
+                content: systemPrompt || 'You are MediNotes AI, a helpful educational assistant for college students. You help with studying, creating flashcards, answering questions, and providing study tips. Keep answers concise and helpful. When creating flashcards or quizzes, remember the context of previous questions and answers in the conversation.'
             },
             ...conversationHistory,
             {
