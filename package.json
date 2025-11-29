@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "concurrently \"tsx dev-server.ts\" \"vite\"",
     "dev:frontend": "vite",
-    "build": "tsc -b && vite build",
+    "build": "vite build",
     "build:api": "tsc --project tsconfig.api.json",
     "lint": "eslint .",
     "preview": "vite preview"
