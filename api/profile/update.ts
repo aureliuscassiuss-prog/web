@@ -24,7 +24,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Verify token
         const decoded = jwt.verify(token, process.env.JWT_SECRET) as { userId: string };
 
-        const { name, email, avatar, phone, semester, college, branch, year } = req.body;
+        let body = req.body;
+        if (typeof body === 'string') {
+            try {
+                body = JSON.parse(body);
+            } catch (e) {
+                console.error('Error parsing body:', e);
+                return res.status(400).json({ message: 'Invalid JSON body' });
+            }
+        }
+
+        const { name, email, avatar, phone, semester, college, branch, year } = body || {};
 
         const db = await getDb();
 
