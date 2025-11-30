@@ -16,7 +16,6 @@ interface User {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    // ... (headers and checks)
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -63,6 +62,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Check if user exists
         let user = await usersCollection.findOne({ email }) as unknown as User | null;
 
+        // Check if this is an admin email
+        const ADMIN_EMAIL = 'rajraja8852@gmail.com';
+        const isAdmin = email === ADMIN_EMAIL;
+
         if (!user) {
             // Create new user
             const newUser = {
@@ -71,7 +74,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 googleId,
                 avatar: picture,
                 reputation: 0,
-                role: 'user',
+                role: isAdmin ? 'admin' : 'user',
                 createdAt: new Date(),
                 updatedAt: new Date()
             };
@@ -80,18 +83,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             user = { ...newUser, _id: result.insertedId } as User;
         } else {
             // Update existing user with Google info if missing
-            if (!user.googleId || !user.avatar) {
+            const updateFields: any = {
+                updatedAt: new Date()
+            };
+
+            if (!user.googleId) updateFields.googleId = googleId;
+            if (!user.avatar) updateFields.avatar = picture;
+            if (isAdmin && user.role !== 'admin') updateFields.role = 'admin';
+
+            if (Object.keys(updateFields).length > 1) { // More than just updatedAt
                 await usersCollection.updateOne(
                     { _id: user._id },
-                    {
-                        $set: {
-                            googleId: googleId,
-                            avatar: user.avatar || picture,
-                            updatedAt: new Date()
-                        }
-                    }
+                    { $set: updateFields }
                 );
                 user.avatar = user.avatar || picture;
+                if (isAdmin) user.role = 'admin';
             }
         }
 
@@ -106,12 +112,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         res.status(200).json({
             token,
             user: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                reputation: user.reputation,
-                avatar: user.avatar,
-                role: user.role
+                id: user!._id,
+                name: user!.name,
+                email: user!.email,
+                reputation: user!.reputation,
+                avatar: user!.avatar,
+                role: user!.role
             }
         });
 

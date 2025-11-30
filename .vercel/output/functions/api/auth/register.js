@@ -42,6 +42,9 @@ export default async function handler(req, res) {
         }
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
+        // Check if this is an admin email
+        const ADMIN_EMAIL = 'rajraja8852@gmail.com';
+        const isAdmin = email === ADMIN_EMAIL;
         // Create user with extended profile
         const result = await db.collection('users').insertOne({
             name,
@@ -55,6 +58,7 @@ export default async function handler(req, res) {
             branch: '',
             year: 1,
             uploads: [],
+            role: isAdmin ? 'admin' : 'user',
             createdAt: new Date()
         });
         // Create token
@@ -72,7 +76,7 @@ export default async function handler(req, res) {
                 college: 'Medicaps University',
                 branch: '',
                 year: 1,
-                role: 'user'
+                role: isAdmin ? 'admin' : 'user'
             }
         });
     }

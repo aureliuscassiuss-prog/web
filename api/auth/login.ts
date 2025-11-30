@@ -53,6 +53,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
+        // Check if this is an admin email
+        const ADMIN_EMAIL = 'rajraja8852@gmail.com';
+        const isAdmin = user.email === ADMIN_EMAIL;
+
+        // Update user role in database if needed
+        if (isAdmin && user.role !== 'admin') {
+            await db.collection('users').updateOne(
+                { _id: user._id },
+                { $set: { role: 'admin' } }
+            );
+        }
+
         const token = jwt.sign(
             { userId: user._id },
             process.env.JWT_SECRET,
@@ -72,7 +84,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 college: user.college,
                 branch: user.branch,
                 year: user.year,
-                role: user.role || 'user'
+                role: isAdmin ? 'admin' : (user.role || 'user')
             }
         });
     } catch (error) {

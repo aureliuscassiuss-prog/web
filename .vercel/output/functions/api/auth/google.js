@@ -1,7 +1,6 @@
 import { getDb } from '../../lib/mongodb.js';
 import jwt from 'jsonwebtoken';
 export default async function handler(req, res) {
-    // ... (headers and checks)
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -36,6 +35,9 @@ export default async function handler(req, res) {
         const usersCollection = db.collection('users');
         // Check if user exists
         let user = await usersCollection.findOne({ email });
+        // Check if this is an admin email
+        const ADMIN_EMAIL = 'rajraja8852@gmail.com';
+        const isAdmin = email === ADMIN_EMAIL;
         if (!user) {
             // Create new user
             const newUser = {
@@ -44,7 +46,7 @@ export default async function handler(req, res) {
                 googleId,
                 avatar: picture,
                 reputation: 0,
-                role: 'user',
+                role: isAdmin ? 'admin' : 'user',
                 createdAt: new Date(),
                 updatedAt: new Date()
             };
@@ -53,15 +55,20 @@ export default async function handler(req, res) {
         }
         else {
             // Update existing user with Google info if missing
-            if (!user.googleId || !user.avatar) {
-                await usersCollection.updateOne({ _id: user._id }, {
-                    $set: {
-                        googleId: googleId,
-                        avatar: user.avatar || picture,
-                        updatedAt: new Date()
-                    }
-                });
+            const updateFields = {
+                updatedAt: new Date()
+            };
+            if (!user.googleId)
+                updateFields.googleId = googleId;
+            if (!user.avatar)
+                updateFields.avatar = picture;
+            if (isAdmin && user.role !== 'admin')
+                updateFields.role = 'admin';
+            if (Object.keys(updateFields).length > 1) { // More than just updatedAt
+                await usersCollection.updateOne({ _id: user._id }, { $set: updateFields });
                 user.avatar = user.avatar || picture;
+                if (isAdmin)
+                    user.role = 'admin';
             }
         }
         // Generate JWT
