@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { X } from 'lucide-react'
 
@@ -12,7 +12,7 @@ import AIAssistantPage from './components/AIAssistantPage'
 import UploadModal from './components/UploadModal'
 import AuthModal from './components/AuthModal'
 import Toast from './components/Toast'
-import Profile from './components/Profile'
+import ProfilePage from './components/ProfilePage'
 import BrowseResources from './components/BrowseResources'
 import AdminPanel from './components/AdminPanel'
 
@@ -23,7 +23,6 @@ function Layout({
   setIsMobileMenuOpen,
   onUploadClick,
   onAuthClick,
-  onProfileClick,
   searchQuery,
   setSearchQuery,
   user,
@@ -31,6 +30,7 @@ function Layout({
   toggleTheme,
   spotlight
 }: any) {
+  const navigate = useNavigate()
   return (
     <div className="flex min-h-screen flex-col bg-white dark:bg-black text-gray-950 dark:text-gray-50 transition-colors duration-200 font-sans selection:bg-gray-900 selection:text-white dark:selection:bg-gray-100 dark:selection:text-black">
 
@@ -38,7 +38,7 @@ function Layout({
       <Header
         onUploadClick={onUploadClick}
         onAuthClick={onAuthClick}
-        onProfileClick={onProfileClick}
+        onProfileClick={() => navigate('/profile')}
         onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         user={user}
       />
@@ -115,7 +115,6 @@ function AppContent() {
   // Modal States
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   // Data States
@@ -188,7 +187,6 @@ function AppContent() {
         setIsMobileMenuOpen={setIsMobileMenuOpen}
         onUploadClick={handleUploadClick}
         onAuthClick={() => setIsAuthModalOpen(true)}
-        onProfileClick={() => setIsProfileModalOpen(true)}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         user={user}
@@ -234,6 +232,11 @@ function AppContent() {
           } />
 
 
+          {/* Profile Route (Protected) */}
+          <Route path="/profile" element={
+            user ? <ProfilePage /> : <Navigate to="/" replace />
+          } />
+
           {/* Catch all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -253,12 +256,7 @@ function AppContent() {
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
-        onSignupSuccess={() => setIsProfileModalOpen(true)}
       />
-
-      {isProfileModalOpen && user && (
-        <Profile onClose={() => setIsProfileModalOpen(false)} />
-      )}
 
       <Toast message={toast.message} show={toast.show} />
     </BrowserRouter>

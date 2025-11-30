@@ -1,11 +1,8 @@
 import { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { BRANCHES, YEARS } from '../data/academicStructure';
-import { User, Save, X, AlertCircle, CheckCircle2, Pencil, Camera, LogOut } from 'lucide-react';
-
-interface ProfileProps {
-    onClose: () => void;
-}
+import { User, Save, AlertCircle, CheckCircle2, Pencil, Camera, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 // Neutral Default Avatar SVG
 const NeutralAvatar = ({ className }: { className?: string }) => (
@@ -24,8 +21,9 @@ const NeutralAvatar = ({ className }: { className?: string }) => (
     </svg>
 );
 
-export default function Profile({ onClose }: ProfileProps) {
+export default function ProfilePage() {
     const { user, updateUser, logout } = useAuth();
+    const navigate = useNavigate();
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -115,7 +113,7 @@ export default function Profile({ onClose }: ProfileProps) {
 
     const handleLogout = () => {
         logout();
-        onClose();
+        navigate('/');
     };
 
     // Shared input class matching global styles
@@ -125,34 +123,23 @@ export default function Profile({ onClose }: ProfileProps) {
     const selectClass = `${inputClass} appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"%3e%3cpolyline points="6 9 12 15 18 9"%3e%3c/polyline%3e%3c/svg%3e')] bg-[length:1.25rem] bg-[right_0.5rem_center] bg-no-repeat pr-10 cursor-pointer hover:border-gray-300 dark:hover:border-gray-700`;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-            {/* Backdrop */}
-            <div
-                className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity animate-fade-in"
-                onClick={onClose}
-            />
-
-            {/* Modal Content */}
-            <div className="relative w-full max-w-2xl overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-950 animate-slide-up max-h-[90vh] flex flex-col">
-                {/* Header */}
-                <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-800 bg-white/50 dark:bg-gray-950/50 backdrop-blur-md sticky top-0 z-10">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
-                            <User className="h-4 w-4 text-gray-900 dark:text-gray-100" />
-                        </div>
-                        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-50">Profile Settings</h2>
+        <div className="max-w-4xl mx-auto space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-6 border-b border-gray-200 dark:border-gray-800">
+                <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg">
+                        <User className="h-6 w-6 text-white" />
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="rounded-full p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors"
-                    >
-                        <X className="h-4 w-4" />
-                        <span className="sr-only">Close</span>
-                    </button>
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">Profile Settings</h1>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your account information</p>
+                    </div>
                 </div>
+            </div>
 
-                {/* Scrollable Body */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-8">
+            {/* Main Content Card */}
+            <div className="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-950">
+                <div className="p-6 space-y-8">
                     {/* Feedback Messages */}
                     {error && (
                         <div className="rounded-md bg-red-50 p-4 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400 border border-red-200 dark:border-red-900 flex items-center gap-2">
@@ -312,21 +299,21 @@ export default function Profile({ onClose }: ProfileProps) {
                 </div>
 
                 {/* Footer Buttons */}
-                <div className="border-t border-gray-200 bg-gray-50/50 p-6 dark:border-gray-800 dark:bg-gray-900/50 flex justify-between items-center">
+                <div className="border-t border-gray-200 bg-gray-50/50 p-6 dark:border-gray-800 dark:bg-gray-900/50 flex flex-col sm:flex-row justify-between items-center gap-4">
                     {/* Logout Button */}
                     <button
                         onClick={handleLogout}
-                        className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 py-2 rounded-md transition-colors text-sm font-medium"
+                        className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 py-2 rounded-md transition-colors text-sm font-medium w-full sm:w-auto justify-center"
                     >
                         <LogOut className="h-4 w-4" />
                         Sign Out
                     </button>
 
-                    <div className="flex gap-3 justify-end">
+                    <div className="flex gap-3 justify-end w-full sm:w-auto">
                         {!isEditing ? (
                             <button
                                 onClick={() => setIsEditing(true)}
-                                className="btn btn-primary"
+                                className="btn btn-primary w-full sm:w-auto"
                             >
                                 <Pencil className="mr-2 h-4 w-4" />
                                 Edit Profile
@@ -350,14 +337,14 @@ export default function Profile({ onClose }: ProfileProps) {
                                             year: user?.year || 1,
                                         });
                                     }}
-                                    className="btn btn-ghost"
+                                    className="btn btn-ghost flex-1 sm:flex-initial"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handleSave}
                                     disabled={isSaving}
-                                    className="btn btn-primary min-w-[140px]"
+                                    className="btn btn-primary min-w-[140px] flex-1 sm:flex-initial"
                                 >
                                     {isSaving ? (
                                         <>Saving...</>

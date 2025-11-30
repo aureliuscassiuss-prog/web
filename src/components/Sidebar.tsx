@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Home, BarChart3, Upload, ShieldCheck, Library, Sun, Moon, Bot } from 'lucide-react'
+import { Home, BarChart3, Upload, ShieldCheck, Library, Sun, Moon, Bot, User } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
 interface SidebarProps {
@@ -19,6 +19,7 @@ export default function Sidebar({ onMobileMenuClose, isDark, toggleTheme, spotli
         { path: '/ai-assistant', label: 'AI Assistant', icon: Bot },
         { path: '/leaderboard', label: 'Leaderboard', icon: BarChart3 },
         { path: '/uploads', label: 'My Uploads', icon: Upload },
+        { path: '/profile', label: 'Profile Settings', icon: User },
     ]
 
     if (user?.role === 'admin') {
