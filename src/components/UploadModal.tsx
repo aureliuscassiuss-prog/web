@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, Upload as UploadIcon, FileText } from 'lucide-react'
+import { X, Upload as UploadIcon, Link as LinkIcon } from 'lucide-react'
 import { BRANCHES, YEARS, getSubjectsByBranchAndYear } from '../data/academicStructure'
 
 interface UploadModalProps {
@@ -24,11 +24,9 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
         branch: '',
         subject: '',
         resourceType: '',
+        driveLink: '',
     })
-    const [file, setFile] = useState<File | null>(null)
-    const [isDragging, setIsDragging] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
-    const [uploadProgress, setUploadProgress] = useState(0)
 
     // Update form data when initialData changes or modal opens
     useEffect(() => {
@@ -49,8 +47,8 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
         e.preventDefault()
 
         // 1. Basic Validation
-        if (!file) {
-            alert('Please select a file')
+        if (!formData.driveLink) {
+            alert('Please enter a Google Drive link')
             return
         }
 
@@ -60,7 +58,6 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
         }
 
         setIsUploading(true)
-        setUploadProgress(0)
 
         try {
             const token = localStorage.getItem('token')
@@ -68,75 +65,20 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
                 throw new Error('Authentication required. Please sign in.')
             }
 
-            // Create FormData
-            const formDataToSend = new FormData()
-            formDataToSend.append('file', file)
-            formDataToSend.append('title', formData.title)
-            formDataToSend.append('description', formData.description)
-            formDataToSend.append('course', formData.course)
-            formDataToSend.append('yearNum', formData.yearNum.toString())
-            formDataToSend.append('year', formData.year)
-            formDataToSend.append('branch', formData.branch)
-            formDataToSend.append('subject', formData.subject)
-            formDataToSend.append('resourceType', formData.resourceType)
-
-            // 2. Wrap XHR in a Promise with robust error handling
-            const response = await new Promise((resolve, reject) => {
-                const xhr = new XMLHttpRequest()
-
-                // Time out after 60 seconds
-                xhr.timeout = 60000
-
-                xhr.upload.addEventListener('progress', (event) => {
-                    if (event.lengthComputable) {
-                        const percentComplete = (event.loaded / event.total) * 100
-                        setUploadProgress(Math.round(percentComplete))
-                    }
-                })
-
-                xhr.addEventListener('load', () => {
-                    // 3. Handle specific HTTP Status Codes
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        try {
-                            const result = JSON.parse(xhr.responseText)
-                            resolve(result)
-                        } catch (err) {
-                            // Response was 200 OK, but not JSON (rare but possible)
-                            resolve(xhr.responseText)
-                        }
-                    } else if (xhr.status === 413) {
-                        reject(new Error('File is too large for the server.'))
-                    } else if (xhr.status === 401) {
-                        reject(new Error('Session expired. Please login again.'))
-                    } else {
-                        // 4. Try to extract server error message safely
-                        try {
-                            const errorResponse = JSON.parse(xhr.responseText)
-                            reject(new Error(errorResponse.message || errorResponse.error || `Upload failed (Status: ${xhr.status})`))
-                        } catch (e) {
-                            // If response is HTML (like a 500 Nginx page), don't parse it
-                            console.error("Non-JSON Error Response:", xhr.responseText)
-                            reject(new Error(`Server Error (${xhr.status}): Please try again later.`))
-                        }
-                    }
-                })
-
-                xhr.addEventListener('error', () => {
-                    // This triggers on network failures (DNS, CORS, offline)
-                    reject(new Error('Network error. Check your connection or CORS settings.'))
-                })
-
-                xhr.addEventListener('timeout', () => {
-                    reject(new Error('Upload timed out. The file might be too large or connection is slow.'))
-                })
-
-                xhr.open('POST', '/api/upload/resource')
-                xhr.setRequestHeader('Authorization', `Bearer ${token}`)
-
-                // Do NOT set Content-Type header manually for FormData, browser does it automatically with boundary
-
-                xhr.send(formDataToSend)
+            const response = await fetch('/api/upload/resource', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(formData)
             })
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to upload resource')
+            }
 
             // Success
             onSuccess(formData.title)
@@ -145,20 +87,9 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
 
         } catch (error: any) {
             console.error('Upload Process Error:', error)
-
-            // 5. User-friendly Error Display
-            let displayMessage = 'Failed to upload resource.'
-
-            if (error.message) {
-                displayMessage = error.message
-            } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                displayMessage = 'Network connection failed.'
-            }
-
-            alert(displayMessage)
+            alert(error.message || 'Failed to upload resource.')
         } finally {
             setIsUploading(false)
-            setUploadProgress(0)
         }
     }
 
@@ -172,46 +103,8 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
             branch: '',
             subject: '',
             resourceType: '',
+            driveLink: '',
         })
-        setFile(null)
-    }
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const selectedFile = e.target.files?.[0]
-        if (selectedFile) {
-            validateAndSetFile(selectedFile)
-        }
-    }
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault()
-        setIsDragging(false)
-        const droppedFile = e.dataTransfer.files[0]
-        if (droppedFile) {
-            validateAndSetFile(droppedFile)
-        }
-    }
-
-    const validateAndSetFile = (selectedFile: File) => {
-        if (selectedFile.size > 50 * 1024 * 1024) {
-            alert('File size exceeds 50MB limit')
-            return
-        }
-
-        const allowedTypes = [
-            'application/pdf',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'application/vnd.ms-powerpoint',
-            'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-        ]
-
-        if (!allowedTypes.includes(selectedFile.type)) {
-            alert('Please select a valid file type: PDF, DOC, DOCX, PPT, or PPTX')
-            return
-        }
-
-        setFile(selectedFile)
     }
 
     const handleYearChange = (yearStr: string) => {
@@ -235,7 +128,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
                 <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-4 md:p-6 flex justify-between items-center z-10">
                     <div>
                         <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Upload Resource</h2>
-                        <p className="text-gray-600 dark:text-gray-400 text-xs md:text-sm mt-1">Share your notes with the community</p>
+                        <p className="text-gray-600 dark:text-gray-400 text-xs md:text-sm mt-1">Share your notes via Google Drive link</p>
                     </div>
                     <button
                         onClick={onClose}
@@ -366,78 +259,40 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
                     </div>
 
                     <div>
-                        <label className="block text-xs md:text-sm font-medium mb-1.5 md:mb-2 text-gray-700 dark:text-gray-300">File *</label>
-                        <div
-                            onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
-                            onDragLeave={() => setIsDragging(false)}
-                            onDrop={handleDrop}
-                            onClick={() => !isUploading && document.getElementById('file-input')?.click()}
-                            className={`border-2 border-dashed rounded-lg p-6 md:p-8 text-center cursor-pointer transition-all ${isUploading
-                                ? 'opacity-50 cursor-not-allowed border-gray-300 dark:border-gray-700'
-                                : isDragging
-                                    ? 'border-black dark:border-white bg-gray-50 dark:bg-gray-800'
-                                    : 'border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-600'
-                                }`}
-                        >
-                            <input
-                                id="file-input"
-                                type="file"
-                                accept=".pdf,.doc,.docx,.ppt,.pptx"
-                                onChange={handleFileChange}
-                                disabled={isUploading}
-                                className="hidden"
-                            />
-                            <UploadIcon className="w-10 h-10 md:w-12 md:h-12 mx-auto mb-3 md:mb-4 text-gray-400" />
-                            <p className="text-sm md:text-base text-gray-600 dark:text-gray-300 font-medium mb-1">
-                                Drag and drop your file here, or click to browse
-                            </p>
-                            <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">PDF, DOC, DOCX, PPT, PPTX (Max 50MB)</p>
-                        </div>
-
-                        {file && (
-                            <div className="mt-4 flex items-center gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
-                                <FileText className="w-6 h-6 md:w-8 md:h-8 text-black dark:text-white flex-shrink-0" />
-                                <div className="flex-1 min-w-0">
-                                    <div className="font-medium truncate text-sm md:text-base text-gray-900 dark:text-white">{file.name}</div>
-                                    <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
-                                        {(file.size / 1024 / 1024).toFixed(2)} MB
-                                    </div>
-                                    {isUploading && (
-                                        <div className="mt-2 w-full bg-gray-200 rounded-full h-1.5 md:h-2 dark:bg-gray-700">
-                                            <div
-                                                className="bg-green-600 h-1.5 md:h-2 rounded-full transition-all duration-300"
-                                                style={{ width: `${uploadProgress}%` }}
-                                            ></div>
-                                        </div>
-                                    )}
-                                </div>
-                                {!isUploading && (
-                                    <button
-                                        type="button"
-                                        onClick={(e) => { e.stopPropagation(); setFile(null) }}
-                                        className="p-1.5 md:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-500 dark:text-gray-400"
-                                    >
-                                        <X className="w-4 h-4 md:w-5 md:h-5" />
-                                    </button>
-                                )}
+                        <label className="block text-xs md:text-sm font-medium mb-1.5 md:mb-2 text-gray-700 dark:text-gray-300">Google Drive Link *</label>
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <LinkIcon className="h-5 w-5 text-gray-400" />
                             </div>
-                        )}
+                            <input
+                                type="url"
+                                required
+                                placeholder="https://drive.google.com/..."
+                                value={formData.driveLink}
+                                onChange={(e) => setFormData({ ...formData, driveLink: e.target.value })}
+                                disabled={isUploading}
+                                className="w-full pl-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:focus:bg-gray-900 dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            />
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Make sure the link is accessible to everyone (Anyone with the link can view)
+                        </p>
                     </div>
 
                     <button
                         type="submit"
-                        disabled={isUploading || !file}
+                        disabled={isUploading || !formData.driveLink}
                         className="w-full bg-red-600 text-white py-2.5 md:py-3 px-4 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-500/20 flex items-center justify-center gap-2 text-sm md:text-base"
                     >
                         {isUploading ? (
                             <>
                                 <div className="w-4 h-4 md:w-5 md:h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                Uploading... {uploadProgress}%
+                                Submitting...
                             </>
                         ) : (
                             <>
                                 <UploadIcon className="w-4 h-4 md:w-5 md:h-5" />
-                                Upload Resource
+                                Submit Resource
                             </>
                         )}
                     </button>

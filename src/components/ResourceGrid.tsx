@@ -1,5 +1,5 @@
 import {
-    Download, Star, Upload as UploadIcon, FileText, User,
+    ExternalLink, Star, Upload as UploadIcon, FileText, User,
     Trophy, Sparkles, Share2, FileQuestion, ArrowUp, Mic,
     Copy, ThumbsUp, ThumbsDown, Trash2
 } from 'lucide-react'
@@ -277,16 +277,21 @@ const FileListCard = ({ resource }: { resource: any }) => (
                             <span>{resource.uploader || 'Admin'}</span>
                         </div>
                         <div>
-                            {resource.downloads || 0} downloads
+                            {resource.downloads || 0} views
                         </div>
                     </div>
                 </div>
             </div>
 
-            <button className="flex items-center justify-center gap-2 px-5 py-2.5 bg-black hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 text-white rounded-lg text-sm font-medium transition-all shadow-sm active:scale-95 w-full sm:w-auto">
-                <Download className="w-4 h-4" />
-                Download
-            </button>
+            <a
+                href={resource.driveLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-black hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 text-white rounded-lg text-sm font-medium transition-all shadow-sm active:scale-95 w-full sm:w-auto"
+            >
+                <ExternalLink className="w-4 h-4" />
+                View Resource
+            </a>
         </div>
     </div>
 )
