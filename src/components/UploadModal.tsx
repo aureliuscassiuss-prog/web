@@ -65,7 +65,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
                 throw new Error('Authentication required. Please sign in.')
             }
 
-            const response = await fetch('/api/upload/resource', {
+            const response = await fetch('/api/resources', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

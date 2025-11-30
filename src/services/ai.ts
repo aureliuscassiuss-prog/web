@@ -4,10 +4,10 @@ export const getAIResponse = async (message: string) => {
     try {
         // 1. Try Backend API first (Production/Vercel)
         try {
-            const backendResponse = await fetch('/api/ai/ask', {
+            const backendResponse = await fetch('/api/ai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ question: message })
+                body: JSON.stringify({ action: 'ask', question: message })
             });
 
             if (backendResponse.ok) {
