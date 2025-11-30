@@ -14,9 +14,10 @@ interface ResourceGridProps {
         subject?: string
     }
     searchQuery?: string
+    onUploadRequest?: (data: any) => void
 }
 
-export default function ResourceGrid({ view, filters, searchQuery = '' }: ResourceGridProps) {
+export default function ResourceGrid({ view, filters, searchQuery = '', onUploadRequest }: ResourceGridProps) {
     const { user, token } = useAuth()
 
     // Data States
@@ -170,6 +171,9 @@ export default function ResourceGrid({ view, filters, searchQuery = '' }: Resour
                             icon={FileQuestion}
                             title={`No ${activeTab === 'formula' ? 'formula sheets' : activeTab} available yet`}
                             description={`Be the first to upload ${activeTab === 'formula' ? 'formula sheets' : 'resources'} for this category.`}
+                            onUploadRequest={onUploadRequest}
+                            filters={filters}
+                            activeTab={activeTab}
                         />
                     ) : (
                         <div className="grid grid-cols-1 gap-4">
@@ -240,8 +244,8 @@ const TabButton = ({ active, onClick, label, icon }: any) => (
     <button
         onClick={onClick}
         className={`pb-3 text-sm font-medium transition-all relative whitespace-nowrap flex items-center gap-2 ${active
-                ? 'text-gray-900 dark:text-white border-b-2 border-black dark:border-white'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+            ? 'text-gray-900 dark:text-white border-b-2 border-black dark:border-white'
+            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
             }`}
     >
         {icon}
@@ -345,12 +349,25 @@ const UploadsView = ({ user, uploads, searchQuery }: any) => {
     )
 }
 
-const EmptyState = ({ icon: Icon, title, description }: any) => (
+const EmptyState = ({ icon: Icon, title, description, onUploadRequest, filters, activeTab }: any) => (
     <div className="flex flex-col items-center justify-center py-16 text-center rounded-xl border border-dashed border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/20">
         <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4 text-gray-400">
             <Icon className="w-8 h-8" />
         </div>
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
         {description && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-sm">{description}</p>}
+
+        {onUploadRequest && (
+            <button
+                onClick={() => onUploadRequest({
+                    ...filters,
+                    resourceType: activeTab !== 'all' ? activeTab : 'notes'
+                })}
+                className="mt-6 flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-lg shadow-blue-500/20"
+            >
+                <UploadIcon className="w-4 h-4" />
+                Upload First
+            </button>
+        )}
     </div>
 )

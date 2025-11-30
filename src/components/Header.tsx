@@ -1,4 +1,4 @@
-import { Search, Upload, Sun, Moon, LogIn, Menu } from 'lucide-react'
+import { Upload, LogIn, Menu } from 'lucide-react'
 import { getAvatarComponent } from '../data/premiumAvatars'
 
 interface HeaderProps {
@@ -6,14 +6,10 @@ interface HeaderProps {
     onAuthClick: () => void
     onProfileClick?: () => void
     onMobileMenuToggle?: () => void
-    searchQuery?: string
-    onSearchChange?: (query: string) => void
     user: { name: string; email: string; avatar?: string } | null
-    isDark: boolean
-    toggleTheme: () => void
 }
 
-export default function Header({ onUploadClick, onAuthClick, onProfileClick, onMobileMenuToggle, searchQuery = '', onSearchChange, user, isDark, toggleTheme }: HeaderProps) {
+export default function Header({ onUploadClick, onAuthClick, onProfileClick, onMobileMenuToggle, user }: HeaderProps) {
     const AvatarComponent = user?.avatar ? getAvatarComponent(user.avatar) : null
 
     return (
@@ -26,34 +22,24 @@ export default function Header({ onUploadClick, onAuthClick, onProfileClick, onM
                 <Menu className="w-6 h-6" />
             </button>
 
-            {/* Search Bar */}
-            <div className="flex-1 max-w-md relative mx-4">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-gray-400" />
-                <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => onSearchChange?.(e.target.value)}
-                    placeholder="Search notes, papers, authors..."
-                    className="w-full pl-11 pr-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20 focus:border-black dark:focus:border-white focus:bg-white dark:focus:bg-black text-gray-900 dark:text-white placeholder-gray-500"
-                />
+            {/* Desktop Logo - Hidden on Mobile */}
+            <div className="hidden md:flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <span className="text-white font-bold text-sm">UN</span>
+                </div>
+                <span className="font-bold text-xl text-gray-900 dark:text-white">UniNotes</span>
             </div>
 
-            <div className="flex items-center gap-4">
-                <button
-                    onClick={onUploadClick}
-                    className="btn bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 border-0"
-                >
-                    <Upload className="w-[18px] h-[18px]" />
-                    Upload
-                </button>
-
-                <button
-                    onClick={toggleTheme}
-                    className="p-2.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
-                    aria-label="Toggle theme"
-                >
-                    {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                </button>
+            <div className="flex items-center gap-4 ml-auto">
+                {user && (
+                    <button
+                        onClick={onUploadClick}
+                        className="btn bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 border-0"
+                    >
+                        <Upload className="w-[18px] h-[18px]" />
+                        Upload
+                    </button>
+                )}
 
                 {user ? (
                     <button

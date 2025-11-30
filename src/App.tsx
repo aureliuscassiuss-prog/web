@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { X } from 'lucide-react'
 
 // Components
 import Sidebar from './components/Sidebar'
@@ -12,9 +13,9 @@ import UploadModal from './components/UploadModal'
 import AuthModal from './components/AuthModal'
 import Toast from './components/Toast'
 import Profile from './components/Profile'
-import BrowseByBranch from './components/BrowseByBranch'
+import BrowseResources from './components/BrowseResources'
 import AdminPanel from './components/AdminPanel'
-import SubjectDashboard from './components/SubjectDashboard'
+
 
 function Layout({
   children,
@@ -27,7 +28,8 @@ function Layout({
   setSearchQuery,
   user,
   isDark,
-  toggleTheme
+  toggleTheme,
+  spotlight
 }: any) {
   return (
     <div className="flex min-h-screen flex-col bg-white dark:bg-black text-gray-950 dark:text-gray-50 transition-colors duration-200 font-sans selection:bg-gray-900 selection:text-white dark:selection:bg-gray-100 dark:selection:text-black">
@@ -38,11 +40,7 @@ function Layout({
         onAuthClick={onAuthClick}
         onProfileClick={onProfileClick}
         onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
         user={user}
-        isDark={isDark}
-        toggleTheme={toggleTheme}
       />
 
       <div className="flex flex-1 items-start gap-10 px-4 sm:px-6 md:px-8 pt-6 max-w-[1600px] mx-auto w-full">
@@ -52,6 +50,9 @@ function Layout({
           <Sidebar
             isMobileMenuOpen={isMobileMenuOpen}
             onMobileMenuClose={() => setIsMobileMenuOpen(false)}
+            isDark={isDark}
+            toggleTheme={toggleTheme}
+            spotlight={spotlight}
           />
         </aside>
 
@@ -59,19 +60,48 @@ function Layout({
         <main className="flex-1 min-w-0 pb-10 animate-fade-in">
           {children}
         </main>
-
-        {/* 4. Optional Right Sidebar (TOC) - Placeholder if needed matching the HTML structure */}
-        {/* <aside className="sticky top-20 hidden xl:block w-[240px] shrink-0">
-             <TableOfContents /> 
-           </aside> 
-        */}
       </div>
 
-      {/* Mobile Sidebar Overlay (Handled inside Sidebar usually, or here) */}
+      {/* Mobile Sidebar Overlay */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setIsMobileMenuOpen(false)}>
-          <div className="fixed inset-y-0 left-0 w-3/4 bg-white dark:bg-black p-4" onClick={e => e.stopPropagation()}>
-            <Sidebar isMobileMenuOpen={true} onMobileMenuClose={() => setIsMobileMenuOpen(false)} />
+        <div
+          className="fixed inset-0 z-40 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        >
+          {/* Backdrop with fade animation */}
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in" />
+
+          {/* Sidebar with slide animation */}
+          <div
+            className="fixed inset-y-0 left-0 w-3/4 max-w-sm bg-white dark:bg-black shadow-2xl animate-slide-in-left flex flex-col"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header with Logo and Close Button */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-md flex items-center justify-center">
+                  <span className="text-white font-bold text-xs">UN</span>
+                </div>
+                <span className="font-semibold text-base text-gray-900 dark:text-white">UniNotes</span>
+              </div>
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-1.5 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Sidebar Content */}
+            <div className="flex-1 overflow-y-auto">
+              <Sidebar
+                isMobileMenuOpen={true}
+                onMobileMenuClose={() => setIsMobileMenuOpen(false)}
+                isDark={isDark}
+                toggleTheme={toggleTheme}
+                spotlight={spotlight}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -94,6 +124,10 @@ function AppContent() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filters, setFilters] = useState<{ branch?: string; year?: number; subject?: string }>({})
   const [toast, setToast] = useState<{ message: string; show: boolean }>({ message: '', show: false })
+  const [uploadInitialData, setUploadInitialData] = useState<any>(null)
+
+  // Spotlight State
+  const [spotlight, setSpotlight] = useState<string | null>(null)
 
   // Theme State
   const [isDark, setIsDark] = useState(() => {
@@ -128,8 +162,25 @@ function AppContent() {
       setIsAuthModalOpen(true)
       showToast('Please sign in to upload resources')
     } else {
+      setUploadInitialData(null)
       setIsUploadModalOpen(true)
     }
+  }
+
+  const handleUploadWithData = (data: any) => {
+    if (!user) {
+      setIsAuthModalOpen(true)
+      showToast('Please sign in to upload resources')
+    } else {
+      setUploadInitialData(data)
+      setIsUploadModalOpen(true)
+    }
+  }
+
+  const handleGetStarted = () => {
+    setIsMobileMenuOpen(true)
+    setSpotlight('browse-resources')
+    setTimeout(() => setSpotlight(null), 3000)
   }
 
   return (
@@ -145,29 +196,22 @@ function AppContent() {
         user={user}
         isDark={isDark}
         toggleTheme={toggleTheme}
+        spotlight={spotlight}
       >
         <Routes>
           {/* Home Route */}
           <Route path="/" element={
             <div className="space-y-8">
-              <Hero />
-              <div className="space-y-4">
-                <h2 className="text-2xl font-semibold tracking-tight">Browse Resources</h2>
-                <BrowseByBranch onFilterChange={setFilters} />
-              </div>
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
-                <ResourceGrid view="resources" filters={filters} searchQuery={searchQuery} />
-              </div>
+              <Hero onGetStarted={handleGetStarted} />
             </div>
           } />
 
+          {/* Browse Resources Route */}
+          <Route path="/resources" element={<BrowseResources onUploadRequest={handleUploadWithData} />} />
+
           {/* Leaderboard Route */}
           <Route path="/leaderboard" element={
-            <div className="space-y-6">
-              <h1 className="text-3xl font-bold tracking-tight">Community Leaderboard</h1>
-              <p className="text-gray-500 dark:text-gray-400">Top contributors helping the community grow.</p>
-              <ResourceGrid view="leaderboard" searchQuery={searchQuery} />
-            </div>
+            <ResourceGrid view="leaderboard" searchQuery={searchQuery} />
           } />
 
           {/* My Uploads Route (Protected) */}
@@ -188,8 +232,6 @@ function AppContent() {
             user ? <AdminPanel /> : <Navigate to="/" replace />
           } />
 
-          {/* Subject Dashboard Route */}
-          <Route path="/resources/:course/:year/:subject" element={<SubjectDashboard />} />
 
           {/* Catch all */}
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -204,11 +246,13 @@ function AppContent() {
           setIsUploadModalOpen(false)
           showToast(`✅ "${title}" uploaded successfully!`)
         }}
+        initialData={uploadInitialData}
       />
 
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
+        onSignupSuccess={() => setIsProfileModalOpen(true)}
       />
 
       {isProfileModalOpen && user && (

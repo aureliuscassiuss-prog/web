@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, Upload as UploadIcon, FileText } from 'lucide-react'
 import { BRANCHES, YEARS, getSubjectsByBranchAndYear } from '../data/academicStructure'
 
@@ -6,9 +6,15 @@ interface UploadModalProps {
     isOpen: boolean
     onClose: () => void
     onSuccess: (title: string) => void
+    initialData?: {
+        year?: number
+        branch?: string
+        subject?: string
+        resourceType?: string
+    }
 }
 
-export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
+export default function UploadModal({ isOpen, onClose, onSuccess, initialData }: UploadModalProps) {
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -23,6 +29,21 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
     const [isDragging, setIsDragging] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
     const [uploadProgress, setUploadProgress] = useState(0)
+
+    // Update form data when initialData changes or modal opens
+    useEffect(() => {
+        if (isOpen && initialData) {
+            const yearStr = initialData.year ? `${initialData.year}${initialData.year === 1 ? 'st' : initialData.year === 2 ? 'nd' : initialData.year === 3 ? 'rd' : 'th'} Year` : ''
+            setFormData(prev => ({
+                ...prev,
+                yearNum: initialData.year || 0,
+                year: yearStr,
+                branch: initialData.branch || '',
+                subject: initialData.subject || '',
+                resourceType: initialData.resourceType || ''
+            }))
+        }
+    }, [isOpen, initialData])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -211,23 +232,23 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
             <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-modal-in border border-gray-200 dark:border-gray-800">
-                <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-6 flex justify-between items-center z-10">
+                <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-4 md:p-6 flex justify-between items-center z-10">
                     <div>
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Upload Resource</h2>
-                        <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">Share your notes with the community</p>
+                        <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Upload Resource</h2>
+                        <p className="text-gray-600 dark:text-gray-400 text-xs md:text-sm mt-1">Share your notes with the community</p>
                     </div>
                     <button
                         onClick={onClose}
                         disabled={isUploading}
                         className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-500 dark:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <X className="w-6 h-6" />
+                        <X className="w-5 h-5 md:w-6 md:h-6" />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <form onSubmit={handleSubmit} className="p-4 md:p-6 space-y-4">
                     <div>
-                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Title *</label>
+                        <label className="block text-xs md:text-sm font-medium mb-1.5 md:mb-2 text-gray-700 dark:text-gray-300">Title *</label>
                         <input
                             type="text"
                             required
@@ -235,12 +256,12 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                             value={formData.title}
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                             disabled={isUploading}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:focus:bg-gray-900 dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:focus:bg-gray-900 dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Description *</label>
+                        <label className="block text-xs md:text-sm font-medium mb-1.5 md:mb-2 text-gray-700 dark:text-gray-300">Description *</label>
                         <textarea
                             required
                             rows={3}
@@ -248,19 +269,19 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                             disabled={isUploading}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black resize-none dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:focus:bg-gray-900 dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black resize-none dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:focus:bg-gray-900 dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Course *</label>
+                            <label className="block text-xs md:text-sm font-medium mb-1.5 md:mb-2 text-gray-700 dark:text-gray-300">Course *</label>
                             <select
                                 required
                                 value={formData.course}
                                 onChange={(e) => setFormData({ ...formData, course: e.target.value })}
                                 disabled={isUploading}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:focus:bg-gray-900 dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:focus:bg-gray-900 dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <option value="B.Tech">B.Tech</option>
                                 <option value="B.Sc">B.Sc</option>
@@ -270,13 +291,13 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Year *</label>
+                            <label className="block text-xs md:text-sm font-medium mb-1.5 md:mb-2 text-gray-700 dark:text-gray-300">Year *</label>
                             <select
                                 required
                                 value={formData.year}
                                 onChange={(e) => handleYearChange(e.target.value)}
                                 disabled={isUploading}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:focus:bg-gray-900 dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:focus:bg-gray-900 dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <option value="">Select...</option>
                                 {YEARS.map(year => (
@@ -288,15 +309,15 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Branch *</label>
+                            <label className="block text-xs md:text-sm font-medium mb-1.5 md:mb-2 text-gray-700 dark:text-gray-300">Branch *</label>
                             <select
                                 required
                                 value={formData.branch}
                                 onChange={(e) => handleBranchChange(e.target.value)}
                                 disabled={isUploading}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:focus:bg-gray-900 dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:focus:bg-gray-900 dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <option value="">Select...</option>
                                 {BRANCHES.map(branch => (
@@ -307,13 +328,13 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Subject *</label>
+                            <label className="block text-xs md:text-sm font-medium mb-1.5 md:mb-2 text-gray-700 dark:text-gray-300">Subject *</label>
                             <select
                                 required
                                 value={formData.subject}
                                 onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                                 disabled={!formData.branch || !formData.yearNum || isUploading}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:focus:bg-gray-900 dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:focus:bg-gray-900 dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <option value="">Select...</option>
                                 {availableSubjects.map(subject => (
@@ -326,13 +347,13 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Resource Type *</label>
+                        <label className="block text-xs md:text-sm font-medium mb-1.5 md:mb-2 text-gray-700 dark:text-gray-300">Resource Type *</label>
                         <select
                             required
                             value={formData.resourceType}
                             onChange={(e) => setFormData({ ...formData, resourceType: e.target.value })}
                             disabled={isUploading}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:focus:bg-gray-900 dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:focus:bg-gray-900 dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <option value="">Select...</option>
                             <option value="notes">Notes</option>
@@ -345,13 +366,13 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">File *</label>
+                        <label className="block text-xs md:text-sm font-medium mb-1.5 md:mb-2 text-gray-700 dark:text-gray-300">File *</label>
                         <div
                             onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
                             onDragLeave={() => setIsDragging(false)}
                             onDrop={handleDrop}
                             onClick={() => !isUploading && document.getElementById('file-input')?.click()}
-                            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all ${isUploading
+                            className={`border-2 border-dashed rounded-lg p-6 md:p-8 text-center cursor-pointer transition-all ${isUploading
                                 ? 'opacity-50 cursor-not-allowed border-gray-300 dark:border-gray-700'
                                 : isDragging
                                     ? 'border-black dark:border-white bg-gray-50 dark:bg-gray-800'
@@ -366,25 +387,25 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                                 disabled={isUploading}
                                 className="hidden"
                             />
-                            <UploadIcon className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                            <p className="text-gray-600 dark:text-gray-300 font-medium mb-1">
+                            <UploadIcon className="w-10 h-10 md:w-12 md:h-12 mx-auto mb-3 md:mb-4 text-gray-400" />
+                            <p className="text-sm md:text-base text-gray-600 dark:text-gray-300 font-medium mb-1">
                                 Drag and drop your file here, or click to browse
                             </p>
-                            <p className="text-gray-500 dark:text-gray-400 text-sm">PDF, DOC, DOCX, PPT, PPTX (Max 50MB)</p>
+                            <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">PDF, DOC, DOCX, PPT, PPTX (Max 50MB)</p>
                         </div>
 
                         {file && (
-                            <div className="mt-4 flex items-center gap-3 p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
-                                <FileText className="w-8 h-8 text-black dark:text-white flex-shrink-0" />
+                            <div className="mt-4 flex items-center gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+                                <FileText className="w-6 h-6 md:w-8 md:h-8 text-black dark:text-white flex-shrink-0" />
                                 <div className="flex-1 min-w-0">
-                                    <div className="font-medium truncate text-gray-900 dark:text-white">{file.name}</div>
-                                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                                    <div className="font-medium truncate text-sm md:text-base text-gray-900 dark:text-white">{file.name}</div>
+                                    <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
                                         {(file.size / 1024 / 1024).toFixed(2)} MB
                                     </div>
                                     {isUploading && (
-                                        <div className="mt-2 w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                                        <div className="mt-2 w-full bg-gray-200 rounded-full h-1.5 md:h-2 dark:bg-gray-700">
                                             <div
-                                                className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                                                className="bg-green-600 h-1.5 md:h-2 rounded-full transition-all duration-300"
                                                 style={{ width: `${uploadProgress}%` }}
                                             ></div>
                                         </div>
@@ -394,9 +415,9 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                                     <button
                                         type="button"
                                         onClick={(e) => { e.stopPropagation(); setFile(null) }}
-                                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-500 dark:text-gray-400"
+                                        className="p-1.5 md:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-500 dark:text-gray-400"
                                     >
-                                        <X className="w-5 h-5" />
+                                        <X className="w-4 h-4 md:w-5 md:h-5" />
                                     </button>
                                 )}
                             </div>
@@ -406,16 +427,16 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                     <button
                         type="submit"
                         disabled={isUploading || !file}
-                        className="w-full bg-red-600 text-white py-3 px-4 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-500/20 flex items-center justify-center gap-2"
+                        className="w-full bg-red-600 text-white py-2.5 md:py-3 px-4 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-500/20 flex items-center justify-center gap-2 text-sm md:text-base"
                     >
                         {isUploading ? (
                             <>
-                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                <div className="w-4 h-4 md:w-5 md:h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                 Uploading... {uploadProgress}%
                             </>
                         ) : (
                             <>
-                                <UploadIcon className="w-5 h-5" />
+                                <UploadIcon className="w-4 h-4 md:w-5 md:h-5" />
                                 Upload Resource
                             </>
                         )}
