@@ -19,6 +19,7 @@ interface AuthContextType {
     token: string | null
     login: (email: string, password: string) => Promise<void>
     register: (name: string, email: string, password: string) => Promise<void>
+    googleLogin: (credential: string) => Promise<void>
     logout: () => void
     updateUser: (updatedUser: User) => void
     isLoading: boolean
@@ -95,6 +96,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('user', JSON.stringify(data.user))
     }
 
+    const googleLogin = async (credential: string) => {
+        const response = await fetch('/api/auth/google', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ credential })
+        })
+
+        if (!response.ok) {
+            let errorMessage = 'Google login failed'
+            try {
+                const error = await response.json()
+                errorMessage = error.message || error.error || 'Google login failed'
+            } catch (e) {
+                errorMessage = `Server error (${response.status}): ${response.statusText}`
+            }
+            throw new Error(errorMessage)
+        }
+
+        const data = await response.json()
+        setToken(data.token)
+        setUser(data.user)
+        localStorage.setItem('token', data.token)
+        localStorage.setItem('user', JSON.stringify(data.user))
+    }
+
     const logout = () => {
         setToken(null)
         setUser(null)
@@ -108,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     return (
-        <AuthContext.Provider value={{ user, token, login, register, logout, updateUser, isLoading }}>
+        <AuthContext.Provider value={{ user, token, login, register, googleLogin, logout, updateUser, isLoading }}>
             {children}
         </AuthContext.Provider>
     )

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { GoogleOAuthProvider } from '@react-oauth/google'
 import { X } from 'lucide-react'
 
 // Components
@@ -265,9 +266,11 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </GoogleOAuthProvider>
   )
 }
 
