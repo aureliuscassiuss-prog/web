@@ -53,30 +53,42 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
 
         const userMessage = chatInput.trim()
         setChatInput('')
-
-        // Add user message
-        const newMessages = [...chatMessages, { role: 'user' as const, content: userMessage }]
-        setChatMessages(newMessages)
         setIsAiLoading(true)
 
+        // Add user message to display
+        const newMessages = [...chatMessages, { role: 'user' as const, content: userMessage }]
+        setChatMessages(newMessages)
+
         try {
+            const headers: any = {
+                'Content-Type': 'application/json'
+            }
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`
+            }
+
+            // Build conversation history for API (exclude the message we just added)
+            const conversationHistory = chatMessages.map(m => ({ role: m.role, content: m.content }))
+
             const response = await fetch('/api/ai', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                },
+                headers,
                 body: JSON.stringify({
-                    action: 'chat',
-                    message: userMessage,
-                    conversationHistory: newMessages.map(m => ({ role: m.role, content: m.content }))
+                    question: userMessage,
+                    conversationHistory
                 })
             })
 
             if (!response.ok) throw new Error('Failed to get AI response')
 
             const data = await response.json()
-            setChatMessages([...newMessages, { role: 'assistant', content: data.response || data.answer || "I'm sorry, I couldn't generate a response." }])
+
+            // Update with the returned conversation history or build it manually
+            if (data.conversationHistory) {
+                setChatMessages(data.conversationHistory.map((m: any) => ({ role: m.role, content: m.content })))
+            } else {
+                setChatMessages([...newMessages, { role: 'assistant', content: data.answer || "I'm sorry, I couldn't generate a response." }])
+            }
         } catch (error) {
             console.error('AI Error:', error)
             setChatMessages([...newMessages, { role: 'assistant', content: "I'm having trouble connecting right now. Please try again later." }])
@@ -262,8 +274,8 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                         {chatMessages.map((message, index) => (
                             <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                 <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${message.role === 'user'
-                                        ? 'bg-black dark:bg-white text-white dark:text-black'
-                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
+                                    ? 'bg-black dark:bg-white text-white dark:text-black'
+                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
                                     }`}>
                                     <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
                                 </div>
