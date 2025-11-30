@@ -47,10 +47,11 @@ export default function AIAssistant() {
                 headers['Authorization'] = `Bearer ${token}`
             }
 
-            const response = await fetch('/api/ai/chat', {
+            const response = await fetch('/api/ai', {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({
+                    action: 'chat',
                     question: userMessage,
                     conversationHistory
                 })

@@ -84,7 +84,7 @@ export default function ProfilePage() {
                 dataToSend.append('avatar', avatarFile);
             }
 
-            const response = await fetch('/api/profile/update', {
+            const response = await fetch('/api/profile', {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${token}`

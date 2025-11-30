@@ -56,10 +56,11 @@ export default function AIAssistantPage() {
                 headers['Authorization'] = `Bearer ${token}`
             }
 
-            const response = await fetch('/api/ai/chat', {
+            const response = await fetch('/api/ai', {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({
+                    action: 'chat',
                     question: userMessage,
                     conversationHistory
                 })
@@ -158,8 +159,8 @@ export default function AIAssistantPage() {
                         <div className={`flex gap-3 max-w-[85%] ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                             {/* Avatar */}
                             <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${msg.sender === 'user'
-                                    ? 'bg-black dark:bg-white'
-                                    : 'bg-gradient-to-br from-blue-500 to-purple-600'
+                                ? 'bg-black dark:bg-white'
+                                : 'bg-gradient-to-br from-blue-500 to-purple-600'
                                 }`}>
                                 {msg.sender === 'user' ? (
                                     <span className="text-sm font-semibold text-white dark:text-black">You</span>

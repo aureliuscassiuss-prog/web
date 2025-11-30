@@ -45,10 +45,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, [])
 
     const login = async (email: string, password: string) => {
-        const response = await fetch('/api/auth/login', {
+        const response = await fetch('/api/auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ action: 'login', email, password })
         })
 
         if (!response.ok) {
@@ -71,10 +71,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const register = async (name: string, email: string, password: string) => {
-        const response = await fetch('/api/auth/register', {
+        const response = await fetch('/api/auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, email, password })
+            body: JSON.stringify({ action: 'register', name, email, password })
         })
 
         if (!response.ok) {
@@ -97,10 +97,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const googleLogin = async (credential: string) => {
-        const response = await fetch('/api/auth/google', {
+        const response = await fetch('/api/auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ credential })
+            body: JSON.stringify({ action: 'google', token: credential })
         })
 
         if (!response.ok) {

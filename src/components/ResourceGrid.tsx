@@ -52,29 +52,29 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                 if (view === 'resources') {
                     // Logic to fetch based on Active Tab
                     if (activeTab === 'notes') {
-                        const res = await fetch(`/api/resources/list?${buildQueryParams('notes')}`)
+                        const res = await fetch(`/api/resources?${buildQueryParams('notes')}`)
                         const data = await res.json()
                         if (isMounted) setResources(data.resources || [])
                     }
                     else if (activeTab === 'pyqs') {
                         // Attempt to fetch from papers endpoint or resources with type=pyq
-                        const res = await fetch(`/api/resources/list?${buildQueryParams('pyq')}`)
+                        const res = await fetch(`/api/resources?${buildQueryParams('pyq')}`)
                         const data = await res.json()
                         if (isMounted) setResources(data.resources || [])
                     }
                     else if (activeTab === 'formula') {
-                        const res = await fetch(`/api/resources/list?${buildQueryParams('formula-sheet')}`)
+                        const res = await fetch(`/api/resources?${buildQueryParams('formula-sheet')}`)
                         const data = await res.json()
                         if (isMounted) setResources(data.resources || [])
                     }
                 }
                 else if (view === 'uploads' && token) {
-                    const res = await fetch('/api/profile/uploads', { headers: { 'Authorization': `Bearer ${token}` } })
+                    const res = await fetch('/api/profile?action=uploads', { headers: { 'Authorization': `Bearer ${token}` } })
                     const data = await res.json()
                     if (isMounted) setUploads(data.uploads || [])
                 }
                 else if (view === 'leaderboard') {
-                    const res = await fetch('/api/leaderboard/top')
+                    const res = await fetch('/api/leaderboard')
                     const data = await res.json()
                     if (isMounted) setLeaderboard(data.leaderboard || [])
                 }
@@ -103,11 +103,6 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                 <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-black dark:border-gray-800 dark:border-t-white"></div>
             </div>
         )
-    }
-
-    // --- VIEW 1: LEADERBOARD ---
-    if (view === 'leaderboard') {
-        return <LeaderboardView leaderboard={leaderboard} />
     }
 
     // --- VIEW 2: UPLOADS ---

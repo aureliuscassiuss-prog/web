@@ -51,7 +51,7 @@ export default function AdminPanel() {
     const fetchPendingResources = async () => {
         setIsLoading(true)
         try {
-            const response = await fetch('/api/admin/pending', {
+            const response = await fetch('/api/admin?action=pending', {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
             const data = await response.json()
@@ -70,7 +70,7 @@ export default function AdminPanel() {
     const fetchAcademicStructure = async () => {
         setIsLoading(true)
         try {
-            const response = await fetch('/api/admin/structure', {
+            const response = await fetch('/api/admin?action=structure', {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
             const data = await response.json()
@@ -89,7 +89,7 @@ export default function AdminPanel() {
     const handleAction = async (resourceId: string, action: 'approve' | 'reject') => {
         setProcessingId(resourceId)
         try {
-            const response = await fetch('/api/admin/action', {
+            const response = await fetch('/api/admin', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -114,13 +114,13 @@ export default function AdminPanel() {
         if (!value.trim()) return
 
         try {
-            const response = await fetch('/api/admin/structure', {
+            const response = await fetch('/api/admin', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ type, value: value.trim(), action: 'add' })
+                body: JSON.stringify({ type, value: value.trim(), action: 'structure', structureAction: 'add' })
             })
 
             if (response.ok) {
@@ -143,13 +143,13 @@ export default function AdminPanel() {
         if (!confirm(`Are you sure you want to remove "${value}"?`)) return
 
         try {
-            const response = await fetch('/api/admin/structure', {
+            const response = await fetch('/api/admin', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ type, value, action: 'remove' })
+                body: JSON.stringify({ type, value, action: 'structure', structureAction: 'remove' })
             })
 
             if (response.ok) {
@@ -190,8 +190,8 @@ export default function AdminPanel() {
                 <button
                     onClick={() => setActiveTab('pending')}
                     className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'pending'
-                            ? 'border-b-2 border-gray-900 text-gray-900 dark:border-white dark:text-white'
-                            : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                        ? 'border-b-2 border-gray-900 text-gray-900 dark:border-white dark:text-white'
+                        : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
                         }`}
                 >
                     <Clock className="inline h-4 w-4 mr-2" />
@@ -200,8 +200,8 @@ export default function AdminPanel() {
                 <button
                     onClick={() => setActiveTab('structure')}
                     className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'structure'
-                            ? 'border-b-2 border-gray-900 text-gray-900 dark:border-white dark:text-white'
-                            : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                        ? 'border-b-2 border-gray-900 text-gray-900 dark:border-white dark:text-white'
+                        : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
                         }`}
                 >
                     <Settings className="inline h-4 w-4 mr-2" />
