@@ -31,11 +31,6 @@ app.use((req, res, next) => {
     next();
 });
 
-// Test Route
-// @ts-ignore
-import uploadTestHandler from './api/upload/test.ts';
-app.post('/api/upload/test', adaptHandler(uploadTestHandler));
-
 // Upload Route - MUST be before express.json() to avoid body parsing
 // @ts-ignore
 import uploadResourceHandler from './api/upload/resource.ts';

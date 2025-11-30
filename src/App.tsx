@@ -8,7 +8,7 @@ import Sidebar from './components/Sidebar'
 import Header from './components/Header'
 import Hero from './components/Hero'
 import ResourceGrid from './components/ResourceGrid'
-import AIAssistant from './components/AIAssistant'
+import AIAssistantPage from './components/AIAssistantPage'
 import UploadModal from './components/UploadModal'
 import AuthModal from './components/AuthModal'
 import Toast from './components/Toast'
@@ -105,8 +105,6 @@ function Layout({
           </div>
         </div>
       )}
-
-      <AIAssistant />
     </div>
   )
 }
@@ -208,6 +206,9 @@ function AppContent() {
 
           {/* Browse Resources Route */}
           <Route path="/resources" element={<BrowseResources onUploadRequest={handleUploadWithData} />} />
+
+          {/* AI Assistant Route */}
+          <Route path="/ai-assistant" element={<AIAssistantPage />} />
 
           {/* Leaderboard Route */}
           <Route path="/leaderboard" element={
