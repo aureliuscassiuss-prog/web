@@ -5,7 +5,6 @@ import {
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import LeaderboardView from './LeaderboardView'
 
 interface ResourceGridProps {
     view: 'resources' | 'leaderboard' | 'papers' | 'uploads'
@@ -31,10 +30,6 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
     // UI States
     const [activeTab, setActiveTab] = useState<'notes' | 'pyqs' | 'formula' | 'ai'>('notes')
     const [chatInput, setChatInput] = useState('')
-    const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([
-        { role: 'assistant', content: "Hi! I'm your AI tutor. I can help you with concepts, solve problems, explain topics, and answer questions related to your subjects. What would you like to learn about today?" }
-    ])
-    const [isAiLoading, setIsAiLoading] = useState(false)
 
     // Helper to build query string
     const buildQueryParams = (type?: string) => {
@@ -45,57 +40,6 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
         if (filters?.subject) params.append('subject', filters.subject)
         if (type) params.append('type', type)
         return params
-    }
-
-    // Handle AI Chat
-    const handleSendMessage = async () => {
-        if (!chatInput.trim() || isAiLoading) return
-
-        const userMessage = chatInput.trim()
-        setChatInput('')
-
-        // Add user message
-        const newMessages = [...chatMessages, { role: 'user' as const, content: userMessage }]
-        setChatMessages(newMessages)
-        setIsAiLoading(true)
-
-        try {
-            const response = await fetch('/api/ai', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                },
-                body: JSON.stringify({
-                    action: 'chat',
-                    message: userMessage,
-                    conversationHistory: newMessages.map(m => ({ role: m.role, content: m.content }))
-                })
-            })
-
-            if (!response.ok) throw new Error('Failed to get AI response')
-
-            const data = await response.json()
-            setChatMessages([...newMessages, { role: 'assistant', content: data.response || data.answer || "I'm sorry, I couldn't generate a response." }])
-        } catch (error) {
-            console.error('AI Error:', error)
-            setChatMessages([...newMessages, { role: 'assistant', content: "I'm having trouble connecting right now. Please try again later." }])
-        } finally {
-            setIsAiLoading(false)
-        }
-    }
-
-    const handleKeyPress = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault()
-            handleSendMessage()
-        }
-    }
-
-    const clearChat = () => {
-        setChatMessages([
-            { role: 'assistant', content: "Hi! I'm your AI tutor. I can help you with concepts, solve problems, explain topics, and answer questions related to your subjects. What would you like to learn about today?" }
-        ])
     }
 
     // --- FETCH DATA EFFECT ---
@@ -113,6 +57,7 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                         if (isMounted) setResources(data.resources || [])
                     }
                     else if (activeTab === 'pyqs') {
+                        // Attempt to fetch from papers endpoint or resources with type=pyq
                         const res = await fetch(`/api/resources?${buildQueryParams('pyq')}`)
                         const data = await res.json()
                         if (isMounted) setResources(data.resources || [])
@@ -165,12 +110,8 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
         return <UploadsView user={user} uploads={uploads} searchQuery={searchQuery} />
     }
 
-    // --- VIEW 2.5: LEADERBOARD ---
-    if (view === 'leaderboard') {
-        return <LeaderboardView leaderboard={leaderboard} />
-    }
-
     // --- VIEW 3: RESOURCES (MAIN TABBED VIEW) ---
+    // This handles Notes, PYQs, Formula Sheets, and AI
     return (
         <div className="animate-fade-in px-4 md:px-8 py-6">
 
@@ -203,7 +144,7 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
 
             {/* TAB CONTENT */}
 
-            {/* 1. NOTES & PYQS & FORMULA */}
+            {/* 1. NOTES & PYQS & FORMULA (Reuse List Logic) */}
             {activeTab !== 'ai' && (
                 <div>
                     <div className="flex justify-between items-center mb-6">
@@ -242,65 +183,44 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
             {/* 2. AI TUTOR INTERFACE */}
             {activeTab === 'ai' && (
                 <div className="animate-fade-in flex flex-col h-[600px] border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden bg-white dark:bg-gray-900 shadow-sm">
-                    {/* Chat Header */}
-                    <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                            <Sparkles className="w-5 h-5 text-purple-500" />
-                            <h3 className="font-semibold text-gray-900 dark:text-white">AI Tutor</h3>
-                        </div>
-                        <button
-                            onClick={clearChat}
-                            className="flex items-center gap-2 text-xs text-gray-400 hover:text-red-500 transition-colors"
-                        >
+                    {/* Chat Header Actions */}
+                    <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-end">
+                        <button className="flex items-center gap-2 text-xs text-gray-400 hover:text-red-500 transition-colors">
                             <Trash2 className="w-3.5 h-3.5" />
                             Clear Chat
                         </button>
                     </div>
 
                     {/* Chat Messages Area */}
-                    <div className="flex-1 p-6 overflow-y-auto space-y-4">
-                        {chatMessages.map((message, index) => (
-                            <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${message.role === 'user'
-                                        ? 'bg-black dark:bg-white text-white dark:text-black'
-                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
-                                    }`}>
-                                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                                </div>
+                    <div className="flex-1 p-6 overflow-y-auto">
+                        <div className="flex flex-col gap-2">
+                            <p className="text-gray-800 dark:text-gray-200 leading-relaxed text-sm">
+                                Hi! I'm your AI tutor. I can help you with concepts, solve problems, explain topics, and answer questions related to your subjects. What would you like to learn about today?
+                            </p>
+                            <div className="flex gap-4 mt-2">
+                                <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><Copy className="w-3.5 h-3.5" /></button>
+                                <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><ThumbsUp className="w-3.5 h-3.5" /></button>
+                                <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><ThumbsDown className="w-3.5 h-3.5" /></button>
                             </div>
-                        ))}
-                        {isAiLoading && (
-                            <div className="flex justify-start">
-                                <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-3">
-                                    <div className="flex gap-1">
-                                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                        </div>
                     </div>
 
                     {/* Chat Input Area */}
-                    <div className="p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
+                    <div className="p-4 bg-white dark:bg-gray-900">
                         <div className="relative flex items-center">
                             <div className="w-full relative">
                                 <input
                                     type="text"
                                     value={chatInput}
                                     onChange={(e) => setChatInput(e.target.value)}
-                                    onKeyPress={handleKeyPress}
                                     placeholder="Ask anything..."
-                                    disabled={isAiLoading}
-                                    className="w-full pl-6 pr-24 py-4 rounded-3xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-gray-300 dark:focus:border-gray-600 focus:ring-0 shadow-sm transition-all disabled:opacity-50"
+                                    className="w-full pl-6 pr-24 py-4 rounded-3xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-gray-300 dark:focus:border-gray-600 focus:ring-0 shadow-sm transition-all"
                                 />
                                 <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                                    <button
-                                        onClick={handleSendMessage}
-                                        disabled={isAiLoading || !chatInput.trim()}
-                                        className="p-2 bg-black dark:bg-white rounded-full text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
+                                    <button className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
+                                        <Mic className="w-5 h-5" />
+                                    </button>
+                                    <button className="p-2 bg-gray-200 dark:bg-gray-700 rounded-full text-gray-500 dark:text-gray-300 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
                                         <ArrowUp className="w-5 h-5" />
                                     </button>
                                 </div>
@@ -371,52 +291,82 @@ const FileListCard = ({ resource }: { resource: any }) => (
     </div>
 )
 
-const UploadsView = ({ user, uploads, searchQuery }: any) => (
+const LeaderboardView = ({ leaderboard }: { leaderboard: any[] }) => (
     <div className="px-4 md:px-8 py-6">
-        <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
-                    <UploadIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-black">
+            <div className="border-b border-gray-200 bg-gray-50/50 px-6 py-4 dark:border-gray-800 dark:bg-gray-900/50">
+                <div className="flex items-center gap-2">
+                    <Trophy className="h-5 w-5 text-gray-900 dark:text-white" />
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Top Contributors</h2>
                 </div>
-                <div>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">My Uploads</h2>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{uploads.length} resources uploaded</p>
-                </div>
+            </div>
+            <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                    <thead className="bg-gray-50 text-gray-500 dark:bg-gray-900 dark:text-gray-400">
+                        <tr>
+                            <th className="px-6 py-3 font-medium">Rank</th>
+                            <th className="px-6 py-3 font-medium">Student</th>
+                            <th className="px-6 py-3 font-medium text-right">Reputation</th>
+                            <th className="px-6 py-3 font-medium text-right">Uploads</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+                        {leaderboard.map((user) => (
+                            <tr key={user.rank} className="group hover:bg-gray-50 dark:hover:bg-gray-900/50">
+                                <td className="px-6 py-4">
+                                    <span className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${user.rank <= 3 ? 'bg-gray-900 text-white dark:bg-white dark:text-black shadow-md' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>
+                                        {user.rank}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">{user.name}</td>
+                                <td className="px-6 py-4 text-right font-medium text-gray-900 dark:text-white">{user.points}</td>
+                                <td className="px-6 py-4 text-right text-gray-500 dark:text-gray-400">{user.uploads}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
         </div>
-
-        {uploads.length === 0 ? (
-            <div className="text-center py-16">
-                <UploadIcon className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
-                <p className="text-gray-500 dark:text-gray-400">You haven't uploaded any resources yet.</p>
-            </div>
-        ) : (
-            <div className="grid grid-cols-1 gap-4">
-                {uploads
-                    .filter((upload: any) =>
-                        !searchQuery ||
-                        upload.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        upload.subject?.toLowerCase().includes(searchQuery.toLowerCase())
-                    )
-                    .map((upload: any) => (
-                        <FileListCard key={upload._id} resource={upload} />
-                    ))}
-            </div>
-        )}
     </div>
 )
 
+const UploadsView = ({ user, uploads, searchQuery }: any) => {
+    if (!user) return <EmptyState icon={UploadIcon} title="Sign in to view uploads" />
+
+    const filtered = uploads.filter((u: any) => !searchQuery || u.title.toLowerCase().includes(searchQuery.toLowerCase()))
+
+    if (filtered.length === 0) return <EmptyState icon={UploadIcon} title="No uploads found" />
+
+    return (
+        <div className="px-4 md:px-8 py-6">
+            <h2 className="text-xl font-bold mb-6 text-gray-900 dark:text-white">My Uploads</h2>
+            <div className="grid grid-cols-1 gap-4">
+                {filtered.map((resource: any) => (
+                    <FileListCard key={resource._id} resource={resource} />
+                ))}
+            </div>
+        </div>
+    )
+}
+
 const EmptyState = ({ icon: Icon, title, description, onUploadRequest, filters, activeTab }: any) => (
-    <div className="text-center py-16">
-        <Icon className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{title}</h3>
-        <p className="text-gray-500 dark:text-gray-400 mb-6">{description}</p>
+    <div className="flex flex-col items-center justify-center py-16 text-center rounded-xl border border-dashed border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/20">
+        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4 text-gray-400">
+            <Icon className="w-8 h-8" />
+        </div>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
+        {description && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-sm">{description}</p>}
+
         {onUploadRequest && (
             <button
-                onClick={() => onUploadRequest({ filters, activeTab })}
-                className="px-6 py-3 bg-black dark:bg-white text-white dark:text-black rounded-lg font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
+                onClick={() => onUploadRequest({
+                    ...filters,
+                    resourceType: activeTab !== 'all' ? activeTab : 'notes'
+                })}
+                className="mt-6 flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-lg shadow-blue-500/20"
             >
-                Upload Resource
+                <UploadIcon className="w-4 h-4" />
+                Upload First
             </button>
         )}
     </div>
