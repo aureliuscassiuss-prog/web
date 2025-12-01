@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 import {
     FileText,
     Download,
@@ -43,7 +44,7 @@ interface SubjectObject {
 }
 
 export default function AIPapers() {
-    // --- STATE & LOGIC (FROM CODE 2 - UNTOUCHED) ---
+    const { user } = useAuth()
 
     // Structure State
     const [structure, setStructure] = useState<{ programs: Program[] }>({ programs: [] })
@@ -74,20 +75,25 @@ export default function AIPapers() {
             })
 
         // Check local storage for daily limit
-        const today = new Date().toDateString()
-        const stored = localStorage.getItem('paper_attempts')
-        if (stored) {
-            const { date, count } = JSON.parse(stored)
-            if (date === today) {
-                setAttemptsLeft(count)
+        if (user?.role === 'admin') {
+            setAttemptsLeft(9999) // Admin gets unlimited
+        } else {
+            const today = new Date().toDateString()
+            const stored = localStorage.getItem('paper_attempts')
+            if (stored) {
+                const { date, count } = JSON.parse(stored)
+                if (date === today) {
+                    setAttemptsLeft(count)
+                } else {
+                    localStorage.setItem('paper_attempts', JSON.stringify({ date: today, count: 3 }))
+                    setAttemptsLeft(3)
+                }
             } else {
                 localStorage.setItem('paper_attempts', JSON.stringify({ date: today, count: 3 }))
                 setAttemptsLeft(3)
             }
-        } else {
-            localStorage.setItem('paper_attempts', JSON.stringify({ date: today, count: 3 }))
         }
-    }, [])
+    }, [user])
 
     // Derived State
     const programs = structure.programs || []
@@ -99,7 +105,7 @@ export default function AIPapers() {
     const subjects = selectedCourse?.subjects || []
 
     const handleGenerate = async () => {
-        if (attemptsLeft <= 0) return
+        if (user?.role !== 'admin' && attemptsLeft <= 0) return
         setGenerating(true)
         setGeneratedPdf(null)
 
@@ -137,10 +143,12 @@ export default function AIPapers() {
 
             generatePDF(flatData)
 
-            // Update limit
-            const newCount = attemptsLeft - 1
-            setAttemptsLeft(newCount)
-            localStorage.setItem('paper_attempts', JSON.stringify({ date: new Date().toDateString(), count: newCount }))
+            // Update limit only for non-admins
+            if (user?.role !== 'admin') {
+                const newCount = attemptsLeft - 1
+                setAttemptsLeft(newCount)
+                localStorage.setItem('paper_attempts', JSON.stringify({ date: new Date().toDateString(), count: newCount }))
+            }
 
         } catch (error) {
             console.error('Generation failed:', error)
@@ -214,12 +222,6 @@ export default function AIPapers() {
         const doc = new jsPDF("landscape", "mm", "a4");
         const width = doc.internal.pageSize.getWidth();
         const height = doc.internal.pageSize.getHeight();
-
-        // Watermark REMOVED
-        // doc.setTextColor(220, 220, 220);
-        // doc.setFontSize(50);
-        // doc.setFont("times", "bold");
-        // doc.text("MediNotes", width / 2, height / 2, { align: "center", angle: 45 });
 
         // Reset Text
         doc.setTextColor(0, 0, 0);
@@ -482,12 +484,6 @@ export default function AIPapers() {
                 if (yCol2 + heightNeeded > 200) {
                     doc.addPage();
                     yCol2 = 20;
-                    // Add Watermark to new page REMOVED
-                    // doc.setTextColor(220, 220, 220);
-                    // doc.setFontSize(50);
-                    // doc.setFont("times", "bold");
-                    // doc.text("MediNotes", width / 2, height / 2, { align: "center", angle: 45 });
-                    // doc.setTextColor(0, 0, 0);
                 }
 
                 doc.setFont("times", "normal");
@@ -582,11 +578,11 @@ export default function AIPapers() {
                 <div className="flex items-center gap-3 bg-gray-50 dark:bg-white/5 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-800">
                     <div className="text-right">
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Daily Limit</p>
-                        <p className={`text-sm font-bold ${attemptsLeft > 0 ? 'text-gray-900 dark:text-white' : 'text-red-500'}`}>
-                            {attemptsLeft} / 3 <span className="text-xs font-normal text-gray-500">Remaining</span>
+                        <p className={`text-sm font-bold ${attemptsLeft > 0 || user?.role === 'admin' ? 'text-gray-900 dark:text-white' : 'text-red-500'}`}>
+                            {user?.role === 'admin' ? 'Unlimited' : `${attemptsLeft} / 3`} <span className="text-xs font-normal text-gray-500">Remaining</span>
                         </p>
                     </div>
-                    <div className={`h-8 w-8 rounded-full flex items-center justify-center ${attemptsLeft > 0 ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600' : 'bg-red-100 text-red-600'}`}>
+                    <div className={`h-8 w-8 rounded-full flex items-center justify-center ${attemptsLeft > 0 || user?.role === 'admin' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600' : 'bg-red-100 text-red-600'}`}>
                         <Sparkles size={14} />
                     </div>
                 </div>
@@ -652,10 +648,10 @@ export default function AIPapers() {
                                 <div className="mt-8">
                                     <button
                                         onClick={handleGenerate}
-                                        disabled={generating || !selectedSubject || attemptsLeft <= 0}
+                                        disabled={generating || !selectedSubject || (user?.role !== 'admin' && attemptsLeft <= 0)}
                                         className={`
                                             w-full flex items-center justify-center gap-3 py-4 rounded-xl font-bold text-sm transition-all transform active:scale-[0.99]
-                                            ${generating || !selectedSubject || attemptsLeft <= 0
+                                            ${generating || !selectedSubject || (user?.role !== 'admin' && attemptsLeft <= 0)
                                                 ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
                                                 : 'bg-black dark:bg-white text-white dark:text-black hover:opacity-90 shadow-xl shadow-black/5 dark:shadow-white/5'}
                                         `}
@@ -673,7 +669,7 @@ export default function AIPapers() {
                                         )}
                                     </button>
                                     <p className="text-center text-[10px] text-gray-400 mt-3">
-                                        {attemptsLeft <= 0
+                                        {user?.role !== 'admin' && attemptsLeft <= 0
                                             ? "Daily limit reached. Please come back tomorrow."
                                             : "Generates a printable PDF based on your syllabus structure."}
                                     </p>
