@@ -453,7 +453,7 @@ async function handleForgotPassword(body: any, res: VercelResponse) {
         } else {
             console.log('Sending password reset OTP to:', email);
             await transporter.sendMail({
-                from: `"UniNotes" <${process.env.BREVO_USER}>`,
+                from: '"UniNotes" <otp@trilliontip.com>',
                 to: email,
                 subject: 'UniNotes Password Reset',
                 text: `Your password reset code is: ${otp}. It expires in 10 minutes.`,
