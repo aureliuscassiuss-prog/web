@@ -24,6 +24,8 @@ interface AuthContextType {
     login: (email: string, password: string) => Promise<void>
     register: (name: string, email: string, password: string) => Promise<any>
     verifyOtp: (email: string, otp: string) => Promise<void>
+    forgotPassword: (email: string) => Promise<any>
+    resetPassword: (email: string, otp: string, newPassword: string) => Promise<void>
     googleLogin: (credential: string) => Promise<void>
     logout: () => void
     updateUser: (updatedUser: User) => void
@@ -169,8 +171,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('user', JSON.stringify(updatedUser))
     }
 
+    const forgotPassword = async (email: string) => {
+        const response = await fetch('/api/auth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'forgot-password', email })
+        })
+
+        if (!response.ok) {
+            let errorMessage = 'Failed to send reset code'
+            try {
+                const error = await response.json()
+                errorMessage = error.message || error.error || 'Failed to send reset code'
+            } catch (e) {
+                errorMessage = `Server error (${response.status}): ${response.statusText}`
+            }
+            throw new Error(errorMessage)
+        }
+
+        const data = await response.json()
+        return data
+    }
+
+    const resetPassword = async (email: string, otp: string, newPassword: string) => {
+        const response = await fetch('/api/auth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'reset-password', email, otp, newPassword })
+        })
+
+        if (!response.ok) {
+            let errorMessage = 'Password reset failed'
+            try {
+                const error = await response.json()
+                errorMessage = error.message || error.error || 'Password reset failed'
+            } catch (e) {
+                errorMessage = `Server error (${response.status}): ${response.statusText}`
+            }
+            throw new Error(errorMessage)
+        }
+
+        await response.json()
+    }
+
     return (
-        <AuthContext.Provider value={{ user, token, login, register, verifyOtp, googleLogin, logout, updateUser, isLoading }}>
+        <AuthContext.Provider value={{ user, token, login, register, verifyOtp, forgotPassword, resetPassword, googleLogin, logout, updateUser, isLoading }}>
             {children}
         </AuthContext.Provider>
     )

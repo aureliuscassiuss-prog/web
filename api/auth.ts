@@ -85,10 +85,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return await handleRegister(body, res);
         } else if (action === 'verify-otp') {
             return await handleVerifyOtp(body, res);
+        } else if (action === 'forgot-password') {
+            return await handleForgotPassword(body, res);
+        } else if (action === 'reset-password') {
+            return await handleResetPassword(body, res);
         } else if (action === 'google') {
             return await handleGoogleAuth(body, res);
         } else {
-            return res.status(400).json({ message: 'Invalid action. Use: login, register, verify-otp, or google' });
+            return res.status(400).json({ message: 'Invalid action. Use: login, register, verify-otp, forgot-password, reset-password, or google' });
         }
     } catch (error) {
         console.error('Auth error:', error);
@@ -403,3 +407,136 @@ async function handleGoogleAuth(body: any, res: VercelResponse) {
         }
     });
 }
+
+async function handleForgotPassword(body: any, res: VercelResponse) {
+    const { email } = body;
+
+    if (!email) {
+        return res.status(400).json({ message: 'Email is required' });
+    }
+
+    const db = await getDb();
+
+    // Check if user exists
+    const user = await db.collection('users').findOne({ email });
+    if (!user) {
+        // Don't reveal if user exists or not for security
+        return res.status(200).json({
+            message: 'If an account exists with this email, you will receive a password reset code.',
+            requireOtp: true,
+            email
+        });
+    }
+
+    // Generate 4-digit OTP
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Store in password_reset collection
+    await db.collection('password_resets').updateOne(
+        { email },
+        {
+            $set: {
+                email,
+                otp,
+                otpExpires,
+                createdAt: new Date()
+            }
+        },
+        { upsert: true }
+    );
+
+    // Send OTP Email via Brevo
+    try {
+        if (!process.env.BREVO_USER || !process.env.BREVO_PASS) {
+            console.warn('Brevo credentials not set, skipping email sending. OTP:', otp);
+        } else {
+            console.log('Sending password reset OTP to:', email);
+            await transporter.sendMail({
+                from: `"UniNotes" <${process.env.BREVO_USER}>`,
+                to: email,
+                subject: 'UniNotes Password Reset',
+                text: `Your password reset code is: ${otp}. It expires in 10 minutes.`,
+                html: `<p>Your password reset code is: <strong>${otp}</strong></p><p>It expires in 10 minutes.</p><p>If you didn't request this, please ignore this email.</p>`
+            });
+            console.log('Password reset OTP sent successfully');
+        }
+    } catch (emailError: any) {
+        console.error('Failed to send password reset email:', emailError);
+
+        let errorMessage = 'Failed to send password reset email';
+        if (emailError.code === 'EAUTH') {
+            errorMessage = 'Email authentication failed. Please check server configuration.';
+        } else if (emailError.response) {
+            errorMessage = `Email provider error: ${emailError.response}`;
+        } else if (emailError.message) {
+            errorMessage = `Email error: ${emailError.message}`;
+        }
+
+        return res.status(500).json({
+            message: errorMessage,
+            details: emailError.toString()
+        });
+    }
+
+    return res.status(200).json({
+        message: 'If an account exists with this email, you will receive a password reset code.',
+        requireOtp: true,
+        email
+    });
+}
+
+async function handleResetPassword(body: any, res: VercelResponse) {
+    const { email, otp, newPassword } = body;
+
+    if (!email || !otp || !newPassword) {
+        return res.status(400).json({ message: 'Email, OTP, and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+        return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
+
+    const db = await getDb();
+
+    // Check password reset request
+    const resetRequest = await db.collection('password_resets').findOne({ email });
+
+    if (!resetRequest) {
+        return res.status(400).json({ message: 'Password reset request not found or expired' });
+    }
+
+    if (resetRequest.otp !== otp) {
+        return res.status(400).json({ message: 'Invalid OTP' });
+    }
+
+    if (new Date() > resetRequest.otpExpires) {
+        return res.status(400).json({ message: 'OTP expired' });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update user password
+    const result = await db.collection('users').updateOne(
+        { email },
+        {
+            $set: {
+                password: hashedPassword,
+                updatedAt: new Date()
+            }
+        }
+    );
+
+    if (result.matchedCount === 0) {
+        return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Delete password reset request
+    await db.collection('password_resets').deleteOne({ email });
+
+    return res.status(200).json({
+        message: 'Password reset successfully'
+    });
+}
+

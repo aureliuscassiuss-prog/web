@@ -34,12 +34,16 @@ function GoogleLoginButton({ onSuccess, onError }: { onSuccess: (token: string) 
 }
 
 export default function AuthModal({ isOpen, onClose, onSignupSuccess }: AuthModalProps) {
-    const { login, register, verifyOtp, googleLogin: authGoogleLogin } = useAuth()
+    const { login, register, verifyOtp, forgotPassword, resetPassword, googleLogin: authGoogleLogin } = useAuth()
     const [isLogin, setIsLogin] = useState(true)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState('')
     const [showOtp, setShowOtp] = useState(false)
+    const [showForgotPassword, setShowForgotPassword] = useState(false)
+    const [showResetPassword, setShowResetPassword] = useState(false)
     const [otp, setOtp] = useState('')
+    const [newPassword, setNewPassword] = useState('')
+    const [confirmPassword, setConfirmPassword] = useState('')
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -74,23 +78,18 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess }: AuthModa
                 await login(formData.email, formData.password)
                 onClose()
             } else {
-                console.log('Attempting registration...');
                 const response = await register(formData.name, formData.email, formData.password)
-                console.log('Registration response:', response);
                 if (response && response.requireOtp) {
-                    console.log('OTP required, showing OTP form');
                     setShowOtp(true)
-                    setIsLoading(false) // Stop loading to show OTP form
+                    setIsLoading(false)
                     return
                 }
                 onClose()
-                // Trigger profile completion after successful signup
                 if (onSignupSuccess) {
                     onSignupSuccess()
                 }
             }
         } catch (err: any) {
-            console.error('Auth error:', err);
             setError(err.message || 'Authentication failed')
             setIsLoading(false)
         }
@@ -111,11 +110,71 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess }: AuthModa
         }
     }
 
+    const handleForgotPassword = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setIsLoading(true)
+        setError('')
+
+        try {
+            const response = await forgotPassword(formData.email)
+            if (response && response.requireOtp) {
+                setShowForgotPassword(false)
+                setShowResetPassword(true)
+                setIsLoading(false)
+            }
+        } catch (err: any) {
+            setError(err.message || 'Failed to send reset code')
+            setIsLoading(false)
+        }
+    }
+
+    const handleResetPassword = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setIsLoading(true)
+        setError('')
+
+        if (newPassword !== confirmPassword) {
+            setError('Passwords do not match')
+            setIsLoading(false)
+            return
+        }
+
+        try {
+            await resetPassword(formData.email, otp, newPassword)
+            setShowResetPassword(false)
+            setShowForgotPassword(false)
+            setIsLogin(true)
+            setOtp('')
+            setNewPassword('')
+            setConfirmPassword('')
+            setError('')
+            alert('Password reset successfully! Please login with your new password.')
+            setIsLoading(false)
+        } catch (err: any) {
+            setError(err.message || 'Password reset failed')
+            setIsLoading(false)
+        }
+    }
+
     // Standard styling matching other components
     const inputWrapperClass = "relative"
     const inputClass = "flex h-10 w-full rounded-md border border-gray-200 bg-white px-3 py-2 pl-9 md:pl-10 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-800 dark:bg-gray-950 dark:ring-offset-gray-950 dark:placeholder:text-gray-400 dark:focus-visible:ring-gray-300 transition-all"
     const labelClass = "text-xs md:text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-1.5 md:mb-2 block text-gray-900 dark:text-gray-100"
     const iconClass = "absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 md:h-4 md:w-4 text-gray-500 dark:text-gray-400"
+
+    const getModalTitle = () => {
+        if (showOtp) return 'Enter Verification Code'
+        if (showForgotPassword) return 'Reset Password'
+        if (showResetPassword) return 'Enter New Password'
+        return isLogin ? 'Welcome back' : 'Create an account'
+    }
+
+    const getModalDescription = () => {
+        if (showOtp) return `We sent a 4-digit code to ${formData.email}`
+        if (showForgotPassword) return 'Enter your email to receive a password reset code'
+        if (showResetPassword) return `Enter the code sent to ${formData.email} and your new password`
+        return isLogin ? 'Enter your email below to sign in to your account' : 'Enter your details below to create your account'
+    }
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -140,14 +199,10 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess }: AuthModa
                 {/* Header */}
                 <div className="flex flex-col space-y-1.5 p-4 md:p-6 pb-2 text-center sm:text-left">
                     <h2 className="text-lg font-semibold leading-none tracking-tight text-gray-900 dark:text-white">
-                        {showOtp ? 'Enter Verification Code' : (isLogin ? 'Welcome back' : 'Create an account')}
+                        {getModalTitle()}
                     </h2>
                     <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
-                        {showOtp
-                            ? `We sent a 4-digit code to ${formData.email}`
-                            : (isLogin
-                                ? 'Enter your email below to sign in to your account'
-                                : 'Enter your details below to create your account')}
+                        {getModalDescription()}
                     </p>
                 </div>
 
@@ -194,6 +249,129 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess }: AuthModa
                                 className="w-full text-xs text-gray-500 hover:underline mt-2"
                             >
                                 Back to Sign Up
+                            </button>
+                        </form>
+                    ) : showForgotPassword ? (
+                        <form onSubmit={handleForgotPassword} className="space-y-3 md:space-y-4">
+                            <div>
+                                <label className={labelClass}>Email</label>
+                                <div className={inputWrapperClass}>
+                                    <Mail className={iconClass} />
+                                    <input
+                                        type="email"
+                                        required
+                                        value={formData.email}
+                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                        className={inputClass}
+                                        placeholder="name@example.com"
+                                    />
+                                </div>
+                            </div>
+
+                            {error && (
+                                <div className="rounded-md bg-red-50 p-3 text-xs md:text-sm text-red-500 dark:bg-red-900/20 dark:text-red-400 border border-red-100 dark:border-red-900">
+                                    {error}
+                                </div>
+                            )}
+
+                            <button
+                                type="submit"
+                                disabled={isLoading}
+                                className="btn btn-primary w-full h-9 md:h-10 text-sm md:text-base"
+                            >
+                                {isLoading ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    'Send Reset Code'
+                                )}
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowForgotPassword(false)
+                                    setIsLogin(true)
+                                }}
+                                className="w-full text-xs text-gray-500 hover:underline mt-2"
+                            >
+                                Back to Login
+                            </button>
+                        </form>
+                    ) : showResetPassword ? (
+                        <form onSubmit={handleResetPassword} className="space-y-3 md:space-y-4">
+                            <div>
+                                <label className={labelClass}>OTP Code</label>
+                                <div className={inputWrapperClass}>
+                                    <Lock className={iconClass} />
+                                    <input
+                                        type="text"
+                                        required
+                                        maxLength={4}
+                                        value={otp}
+                                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                                        className={`${inputClass} tracking-widest text-center text-lg`}
+                                        placeholder="0000"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className={labelClass}>New Password</label>
+                                <div className={inputWrapperClass}>
+                                    <Lock className={iconClass} />
+                                    <input
+                                        type="password"
+                                        required
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        className={inputClass}
+                                        placeholder="••••••••"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className={labelClass}>Confirm Password</label>
+                                <div className={inputWrapperClass}>
+                                    <Lock className={iconClass} />
+                                    <input
+                                        type="password"
+                                        required
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        className={inputClass}
+                                        placeholder="••••••••"
+                                    />
+                                </div>
+                            </div>
+
+                            {error && (
+                                <div className="rounded-md bg-red-50 p-3 text-xs md:text-sm text-red-500 dark:bg-red-900/20 dark:text-red-400 border border-red-100 dark:border-red-900">
+                                    {error}
+                                </div>
+                            )}
+
+                            <button
+                                type="submit"
+                                disabled={isLoading || otp.length !== 4}
+                                className="btn btn-primary w-full h-9 md:h-10 text-sm md:text-base"
+                            >
+                                {isLoading ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    'Reset Password'
+                                )}
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowResetPassword(false)
+                                    setIsLogin(true)
+                                }}
+                                className="w-full text-xs text-gray-500 hover:underline mt-2"
+                            >
+                                Back to Login
                             </button>
                         </form>
                     ) : (
@@ -245,6 +423,21 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess }: AuthModa
                                 </div>
                             </div>
 
+                            {isLogin && (
+                                <div className="text-right">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setShowForgotPassword(true)
+                                            setIsLogin(false)
+                                        }}
+                                        className="text-xs text-gray-500 hover:underline"
+                                    >
+                                        Forgot password?
+                                    </button>
+                                </div>
+                            )}
+
                             {error && (
                                 <div className="rounded-md bg-red-50 p-3 text-xs md:text-sm text-red-500 dark:bg-red-900/20 dark:text-red-400 border border-red-100 dark:border-red-900">
                                     {error}
@@ -268,7 +461,7 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess }: AuthModa
                         </form>
                     )}
 
-                    {!showOtp && (
+                    {!showOtp && !showForgotPassword && !showResetPassword && (
                         <>
                             {/* Divider */}
                             <div className="relative my-4 md:my-6">
