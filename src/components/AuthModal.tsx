@@ -74,8 +74,11 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess }: AuthModa
                 await login(formData.email, formData.password)
                 onClose()
             } else {
+                console.log('Attempting registration...');
                 const response = await register(formData.name, formData.email, formData.password)
+                console.log('Registration response:', response);
                 if (response && response.requireOtp) {
+                    console.log('OTP required, showing OTP form');
                     setShowOtp(true)
                     setIsLoading(false) // Stop loading to show OTP form
                     return
@@ -87,6 +90,7 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess }: AuthModa
                 }
             }
         } catch (err: any) {
+            console.error('Auth error:', err);
             setError(err.message || 'Authentication failed')
             setIsLoading(false)
         }

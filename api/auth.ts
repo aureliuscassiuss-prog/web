@@ -76,6 +76,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         const { action } = body || {};
+        console.log('Auth API Request:', { action, email: body?.email });
 
         // Route to appropriate handler based on action
         if (action === 'login') {
@@ -199,6 +200,7 @@ async function handleRegister(body: any, res: VercelResponse) {
         if (!process.env.BREVO_USER || !process.env.BREVO_PASS) {
             console.warn('Brevo credentials not set, skipping email sending. OTP:', otp);
         } else {
+            console.log('Sending OTP email via Brevo to:', email);
             await transporter.sendMail({
                 from: `"UniNotes" <${process.env.BREVO_USER}>`, // Must be a verified sender in Brevo
                 to: email,
@@ -206,12 +208,14 @@ async function handleRegister(body: any, res: VercelResponse) {
                 text: `Your verification code is: ${otp}. It expires in 10 minutes.`,
                 html: `<p>Your verification code is: <strong>${otp}</strong></p><p>It expires in 10 minutes.</p>`
             });
+            console.log('OTP email sent successfully');
         }
     } catch (emailError) {
         console.error('Failed to send email:', emailError);
         return res.status(500).json({ message: 'Failed to send verification email' });
     }
 
+    console.log('Registration successful, requiring OTP');
     return res.status(200).json({
         message: 'OTP sent to email',
         requireOtp: true,
