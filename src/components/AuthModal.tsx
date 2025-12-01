@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import { X, Mail, Lock, User, ArrowRight, Loader2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
@@ -35,10 +34,12 @@ function GoogleLoginButton({ onSuccess, onError }: { onSuccess: (token: string) 
 }
 
 export default function AuthModal({ isOpen, onClose, onSignupSuccess }: AuthModalProps) {
-    const { login, register, googleLogin: authGoogleLogin } = useAuth()
+    const { login, register, verifyOtp, googleLogin: authGoogleLogin } = useAuth()
     const [isLogin, setIsLogin] = useState(true)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState('')
+    const [showOtp, setShowOtp] = useState(false)
+    const [otp, setOtp] = useState('')
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -73,7 +74,12 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess }: AuthModa
                 await login(formData.email, formData.password)
                 onClose()
             } else {
-                await register(formData.name, formData.email, formData.password)
+                const response = await register(formData.name, formData.email, formData.password)
+                if (response && response.requireOtp) {
+                    setShowOtp(true)
+                    setIsLoading(false) // Stop loading to show OTP form
+                    return
+                }
                 onClose()
                 // Trigger profile completion after successful signup
                 if (onSignupSuccess) {
@@ -82,7 +88,21 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess }: AuthModa
             }
         } catch (err: any) {
             setError(err.message || 'Authentication failed')
-        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    const handleOtpVerify = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setIsLoading(true)
+        setError('')
+
+        try {
+            await verifyOtp(formData.email, otp)
+            onClose()
+            if (onSignupSuccess) onSignupSuccess()
+        } catch (err: any) {
+            setError(err.message || 'OTP verification failed')
             setIsLoading(false)
         }
     }
@@ -116,122 +136,174 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess }: AuthModa
                 {/* Header */}
                 <div className="flex flex-col space-y-1.5 p-4 md:p-6 pb-2 text-center sm:text-left">
                     <h2 className="text-lg font-semibold leading-none tracking-tight text-gray-900 dark:text-white">
-                        {isLogin ? 'Welcome back' : 'Create an account'}
+                        {showOtp ? 'Enter Verification Code' : (isLogin ? 'Welcome back' : 'Create an account')}
                     </h2>
                     <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
-                        {isLogin
-                            ? 'Enter your email below to sign in to your account'
-                            : 'Enter your details below to create your account'}
+                        {showOtp
+                            ? `We sent a 4-digit code to ${formData.email}`
+                            : (isLogin
+                                ? 'Enter your email below to sign in to your account'
+                                : 'Enter your details below to create your account')}
                     </p>
                 </div>
 
                 <div className="p-4 md:p-6 pt-2 md:pt-4">
-                    <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
-                        {!isLogin && (
+                    {showOtp ? (
+                        <form onSubmit={handleOtpVerify} className="space-y-3 md:space-y-4">
                             <div>
-                                <label className={labelClass}>Full Name</label>
+                                <label className={labelClass}>OTP Code</label>
                                 <div className={inputWrapperClass}>
-                                    <User className={iconClass} />
+                                    <Lock className={iconClass} />
                                     <input
                                         type="text"
                                         required
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        className={inputClass}
-                                        placeholder="John Doe"
+                                        maxLength={4}
+                                        value={otp}
+                                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                                        className={`${inputClass} tracking-widest text-center text-lg`}
+                                        placeholder="0000"
                                     />
                                 </div>
                             </div>
-                        )}
 
-                        <div>
-                            <label className={labelClass}>Email</label>
-                            <div className={inputWrapperClass}>
-                                <Mail className={iconClass} />
-                                <input
-                                    type="email"
-                                    required
-                                    value={formData.email}
-                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                    className={inputClass}
-                                    placeholder="name@example.com"
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className={labelClass}>Password</label>
-                            <div className={inputWrapperClass}>
-                                <Lock className={iconClass} />
-                                <input
-                                    type="password"
-                                    required
-                                    value={formData.password}
-                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                    className={inputClass}
-                                    placeholder="••••••••"
-                                />
-                            </div>
-                        </div>
-
-                        {error && (
-                            <div className="rounded-md bg-red-50 p-3 text-xs md:text-sm text-red-500 dark:bg-red-900/20 dark:text-red-400 border border-red-100 dark:border-red-900">
-                                {error}
-                            </div>
-                        )}
-
-                        <button
-                            type="submit"
-                            disabled={isLoading}
-                            className="btn btn-primary w-full h-9 md:h-10 text-sm md:text-base"
-                        >
-                            {isLoading ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <>
-                                    {isLogin ? 'Sign In' : 'Sign Up'}
-                                    {!isLoading && <ArrowRight className="ml-2 h-4 w-4" />}
-                                </>
+                            {error && (
+                                <div className="rounded-md bg-red-50 p-3 text-xs md:text-sm text-red-500 dark:bg-red-900/20 dark:text-red-400 border border-red-100 dark:border-red-900">
+                                    {error}
+                                </div>
                             )}
-                        </button>
-                    </form>
 
-                    {/* Divider */}
-                    <div className="relative my-4 md:my-6">
-                        <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t border-gray-200 dark:border-gray-800" />
-                        </div>
-                        <div className="relative flex justify-center text-[10px] md:text-xs uppercase">
-                            <span className="bg-white px-2 text-gray-500 dark:bg-gray-950 dark:text-gray-400">
-                                Or continue with
-                            </span>
-                        </div>
-                    </div>
+                            <button
+                                type="submit"
+                                disabled={isLoading || otp.length !== 4}
+                                className="btn btn-primary w-full h-9 md:h-10 text-sm md:text-base"
+                            >
+                                {isLoading ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    'Verify Email'
+                                )}
+                            </button>
 
-                    {/* Social Login - Google Only */}
-                    {googleClientId ? (
-                        <GoogleLoginButton
-                            onSuccess={handleGoogleSuccess}
-                            onError={() => setError('Google login failed')}
-                        />
+                            <button
+                                type="button"
+                                onClick={() => setShowOtp(false)}
+                                className="w-full text-xs text-gray-500 hover:underline mt-2"
+                            >
+                                Back to Sign Up
+                            </button>
+                        </form>
                     ) : (
-                        <div className="text-center text-xs text-gray-400">
-                            (Google Login not configured)
-                        </div>
+                        <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
+                            {!isLogin && (
+                                <div>
+                                    <label className={labelClass}>Full Name</label>
+                                    <div className={inputWrapperClass}>
+                                        <User className={iconClass} />
+                                        <input
+                                            type="text"
+                                            required
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                            className={inputClass}
+                                            placeholder="John Doe"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            <div>
+                                <label className={labelClass}>Email</label>
+                                <div className={inputWrapperClass}>
+                                    <Mail className={iconClass} />
+                                    <input
+                                        type="email"
+                                        required
+                                        value={formData.email}
+                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                        className={inputClass}
+                                        placeholder="name@example.com"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className={labelClass}>Password</label>
+                                <div className={inputWrapperClass}>
+                                    <Lock className={iconClass} />
+                                    <input
+                                        type="password"
+                                        required
+                                        value={formData.password}
+                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                        className={inputClass}
+                                        placeholder="••••••••"
+                                    />
+                                </div>
+                            </div>
+
+                            {error && (
+                                <div className="rounded-md bg-red-50 p-3 text-xs md:text-sm text-red-500 dark:bg-red-900/20 dark:text-red-400 border border-red-100 dark:border-red-900">
+                                    {error}
+                                </div>
+                            )}
+
+                            <button
+                                type="submit"
+                                disabled={isLoading}
+                                className="btn btn-primary w-full h-9 md:h-10 text-sm md:text-base"
+                            >
+                                {isLoading ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <>
+                                        {isLogin ? 'Sign In' : 'Sign Up'}
+                                        {!isLoading && <ArrowRight className="ml-2 h-4 w-4" />}
+                                    </>
+                                )}
+                            </button>
+                        </form>
                     )}
 
-                    <div className="mt-4 md:mt-6 text-center text-xs md:text-sm text-gray-500 dark:text-gray-400">
-                        {isLogin ? "Don't have an account? " : "Already have an account? "}
-                        <button
-                            onClick={() => {
-                                setIsLogin(!isLogin)
-                                setError('')
-                            }}
-                            className="font-semibold text-gray-900 hover:underline dark:text-gray-100"
-                        >
-                            {isLogin ? 'Sign up' : 'Sign in'}
-                        </button>
-                    </div>
+                    {!showOtp && (
+                        <>
+                            {/* Divider */}
+                            <div className="relative my-4 md:my-6">
+                                <div className="absolute inset-0 flex items-center">
+                                    <span className="w-full border-t border-gray-200 dark:border-gray-800" />
+                                </div>
+                                <div className="relative flex justify-center text-[10px] md:text-xs uppercase">
+                                    <span className="bg-white px-2 text-gray-500 dark:bg-gray-950 dark:text-gray-400">
+                                        Or continue with
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Social Login - Google Only */}
+                            {googleClientId ? (
+                                <GoogleLoginButton
+                                    onSuccess={handleGoogleSuccess}
+                                    onError={() => setError('Google login failed')}
+                                />
+                            ) : (
+                                <div className="text-center text-xs text-gray-400">
+                                    (Google Login not configured)
+                                </div>
+                            )}
+
+                            <div className="mt-4 md:mt-6 text-center text-xs md:text-sm text-gray-500 dark:text-gray-400">
+                                {isLogin ? "Don't have an account? " : "Already have an account? "}
+                                <button
+                                    onClick={() => {
+                                        setIsLogin(!isLogin)
+                                        setError('')
+                                    }}
+                                    className="font-semibold text-gray-900 hover:underline dark:text-gray-100"
+                                >
+                                    {isLogin ? 'Sign up' : 'Sign in'}
+                                </button>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         </div>

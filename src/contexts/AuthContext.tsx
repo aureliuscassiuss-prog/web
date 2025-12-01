@@ -22,7 +22,8 @@ interface AuthContextType {
     user: User | null
     token: string | null
     login: (email: string, password: string) => Promise<void>
-    register: (name: string, email: string, password: string) => Promise<void>
+    register: (name: string, email: string, password: string) => Promise<any>
+    verifyOtp: (email: string, otp: string) => Promise<void>
     googleLogin: (credential: string) => Promise<void>
     logout: () => void
     updateUser: (updatedUser: User) => void
@@ -87,7 +88,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const error = await response.json()
                 errorMessage = error.message || error.error || 'Registration failed'
             } catch (e) {
-                // Response is not JSON (likely HTML error page)
+                errorMessage = `Server error (${response.status}): ${response.statusText}`
+            }
+            throw new Error(errorMessage)
+        }
+
+        const data = await response.json()
+
+        // If OTP is required, don't set user/token yet
+        if (data.requireOtp) {
+            return data
+        }
+
+        setToken(data.token)
+        setUser(data.user)
+        localStorage.setItem('token', data.token)
+        localStorage.setItem('user', JSON.stringify(data.user))
+        return data
+    }
+
+    const verifyOtp = async (email: string, otp: string) => {
+        const response = await fetch('/api/auth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'verify-otp', email, otp })
+        })
+
+        if (!response.ok) {
+            let errorMessage = 'OTP verification failed'
+            try {
+                const error = await response.json()
+                errorMessage = error.message || error.error || 'OTP verification failed'
+            } catch (e) {
                 errorMessage = `Server error (${response.status}): ${response.statusText}`
             }
             throw new Error(errorMessage)
@@ -138,7 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     return (
-        <AuthContext.Provider value={{ user, token, login, register, googleLogin, logout, updateUser, isLoading }}>
+        <AuthContext.Provider value={{ user, token, login, register, verifyOtp, googleLogin, logout, updateUser, isLoading }}>
             {children}
         </AuthContext.Provider>
     )

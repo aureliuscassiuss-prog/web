@@ -3,6 +3,7 @@ import { getDb } from '../lib/mongodb.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { ObjectId } from 'mongodb';
+import nodemailer from 'nodemailer';
 
 interface User {
     _id: ObjectId;
@@ -26,6 +27,17 @@ interface User {
 }
 
 const ADMIN_EMAIL = 'rajraja8852@gmail.com';
+
+// Configure Nodemailer Transporter for Brevo
+const transporter = nodemailer.createTransport({
+    host: 'smtp-relay.brevo.com',
+    port: 587,
+    secure: false, // true for 465, false for other ports
+    auth: {
+        user: process.env.BREVO_USER,
+        pass: process.env.BREVO_PASS
+    }
+});
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Content-Type', 'application/json');
@@ -70,10 +82,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return await handleLogin(body, res);
         } else if (action === 'register') {
             return await handleRegister(body, res);
+        } else if (action === 'verify-otp') {
+            return await handleVerifyOtp(body, res);
         } else if (action === 'google') {
             return await handleGoogleAuth(body, res);
         } else {
-            return res.status(400).json({ message: 'Invalid action. Use: login, register, or google' });
+            return res.status(400).json({ message: 'Invalid action. Use: login, register, verify-otp, or google' });
         }
     } catch (error) {
         console.error('Auth error:', error);
@@ -156,19 +170,87 @@ async function handleRegister(body: any, res: VercelResponse) {
         return res.status(400).json({ message: 'User already exists' });
     }
 
+    // Generate 4-digit OTP
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Store in pending_registrations
+    await db.collection('pending_registrations').updateOne(
+        { email },
+        {
+            $set: {
+                name,
+                email,
+                password: hashedPassword,
+                gender: gender || 'male',
+                otp,
+                otpExpires,
+                createdAt: new Date()
+            }
+        },
+        { upsert: true }
+    );
+
+    // Send OTP Email via Brevo
+    try {
+        if (!process.env.BREVO_USER || !process.env.BREVO_PASS) {
+            console.warn('Brevo credentials not set, skipping email sending. OTP:', otp);
+        } else {
+            await transporter.sendMail({
+                from: `"UniNotes" <${process.env.BREVO_USER}>`, // Must be a verified sender in Brevo
+                to: email,
+                subject: 'UniNotes Verification OTP',
+                text: `Your verification code is: ${otp}. It expires in 10 minutes.`,
+                html: `<p>Your verification code is: <strong>${otp}</strong></p><p>It expires in 10 minutes.</p>`
+            });
+        }
+    } catch (emailError) {
+        console.error('Failed to send email:', emailError);
+        return res.status(500).json({ message: 'Failed to send verification email' });
+    }
+
+    return res.status(200).json({
+        message: 'OTP sent to email',
+        requireOtp: true,
+        email
+    });
+}
+
+async function handleVerifyOtp(body: any, res: VercelResponse) {
+    const { email, otp } = body;
+
+    if (!email || !otp) {
+        return res.status(400).json({ message: 'Email and OTP are required' });
+    }
+
+    const db = await getDb();
+    const pendingUser = await db.collection('pending_registrations').findOne({ email });
+
+    if (!pendingUser) {
+        return res.status(400).json({ message: 'Registration request not found or expired' });
+    }
+
+    if (pendingUser.otp !== otp) {
+        return res.status(400).json({ message: 'Invalid OTP' });
+    }
+
+    if (new Date() > pendingUser.otpExpires) {
+        return res.status(400).json({ message: 'OTP expired' });
+    }
+
     const isAdmin = email === ADMIN_EMAIL;
 
-    // Create user with extended profile
+    // Create user
     const result = await db.collection('users').insertOne({
-        name,
-        email,
-        password: hashedPassword,
+        name: pendingUser.name,
+        email: pendingUser.email,
+        password: pendingUser.password,
         reputation: 0,
-        avatar: gender === 'female' ? '/girl.webp' : '/1.webp',
-        gender: gender || 'male', // Default to male if not specified, but frontend should enforce
+        avatar: pendingUser.gender === 'female' ? '/girl.webp' : '/1.webp',
+        gender: pendingUser.gender || 'male',
         phone: '',
         semester: 1,
         college: 'Medicaps University',
@@ -180,9 +262,12 @@ async function handleRegister(body: any, res: VercelResponse) {
         createdAt: new Date()
     });
 
+    // Delete pending registration
+    await db.collection('pending_registrations').deleteOne({ email });
+
     // Create token
     const token = jwt.sign(
-        { userId: result.insertedId, name, email, role: isAdmin ? 'admin' : 'user' },
+        { userId: result.insertedId, name: pendingUser.name, email, role: isAdmin ? 'admin' : 'user' },
         process.env.JWT_SECRET!,
         { expiresIn: '7d' }
     );
@@ -191,11 +276,11 @@ async function handleRegister(body: any, res: VercelResponse) {
         token,
         user: {
             id: result.insertedId,
-            name,
+            name: pendingUser.name,
             email,
             reputation: 0,
-            avatar: gender === 'female' ? '/girl.webp' : '/1.webp',
-            gender: gender || 'male',
+            avatar: pendingUser.gender === 'female' ? '/girl.webp' : '/1.webp',
+            gender: pendingUser.gender || 'male',
             phone: '',
             semester: 1,
             college: 'Medicaps University',
