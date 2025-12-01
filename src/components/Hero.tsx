@@ -92,48 +92,20 @@ export default function Hero({ onGetStarted }: HeroProps) {
                 <div className="relative rounded-2xl border border-gray-200/50 bg-white/40 p-2 dark:border-white/10 dark:bg-white/5 backdrop-blur-2xl shadow-2xl ring-1 ring-black/5 dark:ring-white/5">
 
                     {/* The Screen/Frame */}
-                    <div className="aspect-[16/9] w-full overflow-hidden rounded-xl bg-gray-50 dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/5 relative flex items-center justify-center group cursor-pointer">
+                    <div className="aspect-[16/9] w-full overflow-hidden rounded-xl bg-gray-50 dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/5 relative flex items-center justify-center group">
 
-                        {/* Inner Grid */}
-                        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] opacity-50"></div>
+                        {/* Video Background */}
+                        <video
+                            src="/1.mp4"
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            className="absolute inset-0 w-full h-full object-cover"
+                        />
 
-                        {/* Floating UI Widget 1: AI Chat (Left) */}
-                        <div className="absolute left-4 top-1/4 hidden md:flex flex-col gap-2 p-3 rounded-lg border border-gray-200 dark:border-white/10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md shadow-lg w-48 animate-bounce-slow [animation-duration:3s]">
-                            <div className="flex items-center gap-2">
-                                <div className="h-6 w-6 rounded-full bg-blue-500 flex items-center justify-center"><Sparkles className="h-3 w-3 text-white" /></div>
-                                <div className="h-2 w-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                            </div>
-                            <div className="h-2 w-32 bg-gray-100 dark:bg-gray-800 rounded"></div>
-                            <div className="h-2 w-24 bg-gray-100 dark:bg-gray-800 rounded"></div>
-                        </div>
-
-                        {/* Floating UI Widget 2: Graph (Right) */}
-                        <div className="absolute right-4 bottom-1/4 hidden md:flex flex-col gap-2 p-3 rounded-lg border border-gray-200 dark:border-white/10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md shadow-lg w-40 animate-bounce-slow [animation-duration:4s]">
-                            <div className="flex items-center justify-between mb-1">
-                                <div className="text-xs font-semibold text-gray-500">Trend</div>
-                                <TrendingUp className="h-3 w-3 text-green-500" />
-                            </div>
-                            <div className="flex items-end gap-1 h-8">
-                                <div className="w-full bg-blue-500/20 h-[40%] rounded-sm"></div>
-                                <div className="w-full bg-blue-500/40 h-[70%] rounded-sm"></div>
-                                <div className="w-full bg-blue-500 h-[90%] rounded-sm"></div>
-                            </div>
-                        </div>
-
-                        {/* Central Play Button */}
-                        <div className="relative z-10 flex flex-col items-center gap-4 transition-transform duration-300 group-hover:scale-105">
-                            <div className="group/play relative flex items-center justify-center">
-                                <div className="absolute inset-0 rounded-full bg-blue-500/20 animate-ping duration-2000"></div>
-                                <div className="relative rounded-full bg-white dark:bg-white/10 p-5 shadow-xl ring-1 ring-gray-100 dark:ring-white/10 backdrop-blur-md transition-colors group-hover/play:bg-blue-50 dark:group-hover/play:bg-white/20">
-                                    <PlayCircle className="h-12 w-12 text-gray-900 dark:text-white fill-current/10" />
-                                </div>
-                            </div>
-                            <div className="text-center">
-                                <p className="text-sm md:text-base font-semibold text-gray-900 dark:text-white tracking-wide">
-                                    See how MediNotes works
-                                </p>
-                            </div>
-                        </div>
+                        {/* Overlay Gradient for better text readability if needed, or just subtle polish */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
                     </div>
                 </div>
 
