@@ -9,7 +9,8 @@ import {
     Moon,
     Bot,
     User,
-    Sparkles
+    Sparkles,
+    GraduationCap
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -31,6 +32,7 @@ export default function Sidebar({ onMobileMenuClose, isDark, toggleTheme, spotli
             items: [
                 { path: '/', label: 'Home', icon: Home },
                 { path: '/resources', label: 'Resources', icon: Library, id: 'browse-resources' },
+                { path: '/preparation', label: 'Preparation', icon: GraduationCap },
                 { path: '/ai-assistant', label: 'AI Assistant', icon: Bot, badge: 'New' },
                 { path: '/leaderboard', label: 'Leaderboard', icon: BarChart3 },
             ]

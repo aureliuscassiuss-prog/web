@@ -312,6 +312,77 @@ async function handleUpdateStructure(body: any, res: VercelResponse) {
                 { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 's.name': subjectName }] }
             );
         }
+        else if (structureAction === 'add-video') {
+            const { subjectName, unitName, videoTitle, videoUrl } = body;
+
+            // 1. Convert unit string to object if necessary
+            await db.collection('academic_structure').updateOne(
+                {
+                    _id: 'main',
+                    'programs.id': programId,
+                    'programs.years.id': yearId,
+                    'programs.years.courses.id': courseId,
+                    'programs.years.courses.subjects.name': subjectName,
+                    'programs.years.courses.subjects.units': unitName // Matches string unit
+                } as any,
+                {
+                    $set: {
+                        'programs.$[p].years.$[y].courses.$[c].subjects.$[s].units.$[u]': {
+                            name: unitName,
+                            videos: []
+                        }
+                    }
+                } as any,
+                {
+                    arrayFilters: [
+                        { 'p.id': programId },
+                        { 'y.id': yearId },
+                        { 'c.id': courseId },
+                        { 's.name': subjectName },
+                        { 'u': unitName } // Matches the string value
+                    ]
+                }
+            );
+
+            // 2. Add the video
+            const newVideo = {
+                id: Date.now().toString(),
+                title: videoTitle,
+                url: videoUrl,
+                watched: false // Default state for user progress (though this should be user-specific ideally)
+            };
+
+            await db.collection('academic_structure').updateOne(
+                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId } as any,
+                { $push: { 'programs.$[p].years.$[y].courses.$[c].subjects.$[s].units.$[u].videos': newVideo } } as any,
+                {
+                    arrayFilters: [
+                        { 'p.id': programId },
+                        { 'y.id': yearId },
+                        { 'c.id': courseId },
+                        { 's.name': subjectName },
+                        { 'u.name': unitName } // Matches the object name
+                    ]
+                }
+            );
+        }
+        else if (structureAction === 'remove-video') {
+            const { subjectName, unitName, videoId } = body;
+
+            await db.collection('academic_structure').updateOne(
+                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId } as any,
+                { $pull: { 'programs.$[p].years.$[y].courses.$[c].subjects.$[s].units.$[u].videos': { id: videoId } } } as any,
+                {
+                    arrayFilters: [
+                        { 'p.id': programId },
+                        { 'y.id': yearId },
+                        { 'c.id': courseId },
+                        { 's.name': subjectName },
+                        { 'u.name': unitName }
+                    ]
+                }
+            );
+        }
 
         const updatedStructure = await db.collection('academic_structure').findOne({ _id: 'main' } as any);
         return res.status(200).json(updatedStructure);

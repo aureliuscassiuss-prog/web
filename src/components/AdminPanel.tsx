@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import {
     Check, X, Clock, FileText, AlertCircle, Shield, Calendar,
     User, Loader2, Plus, Trash2, Settings, Layers, BookOpen,
-    Ban, Upload as UploadIcon, ExternalLink, ChevronRight, Search
+    Ban, Upload as UploadIcon, ExternalLink, ChevronRight, Search, Video
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -51,7 +51,18 @@ interface Course {
 
 interface SubjectObject {
     name: string
-    units?: string[]
+    units?: (string | UnitObject)[]
+}
+
+interface UnitObject {
+    name: string
+    videos?: VideoObject[]
+}
+
+interface VideoObject {
+    id: string
+    title: string
+    url: string
 }
 
 // --- Main Component ---
@@ -73,6 +84,7 @@ export default function AdminPanel() {
     const [selectedYearId, setSelectedYearId] = useState<string>('')
     const [selectedCourseId, setSelectedCourseId] = useState<string>('')
     const [selectedSubjectName, setSelectedSubjectName] = useState<string>('')
+    const [selectedUnitName, setSelectedUnitName] = useState<string>('')
 
     // New Item Input State
     const [newProgram, setNewProgram] = useState('')
@@ -80,6 +92,8 @@ export default function AdminPanel() {
     const [newBranch, setNewBranch] = useState('')
     const [newSubject, setNewSubject] = useState('')
     const [newUnit, setNewUnit] = useState('')
+    const [newVideoTitle, setNewVideoTitle] = useState('')
+    const [newVideoUrl, setNewVideoUrl] = useState('')
 
     // Fetch Data on Tab Change
     useEffect(() => {
@@ -146,9 +160,10 @@ export default function AdminPanel() {
         } catch (err) { console.error(err) } finally { setProcessingId(null) }
     }
 
-    const handleStructureAdd = async (type: 'program' | 'year' | 'course' | 'subject' | 'unit', value: string) => {
+    const handleStructureAdd = async (type: 'program' | 'year' | 'course' | 'subject' | 'unit' | 'video', value: string) => {
         if (!value.trim()) return
         if (type === 'unit' && !selectedSubjectName) return alert('Please select a subject first.')
+        if (type === 'video' && !selectedUnitName) return alert('Please select a unit first.')
 
         const payload: any = { action: 'structure', value }
 
@@ -158,6 +173,16 @@ export default function AdminPanel() {
         else if (type === 'course') { payload.structureAction = 'add-course'; payload.programId = selectedProgramId; payload.yearId = selectedYearId }
         else if (type === 'subject') { payload.structureAction = 'add-subject'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.courseId = selectedCourseId }
         else if (type === 'unit') { payload.structureAction = 'add-unit'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.courseId = selectedCourseId; payload.subjectName = selectedSubjectName }
+        else if (type === 'video') {
+            payload.structureAction = 'add-video';
+            payload.programId = selectedProgramId;
+            payload.yearId = selectedYearId;
+            payload.courseId = selectedCourseId;
+            payload.subjectName = selectedSubjectName;
+            payload.unitName = selectedUnitName;
+            payload.videoTitle = value;
+            payload.videoUrl = newVideoUrl;
+        }
 
         try {
             const res = await fetch('/api/admin', {
@@ -174,6 +199,7 @@ export default function AdminPanel() {
                 if (type === 'course') setNewBranch('')
                 if (type === 'subject') setNewSubject('')
                 if (type === 'unit') setNewUnit('')
+                if (type === 'video') { setNewVideoTitle(''); setNewVideoUrl('') }
             } else {
                 const errorData = await res.json()
                 alert(errorData.message || 'Failed to add item')
@@ -181,8 +207,8 @@ export default function AdminPanel() {
         } catch (err) { console.error(err); alert('Failed to add item') }
     }
 
-    const handleStructureRemove = async (type: 'program' | 'year' | 'course' | 'subject' | 'unit', value: string) => {
-        if (!confirm(`Delete "${value}"? This cannot be undone.`)) return
+    const handleStructureRemove = async (type: 'program' | 'year' | 'course' | 'subject' | 'unit' | 'video', value: string) => {
+        if (!confirm(`Delete "${value}" ? This cannot be undone.`)) return
 
         const payload: any = { action: 'structure', value }
         if (type === 'program') { payload.structureAction = 'remove-program'; payload.programId = value }
@@ -190,6 +216,15 @@ export default function AdminPanel() {
         else if (type === 'course') { payload.structureAction = 'remove-course'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.courseId = value }
         else if (type === 'subject') { payload.structureAction = 'remove-subject'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.courseId = selectedCourseId; payload.value = value }
         else if (type === 'unit') { payload.structureAction = 'remove-unit'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.courseId = selectedCourseId; payload.subjectName = selectedSubjectName; payload.value = value }
+        else if (type === 'video') {
+            payload.structureAction = 'remove-video';
+            payload.programId = selectedProgramId;
+            payload.yearId = selectedYearId;
+            payload.courseId = selectedCourseId;
+            payload.subjectName = selectedSubjectName;
+            payload.unitName = selectedUnitName;
+            payload.videoId = value; // value passed is video ID
+        }
 
         try {
             const res = await fetch('/api/admin', {
@@ -214,7 +249,11 @@ export default function AdminPanel() {
     const subjects = selectedCourse?.subjects || []
     const getSubjectName = (s: any) => typeof s === 'string' ? s : s.name
     const selectedSubject = subjects.find(s => getSubjectName(s) === selectedSubjectName)
-    const units = (selectedSubject && typeof selectedSubject === 'object' && selectedSubject.units) ? selectedSubject.units : []
+    const units = (selectedSubject && typeof selectedSubject === 'object' && selectedSubject.units)
+        ? selectedSubject.units.map((u: any) => typeof u === 'string' ? { name: u, videos: [] } : u)
+        : []
+    const selectedUnit = units.find((u: any) => u.name === selectedUnitName)
+    const videos = selectedUnit ? selectedUnit.videos || [] : []
 
     // --- Render ---
     return (
@@ -253,7 +292,7 @@ export default function AdminPanel() {
                             {activeTab === 'pending' && <PendingView resources={pendingResources} processingId={processingId} onAction={handleResourceAction} />}
                             {activeTab === 'users' && <UsersView users={users} processingId={processingId} onAction={handleUserAction} />}
                             {activeTab === 'structure' && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 items-start overflow-x-auto pb-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 items-start overflow-x-auto pb-8">
                                     <StructureCard
                                         title="Programs"
                                         step="01"
@@ -310,270 +349,37 @@ export default function AdminPanel() {
                                     <StructureCard
                                         title="Units"
                                         step="05"
-                                        items={units.map(u => ({ id: u, name: u }))}
+                                        items={units.map((u: any) => ({ id: u.name, name: u.name }))}
                                         value={newUnit}
                                         setValue={setNewUnit}
                                         onAdd={() => handleStructureAdd('unit', newUnit)}
                                         onRemove={(id: string) => handleStructureRemove('unit', id)}
+                                        activeId={selectedUnitName}
+                                        onSelect={setSelectedUnitName}
                                         disabled={!selectedSubjectName}
                                         parentName={selectedSubjectName}
+                                    />
+                                    <StructureCard
+                                        title="Videos"
+                                        step="06"
+                                        items={videos.map((v: any) => ({ id: v.id, name: v.title }))}
+                                        value={newVideoTitle}
+                                        setValue={setNewVideoTitle}
+                                        extraInput={{
+                                            value: newVideoUrl,
+                                            setValue: setNewVideoUrl,
+                                            placeholder: "YouTube URL..."
+                                        }}
+                                        onAdd={() => handleStructureAdd('video', newVideoTitle)}
+                                        onRemove={(id: string) => handleStructureRemove('video', id)}
+                                        disabled={!selectedUnitName}
+                                        parentName={selectedUnitName}
                                         isLast
                                     />
                                 </div>
                             )}
                         </>
                     )}
-                </div>
-            </div>
-        </div>
-    )
-}
-
-// --- Sub Components ---
-
-function TabButton({ active, onClick, icon, label, count }: any) {
-    return (
-        <button
-            onClick={onClick}
-            className={`
-                flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all
-                ${active
-                    ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-800 dark:text-white'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300'}
-            `}
-        >
-            {icon}
-            {label}
-            {count > 0 && (
-                <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">
-                    {count}
-                </span>
-            )}
-        </button>
-    )
-}
-
-function PendingView({ resources, processingId, onAction }: any) {
-    if (resources.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-gray-900 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
-                <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-full mb-4">
-                    <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">All Caught Up</h3>
-                <p className="text-gray-500 text-sm">No pending resources to review.</p>
-            </div>
-        )
-    }
-
-    return (
-        <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            {resources.map((res: PendingResource) => (
-                <div key={res._id} className="group bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm hover:shadow-md hover:border-gray-300 dark:hover:border-gray-700 transition-all">
-                    <div className="flex justify-between items-start mb-4">
-                        <span className={`
-                            px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider
-                            ${res.type === 'notes' ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' :
-                                res.type === 'paper' ? 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' :
-                                    'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}
-                        `}>
-                            {res.type}
-                        </span>
-                        <span className="text-xs text-gray-400 flex items-center gap-1">
-                            {new Date(res.createdAt).toLocaleDateString()}
-                        </span>
-                    </div>
-
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                        {res.title}
-                    </h3>
-
-                    <div className="space-y-1.5 mb-5">
-                        <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                            <User size={12} className="shrink-0" />
-                            <span className="truncate">{res.uploaderName}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                            <BookOpen size={12} className="shrink-0" />
-                            <span className="truncate">{res.subject}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                            <Layers size={12} className="shrink-0" />
-                            <span className="truncate">{res.branch} • {res.year}</span>
-                        </div>
-                    </div>
-
-                    <div className="flex gap-2 pt-4 border-t border-gray-100 dark:border-gray-800">
-                        <a href={res.driveLink} target="_blank" rel="noopener noreferrer"
-                            className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 text-xs font-medium transition-colors">
-                            <ExternalLink size={14} /> View
-                        </a>
-                        <button onClick={() => onAction(res._id, 'approve')} disabled={!!processingId}
-                            className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 text-xs font-medium transition-colors disabled:opacity-50">
-                            {processingId === res._id ? <Loader2 size={14} className="animate-spin" /> : <><Check size={14} /> Approve</>}
-                        </button>
-                        <button onClick={() => onAction(res._id, 'reject')} disabled={!!processingId}
-                            className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 transition-colors disabled:opacity-50">
-                            <X size={16} />
-                        </button>
-                    </div>
-                </div>
-            ))}
-        </div>
-    )
-}
-
-function UsersView({ users, processingId, onAction }: any) {
-    return (
-        <div className="rounded-xl border border-gray-200 bg-white dark:bg-gray-900 dark:border-gray-800 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                    <thead className="bg-gray-50 dark:bg-black/20 text-xs uppercase text-gray-500 dark:text-gray-400 font-semibold border-b border-gray-100 dark:border-gray-800">
-                        <tr>
-                            <th className="px-6 py-4">User</th>
-                            <th className="px-6 py-4">Status</th>
-                            <th className="px-6 py-4 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                        {users.map((user: any) => (
-                            <tr key={user._id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                                <td className="px-6 py-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400">
-                                            <span className="text-xs font-bold">{user.name.charAt(0).toUpperCase()}</span>
-                                        </div>
-                                        <div>
-                                            <div className="font-medium text-gray-900 dark:text-white">{user.name}</div>
-                                            <div className="text-xs text-gray-500">{user.email}</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {user.role === 'admin' && <StatusBadge type="admin" label="ADMIN" />}
-                                        {user.isBanned && <StatusBadge type="danger" label="BANNED" />}
-                                        {!user.canUpload && !user.isBanned && <StatusBadge type="warning" label="RESTRICTED" />}
-                                        {!user.isBanned && user.canUpload !== false && user.role !== 'admin' && <StatusBadge type="success" label="ACTIVE" />}
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4 text-right">
-                                    {user.role !== 'admin' && (
-                                        <div className="flex items-center justify-end gap-2">
-                                            {user.isBanned ? (
-                                                <ActionButton onClick={() => onAction(user._id, 'unban')} disabled={processingId === user._id} icon={<Check size={14} />} label="Unban" variant="success" />
-                                            ) : (
-                                                <>
-                                                    <ActionButton
-                                                        onClick={() => onAction(user._id, user.canUpload !== false ? 'restrict-upload' : 'allow-upload')}
-                                                        disabled={processingId === user._id}
-                                                        icon={user.canUpload !== false ? <Ban size={14} /> : <UploadIcon size={14} />}
-                                                        variant="ghost"
-                                                        title={user.canUpload !== false ? 'Restrict Uploads' : 'Allow Uploads'}
-                                                    />
-                                                    <ActionButton
-                                                        onClick={() => onAction(user._id, 'ban')}
-                                                        disabled={processingId === user._id}
-                                                        icon={<Ban size={14} />}
-                                                        variant="ghost-danger"
-                                                        title="Ban User"
-                                                    />
-                                                    <ActionButton
-                                                        onClick={() => onAction(user._id, 'delete')}
-                                                        disabled={processingId === user._id}
-                                                        icon={<Trash2 size={14} />}
-                                                        variant="danger"
-                                                        title="Delete User"
-                                                    />
-                                                </>
-                                            )}
-                                        </div>
-                                    )}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    )
-}
-
-function StructureCard({ title, step, items, value, setValue, onAdd, onRemove, activeId, onSelect, disabled, parentName, isLast }: any) {
-    return (
-        <div className={`
-            flex flex-col h-[400px] w-full min-w-[280px] rounded-xl border bg-white dark:bg-gray-900 shadow-sm transition-all duration-300
-            ${disabled
-                ? 'border-gray-100 opacity-50 dark:border-gray-800'
-                : 'border-gray-200 dark:border-gray-800 ring-1 ring-transparent hover:ring-gray-200 dark:hover:ring-gray-700'}
-        `}>
-            {/* Header */}
-            <div className="flex-none p-4 border-b border-gray-100 dark:border-gray-800">
-                <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Step {step}</span>
-                    <span className={`h-1.5 w-1.5 rounded-full ${disabled ? 'bg-gray-300 dark:bg-gray-700' : 'bg-green-500'}`}></span>
-                </div>
-                <h3 className="text-base font-semibold text-gray-900 dark:text-white">{title}</h3>
-                <p className="text-xs text-gray-500 h-4 truncate">
-                    {disabled ? 'Select previous step' : parentName ? `in ${parentName}` : 'Root level'}
-                </p>
-            </div>
-
-            {/* List */}
-            <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                {!disabled && items.length === 0 && (
-                    <div className="flex flex-col items-center justify-center h-full text-gray-400 text-xs">
-                        <Layers size={20} className="mb-2 opacity-20" />
-                        No {title.toLowerCase()} found
-                    </div>
-                )}
-
-                {items.map((item: any) => (
-                    <div
-                        key={item.id}
-                        onClick={() => !isLast && onSelect && onSelect(item.id)}
-                        className={`
-                            group flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer text-sm transition-colors
-                            ${activeId === item.id
-                                ? 'bg-black text-white dark:bg-white dark:text-black'
-                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}
-                        `}
-                    >
-                        <span className="truncate flex-1">{item.name}</span>
-                        <div className="flex items-center gap-1">
-                            {!isLast && (
-                                <ChevronRight size={14} className={`opacity-0 group-hover:opacity-100 ${activeId === item.id ? 'opacity-100' : ''}`} />
-                            )}
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onRemove(item.id); }}
-                                className={`p-1 rounded hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/50 ${activeId === item.id ? 'text-gray-300 hover:text-red-200' : 'text-gray-400'}`}
-                            >
-                                <Trash2 size={12} />
-                            </button>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* Footer Input */}
-            <div className="flex-none p-3 border-t border-gray-100 dark:border-gray-800">
-                <div className="flex gap-2">
-                    <input
-                        type="text"
-                        value={value}
-                        onChange={(e) => setValue(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && !disabled && onAdd()}
-                        disabled={disabled}
-                        placeholder={`Add ${title}...`}
-                        className="flex-1 min-w-0 bg-gray-50 dark:bg-gray-800 border-0 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-black dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed"
-                    />
-                    <button
-                        onClick={onAdd}
-                        disabled={disabled || !value.trim()}
-                        className="flex-none p-2 rounded-md bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                        <Plus size={16} />
-                    </button>
                 </div>
             </div>
         </div>
@@ -618,5 +424,252 @@ function ActionButton({ onClick, disabled, icon, label, variant = 'ghost', title
             {icon}
             {label}
         </button>
+    )
+}
+
+function TabButton({ active, onClick, icon, label, count }: any) {
+    return (
+        <button
+            onClick={onClick}
+            className={`
+                flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all
+                ${active
+                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-white/5'}
+            `}
+        >
+            {icon}
+            {label}
+            {count > 0 && (
+                <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                    {count}
+                </span>
+            )}
+        </button>
+    )
+}
+
+function StructureCard({ title, step, items, value, setValue, extraInput, onAdd, onRemove, activeId, onSelect, disabled, parentName, isLast }: any) {
+    return (
+        <div className={`
+            flex flex-col h-[400px] w-full min-w-[280px] rounded-xl border bg-white dark:bg-gray-900 shadow-sm transition-all duration-300
+            ${disabled
+                ? 'border-gray-100 opacity-50 dark:border-gray-800'
+                : 'border-gray-200 dark:border-gray-800 ring-1 ring-transparent hover:ring-gray-200 dark:hover:ring-gray-700'}
+        `}>
+            {/* Header */}
+            <div className="flex-none p-4 border-b border-gray-100 dark:border-gray-800">
+                <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Step {step}</span>
+                    <span className={`h-1.5 w-1.5 rounded-full ${disabled ? 'bg-gray-300 dark:bg-gray-700' : 'bg-green-500'}`}></span>
+                </div>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white">{title}</h3>
+                <p className="text-xs text-gray-500 h-4 truncate">
+                    {disabled ? 'Select previous step' : parentName ? `in ${parentName}` : 'Root level'}
+                </p>
+            </div>
+
+            {/* List */}
+            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                {items.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-gray-400">
+                        <Layers size={24} className="mb-2 opacity-20" />
+                        <p className="text-xs">No items yet</p>
+                    </div>
+                ) : (
+                    items.map((item: any) => (
+                        <div
+                            key={item.id}
+                            onClick={() => !disabled && onSelect && onSelect(item.id)}
+                            className={`
+                                group flex items-center justify-between p-2 rounded-lg cursor-pointer text-sm transition-colors
+                                ${activeId === item.id
+                                    ? 'bg-black text-white dark:bg-white dark:text-black'
+                                    : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'}
+                            `}
+                        >
+                            <span className="truncate flex-1">{item.name}</span>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onRemove(item.id) }}
+                                className={`p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity ${activeId === item.id ? 'hover:bg-gray-800 dark:hover:bg-gray-200' : 'hover:bg-red-100 text-red-500'}`}
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* Footer Input */}
+            <div className="flex-none p-3 border-t border-gray-100 dark:border-gray-800 space-y-2">
+                {extraInput && (
+                    <input
+                        type="text"
+                        value={extraInput.value}
+                        onChange={(e) => extraInput.setValue(e.target.value)}
+                        disabled={disabled}
+                        placeholder={extraInput.placeholder}
+                        className="w-full bg-gray-50 dark:bg-gray-800 border-0 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-black dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                )}
+                <div className="flex gap-2">
+                    <input
+                        type="text"
+                        value={value}
+                        onChange={(e) => setValue(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && !disabled && onAdd()}
+                        disabled={disabled}
+                        placeholder={`Add ${title}...`}
+                        className="flex-1 min-w-0 bg-gray-50 dark:bg-gray-800 border-0 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-black dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                    <button
+                        onClick={onAdd}
+                        disabled={disabled || !value.trim()}
+                        className="flex-none p-2 rounded-md bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                        <Plus size={16} />
+                    </button>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function PendingView({ resources, processingId, onAction }: any) {
+    if (resources.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center h-64 text-gray-400 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
+                <Check size={48} className="mb-4 opacity-20" />
+                <p>No pending approvals</p>
+            </div>
+        )
+    }
+
+    return (
+        <div className="grid gap-4">
+            {resources.map((resource: PendingResource) => (
+                <div key={resource._id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+                    <div className="flex flex-col md:flex-row gap-4 justify-between">
+                        <div className="space-y-2">
+                            <div className="flex items-start justify-between md:justify-start gap-4">
+                                <h3 className="font-semibold text-lg">{resource.title}</h3>
+                                <StatusBadge type="warning" label="Pending" />
+                            </div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{resource.description}</p>
+                            <div className="flex flex-wrap gap-2 text-xs text-gray-500">
+                                <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded">{resource.type}</span>
+                                <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded">{resource.branch}</span>
+                                <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded">{resource.year}</span>
+                                <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded">{resource.subject}</span>
+                                {resource.unit && <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded">{resource.unit}</span>}
+                            </div>
+                            <div className="flex items-center gap-4 text-xs text-gray-400 pt-2">
+                                <span className="flex items-center gap-1"><User size={12} /> {resource.uploaderName}</span>
+                                <span className="flex items-center gap-1"><Calendar size={12} /> {new Date(resource.createdAt).toLocaleDateString()}</span>
+                            </div>
+                        </div>
+                        <div className="flex flex-row md:flex-col gap-2 justify-end md:min-w-[140px]">
+                            <a
+                                href={resource.driveLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+                            >
+                                <ExternalLink size={16} /> Review
+                            </a>
+                            <div className="flex gap-2">
+                                <ActionButton
+                                    onClick={() => onAction(resource._id, 'approve')}
+                                    disabled={processingId === resource._id}
+                                    icon={processingId === resource._id ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                                    label="Approve"
+                                    variant="success"
+                                    className="flex-1"
+                                />
+                                <ActionButton
+                                    onClick={() => onAction(resource._id, 'reject')}
+                                    disabled={processingId === resource._id}
+                                    icon={<X size={16} />}
+                                    label="Reject"
+                                    variant="danger"
+                                    className="flex-1"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ))}
+        </div>
+    )
+}
+
+function UsersView({ users, processingId, onAction }: any) {
+    return (
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                    <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-500 font-medium border-b border-gray-200 dark:border-gray-800">
+                        <tr>
+                            <th className="px-6 py-4">User</th>
+                            <th className="px-6 py-4">Role</th>
+                            <th className="px-6 py-4">Status</th>
+                            <th className="px-6 py-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                        {users.map((user: UserData) => (
+                            <tr key={user._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                <td className="px-6 py-4">
+                                    <div className="font-medium">{user.name}</div>
+                                    <div className="text-xs text-gray-500">{user.email}</div>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <StatusBadge
+                                        type={user.role === 'admin' ? 'admin' : 'success'}
+                                        label={user.role}
+                                    />
+                                </td>
+                                <td className="px-6 py-4">
+                                    <div className="flex flex-col gap-1">
+                                        {user.isBanned && <StatusBadge type="danger" label="Banned" />}
+                                        {!user.canUpload && <StatusBadge type="warning" label="Upload Restricted" />}
+                                        {!user.isBanned && user.canUpload && <span className="text-gray-500">Active</span>}
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <div className="flex justify-end gap-2">
+                                        {user.role !== 'admin' && (
+                                            <>
+                                                <ActionButton
+                                                    onClick={() => onAction(user._id, user.isBanned ? 'unban' : 'ban')}
+                                                    disabled={processingId === user._id}
+                                                    icon={<Ban size={16} />}
+                                                    variant={user.isBanned ? 'success' : 'ghost-danger'}
+                                                    title={user.isBanned ? 'Unban User' : 'Ban User'}
+                                                />
+                                                <ActionButton
+                                                    onClick={() => onAction(user._id, user.canUpload ? 'restrict-upload' : 'allow-upload')}
+                                                    disabled={processingId === user._id}
+                                                    icon={<UploadIcon size={16} />}
+                                                    variant={user.canUpload ? 'ghost-danger' : 'success'}
+                                                    title={user.canUpload ? 'Restrict Uploads' : 'Allow Uploads'}
+                                                />
+                                                <ActionButton
+                                                    onClick={() => onAction(user._id, 'delete')}
+                                                    disabled={processingId === user._id}
+                                                    icon={<Trash2 size={16} />}
+                                                    variant="ghost-danger"
+                                                    title="Delete User"
+                                                />
+                                            </>
+                                        )}
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     )
 }
