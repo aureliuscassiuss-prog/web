@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-route
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import { X } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
 
 // Components
 import Sidebar from './components/Sidebar'
@@ -74,48 +75,60 @@ function Layout({
       <Footer />
 
       {/* Mobile Sidebar Overlay */}
-      {isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 z-40 md:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        >
-          {/* Backdrop with fade animation */}
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in" />
+      {/* Mobile Sidebar Overlay */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              key="backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
+              onClick={() => setIsMobileMenuOpen(false)}
+            />
 
-          {/* Sidebar with slide animation */}
-          <div
-            className="fixed inset-y-0 left-0 w-3/4 max-w-sm bg-white dark:bg-black shadow-2xl animate-slide-in-left flex flex-col"
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Header with Logo and Close Button */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-md flex items-center justify-center">
-                  <span className="text-white font-bold text-xs">UN</span>
+            {/* Sidebar with slide animation */}
+            <motion.div
+              key="sidebar"
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-y-0 left-0 z-50 w-3/4 max-w-sm bg-white dark:bg-black shadow-2xl flex flex-col md:hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header with Logo and Close Button */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-md flex items-center justify-center">
+                    <span className="text-white font-bold text-xs">UN</span>
+                  </div>
+                  <span className="font-semibold text-base text-gray-900 dark:text-white">UniNotes</span>
                 </div>
-                <span className="font-semibold text-base text-gray-900 dark:text-white">UniNotes</span>
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-1.5 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <button
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="p-1.5 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
 
-            {/* Sidebar Content */}
-            <div className="flex-1 overflow-y-auto">
-              <Sidebar
-                isMobileMenuOpen={true}
-                onMobileMenuClose={() => setIsMobileMenuOpen(false)}
-                isDark={isDark}
-                toggleTheme={toggleTheme}
-                spotlight={spotlight}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+              {/* Sidebar Content */}
+              <div className="flex-1 overflow-y-auto">
+                <Sidebar
+                  isMobileMenuOpen={true}
+                  onMobileMenuClose={() => setIsMobileMenuOpen(false)}
+                  isDark={isDark}
+                  toggleTheme={toggleTheme}
+                  spotlight={spotlight}
+                />
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
