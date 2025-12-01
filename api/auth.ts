@@ -202,7 +202,7 @@ async function handleRegister(body: any, res: VercelResponse) {
         } else {
             console.log('Sending OTP email via Brevo to:', email);
             await transporter.sendMail({
-                from: `"UniNotes" <${process.env.BREVO_USER}>`, // Must be a verified sender in Brevo
+                from: '"UniNotes" <otp@trilliontip.com>', // Must be a verified sender in Brevo
                 to: email,
                 subject: 'UniNotes Verification OTP',
                 text: `Your verification code is: ${otp}. It expires in 10 minutes.`,
