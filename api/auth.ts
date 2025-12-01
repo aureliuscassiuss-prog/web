@@ -210,9 +210,23 @@ async function handleRegister(body: any, res: VercelResponse) {
             });
             console.log('OTP email sent successfully');
         }
-    } catch (emailError) {
+    } catch (emailError: any) {
         console.error('Failed to send email:', emailError);
-        return res.status(500).json({ message: 'Failed to send verification email' });
+
+        // Extract specific error message
+        let errorMessage = 'Failed to send verification email';
+        if (emailError.code === 'EAUTH') {
+            errorMessage = 'Email authentication failed. Please check server configuration.';
+        } else if (emailError.response) {
+            errorMessage = `Email provider error: ${emailError.response}`;
+        } else if (emailError.message) {
+            errorMessage = `Email error: ${emailError.message}`;
+        }
+
+        return res.status(500).json({
+            message: errorMessage,
+            details: emailError.toString()
+        });
     }
 
     console.log('Registration successful, requiring OTP');
