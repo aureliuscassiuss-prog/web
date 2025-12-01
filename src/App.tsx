@@ -200,8 +200,12 @@ function AppContent() {
   }
 
   const handleGetStarted = () => {
-    setAuthModalInitialView('signup')
-    setIsAuthModalOpen(true)
+    if (user) {
+      setIsMobileMenuOpen(true)
+    } else {
+      setAuthModalInitialView('signup')
+      setIsAuthModalOpen(true)
+    }
   }
 
   return (
@@ -225,7 +229,7 @@ function AppContent() {
           {/* Home Route */}
           <Route path="/" element={
             <div className="space-y-8">
-              <Hero onGetStarted={handleGetStarted} />
+              <Hero onGetStarted={handleGetStarted} user={user} />
             </div>
           } />
 

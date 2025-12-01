@@ -1,11 +1,12 @@
-import { ArrowRight, Sparkles, PlayCircle, ChevronRight, Star, Users, TrendingUp, MessageSquare } from 'lucide-react'
+import { ArrowRight, Sparkles, ChevronRight, Star, Users, Menu } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 interface HeroProps {
     onGetStarted?: () => void
+    user?: any
 }
 
-export default function Hero({ onGetStarted }: HeroProps) {
+export default function Hero({ onGetStarted, user }: HeroProps) {
     return (
         <section className="relative flex flex-col items-center justify-center pt-16 pb-24 px-4 text-center md:pt-32 md:pb-48 overflow-hidden bg-white dark:bg-[#030303] selection:bg-blue-500/30">
 
@@ -48,8 +49,17 @@ export default function Hero({ onGetStarted }: HeroProps) {
                     className="relative h-12 px-8 rounded-full text-base font-medium text-white bg-black dark:bg-white dark:text-black shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 w-full sm:w-auto flex items-center justify-center overflow-hidden"
                 >
                     <span className="relative flex items-center z-10">
-                        Get Started
-                        <ArrowRight className="ml-2 h-4 w-4" />
+                        {user ? (
+                            <>
+                                Explore
+                                <Menu className="ml-2 h-4 w-4" />
+                            </>
+                        ) : (
+                            <>
+                                Get Started
+                                <ArrowRight className="ml-2 h-4 w-4" />
+                            </>
+                        )}
                     </span>
                 </button>
                 <Link
