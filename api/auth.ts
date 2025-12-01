@@ -473,6 +473,7 @@ async function handleForgotPassword(body: any, res: VercelResponse) {
             errorMessage = `Email error: ${emailError.message}`;
         }
 
+
         return res.status(500).json({
             message: errorMessage,
             details: emailError.toString()

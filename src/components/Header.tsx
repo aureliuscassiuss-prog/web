@@ -60,7 +60,7 @@ export default function Header({ onUploadClick, onAuthClick, onProfileClick, onM
                         className="btn bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 border-0 shadow-lg"
                     >
                         <LogIn className="w-[18px] h-[18px]" />
-                        Sign In
+                        Login
                     </button>
                 )}
             </div>

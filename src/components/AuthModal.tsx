@@ -7,6 +7,7 @@ interface AuthModalProps {
     isOpen: boolean
     onClose: () => void
     onSignupSuccess?: () => void
+    initialView?: 'login' | 'signup'
 }
 
 // Separate component to safely use the hook
@@ -33,9 +34,9 @@ function GoogleLoginButton({ onSuccess, onError }: { onSuccess: (token: string) 
     )
 }
 
-export default function AuthModal({ isOpen, onClose, onSignupSuccess }: AuthModalProps) {
+export default function AuthModal({ isOpen, onClose, onSignupSuccess, initialView = 'login' }: AuthModalProps) {
     const { login, register, verifyOtp, forgotPassword, resetPassword, googleLogin: authGoogleLogin } = useAuth()
-    const [isLogin, setIsLogin] = useState(true)
+    const [isLogin, setIsLogin] = useState(initialView === 'login')
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState('')
     const [showOtp, setShowOtp] = useState(false)

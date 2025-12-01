@@ -139,6 +139,7 @@ function AppContent() {
   // Modal States
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [authModalInitialView, setAuthModalInitialView] = useState<'login' | 'signup'>('login')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   // Data States
@@ -199,9 +200,8 @@ function AppContent() {
   }
 
   const handleGetStarted = () => {
-    setIsMobileMenuOpen(true)
-    setSpotlight('browse-resources')
-    setTimeout(() => setSpotlight(null), 3000)
+    setAuthModalInitialView('signup')
+    setIsAuthModalOpen(true)
   }
 
   return (
@@ -210,7 +210,10 @@ function AppContent() {
         isMobileMenuOpen={isMobileMenuOpen}
         setIsMobileMenuOpen={setIsMobileMenuOpen}
         onUploadClick={handleUploadClick}
-        onAuthClick={() => setIsAuthModalOpen(true)}
+        onAuthClick={() => {
+          setAuthModalInitialView('login')
+          setIsAuthModalOpen(true)
+        }}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         user={user}
@@ -294,6 +297,7 @@ function AppContent() {
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
+        initialView={authModalInitialView}
       />
 
       <Toast message={toast.message} show={toast.show} />
