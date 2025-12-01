@@ -20,6 +20,7 @@ import BrowseResources from './components/BrowseResources'
 import AdminPanel from './components/AdminPanel'
 import Preparation from './components/Preparation'
 import CoursePlayer from './components/CoursePlayer'
+import AIPapers from './components/AIPapers'
 import AboutPage from './components/AboutPage'
 import ContactPage from './components/ContactPage'
 import DocsPage from './components/DocsPage'
@@ -247,6 +248,7 @@ function AppContent() {
           } />
           <Route path="/preparation" element={<Preparation />} />
           <Route path="/preparation/play" element={<CoursePlayer />} />
+          <Route path="/ai-papers" element={<AIPapers />} />
 
           {/* Admin Route (Protected) */}
           <Route path="/admin" element={

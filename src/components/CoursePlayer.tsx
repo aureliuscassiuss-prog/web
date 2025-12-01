@@ -1,24 +1,38 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { ChevronLeft, Play, CheckCircle, Lock, Menu, X, Video } from 'lucide-react'
+import {
+    ChevronLeft,
+    Play,
+    CheckCircle2,
+    Menu,
+    X,
+    Search,
+    ChevronDown,
+    BookOpen,
+    MonitorPlay,
+    ListVideo,
+    Clock,
+    Check
+} from 'lucide-react'
 
+// --- Types ---
 interface VideoObject {
     id: string
     title: string
     url: string
-    watched?: boolean
+    duration?: string
 }
 
 interface UnitObject {
     name: string
-    videos?: VideoObject[]
+    videos: VideoObject[]
 }
 
 export default function CoursePlayer() {
     const navigate = useNavigate()
     const [searchParams] = useSearchParams()
 
-    // Params
+    // Params from URL
     const programId = searchParams.get('program')
     const yearId = searchParams.get('year')
     const courseId = searchParams.get('course')
@@ -29,50 +43,106 @@ export default function CoursePlayer() {
     const [currentVideo, setCurrentVideo] = useState<VideoObject | null>(null)
     const [isSidebarOpen, setIsSidebarOpen] = useState(true)
     const [loading, setLoading] = useState(true)
+    const [searchQuery, setSearchQuery] = useState('')
 
-    // Mock Progress State (In a real app, this would be persisted)
+    // UI State for Accordions (Default to first unit open)
+    const [expandedUnitIndices, setExpandedUnitIndices] = useState<Set<number>>(new Set([0]))
+
+    // Progress State
     const [watchedVideos, setWatchedVideos] = useState<Set<string>>(new Set())
 
     useEffect(() => {
-        if (!programId || !yearId || !courseId || !subjectName) {
-            navigate('/preparation')
-            return
+        // Scroll top on mount
+        window.scrollTo(0, 0)
+
+        const fetchStructure = async () => {
+            try {
+                // 1. Try Fetching from API
+                const res = await fetch('/api/admin?action=structure')
+                if (!res.ok) throw new Error('API Failed')
+                const data = await res.json()
+                processData(data)
+            } catch (err) {
+                // 2. Fallback: Use Mock Data if API fails
+                console.log("Using Mock Data (Fallback)")
+                const mockData = {
+                    programs: [
+                        {
+                            id: 'p1', name: 'B.Tech', years: [
+                                {
+                                    id: 'y1', name: '1st Year', courses: [
+                                        {
+                                            id: 'c1', name: 'CSE', subjects: [
+                                                {
+                                                    name: 'Engineering Physics',
+                                                    units: [
+                                                        {
+                                                            name: 'Quantum Mechanics',
+                                                            videos: [
+                                                                { id: 'v1', title: 'Introduction to Quantum Mechanics', url: 'https://www.youtube.com/watch?v=PyCS5xG9d_c', duration: '10:05' },
+                                                                { id: 'v2', title: 'Wave Particle Duality', url: 'https://www.youtube.com/watch?v=Q_h4IoPJXZw', duration: '15:20' },
+                                                                { id: 'v3', title: 'Schrodinger Wave Equation', url: 'https://www.youtube.com/watch?v=uK60IdXN6RE', duration: '12:45' }
+                                                            ]
+                                                        },
+                                                        {
+                                                            name: 'Optics & Lasers',
+                                                            videos: [
+                                                                { id: 'v4', title: 'Interference of Light', url: 'https://www.youtube.com/watch?v=M9Uvl0FqNww', duration: '08:30' },
+                                                                { id: 'v5', title: 'Diffraction Gratings', url: 'https://www.youtube.com/watch?v=9D8cPrEAGqc', duration: '14:10' }
+                                                            ]
+                                                        }
+                                                    ]
+                                                },
+                                                // Add more mock subjects if needed
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+                processData(mockData)
+            }
         }
 
-        fetch('/api/admin?action=structure')
-            .then(res => res.json())
-            .then(data => {
-                const program = data.programs?.find((p: any) => p.id === programId)
-                const year = program?.years?.find((y: any) => y.id === yearId)
-                const course = year?.courses?.find((c: any) => c.id === courseId)
-                const subject = course?.subjects?.find((s: any) =>
-                    (typeof s === 'string' ? s : s.name) === subjectName
-                )
+        const processData = (data: any) => {
+            const program = data.programs?.find((p: any) => p.id === programId)
+            const year = program?.years?.find((y: any) => y.id === yearId)
+            const course = year?.courses?.find((c: any) => c.id === courseId)
+            const subject = course?.subjects?.find((s: any) => (typeof s === 'string' ? s : s.name) === subjectName)
 
-                if (subject) {
-                    const subjectUnits = typeof subject === 'object' && subject.units
-                        ? subject.units.map((u: any) => typeof u === 'string' ? { name: u, videos: [] } : u)
-                        : []
-                    setUnits(subjectUnits)
+            if (subject) {
+                // Normalize data structure
+                const subjectUnits = (subject.units || []).map((u: any) => {
+                    if (typeof u === 'string') return { name: u, videos: [] }
+                    return {
+                        name: u.name,
+                        videos: u.videos || []
+                    }
+                })
+                setUnits(subjectUnits)
 
-                    // Auto-select first video
-                    for (const unit of subjectUnits) {
-                        if (unit.videos && unit.videos.length > 0) {
-                            setCurrentVideo(unit.videos[0])
-                            break
-                        }
+                // Auto-select first video
+                for (const unit of subjectUnits) {
+                    if (unit.videos && unit.videos.length > 0) {
+                        setCurrentVideo(unit.videos[0])
+                        break
                     }
                 }
-                setLoading(false)
-            })
-            .catch(err => {
-                console.error(err)
-                setLoading(false)
-            })
-    }, [programId, yearId, courseId, subjectName, navigate])
+            } else {
+                // If subject not found in data (or params missing), just load empty or mock
+                setUnits([])
+            }
+            setLoading(false)
+        }
 
-    // Helper to extract YouTube ID
+        fetchStructure()
+    }, [programId, yearId, courseId, subjectName])
+
+    // Helper: Extract YouTube ID
     const getYouTubeId = (url: string) => {
+        if (!url) return null;
         const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/
         const match = url.match(regExp)
         return (match && match[2].length === 11) ? match[2] : null
@@ -80,174 +150,270 @@ export default function CoursePlayer() {
 
     const toggleWatched = (videoId: string) => {
         const newWatched = new Set(watchedVideos)
-        if (newWatched.has(videoId)) {
-            newWatched.delete(videoId)
-        } else {
-            newWatched.add(videoId)
-        }
+        if (newWatched.has(videoId)) newWatched.delete(videoId)
+        else newWatched.add(videoId)
         setWatchedVideos(newWatched)
     }
 
-    // Calculate Progress
-    const totalVideos = units.reduce((acc, unit) => acc + (unit.videos?.length || 0), 0)
-    const completedVideos = watchedVideos.size
-    const progressPercentage = totalVideos === 0 ? 0 : Math.round((completedVideos / totalVideos) * 100)
+    const toggleUnit = (index: number) => {
+        const newExpanded = new Set(expandedUnitIndices)
+        if (newExpanded.has(index)) newExpanded.delete(index)
+        else newExpanded.add(index)
+        setExpandedUnitIndices(newExpanded)
+    }
+
+    const filteredUnits = useMemo(() => {
+        if (!searchQuery) return units;
+        return units.map(unit => ({
+            ...unit,
+            videos: unit.videos?.filter(v =>
+                v.title.toLowerCase().includes(searchQuery.toLowerCase())
+            )
+        })).filter(unit => (unit.videos && unit.videos.length > 0) || unit.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    }, [units, searchQuery])
 
     if (loading) {
-        return <div className="min-h-screen flex items-center justify-center bg-black text-white">Loading...</div>
+        return (
+            <div className="h-screen w-full flex flex-col items-center justify-center bg-white dark:bg-[#09090b] text-gray-500 gap-4">
+                <div className="w-8 h-8 border-2 border-gray-200 border-t-blue-600 rounded-full animate-spin dark:border-gray-800 dark:border-t-blue-500"></div>
+                <p className="text-xs font-medium tracking-wide animate-pulse">LOADING CLASSROOM...</p>
+            </div>
+        )
     }
 
     return (
-        <div className="flex h-screen bg-gray-950 text-gray-100 overflow-hidden font-sans">
+        <div className="flex h-screen bg-white dark:bg-[#09090b] overflow-hidden text-gray-900 dark:text-gray-100 font-sans selection:bg-blue-100 dark:selection:bg-blue-900/30">
 
-            {/* Sidebar */}
+            {/* --- SIDEBAR --- */}
             <aside
                 className={`
-                    fixed inset-y-0 left-0 z-50 w-80 bg-gray-900 border-r border-gray-800 transform transition-transform duration-300 ease-in-out
+                    fixed inset-y-0 left-0 z-50 w-full md:w-[380px] bg-gray-50/80 dark:bg-[#09090b]/95 backdrop-blur-xl border-r border-gray-200 dark:border-gray-800 
+                    transform transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1) flex flex-col
                     ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-                    md:relative md:translate-x-0
+                    md:relative md:translate-x-0 md:bg-white md:dark:bg-[#09090b]
                 `}
             >
-                <div className="flex flex-col h-full">
-                    {/* Sidebar Header */}
-                    <div className="p-4 border-b border-gray-800 flex items-center justify-between">
-                        <div>
-                            <h2 className="font-semibold text-white truncate max-w-[200px]" title={subjectName || ''}>{subjectName}</h2>
-                            <p className="text-xs text-gray-400 mt-1">{progressPercentage}% Completed</p>
-                        </div>
-                        <button onClick={() => navigate('/preparation')} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition-colors">
+                {/* Header */}
+                <div className="flex-none p-5 border-b border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-black/20">
+                    <div className="flex items-center justify-between mb-6">
+                        <button
+                            onClick={() => navigate(-1)}
+                            className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors text-xs font-semibold uppercase tracking-wide"
+                        >
+                            <ChevronLeft size={14} />
+                            Back
+                        </button>
+                        <button onClick={() => setIsSidebarOpen(false)} className="md:hidden p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
                             <X size={20} />
                         </button>
                     </div>
 
-                    {/* Progress Bar */}
-                    <div className="h-1 bg-gray-800 w-full">
-                        <div
-                            className="h-full bg-gradient-to-r from-blue-500 to-violet-500 transition-all duration-500"
-                            style={{ width: `${progressPercentage}%` }}
+                    <div className="space-y-1 mb-6">
+                        <h1 className="text-xl font-bold leading-tight truncate">{subjectName || 'Course Material'}</h1>
+                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                            <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded text-[10px] font-bold uppercase">
+                                {courseId || 'Core'}
+                            </span>
+                            <span>• {units.reduce((acc, u) => acc + (u.videos?.length || 0), 0)} Lectures</span>
+                        </div>
+                    </div>
+
+                    {/* Search */}
+                    <div className="relative group">
+                        <input
+                            type="text"
+                            placeholder="Find a topic..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm group-hover:border-gray-300 dark:group-hover:border-gray-700"
                         />
+                        <Search className="absolute left-3 top-3 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" size={14} />
                     </div>
+                </div>
 
-                    {/* Units List */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-6">
-                        {units.map((unit, idx) => (
-                            <div key={idx} className="space-y-2">
-                                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider px-2">
-                                    {unit.name}
-                                </h3>
-                                <div className="space-y-1">
-                                    {unit.videos && unit.videos.length > 0 ? (
-                                        unit.videos.map((video) => {
-                                            const isWatched = watchedVideos.has(video.id)
-                                            const isActive = currentVideo?.id === video.id
+                {/* Content List */}
+                <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800 p-3 space-y-2">
+                    {filteredUnits.length > 0 ? (
+                        filteredUnits.map((unit, idx) => {
+                            const isExpanded = expandedUnitIndices.has(idx)
+                            const activeInUnit = unit.videos?.some(v => v.id === currentVideo?.id)
 
-                                            return (
-                                                <button
-                                                    key={video.id}
-                                                    onClick={() => setCurrentVideo(video)}
-                                                    className={`
-                                                        w-full flex items-start gap-3 p-2 rounded-lg text-left transition-all group
-                                                        ${isActive ? 'bg-blue-900/20 text-blue-400' : 'hover:bg-gray-800 text-gray-300'}
-                                                    `}
-                                                >
-                                                    <div className="mt-0.5">
-                                                        {isActive ? (
-                                                            <Play size={16} className="fill-current" />
-                                                        ) : isWatched ? (
-                                                            <CheckCircle size={16} className="text-green-500" />
-                                                        ) : (
-                                                            <div className="w-4 h-4 rounded-full border-2 border-gray-600 group-hover:border-gray-400" />
-                                                        )}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className={`text-sm font-medium truncate ${isActive ? 'text-blue-400' : 'text-gray-300'}`}>
-                                                            {video.title}
-                                                        </p>
-                                                        <p className="text-[10px] text-gray-500 mt-0.5 flex items-center gap-1">
-                                                            <Video size={10} /> Video
-                                                        </p>
-                                                    </div>
-                                                </button>
-                                            )
-                                        })
-                                    ) : (
-                                        <p className="text-xs text-gray-600 px-2 italic">No videos available</p>
-                                    )}
+                            return (
+                                <div
+                                    key={idx}
+                                    className={`
+                                        rounded-xl border transition-all duration-300 overflow-hidden
+                                        ${activeInUnit
+                                            ? 'bg-white dark:bg-white/5 border-gray-200 dark:border-gray-700 shadow-sm'
+                                            : 'bg-transparent border-transparent hover:bg-gray-100/50 dark:hover:bg-white/5'}
+                                    `}
+                                >
+                                    <button
+                                        onClick={() => toggleUnit(idx)}
+                                        className="w-full text-left px-4 py-3 flex items-center justify-between group select-none"
+                                    >
+                                        <div className="min-w-0 flex-1 pr-4">
+                                            <h3 className={`text-sm font-semibold truncate transition-colors ${activeInUnit ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
+                                                {unit.name}
+                                            </h3>
+                                            <p className="text-[11px] text-gray-400 mt-0.5 font-medium">
+                                                {unit.videos?.length || 0} Videos
+                                            </p>
+                                        </div>
+                                        <ChevronDown
+                                            size={16}
+                                            className={`text-gray-400 transition-transform duration-300 ease-out ${isExpanded ? 'rotate-180' : ''}`}
+                                        />
+                                    </button>
+
+                                    {/* Smooth Accordion Content using Grid trick */}
+                                    <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                                        <div className="overflow-hidden">
+                                            <div className="px-2 pb-2 space-y-1">
+                                                {unit.videos?.map((video) => {
+                                                    const isActive = currentVideo?.id === video.id
+                                                    const isWatched = watchedVideos.has(video.id)
+
+                                                    return (
+                                                        <button
+                                                            key={video.id}
+                                                            onClick={() => {
+                                                                setCurrentVideo(video)
+                                                                if (window.innerWidth < 768) setIsSidebarOpen(false)
+                                                            }}
+                                                            className={`
+                                                                w-full flex items-start gap-3 p-2 rounded-lg text-left transition-all duration-200 group
+                                                                ${isActive
+                                                                    ? 'bg-black text-white dark:bg-white dark:text-black shadow-md shadow-gray-200 dark:shadow-none transform scale-[1.02]'
+                                                                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10'}
+                                                            `}
+                                                        >
+                                                            <div className="mt-1 flex-shrink-0">
+                                                                {isActive ? (
+                                                                    <Play size={12} className="fill-current" />
+                                                                ) : isWatched ? (
+                                                                    <CheckCircle2 size={14} className="text-green-500 dark:text-green-400" />
+                                                                ) : (
+                                                                    <div className="w-3.5 h-3.5 rounded-full border border-gray-300 dark:border-gray-600 group-hover:border-gray-500" />
+                                                                )}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className={`text-xs font-medium leading-relaxed ${isActive ? 'text-white dark:text-black' : 'group-hover:text-gray-900 dark:group-hover:text-white'}`}>
+                                                                    {video.title}
+                                                                </p>
+                                                                <div className={`flex items-center gap-2 mt-1 text-[10px] ${isActive ? 'text-white/60 dark:text-black/60' : 'text-gray-400'}`}>
+                                                                    <span className="flex items-center gap-1"><Clock size={10} /> {video.duration || '10:00'}</span>
+                                                                </div>
+                                                            </div>
+                                                        </button>
+                                                    )
+                                                })}
+                                                {(!unit.videos || unit.videos.length === 0) && (
+                                                    <div className="text-center py-4 text-[10px] text-gray-400 italic">No content available</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            )
+                        })
+                    ) : (
+                        <div className="text-center py-10 opacity-50">
+                            <Search className="mx-auto mb-2 text-gray-400" size={24} />
+                            <p className="text-xs">No topics found</p>
+                        </div>
+                    )}
                 </div>
             </aside>
 
-            {/* Main Content */}
-            <main className="flex-1 flex flex-col min-w-0 bg-black">
-                {/* Mobile Header */}
-                <div className="md:hidden p-4 flex items-center gap-3 border-b border-gray-800 bg-gray-900">
-                    <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-gray-400">
-                        <Menu size={24} />
+            {/* --- MAIN CONTENT --- */}
+            <main className="flex-1 flex flex-col min-w-0 relative bg-white dark:bg-[#09090b]">
+
+                {/* Mobile Top Bar */}
+                <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-white/80 dark:bg-black/50 backdrop-blur-md sticky top-0 z-30">
+                    <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors">
+                        <Menu size={20} className="text-gray-700 dark:text-gray-200" />
                     </button>
-                    <span className="font-semibold truncate">{currentVideo?.title || 'Select a video'}</span>
+                    <span className="text-sm font-bold truncate">
+                        {currentVideo ? currentVideo.title : 'Course Player'}
+                    </span>
                 </div>
 
-                {/* Video Player Area */}
-                <div className="flex-1 flex flex-col">
+                {/* Content Area */}
+                <div className="flex-1 overflow-y-auto">
                     {currentVideo ? (
-                        <div className="relative w-full h-full flex flex-col">
-                            <div className="flex-1 relative bg-black flex items-center justify-center">
+                        <div className="max-w-5xl mx-auto p-4 md:p-8 lg:p-12 space-y-6">
+
+                            {/* Player Wrapper */}
+                            <div className="relative group rounded-xl overflow-hidden bg-black shadow-2xl shadow-blue-900/10 ring-1 ring-gray-900/5 dark:ring-white/10 aspect-video">
                                 {getYouTubeId(currentVideo.url) ? (
                                     <iframe
-                                        src={`https://www.youtube.com/embed/${getYouTubeId(currentVideo.url)}?autoplay=0&rel=0`}
+                                        src={`https://www.youtube.com/embed/${getYouTubeId(currentVideo.url)}?autoplay=1&rel=0`}
                                         title={currentVideo.title}
                                         className="w-full h-full absolute inset-0"
                                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                         allowFullScreen
                                     />
                                 ) : (
-                                    <div className="text-center p-10">
-                                        <p className="text-red-400 mb-2">Invalid Video URL</p>
-                                        <p className="text-sm text-gray-500">{currentVideo.url}</p>
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900/50 text-gray-400">
+                                        <MonitorPlay size={48} className="mb-4 opacity-20" />
+                                        <p className="text-sm">Video Source Unavailable</p>
                                     </div>
                                 )}
                             </div>
 
-                            {/* Video Controls / Info */}
-                            <div className="p-6 bg-gray-900 border-t border-gray-800">
-                                <div className="flex items-start justify-between gap-4">
-                                    <div>
-                                        <h1 className="text-xl md:text-2xl font-bold text-white mb-2">{currentVideo.title}</h1>
-                                        <p className="text-gray-400 text-sm">
-                                            {subjectName} • {units.find(u => u.videos?.some(v => v.id === currentVideo.id))?.name}
-                                        </p>
+                            {/* Header Info */}
+                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 pb-8 border-b border-gray-100 dark:border-gray-800">
+                                <div className="space-y-3 flex-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-white/10 text-[10px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                                            Video Lesson
+                                        </span>
+                                        <span className="text-xs text-gray-400 flex items-center gap-1">
+                                            <ListVideo size={12} />
+                                            {units.find(u => u.videos?.some(v => v.id === currentVideo.id))?.name}
+                                        </span>
                                     </div>
-                                    <button
-                                        onClick={() => toggleWatched(currentVideo.id)}
-                                        className={`
-                                            flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors
-                                            ${watchedVideos.has(currentVideo.id)
-                                                ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
-                                                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}
-                                        `}
-                                    >
-                                        {watchedVideos.has(currentVideo.id) ? (
-                                            <>
-                                                <CheckCircle size={18} />
-                                                Completed
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div className="w-4 h-4 rounded-full border-2 border-current" />
-                                                Mark as Done
-                                            </>
-                                        )}
-                                    </button>
+                                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white leading-tight">
+                                        {currentVideo.title}
+                                    </h1>
+                                    <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed max-w-2xl">
+                                        Master the concepts of {currentVideo.title}. Make sure to take notes and review the attached materials if available.
+                                    </p>
                                 </div>
+
+                                {/* Action Button */}
+                                <button
+                                    onClick={() => toggleWatched(currentVideo.id)}
+                                    className={`
+                                        flex-shrink-0 group flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all duration-300 active:scale-95
+                                        ${watchedVideos.has(currentVideo.id)
+                                            ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20'
+                                            : 'bg-black text-white dark:bg-white dark:text-black hover:opacity-90 shadow-lg shadow-gray-200 dark:shadow-none'}
+                                    `}
+                                >
+                                    <div className={`
+                                        w-5 h-5 rounded-full flex items-center justify-center transition-all
+                                        ${watchedVideos.has(currentVideo.id) ? 'bg-green-500 text-white' : 'bg-white/20 dark:bg-black/10'}
+                                    `}>
+                                        <Check size={12} className={watchedVideos.has(currentVideo.id) ? 'opacity-100' : 'opacity-0'} />
+                                    </div>
+                                    {watchedVideos.has(currentVideo.id) ? 'Completed' : 'Mark Complete'}
+                                </button>
                             </div>
+
+
+
                         </div>
                     ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center text-gray-500">
-                            <PlayCircle size={48} className="mb-4 opacity-50" />
-                            <p>Select a video from the sidebar to start learning</p>
+                        <div className="h-full flex flex-col items-center justify-center text-center p-8 opacity-60">
+                            <div className="w-20 h-20 bg-gray-100 dark:bg-white/5 rounded-full flex items-center justify-center mb-6">
+                                <MonitorPlay className="text-gray-400" size={40} />
+                            </div>
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Start Learning</h2>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm">
+                                Select a video from the sidebar to begin your preparation session.
+                            </p>
                         </div>
                     )}
                 </div>

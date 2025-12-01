@@ -10,7 +10,8 @@ import {
     Bot,
     User,
     Sparkles,
-    GraduationCap
+    GraduationCap,
+    FileText
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -34,6 +35,7 @@ export default function Sidebar({ onMobileMenuClose, isDark, toggleTheme, spotli
                 { path: '/resources', label: 'Resources', icon: Library, id: 'browse-resources' },
                 { path: '/preparation', label: 'Preparation', icon: GraduationCap },
                 { path: '/ai-assistant', label: 'AI Assistant', icon: Bot, badge: 'New' },
+                { path: '/ai-papers', label: 'AI Papers', icon: FileText, badge: 'Beta' },
                 { path: '/leaderboard', label: 'Leaderboard', icon: BarChart3 },
             ]
         },

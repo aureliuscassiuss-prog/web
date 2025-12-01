@@ -27,9 +27,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        const { question, conversationHistory, systemPrompt, subject, context } = req.body;
+        const { question, conversationHistory, systemPrompt, subject, context, type } = req.body;
 
-        if (!question) {
+        if (!question && type !== 'generate-paper') {
             return res.status(400).json({ message: 'Question is required' });
         }
 
@@ -66,10 +66,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // Add current question
-        messages.push({
-            role: 'user',
-            content: question
-        });
+        if (req.body.type === 'generate-paper') {
+            const { subject, program, year, branch } = req.body;
+            messages.push({
+                role: 'user',
+                content: `Generate a realistic university question paper for:
+                Subject: ${subject}
+                Program: ${program}
+                Year: ${year}
+                Branch: ${branch}
+                
+                Strictly return ONLY a valid JSON object with this structure (no markdown, no other text):
+                {
+                    "universityName": "University Name",
+                    "examName": "End Semester Examination",
+                    "courseCode": "CS-101 (Example)",
+                    "duration": "3 Hours",
+                    "maxMarks": 60,
+                    "instructions": ["Answer all questions", "Figures to the right indicate full marks"],
+                    "sections": [
+                        {
+                            "name": "Section A - Multiple Choice Questions",
+                            "marks": 10,
+                            "questions": [
+                                { "id": 1, "text": "Question text?", "options": ["A", "B", "C", "D"], "answer": "A" }
+                            ]
+                        },
+                        {
+                            "name": "Section B - Descriptive Questions",
+                            "marks": 50,
+                            "questions": [
+                                { "id": 11, "text": "Question text?", "marks": 10 }
+                            ]
+                        }
+                    ]
+                }
+                Generate 10 MCQs in Section A and 5 Descriptive Questions (10 marks each) in Section B based on the subject syllabus.`
+            });
+        } else {
+            messages.push({
+                role: 'user',
+                content: question
+            });
+        }
 
         const chatCompletion = await groq.chat.completions.create({
             messages,
