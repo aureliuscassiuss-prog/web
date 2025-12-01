@@ -10,8 +10,12 @@ interface User {
     semester?: number
     college?: string
     branch?: string
+    course?: string // Program
     year?: number
+    gender?: 'male' | 'female' | 'other'
     role?: 'user' | 'admin'
+    isBanned?: boolean
+    canUpload?: boolean
 }
 
 interface AuthContextType {

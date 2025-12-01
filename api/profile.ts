@@ -89,7 +89,10 @@ async function handleUpdateProfile(req: VercelRequest, userId: string, res: Verc
     const semester = getValue('semester');
     const college = getValue('college');
     const branch = getValue('branch');
+    const course = getValue('course'); // Program
     const year = getValue('year');
+
+    const gender = getValue('gender');
 
     const db = await getDb();
 
@@ -101,7 +104,9 @@ async function handleUpdateProfile(req: VercelRequest, userId: string, res: Verc
     if (semester) updateFields.semester = parseInt(semester as string);
     if (college) updateFields.college = college;
     if (branch) updateFields.branch = branch;
+    if (course) updateFields.course = course;
     if (year) updateFields.year = parseInt(year as string);
+    if (gender) updateFields.gender = gender;
 
     // Handle Avatar File
     const avatarFile = files.avatar?.[0];
@@ -110,6 +115,19 @@ async function handleUpdateProfile(req: VercelRequest, userId: string, res: Verc
         const fileData = fs.readFileSync(avatarFile.filepath);
         const base64Image = `data:${avatarFile.mimetype};base64,${fileData.toString('base64')}`;
         updateFields.avatar = base64Image;
+    } else if (gender && !updateFields.avatar) {
+        // If gender changed but no new avatar uploaded, check if we should set default
+        // We only set default if current avatar is one of the defaults or empty
+        // But for simplicity, let's just update the avatar if it's currently empty or a default one
+        // Actually, better to let the frontend handle the "preview" and send the avatar if needed.
+        // But the requirement is "set default avatar accordingly".
+        // If the user selects gender in the modal, we might want to update the avatar too if they don't have a custom one.
+
+        // Let's check the current user first
+        const currentUser = await db.collection('users').findOne({ _id: new ObjectId(userId) });
+        if (currentUser && (!currentUser.avatar || currentUser.avatar === '/1.webp' || currentUser.avatar === '/girl.webp')) {
+            updateFields.avatar = gender === 'female' ? '/girl.webp' : '/1.webp';
+        }
     }
 
     console.log('Updating user:', userId, 'with fields:', Object.keys(updateFields));
@@ -137,6 +155,7 @@ async function handleUpdateProfile(req: VercelRequest, userId: string, res: Verc
             college: result.college,
             branch: result.branch,
             year: result.year,
+            gender: result.gender,
             reputation: result.reputation || 0
         }
     });

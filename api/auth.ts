@@ -16,7 +16,11 @@ interface User {
     semester?: number;
     college?: string;
     branch?: string;
+    course?: string;
     year?: number;
+    gender?: 'male' | 'female' | 'other';
+    isBanned?: boolean;
+    canUpload?: boolean;
     createdAt: Date;
     updatedAt?: Date;
 }
@@ -109,7 +113,7 @@ async function handleLogin(body: any, res: VercelResponse) {
     }
 
     const token = jwt.sign(
-        { userId: user._id },
+        { userId: user._id, name: user.name, email: user.email, role: user.role },
         process.env.JWT_SECRET!,
         { expiresIn: '7d' }
     );
@@ -126,6 +130,7 @@ async function handleLogin(body: any, res: VercelResponse) {
             semester: user.semester,
             college: user.college,
             branch: user.branch,
+            course: user.course,
             year: user.year,
             role: isAdmin ? 'admin' : (user.role || 'user')
         }
@@ -133,7 +138,7 @@ async function handleLogin(body: any, res: VercelResponse) {
 }
 
 async function handleRegister(body: any, res: VercelResponse) {
-    const { name, email, password } = body;
+    const { name, email, password, gender } = body;
 
     if (!name || !email || !password) {
         return res.status(400).json({ message: 'All fields are required' });
@@ -162,11 +167,13 @@ async function handleRegister(body: any, res: VercelResponse) {
         email,
         password: hashedPassword,
         reputation: 0,
-        avatar: 'avatar1',
+        avatar: gender === 'female' ? '/girl.webp' : '/1.webp',
+        gender: gender || 'male', // Default to male if not specified, but frontend should enforce
         phone: '',
         semester: 1,
         college: 'Medicaps University',
         branch: '',
+        course: '',
         year: 1,
         uploads: [],
         role: isAdmin ? 'admin' : 'user',
@@ -175,7 +182,7 @@ async function handleRegister(body: any, res: VercelResponse) {
 
     // Create token
     const token = jwt.sign(
-        { userId: result.insertedId },
+        { userId: result.insertedId, name, email, role: isAdmin ? 'admin' : 'user' },
         process.env.JWT_SECRET!,
         { expiresIn: '7d' }
     );
@@ -187,11 +194,13 @@ async function handleRegister(body: any, res: VercelResponse) {
             name,
             email,
             reputation: 0,
-            avatar: 'avatar1',
+            avatar: gender === 'female' ? '/girl.webp' : '/1.webp',
+            gender: gender || 'male',
             phone: '',
             semester: 1,
             college: 'Medicaps University',
             branch: '',
+            course: '',
             year: 1,
             role: isAdmin ? 'admin' : 'user'
         }
@@ -280,6 +289,13 @@ async function handleGoogleAuth(body: any, res: VercelResponse) {
             email: user!.email,
             reputation: user!.reputation,
             avatar: user!.avatar,
+            gender: user!.gender,
+            phone: user!.phone,
+            semester: user!.semester,
+            college: user!.college,
+            branch: user!.branch,
+            course: user!.course,
+            year: user!.year,
             role: user!.role
         }
     });

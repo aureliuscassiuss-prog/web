@@ -2,20 +2,25 @@
 import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import { Groq } from 'groq-sdk';
-// @ts-ignore
-import registerHandler from './api/auth/register.ts';
-// @ts-ignore
-import loginHandler from './api/auth/login.ts';
+
+// Import consolidated API handlers
+import authHandler from './api/auth.ts';
+import resourcesHandler from './api/resources.ts';
+import profileHandler from './api/profile.ts';
+import adminHandler from './api/admin.ts';
+import aiHandler from './api/ai.ts';
+import leaderboardHandler from './api/leaderboard.ts';
 
 // Handler adapter for Vercel-style handlers
 const adaptHandler = (handler: any) => async (req: Request, res: Response) => {
     try {
+        // Vercel handlers expect (req, res)
+        // We need to ensure req.query and req.body are available
         await handler(req, res);
     } catch (error) {
         console.error('Handler error:', error);
         if (!res.headersSent) {
-            res.status(500).json({ error: 'Internal Server Error' });
+            res.status(500).json({ error: 'Internal Server Error', details: error.message });
         }
     }
 };
@@ -23,6 +28,7 @@ const adaptHandler = (handler: any) => async (req: Request, res: Response) => {
 const app = express();
 const PORT = 3000;
 
+// Allow access from any origin (for mobile testing)
 app.use(cors());
 
 // Global Request Logger
@@ -31,97 +37,63 @@ app.use((req, res, next) => {
     next();
 });
 
-// Upload Route - MUST be before express.json() to avoid body parsing
-// @ts-ignore
-import uploadResourceHandler from './api/upload/resource.ts';
-app.post('/api/upload/resource', adaptHandler(uploadResourceHandler));
+// IMPORTANT: Do NOT use express.json() globally if some handlers need raw body (like file uploads)
+// But for our consolidated endpoints, most need JSON. 
+// If profile/resources handlers use 'formidable', they handle the stream themselves.
+// We'll apply json parsing conditionally or let the handlers deal with it.
+// For now, let's use it but be aware of upload endpoints.
+// Actually, 'formidable' in Vercel functions usually expects the raw request.
+// So we should NOT use express.json() for routes that handle uploads.
 
-// Profile Update Route (skip JSON parsing for multipart form data)
-// @ts-ignore
-import profileUpdateHandler from './api/profile/update.ts';
-app.put('/api/profile/update', adaptHandler(profileUpdateHandler));
+// Middleware to parse JSON for non-upload routes
+const jsonParser = express.json();
 
-// Now apply JSON parsing for other routes
-app.use(express.json());
+// --- ROUTES ---
 
-// AI Route
-const groq = new Groq({
-    apiKey: process.env.GROQ_API_KEY || process.env.VITE_GROQ_API_KEY
-});
+// 1. Auth
+app.all('/api/auth', jsonParser, adaptHandler(authHandler));
 
-app.post('/api/ai/ask', async (req: Request, res: Response) => {
-    try {
-        const { question } = req.body;
-
-        if (!process.env.GROQ_API_KEY && !process.env.VITE_GROQ_API_KEY) {
-            return res.status(500).json({ message: 'Groq API key not configured' });
-        }
-
-        const chatCompletion = await groq.chat.completions.create({
-            messages: [
-                {
-                    role: 'system',
-                    content: 'You are MediNotes AI, a helpful educational assistant. Keep answers concise and helpful.'
-                },
-                {
-                    role: 'user',
-                    content: question
-                }
-            ],
-            model: 'llama-3.3-70b-versatile',
-            temperature: 0.7,
-            max_tokens: 1024
-        });
-
-        res.json({ answer: chatCompletion.choices[0]?.message?.content || 'No response' });
-    } catch (error: any) {
-        console.error('AI Error:', error);
-        res.status(500).json({ message: error.message });
+// 2. Resources (List & Upload)
+// Note: Uploads use multipart/form-data, so we skip jsonParser for POSTs to /api/resources if it's an upload
+app.use('/api/resources', (req, res, next) => {
+    if (req.method === 'POST' && req.headers['content-type']?.includes('multipart/form-data')) {
+        next();
+    } else {
+        jsonParser(req, res, next);
     }
-});
+}, adaptHandler(resourcesHandler));
+
+// 3. Profile (Update & Uploads)
+app.use('/api/profile', (req, res, next) => {
+    if (req.method === 'PUT' && req.headers['content-type']?.includes('multipart/form-data')) {
+        next();
+    } else {
+        jsonParser(req, res, next);
+    }
+}, adaptHandler(profileHandler));
+
+// 4. Admin
+app.all('/api/admin', jsonParser, adaptHandler(adminHandler));
+
+// 5. AI
+app.all('/api/ai', jsonParser, adaptHandler(aiHandler));
+
+// 6. Leaderboard
+app.all('/api/leaderboard', jsonParser, adaptHandler(leaderboardHandler));
 
 
+// Listen on 0.0.0.0 to be accessible from network
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`
+🚀 Dev Server running on http://localhost:${PORT}
+📱 Network Access: http://0.0.0.0:${PORT} (Use your local IP)
 
-// Auth Routes
-app.post('/api/auth/register', adaptHandler(registerHandler));
-app.post('/api/auth/login', adaptHandler(loginHandler));
-
-// Profile Routes
-// @ts-ignore
-import profileUploadsHandler from './api/profile/uploads.ts';
-app.get('/api/profile/uploads', adaptHandler(profileUploadsHandler));
-
-// Enhanced AI Route with memory
-// @ts-ignore
-import aiChatHandler from './api/ai/chat.ts';
-app.post('/api/ai/chat', adaptHandler(aiChatHandler));
-
-// Leaderboard Route
-// @ts-ignore
-import leaderboardHandler from './api/leaderboard/top.ts';
-app.get('/api/leaderboard/top', adaptHandler(leaderboardHandler));
-
-// Resources Route
-// @ts-ignore
-import resourcesHandler from './api/resources/list.ts';
-app.get('/api/resources/list', adaptHandler(resourcesHandler));
-
-// Admin Routes
-// @ts-ignore
-import adminPendingHandler from './api/admin/pending.ts';
-// @ts-ignore
-import adminActionHandler from './api/admin/action.ts';
-app.get('/api/admin/pending', adaptHandler(adminPendingHandler));
-app.post('/api/admin/action', adaptHandler(adminActionHandler));
-
-app.listen(PORT, () => {
-    console.log(`Dev Server running on http://localhost:${PORT}`);
-    console.log(`- AI: http://localhost:${PORT}/api/ai/ask`);
-    console.log(`- AI Chat (with memory): http://localhost:${PORT}/api/ai/chat`);
-    console.log(`- Auth: http://localhost:${PORT}/api/auth/*`);
-    console.log(`- Profile: http://localhost:${PORT}/api/profile/*`);
-    console.log(`- Leaderboard: http://localhost:${PORT}/api/leaderboard/top`);
-    console.log(`- Resources: http://localhost:${PORT}/api/resources/list`);
-    console.log(`- Upload: http://localhost:${PORT}/api/upload/resource`);
-    console.log(`- Admin: http://localhost:${PORT}/api/admin/*`);
+Endpoints:
+- Auth:        http://localhost:${PORT}/api/auth
+- Resources:   http://localhost:${PORT}/api/resources
+- Profile:     http://localhost:${PORT}/api/profile
+- Admin:       http://localhost:${PORT}/api/admin
+- AI:          http://localhost:${PORT}/api/ai
+- Leaderboard: http://localhost:${PORT}/api/leaderboard
+    `);
 });

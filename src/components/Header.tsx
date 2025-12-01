@@ -1,4 +1,4 @@
-import { Upload, LogIn, Menu } from 'lucide-react'
+import { LogIn, Menu } from 'lucide-react'
 import { getAvatarComponent } from '../data/premiumAvatars'
 
 interface HeaderProps {
@@ -31,16 +31,6 @@ export default function Header({ onUploadClick, onAuthClick, onProfileClick, onM
             </div>
 
             <div className="flex items-center gap-4 ml-auto">
-                {user && (
-                    <button
-                        onClick={onUploadClick}
-                        className="btn bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 border-0"
-                    >
-                        <Upload className="w-[18px] h-[18px]" />
-                        Upload
-                    </button>
-                )}
-
                 {user ? (
                     <button
                         onClick={onProfileClick}
@@ -54,8 +44,7 @@ export default function Header({ onUploadClick, onAuthClick, onProfileClick, onM
                             <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-black dark:border-white shadow-lg">
                                 <AvatarComponent className="w-full h-full" />
                             </div>
-                        ) : user.avatar && user.avatar.length > 20 ? (
-                            // Assuming custom avatars are long URLs/Base64 strings
+                        ) : user.avatar ? (
                             <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-black dark:border-white shadow-lg">
                                 <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
                             </div>

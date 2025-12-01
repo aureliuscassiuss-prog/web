@@ -7,6 +7,7 @@ import { X } from 'lucide-react'
 // Components
 import Sidebar from './components/Sidebar'
 import Header from './components/Header'
+import Footer from './components/Footer'
 import Hero from './components/Hero'
 import ResourceGrid from './components/ResourceGrid'
 import AIAssistantPage from './components/AIAssistantPage'
@@ -16,6 +17,11 @@ import Toast from './components/Toast'
 import ProfilePage from './components/ProfilePage'
 import BrowseResources from './components/BrowseResources'
 import AdminPanel from './components/AdminPanel'
+import AboutPage from './components/AboutPage'
+import ContactPage from './components/ContactPage'
+import DocsPage from './components/DocsPage'
+import PrivacyPage from './components/PrivacyPage'
+import TermsPage from './components/TermsPage'
 
 
 function Layout({
@@ -32,6 +38,7 @@ function Layout({
   spotlight
 }: any) {
   const navigate = useNavigate()
+
   return (
     <div className="flex min-h-screen flex-col bg-white dark:bg-black text-gray-950 dark:text-gray-50 transition-colors duration-200 font-sans selection:bg-gray-900 selection:text-white dark:selection:bg-gray-100 dark:selection:text-black">
 
@@ -62,6 +69,9 @@ function Layout({
           {children}
         </main>
       </div>
+
+      {/* Footer */}
+      <Footer />
 
       {/* Mobile Sidebar Overlay */}
       {isMobileMenuOpen && (
@@ -219,7 +229,7 @@ function AppContent() {
             user ? (
               <div className="space-y-6">
                 <h1 className="text-3xl font-bold tracking-tight">My Contributions</h1>
-                <ResourceGrid view="uploads" searchQuery={searchQuery} />
+                <ResourceGrid view="uploads" searchQuery={searchQuery} onUploadRequest={handleUploadWithData} />
               </div>
             ) : (
               <Navigate to="/" replace />
@@ -228,8 +238,7 @@ function AppContent() {
 
           {/* Admin Route (Protected) */}
           <Route path="/admin" element={
-            /* Add actual admin check logic here usually */
-            user ? <AdminPanel /> : <Navigate to="/" replace />
+            user && user.role === 'admin' ? <AdminPanel /> : <Navigate to="/" replace />
           } />
 
 
@@ -237,6 +246,21 @@ function AppContent() {
           <Route path="/profile" element={
             user ? <ProfilePage /> : <Navigate to="/" replace />
           } />
+
+          {/* About Route */}
+          <Route path="/about" element={<AboutPage />} />
+
+          {/* Contact Route */}
+          <Route path="/contact" element={<ContactPage />} />
+
+          {/* Docs Route */}
+          <Route path="/docs" element={<DocsPage />} />
+
+          {/* Privacy Route */}
+          <Route path="/privacy" element={<PrivacyPage />} />
+
+          {/* Terms Route */}
+          <Route path="/terms" element={<TermsPage />} />
 
           {/* Catch all */}
           <Route path="*" element={<Navigate to="/" replace />} />

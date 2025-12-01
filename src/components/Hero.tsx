@@ -1,4 +1,4 @@
-import { ArrowRight, Sparkles, PlayCircle } from 'lucide-react'
+import { ArrowRight, Sparkles, PlayCircle, ChevronRight, Star, Users, TrendingUp, MessageSquare } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 interface HeroProps {
@@ -7,68 +7,144 @@ interface HeroProps {
 
 export default function Hero({ onGetStarted }: HeroProps) {
     return (
-        <section className="relative flex flex-col items-center justify-center pt-8 pb-16 px-4 text-center md:pt-24 md:pb-32 overflow-hidden">
+        <section className="relative flex flex-col items-center justify-center pt-16 pb-24 px-4 text-center md:pt-32 md:pb-48 overflow-hidden bg-white dark:bg-[#030303] selection:bg-blue-500/30">
 
-            {/* Optional: Subtle Background Grid */}
-            <div className="absolute inset-0 -z-10 h-full w-full bg-white dark:bg-black bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#1f2937_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none"></div>
+            {/* --- Background Effects (Cleaned & Professional) --- */}
+
+            {/* 1. Top Spotlight - Neutral Blue/White (No Pink) */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1200px] h-[500px] bg-blue-500/10 blur-[100px] rounded-full pointer-events-none opacity-40 dark:opacity-20" />
+
+            {/* 2. Subtle Grid - Softened, No Hard Borders */}
+            <div className="absolute inset-0 -z-10 h-full w-full bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none"></div>
+
+            {/* --- Main Content --- */}
 
             {/* Announcement Badge */}
-            <div className="mb-6 md:mb-8 animate-fade-in opacity-0 [animation-fill-mode:forwards]">
-                <span className="inline-flex items-center rounded-full border border-gray-200 bg-white/50 backdrop-blur-sm px-3 py-1 text-xs md:text-sm font-medium text-gray-600 shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950/50 dark:text-gray-400 dark:hover:bg-gray-900 cursor-default">
-                    <Sparkles className="mr-2 h-3 w-3 md:h-3.5 md:w-3.5 text-yellow-500" />
+            <div className="mb-8 animate-fade-in opacity-0 [animation-fill-mode:forwards]">
+                <div className="group relative inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/60 backdrop-blur-md px-4 py-1.5 text-xs md:text-sm font-medium text-gray-600 shadow-sm transition-all hover:bg-white hover:shadow-md hover:border-blue-200 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:border-white/20 cursor-default">
+                    <Sparkles className="h-3.5 w-3.5 text-blue-500" />
                     <span>New: AI Tutor is now live</span>
-                </span>
+                    <ChevronRight className="h-3 w-3 text-gray-400 transition-transform group-hover:translate-x-0.5" />
+                </div>
             </div>
 
-            {/* Main Headline */}
-            <h1 className="max-w-4xl text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white md:text-7xl animate-slide-up opacity-0 [animation-fill-mode:forwards] [animation-delay:0.1s]">
-                Study smarter.<br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-900 via-gray-500 to-gray-900 dark:from-white dark:via-gray-400 dark:to-white">
+            {/* Headline */}
+            <h1 className="max-w-6xl text-5xl font-bold tracking-tighter text-gray-900 dark:text-white md:text-8xl animate-slide-up opacity-0 [animation-fill-mode:forwards] [animation-delay:0.1s]">
+                Study smarter. <br className="hidden md:block" />
+                <span className="inline-block text-transparent bg-clip-text bg-gradient-to-b from-gray-900 to-gray-500 dark:from-white dark:to-gray-400">
                     Achieve more.
                 </span>
             </h1>
 
             {/* Subheading */}
-            <p className="mt-4 md:mt-6 max-w-2xl text-base md:text-xl text-gray-600 dark:text-gray-400 animate-slide-up opacity-0 [animation-fill-mode:forwards] [animation-delay:0.2s] leading-relaxed px-4">
-                Find notes, PYQs, and study materials for Medicaps University. Get instant AI tutoring help for any subject.
+            <p className="mt-6 md:mt-8 max-w-2xl text-base md:text-xl text-gray-600 dark:text-gray-400 animate-slide-up opacity-0 [animation-fill-mode:forwards] [animation-delay:0.2s] leading-relaxed px-4">
+                The all-in-one academic platform for Medicaps University. Access premium notes, PYQs, and get instant guidance from your personal AI Tutor.
             </p>
 
             {/* Action Buttons */}
             <div className="mt-8 md:mt-10 flex flex-col gap-3 md:gap-4 w-full sm:w-auto sm:flex-row animate-slide-up opacity-0 [animation-fill-mode:forwards] [animation-delay:0.3s]">
                 <button
                     onClick={onGetStarted}
-                    className="btn btn-primary h-10 md:h-12 px-6 md:px-8 rounded-full text-sm md:text-base shadow-xl shadow-black/5 dark:shadow-white/5 w-full sm:w-auto flex items-center justify-center cursor-pointer"
+                    className="relative h-12 px-8 rounded-full text-base font-medium text-white bg-black dark:bg-white dark:text-black shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 w-full sm:w-auto flex items-center justify-center overflow-hidden"
                 >
-                    Get Started
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                    <span className="relative flex items-center z-10">
+                        Get Started
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                    </span>
                 </button>
                 <Link
                     to="/leaderboard"
-                    className="btn btn-outline h-10 md:h-12 px-6 md:px-8 rounded-full text-sm md:text-base bg-white/50 backdrop-blur-sm w-full sm:w-auto flex items-center justify-center"
+                    className="h-12 px-8 rounded-full text-base font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 bg-white/50 dark:bg-white/5 backdrop-blur-sm hover:bg-gray-50 dark:hover:bg-white/10 transition-all duration-200 w-full sm:w-auto flex items-center justify-center"
                 >
                     View Leaderboard
                 </Link>
             </div>
 
-            {/* Visual Placeholder / Video Area */}
-            <div className="mt-12 md:mt-16 w-full max-w-5xl animate-fade-in opacity-0 [animation-fill-mode:forwards] [animation-delay:0.5s] px-2 sm:px-0">
-                <div className="relative rounded-xl border border-gray-200 bg-gray-50/50 p-1 md:p-2 dark:border-gray-800 dark:bg-gray-900/50 backdrop-blur-sm shadow-2xl dark:shadow-black/50">
-                    <div className="aspect-[16/9] w-full overflow-hidden rounded-lg bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 relative flex items-center justify-center group cursor-pointer">
+            {/* Social Proof (New Content) */}
+            <div className="mt-8 md:mt-10 flex flex-col md:flex-row items-center gap-4 animate-fade-in opacity-0 [animation-fill-mode:forwards] [animation-delay:0.4s]">
+                <div className="flex -space-x-3">
+                    {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="h-8 w-8 rounded-full border-2 border-white dark:border-black bg-gray-200 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
+                            <Users className="h-4 w-4 text-gray-400" />
+                        </div>
+                    ))}
+                    <div className="h-8 w-8 rounded-full border-2 border-white dark:border-black bg-gray-100 dark:bg-gray-900 flex items-center justify-center text-[10px] font-bold text-gray-600 dark:text-gray-400">
+                        2k+
+                    </div>
+                </div>
+                <div className="flex items-center gap-1">
+                    <div className="flex text-yellow-500">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                            <Star key={i} className="h-4 w-4 fill-current" />
+                        ))}
+                    </div>
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">from students</span>
+                </div>
+            </div>
 
-                        {/* Grid Pattern inside the frame */}
-                        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-                        <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent dark:from-gray-950"></div>
+            {/* --- Visual / Video Section (Professional Glass) --- */}
+            <div className="relative mt-16 md:mt-20 w-full max-w-6xl animate-fade-in opacity-0 [animation-fill-mode:forwards] [animation-delay:0.5s] px-4">
 
-                        {/* Central Play Indicator */}
-                        <div className="relative z-10 flex flex-col items-center gap-3 md:gap-4 transition-transform duration-300 group-hover:scale-105">
-                            <div className="rounded-full bg-gray-100 dark:bg-gray-900 p-3 md:p-4 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
-                                <PlayCircle className="h-8 w-8 md:h-12 md:w-12 text-gray-900 dark:text-white opacity-80" />
+                {/* Clean Glow (No Pink) */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] h-[50%] bg-blue-500/20 blur-[90px] rounded-full -z-10"></div>
+
+                {/* Main Glass Container */}
+                <div className="relative rounded-2xl border border-gray-200/50 bg-white/40 p-2 dark:border-white/10 dark:bg-white/5 backdrop-blur-2xl shadow-2xl ring-1 ring-black/5 dark:ring-white/5">
+
+                    {/* The Screen/Frame */}
+                    <div className="aspect-[16/9] w-full overflow-hidden rounded-xl bg-gray-50 dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/5 relative flex items-center justify-center group cursor-pointer">
+
+                        {/* Inner Grid */}
+                        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] opacity-50"></div>
+
+                        {/* Floating UI Widget 1: AI Chat (Left) */}
+                        <div className="absolute left-4 top-1/4 hidden md:flex flex-col gap-2 p-3 rounded-lg border border-gray-200 dark:border-white/10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md shadow-lg w-48 animate-bounce-slow [animation-duration:3s]">
+                            <div className="flex items-center gap-2">
+                                <div className="h-6 w-6 rounded-full bg-blue-500 flex items-center justify-center"><Sparkles className="h-3 w-3 text-white" /></div>
+                                <div className="h-2 w-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
                             </div>
-                            <p className="text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">
-                                See how MediNotes works
-                            </p>
+                            <div className="h-2 w-32 bg-gray-100 dark:bg-gray-800 rounded"></div>
+                            <div className="h-2 w-24 bg-gray-100 dark:bg-gray-800 rounded"></div>
+                        </div>
+
+                        {/* Floating UI Widget 2: Graph (Right) */}
+                        <div className="absolute right-4 bottom-1/4 hidden md:flex flex-col gap-2 p-3 rounded-lg border border-gray-200 dark:border-white/10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md shadow-lg w-40 animate-bounce-slow [animation-duration:4s]">
+                            <div className="flex items-center justify-between mb-1">
+                                <div className="text-xs font-semibold text-gray-500">Trend</div>
+                                <TrendingUp className="h-3 w-3 text-green-500" />
+                            </div>
+                            <div className="flex items-end gap-1 h-8">
+                                <div className="w-full bg-blue-500/20 h-[40%] rounded-sm"></div>
+                                <div className="w-full bg-blue-500/40 h-[70%] rounded-sm"></div>
+                                <div className="w-full bg-blue-500 h-[90%] rounded-sm"></div>
+                            </div>
+                        </div>
+
+                        {/* Central Play Button */}
+                        <div className="relative z-10 flex flex-col items-center gap-4 transition-transform duration-300 group-hover:scale-105">
+                            <div className="group/play relative flex items-center justify-center">
+                                <div className="absolute inset-0 rounded-full bg-blue-500/20 animate-ping duration-2000"></div>
+                                <div className="relative rounded-full bg-white dark:bg-white/10 p-5 shadow-xl ring-1 ring-gray-100 dark:ring-white/10 backdrop-blur-md transition-colors group-hover/play:bg-blue-50 dark:group-hover/play:bg-white/20">
+                                    <PlayCircle className="h-12 w-12 text-gray-900 dark:text-white fill-current/10" />
+                                </div>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-sm md:text-base font-semibold text-gray-900 dark:text-white tracking-wide">
+                                    See how MediNotes works
+                                </p>
+                            </div>
                         </div>
                     </div>
+                </div>
+
+                {/* Feature Pills (New Content Below Video) */}
+                <div className="mt-8 flex flex-wrap justify-center gap-x-8 gap-y-4 opacity-60">
+                    {['Instant Notes', 'AI Tutoring', 'Past Year Papers', 'CGPA Calculator'].map((feature) => (
+                        <div key={feature} className="flex items-center gap-2 text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">
+                            <div className="h-1.5 w-1.5 rounded-full bg-blue-500/50"></div>
+                            {feature}
+                        </div>
+                    ))}
                 </div>
             </div>
         </section>

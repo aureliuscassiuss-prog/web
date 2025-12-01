@@ -17,7 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const db = await getDb();
 
         if (req.method === 'GET') {
-            const { search, branch, year, subject, type, course, resourceType } = req.query;
+            const { search, branch, year, subject, unit, type, course, resourceType } = req.query;
 
             // Build query - support both 'status: approved' and 'isPublic: true' for backward compatibility
             const query: any = {
@@ -50,7 +50,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             // Branch filtering
             if (branch && typeof branch === 'string') {
                 query.branch = branch;
-            } else if (course && typeof course === 'string') {
+            }
+
+            // Course (Program) filtering
+            if (course && typeof course === 'string') {
                 query.course = course;
             }
 
@@ -78,12 +81,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 query.subject = subject;
             }
 
+            // Unit filtering
+            if (unit && typeof unit === 'string') {
+                query.unit = unit;
+            }
+
             // Fetch resources
-            const resources = await db.collection('resources')
-                .find(query)
-                .sort({ createdAt: -1 })
-                .limit(100)
-                .toArray();
+            // Fetch resources with uploader details
+            const resources = await db.collection('resources').aggregate([
+                { $match: query },
+                { $sort: { createdAt: -1 } },
+                { $limit: 100 },
+                {
+                    $lookup: {
+                        from: 'users',
+                        let: {
+                            uploaderIdObj: {
+                                $convert: {
+                                    input: '$uploaderId',
+                                    to: 'objectId',
+                                    onError: null,
+                                    onNull: null
+                                }
+                            }
+                        },
+                        pipeline: [
+                            { $match: { $expr: { $eq: ['$_id', '$$uploaderIdObj'] } } },
+                            { $project: { avatar: 1 } }
+                        ],
+                        as: 'uploaderDetails'
+                    }
+                },
+                {
+                    $addFields: {
+                        uploaderAvatar: { $arrayElemAt: ['$uploaderDetails.avatar', 0] }
+                    }
+                },
+                { $project: { uploaderDetails: 0 } }
+            ]).toArray();
 
             return res.status(200).json({ resources });
 
@@ -101,6 +136,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             // Verify token
             const decoded = jwt.verify(token, process.env.JWT_SECRET) as { userId: string; name: string };
 
+            // Check if user is banned or restricted from uploading
+            const user = await db.collection('users').findOne({ _id: new ObjectId(decoded.userId) });
+
+            if (!user) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+
+            if (user.isBanned) {
+                return res.status(403).json({ message: 'Your account has been banned. You cannot upload resources.' });
+            }
+
+            if (user.canUpload === false) {
+                return res.status(403).json({ message: 'You have been restricted from uploading resources. Contact admin for more information.' });
+            }
+
             // Extract fields from JSON body
             const {
                 title,
@@ -110,6 +160,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 year,
                 yearNum,
                 subject,
+                unit,
                 resourceType,
                 driveLink
             } = req.body;
@@ -132,6 +183,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 branch,
                 year: yearNum ? parseInt(yearNum) : (year ? parseInt(year) : 1),
                 subject,
+                unit,
                 resourceType,
                 driveLink, // Store the link directly
                 status: 'pending', // Default to pending for admin approval
@@ -179,6 +231,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     _id: result.insertedId
                 }
             });
+        } else if (req.method === 'DELETE') {
+            if (!process.env.JWT_SECRET) {
+                return res.status(500).json({ message: 'Server misconfiguration' });
+            }
+
+            const token = req.headers.authorization?.replace('Bearer ', '');
+            if (!token) {
+                return res.status(401).json({ message: 'No token provided' });
+            }
+
+            const decoded = jwt.verify(token, process.env.JWT_SECRET) as { userId: string; role?: string };
+            const { id } = req.query;
+
+            if (!id || typeof id !== 'string') {
+                return res.status(400).json({ message: 'Resource ID is required' });
+            }
+
+            const resource = await db.collection('resources').findOne({ _id: new ObjectId(id) });
+
+            if (!resource) {
+                return res.status(404).json({ message: 'Resource not found' });
+            }
+
+            // Check ownership or admin role
+            if (resource.uploaderId !== decoded.userId && decoded.role !== 'admin') {
+                return res.status(403).json({ message: 'You are not authorized to delete this resource' });
+            }
+
+            await db.collection('resources').deleteOne({ _id: new ObjectId(id) });
+
+            // Optionally remove from user's uploads array and decrease reputation?
+            // For now, just delete the resource.
+
+            return res.status(200).json({ message: 'Resource deleted successfully' });
+
         } else {
             return res.status(405).json({ message: 'Method not allowed' });
         }

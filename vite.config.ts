@@ -10,6 +10,9 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true,
       }
-    }
+    },
+    // Enable history fallback for client-side routing
+    // This ensures all routes serve index.html, allowing React Router to handle routing
+    historyApiFallback: true
   }
 })

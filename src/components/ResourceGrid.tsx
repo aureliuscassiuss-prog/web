@@ -1,9 +1,10 @@
 import {
-    ExternalLink, Star, Upload as UploadIcon, FileText, User,
-    Trophy, Sparkles, Share2, FileQuestion, ArrowUp, Mic,
-    Copy, ThumbsUp, ThumbsDown, Trash2
+    Upload as UploadIcon, FileText, User,
+    Trophy, Sparkles, FileQuestion, ArrowUp,
+    Copy, ThumbsUp, ThumbsDown, Trash2, Bot, Download,
+    Check, ChevronRight
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import LeaderboardView from './LeaderboardView'
 
@@ -13,127 +14,116 @@ interface ResourceGridProps {
         branch?: string
         year?: number
         subject?: string
+        course?: string
+        unit?: string
     }
     searchQuery?: string
     onUploadRequest?: (data: any) => void
 }
 
+interface Message {
+    role: 'user' | 'assistant'
+    content: string
+}
+
 export default function ResourceGrid({ view, filters, searchQuery = '', onUploadRequest }: ResourceGridProps) {
-    const { user, token } = useAuth()
+    const { token, user } = useAuth()
+    const chatEndRef = useRef<HTMLDivElement>(null)
 
     // Data States
     const [resources, setResources] = useState<any[]>([])
-    const [papers, setPapers] = useState<any[]>([])
     const [uploads, setUploads] = useState<any[]>([])
     const [leaderboard, setLeaderboard] = useState<any[]>([])
     const [isLoading, setIsLoading] = useState(false)
 
     // UI States
     const [activeTab, setActiveTab] = useState<'notes' | 'pyqs' | 'formula' | 'ai'>('notes')
+    const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
+
+    // AI Chat States
     const [chatInput, setChatInput] = useState('')
-    const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([
-        { role: 'assistant', content: "Hi! I'm your AI tutor. I can help you with concepts, solve problems, explain topics, and answer questions related to your subjects. What would you like to learn about today?" }
+    const [chatMessages, setChatMessages] = useState<Message[]>([
+        { role: 'assistant', content: "Hi! I'm your AI tutor. I can help you with concepts, solve problems, or explain topics. What are we studying today?" }
     ])
     const [isAiLoading, setIsAiLoading] = useState(false)
 
-    // Helper to build query string
+    // Scroll to bottom of chat
+    useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    }, [chatMessages, isAiLoading])
+
     const buildQueryParams = (type?: string) => {
         const params = new URLSearchParams()
         if (searchQuery) params.append('search', searchQuery)
         if (filters?.branch) params.append('branch', filters.branch)
         if (filters?.year && filters.year > 0) params.append('year', filters.year.toString())
         if (filters?.subject) params.append('subject', filters.subject)
+        if (filters?.course) params.append('course', filters.course)
+        if (filters?.unit) params.append('unit', filters.unit)
         if (type) params.append('type', type)
         return params
     }
 
-    // Handle AI Chat
+    // --- AI HANDLERS ---
     const handleSendMessage = async () => {
         if (!chatInput.trim() || isAiLoading) return
-
         const userMessage = chatInput.trim()
         setChatInput('')
         setIsAiLoading(true)
 
-        // Add user message to display
-        const newMessages = [...chatMessages, { role: 'user' as const, content: userMessage }]
+        const newMessages: Message[] = [...chatMessages, { role: 'user', content: userMessage }]
         setChatMessages(newMessages)
 
         try {
-            const headers: any = {
-                'Content-Type': 'application/json'
-            }
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`
-            }
+            const headers: any = { 'Content-Type': 'application/json' }
+            if (token) headers['Authorization'] = `Bearer ${token}`
 
-            // Build conversation history for API (exclude the message we just added)
-            const conversationHistory = chatMessages.map(m => ({ role: m.role, content: m.content }))
+            const conversationHistory = newMessages.map(m => ({ role: m.role, content: m.content }))
 
             const response = await fetch('/api/ai', {
                 method: 'POST',
                 headers,
-                body: JSON.stringify({
-                    question: userMessage,
-                    conversationHistory
-                })
+                body: JSON.stringify({ question: userMessage, conversationHistory })
             })
 
             if (!response.ok) throw new Error('Failed to get AI response')
-
             const data = await response.json()
 
-            // Update with the returned conversation history or build it manually
             if (data.conversationHistory) {
-                setChatMessages(data.conversationHistory.map((m: any) => ({ role: m.role, content: m.content })))
+                setChatMessages(data.conversationHistory)
             } else {
                 setChatMessages([...newMessages, { role: 'assistant', content: data.answer || "I'm sorry, I couldn't generate a response." }])
             }
         } catch (error) {
             console.error('AI Error:', error)
-            setChatMessages([...newMessages, { role: 'assistant', content: "I'm having trouble connecting right now. Please try again later." }])
+            setChatMessages([...newMessages, { role: 'assistant', content: "Connection error. Please try again later." }])
         } finally {
             setIsAiLoading(false)
         }
     }
 
-    const handleKeyPress = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault()
-            handleSendMessage()
-        }
+    const copyToClipboard = (text: string, index: number) => {
+        navigator.clipboard.writeText(text)
+        setCopiedIndex(index)
+        setTimeout(() => setCopiedIndex(null), 2000)
     }
 
     const clearChat = () => {
-        setChatMessages([
-            { role: 'assistant', content: "Hi! I'm your AI tutor. I can help you with concepts, solve problems, explain topics, and answer questions related to your subjects. What would you like to learn about today?" }
-        ])
+        setChatMessages([{ role: 'assistant', content: "Chat cleared. How can I help you now?" }])
     }
 
-    // --- FETCH DATA EFFECT ---
+    // --- DATA FETCHING ---
     useEffect(() => {
         let isMounted = true
         setIsLoading(true)
 
         const fetchData = async () => {
             try {
-                if (view === 'resources') {
-                    // Logic to fetch based on Active Tab
-                    if (activeTab === 'notes') {
-                        const res = await fetch(`/api/resources?${buildQueryParams('notes')}`)
-                        const data = await res.json()
-                        if (isMounted) setResources(data.resources || [])
-                    }
-                    else if (activeTab === 'pyqs') {
-                        const res = await fetch(`/api/resources?${buildQueryParams('pyq')}`)
-                        const data = await res.json()
-                        if (isMounted) setResources(data.resources || [])
-                    }
-                    else if (activeTab === 'formula') {
-                        const res = await fetch(`/api/resources?${buildQueryParams('formula-sheet')}`)
-                        const data = await res.json()
-                        if (isMounted) setResources(data.resources || [])
-                    }
+                if (view === 'resources' && activeTab !== 'ai') {
+                    let typeParam = activeTab === 'notes' ? 'notes' : activeTab === 'pyqs' ? 'pyq' : 'formula-sheet'
+                    const res = await fetch(`/api/resources?${buildQueryParams(typeParam)}`)
+                    const data = await res.json()
+                    if (isMounted) setResources(data.resources || [])
                 }
                 else if (view === 'uploads' && token) {
                     const res = await fetch('/api/profile?action=uploads', { headers: { 'Authorization': `Bearer ${token}` } })
@@ -152,171 +142,205 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
             }
         }
 
-        // Only fetch if not AI tab (AI is local/interactive)
-        if (activeTab !== 'ai') {
-            fetchData()
-        } else {
-            setIsLoading(false)
-        }
+        if (activeTab !== 'ai') fetchData()
+        else setIsLoading(false)
 
         return () => { isMounted = false }
     }, [view, activeTab, searchQuery, filters, token])
 
+    const handleDelete = async (resourceId: string) => {
+        if (!confirm('Are you sure you want to delete this resource?')) return
 
-    // --- LOADING STATE ---
+        try {
+            const response = await fetch(`/api/resources?id=${resourceId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+
+            if (response.ok) {
+                setUploads(prev => prev.filter(r => r._id !== resourceId))
+                setResources(prev => prev.filter(r => r._id !== resourceId))
+            } else {
+                const data = await response.json()
+                alert(data.message || 'Failed to delete resource')
+            }
+        } catch (error) {
+            console.error('Delete error:', error)
+            alert('Error deleting resource')
+        }
+    }
+
+    // --- MAIN RENDER ---
     if (isLoading) {
         return (
-            <div className="flex h-64 items-center justify-center">
-                <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-black dark:border-gray-800 dark:border-t-white"></div>
+            <div className="flex h-64 flex-col items-center justify-center space-y-3">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-blue-600 dark:border-gray-800 dark:border-t-blue-400"></div>
+                <p className="text-sm text-gray-500 animate-pulse">Loading...</p>
             </div>
         )
     }
 
-    // --- VIEW 2: UPLOADS ---
-    if (view === 'uploads') {
-        return <UploadsView user={user} uploads={uploads} searchQuery={searchQuery} />
-    }
+    if (view === 'uploads') return <UploadsView uploads={uploads} onUploadRequest={onUploadRequest} onDelete={handleDelete} />
+    if (view === 'leaderboard') return <LeaderboardView leaderboard={leaderboard} />
 
-    // --- VIEW 2.5: LEADERBOARD ---
-    if (view === 'leaderboard') {
-        return <LeaderboardView leaderboard={leaderboard} />
-    }
-
-    // --- VIEW 3: RESOURCES (MAIN TABBED VIEW) ---
     return (
-        <div className="animate-fade-in px-4 md:px-8 py-6">
+        <div className="animate-fade-in w-full max-w-4xl mx-auto">
 
-            {/* TABS HEADER */}
-            <div className="border-b border-gray-200 dark:border-gray-800 mb-8">
-                <div className="flex gap-8 overflow-x-auto no-scrollbar">
-                    <TabButton
-                        active={activeTab === 'notes'}
-                        onClick={() => setActiveTab('notes')}
-                        label="Notes"
-                    />
-                    <TabButton
-                        active={activeTab === 'pyqs'}
-                        onClick={() => setActiveTab('pyqs')}
-                        label="PYQs"
-                    />
-                    <TabButton
-                        active={activeTab === 'formula'}
-                        onClick={() => setActiveTab('formula')}
-                        label="Formula Sheets"
-                    />
-                    <TabButton
-                        active={activeTab === 'ai'}
-                        onClick={() => setActiveTab('ai')}
-                        label="AI Tutor"
-                        icon={<Sparkles className="w-3.5 h-3.5" />}
-                    />
+            {/* FIXED LAYOUT TABS (No Scrolling) */}
+            <div className="mb-6 bg-gray-100/50 dark:bg-gray-800/50 p-1.5 rounded-xl border border-gray-200 dark:border-gray-800">
+                <div className="grid grid-cols-4 gap-1">
+                    <TabButton active={activeTab === 'notes'} onClick={() => setActiveTab('notes')} label="Notes" icon={<FileText className="w-4 h-4" />} />
+                    <TabButton active={activeTab === 'pyqs'} onClick={() => setActiveTab('pyqs')} label="PYQs" icon={<FileQuestion className="w-4 h-4" />} />
+                    <TabButton active={activeTab === 'formula'} onClick={() => setActiveTab('formula')} label="Formula" icon={<FileText className="w-4 h-4" />} />
+                    <TabButton active={activeTab === 'ai'} onClick={() => setActiveTab('ai')} label="AI Tutor" icon={<Sparkles className="w-4 h-4" />} isSpecial />
                 </div>
             </div>
 
-            {/* TAB CONTENT */}
-
-            {/* 1. NOTES & PYQS & FORMULA */}
-            {activeTab !== 'ai' && (
-                <div>
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                            {activeTab === 'notes' ? 'Notes' : activeTab === 'pyqs' ? 'Previous Year Questions' : 'Formula Sheets'}
-                        </h2>
+            {/* CONTENT AREA */}
+            {activeTab !== 'ai' ? (
+                <div className="space-y-4">
+                    {/* PROFESSIONAL HEADER WITH UPLOAD BUTTON */}
+                    <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-800">
                         <div className="flex items-center gap-3">
-                            <span className="text-sm text-gray-500 dark:text-gray-400">
-                                {resources.length} files available
-                            </span>
-                            <button className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                                <Share2 className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                            </button>
+                            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                                {activeTab === 'notes' ? 'Lecture Notes' : activeTab === 'pyqs' ? 'Previous Papers' : 'Formula Sheets'}
+                            </h2>
+                            {/* Upload Button Next to Heading */}
+                            {onUploadRequest && (
+                                <button
+                                    onClick={() => onUploadRequest({ filters, activeTab })}
+                                    className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg dark:bg-blue-900/20 dark:text-blue-400 transition-colors"
+                                    title="Upload Resource"
+                                >
+                                    <UploadIcon className="w-4 h-4" />
+                                </button>
+                            )}
                         </div>
+
+                        {/* Result Counter */}
+                        <span className="text-xs font-medium px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-full">
+                            {resources.length} Result{resources.length !== 1 && 's'}
+                        </span>
                     </div>
 
                     {resources.length === 0 ? (
                         <EmptyState
                             icon={FileQuestion}
-                            title={`No ${activeTab === 'formula' ? 'formula sheets' : activeTab} available yet`}
-                            description={`Be the first to upload ${activeTab === 'formula' ? 'formula sheets' : 'resources'} for this category.`}
+                            title={`No content found`}
+                            description={`Be the first to upload for this subject.`}
                             onUploadRequest={onUploadRequest}
                             filters={filters}
                             activeTab={activeTab}
                         />
                     ) : (
-                        <div className="grid grid-cols-1 gap-4">
+                        <div className="grid grid-cols-1 gap-3">
                             {resources.map((resource) => (
                                 <FileListCard key={resource._id} resource={resource} />
                             ))}
                         </div>
                     )}
                 </div>
-            )}
-
-            {/* 2. AI TUTOR INTERFACE */}
-            {activeTab === 'ai' && (
-                <div className="animate-fade-in flex flex-col h-[600px] border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden bg-white dark:bg-gray-900 shadow-sm">
+            ) : (
+                /* IMPROVED AI TUTOR INTERFACE */
+                <div className="flex flex-col h-[600px] border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden bg-gray-50 dark:bg-gray-900/50 relative shadow-sm">
                     {/* Chat Header */}
-                    <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                            <Sparkles className="w-5 h-5 text-purple-500" />
-                            <h3 className="font-semibold text-gray-900 dark:text-white">AI Tutor</h3>
+                    <div className="absolute top-0 inset-x-0 p-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 flex justify-between items-center z-10">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-indigo-500/20">
+                                <Bot className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-bold text-gray-900 dark:text-white leading-none">AI Tutor</h3>
+                                <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">Always here to help</p>
+                            </div>
                         </div>
-                        <button
-                            onClick={clearChat}
-                            className="flex items-center gap-2 text-xs text-gray-400 hover:text-red-500 transition-colors"
-                        >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            Clear Chat
+                        <button onClick={clearChat} className="p-2 hover:bg-red-50 hover:text-red-500 rounded-lg text-gray-400 transition-colors" title="Clear Chat">
+                            <Trash2 className="w-4 h-4" />
                         </button>
                     </div>
 
-                    {/* Chat Messages Area */}
-                    <div className="flex-1 p-6 overflow-y-auto space-y-4">
+                    {/* Messages Area */}
+                    <div className="flex-1 overflow-y-auto p-4 pt-16 pb-4 space-y-6 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800">
                         {chatMessages.map((message, index) => (
-                            <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${message.role === 'user'
-                                    ? 'bg-black dark:bg-white text-white dark:text-black'
-                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
-                                    }`}>
-                                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                                </div>
-                            </div>
-                        ))}
-                        {isAiLoading && (
-                            <div className="flex justify-start">
-                                <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-3">
-                                    <div className="flex gap-1">
-                                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                            <div key={index} className={`flex flex-col ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
+                                <div className={`flex gap-2 max-w-[90%] md:max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                                    {/* Avatar */}
+                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-1 overflow-hidden
+                                        ${message.role === 'user' ? 'bg-blue-100 text-blue-600' : 'bg-violet-100 text-violet-600'}`}>
+                                        {message.role === 'user' ? (
+                                            user?.avatar ? (
+                                                <img src={user.avatar} alt="User" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <User className="w-3.5 h-3.5" />
+                                            )
+                                        ) : (
+                                            <Sparkles className="w-3.5 h-3.5" />
+                                        )}
+                                    </div>
+
+                                    {/* Bubble */}
+                                    <div className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm
+                                        ${message.role === 'user'
+                                            ? 'bg-blue-600 text-white rounded-tr-none'
+                                            : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-700 rounded-tl-none'
+                                        }`}>
+                                        <p className="whitespace-pre-wrap">{message.content}</p>
                                     </div>
                                 </div>
+
+                                {/* AI Action Buttons (Copy, Like, Dislike) */}
+                                {message.role === 'assistant' && (
+                                    <div className="flex items-center gap-1 mt-1 ml-9">
+                                        <button
+                                            onClick={() => copyToClipboard(message.content, index)}
+                                            className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+                                        >
+                                            {copiedIndex === index ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                                            {copiedIndex === index ? 'Copied' : 'Copy'}
+                                        </button>
+                                        <div className="h-3 w-px bg-gray-200 dark:bg-gray-700 mx-1"></div>
+                                        <button className="p-1 text-gray-400 hover:text-blue-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors">
+                                            <ThumbsUp className="w-3 h-3" />
+                                        </button>
+                                        <button className="p-1 text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors">
+                                            <ThumbsDown className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+
+                        {isAiLoading && (
+                            <div className="flex gap-2 justify-start ml-1">
+                                <div className="bg-gray-200 dark:bg-gray-700 w-2 h-2 rounded-full animate-bounce"></div>
+                                <div className="bg-gray-200 dark:bg-gray-700 w-2 h-2 rounded-full animate-bounce delay-100"></div>
+                                <div className="bg-gray-200 dark:bg-gray-700 w-2 h-2 rounded-full animate-bounce delay-200"></div>
                             </div>
                         )}
+                        <div ref={chatEndRef} />
                     </div>
 
-                    {/* Chat Input Area */}
-                    <div className="p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
-                        <div className="relative flex items-center">
-                            <div className="w-full relative">
-                                <input
-                                    type="text"
-                                    value={chatInput}
-                                    onChange={(e) => setChatInput(e.target.value)}
-                                    onKeyPress={handleKeyPress}
-                                    placeholder="Ask anything..."
-                                    disabled={isAiLoading}
-                                    className="w-full pl-6 pr-24 py-4 rounded-3xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-gray-300 dark:focus:border-gray-600 focus:ring-0 shadow-sm transition-all disabled:opacity-50"
-                                />
-                                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                                    <button
-                                        onClick={handleSendMessage}
-                                        disabled={isAiLoading || !chatInput.trim()}
-                                        className="p-2 bg-black dark:bg-white rounded-full text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        <ArrowUp className="w-5 h-5" />
-                                    </button>
-                                </div>
-                            </div>
+                    {/* Input Area */}
+                    <div className="p-3 bg-white dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800">
+                        <div className="relative flex items-center gap-2">
+                            <input
+                                type="text"
+                                value={chatInput}
+                                onChange={(e) => setChatInput(e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                                placeholder="Ask about this topic..."
+                                disabled={isAiLoading}
+                                className="w-full pl-4 pr-12 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
+                            />
+                            <button
+                                onClick={handleSendMessage}
+                                disabled={isAiLoading || !chatInput.trim()}
+                                className="absolute right-2 p-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 rounded-lg text-white transition-all shadow-sm"
+                            >
+                                <ArrowUp className="w-4 h-4" />
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -325,110 +349,147 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
     )
 }
 
-// --- SUB-COMPONENTS ---
+// --- REFACTORED SUB-COMPONENTS ---
 
-const TabButton = ({ active, onClick, label, icon }: any) => (
+// 1. Fixed Layout Tab Button
+const TabButton = ({ active, onClick, label, icon, isSpecial }: any) => (
     <button
         onClick={onClick}
-        className={`pb-3 text-sm font-medium transition-all relative whitespace-nowrap flex items-center gap-2 ${active
-            ? 'text-gray-900 dark:text-white border-b-2 border-black dark:border-white'
-            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-            }`}
+        className={`
+            flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2.5 px-2 rounded-lg text-xs sm:text-sm font-medium transition-all
+            ${active
+                ? 'bg-white dark:bg-gray-900 shadow-sm text-gray-900 dark:text-white ring-1 ring-gray-200 dark:ring-gray-700'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50 dark:text-gray-400 dark:hover:bg-gray-700/50'
+            }
+            ${active && isSpecial ? 'text-violet-600 dark:text-violet-400 ring-violet-200 dark:ring-violet-900' : ''}
+        `}
     >
-        {icon}
-        {label}
+        <span className={isSpecial ? "text-violet-500" : active ? "text-blue-500" : "text-gray-400"}>
+            {icon}
+        </span>
+        <span className="truncate">{label}</span>
     </button>
 )
 
-const FileListCard = ({ resource }: { resource: any }) => (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6 transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-gray-700 group">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex gap-4">
-                <div className="flex-shrink-0">
-                    <div className="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-900/10 flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-red-500" />
-                    </div>
-                </div>
-                <div>
-                    <h3 className="text-base font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                        {resource.title}
-                    </h3>
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        <div className="flex items-center gap-1.5">
-                            <span>📅 {new Date(resource.createdAt || Date.now()).toLocaleDateString()}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden flex items-center justify-center text-[8px]">
-                                {resource.uploader ? resource.uploader[0] : 'U'}
-                            </div>
-                            <span>{resource.uploader || 'Admin'}</span>
-                        </div>
-                        <div>
-                            {resource.downloads || 0} views
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <a
-                href={resource.driveLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-black hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 text-white rounded-lg text-sm font-medium transition-all shadow-sm active:scale-95 w-full sm:w-auto"
-            >
-                <ExternalLink className="w-4 h-4" />
-                View Resource
+// 2. Mobile-Friendly Resource Card
+const FileListCard = ({ resource, onDelete }: { resource: any, onDelete?: (id: string) => void }) => (
+    <div className="group block bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-3 hover:border-blue-300 dark:hover:border-blue-700 transition-all hover:shadow-md active:scale-[0.99]">
+        <div className="flex items-center gap-3">
+            {/* File Icon Box */}
+            <a href={resource.driveLink} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 w-10 h-10 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center justify-center border border-gray-100 dark:border-gray-700 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 transition-colors">
+                <FileText className="w-5 h-5 text-gray-400 group-hover:text-blue-500" />
             </a>
+
+            {/* Info */}
+            <a href={resource.driveLink} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                    {resource.title}
+                </h3>
+                <div className="flex items-center gap-2 mt-1">
+                    {/* Uploader Info */}
+                    <div className="flex items-center gap-1.5 pr-2 border-r border-gray-200 dark:border-gray-700">
+                        {resource.uploaderAvatar ? (
+                            <img src={resource.uploaderAvatar} alt={resource.uploader} className="w-4 h-4 rounded-full object-cover" />
+                        ) : (
+                            <div className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                                <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400">
+                                    {(resource.uploader || 'A').charAt(0).toUpperCase()}
+                                </span>
+                            </div>
+                        )}
+                        <span className="text-[10px] text-gray-500 font-medium truncate max-w-[80px]">
+                            {resource.uploader || 'Anonymous'}
+                        </span>
+                    </div>
+
+                    <span className="text-[10px] text-gray-500 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">
+                        {resource.subject || 'General'}
+                    </span>
+                    {resource.unit && (
+                        <span className="text-[10px] text-gray-500 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">
+                            {resource.unit}
+                        </span>
+                    )}
+                    <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+                        <Download className="w-3 h-3" /> {resource.downloads || 0}
+                    </span>
+                    {resource.status === 'pending' && (
+                        <span className="text-[10px] text-yellow-600 bg-yellow-100 dark:bg-yellow-900/30 px-1.5 py-0.5 rounded">
+                            Pending
+                        </span>
+                    )}
+                </div>
+            </a>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2">
+                {onDelete && (
+                    <button
+                        onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            onDelete(resource._id)
+                        }}
+                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        title="Delete"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                )}
+                <a href={resource.driveLink} target="_blank" rel="noopener noreferrer" className="text-gray-300 group-hover:text-blue-500 transition-colors">
+                    <ChevronRight className="w-5 h-5" />
+                </a>
+            </div>
         </div>
     </div>
 )
 
-const UploadsView = ({ user, uploads, searchQuery }: any) => (
-    <div className="px-4 md:px-8 py-6">
-        <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
-                    <UploadIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                </div>
+const UploadsView = ({ uploads, onUploadRequest, onDelete }: any) => (
+    <div className="animate-fade-in">
+        <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/10 dark:to-pink-900/10 border border-purple-100 dark:border-purple-900/30 rounded-xl p-5 mb-6">
+            <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">My Uploads</h2>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{uploads.length} resources uploaded</p>
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">Your Uploads</h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                        You have contributed <strong>{uploads.length}</strong> resources.
+                    </p>
+                </div>
+                <div className="p-3 bg-white dark:bg-gray-800 rounded-full shadow-sm">
+                    <Trophy className="w-6 h-6 text-yellow-500" />
                 </div>
             </div>
         </div>
 
-        {uploads.length === 0 ? (
-            <div className="text-center py-16">
-                <UploadIcon className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
-                <p className="text-gray-500 dark:text-gray-400">You haven't uploaded any resources yet.</p>
-            </div>
-        ) : (
-            <div className="grid grid-cols-1 gap-4">
-                {uploads
-                    .filter((upload: any) =>
-                        !searchQuery ||
-                        upload.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        upload.subject?.toLowerCase().includes(searchQuery.toLowerCase())
-                    )
-                    .map((upload: any) => (
-                        <FileListCard key={upload._id} resource={upload} />
-                    ))}
-            </div>
-        )}
+        <div className="grid grid-cols-1 gap-3">
+            {uploads.length === 0 ? (
+                <EmptyState
+                    icon={UploadIcon}
+                    title="No uploads found"
+                    description="You haven't uploaded any resources yet."
+                    onUploadRequest={onUploadRequest}
+                />
+            ) : (
+                uploads.map((upload: any) => (
+                    <FileListCard key={upload._id} resource={upload} onDelete={onDelete} />
+                ))
+            )}
+        </div>
     </div>
 )
 
 const EmptyState = ({ icon: Icon, title, description, onUploadRequest, filters, activeTab }: any) => (
-    <div className="text-center py-16">
-        <Icon className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{title}</h3>
-        <p className="text-gray-500 dark:text-gray-400 mb-6">{description}</p>
+    <div className="flex flex-col items-center justify-center py-12 bg-white dark:bg-gray-900 rounded-xl border border-dashed border-gray-200 dark:border-gray-800 text-center">
+        <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-full mb-3">
+            <Icon className="w-6 h-6 text-gray-400" />
+        </div>
+        <p className="text-sm font-medium text-gray-900 dark:text-white">{title}</p>
+        <p className="text-xs text-gray-500 mb-4">{description}</p>
         {onUploadRequest && (
             <button
                 onClick={() => onUploadRequest({ filters, activeTab })}
-                className="px-6 py-3 bg-black dark:bg-white text-white dark:text-black rounded-lg font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
+                className="text-xs flex items-center gap-1 text-blue-600 font-medium hover:underline"
             >
-                Upload Resource
+                <UploadIcon className="w-3 h-3" /> Upload Now
             </button>
         )}
     </div>

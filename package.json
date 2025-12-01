@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"tsx dev-server.ts\" \"vite\"",
+    "dev": "concurrently \"npx tsx dev-server.ts\" \"vite\"",
+    "dev:host": "concurrently \"npx tsx dev-server.ts\" \"vite --host\"",
     "dev:frontend": "vite",
     "build": "vite build",
     "build:api": "tsc --project tsconfig.api.json",

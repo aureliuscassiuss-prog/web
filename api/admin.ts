@@ -18,6 +18,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
+
+        // Route based on URL path or query parameter
+        const { action } = req.query;
+
+        // Allow public access for reading structure
+        if (req.method === 'GET' && action === 'structure') {
+            return await handleGetStructure(res);
+        }
+
         // Verify admin access
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -34,16 +43,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(403).json({ message: 'Forbidden: Admin access required' });
         }
 
-        // Route based on URL path or query parameter
-        const { action } = req.query;
-
         if (req.method === 'GET') {
             if (action === 'pending') {
                 return await handleGetPending(res);
             } else if (action === 'structure') {
                 return await handleGetStructure(res);
+            } else if (action === 'users') {
+                return await handleGetUsers(res);
             } else {
-                return res.status(400).json({ message: 'Invalid action. Use: pending or structure' });
+                return res.status(400).json({ message: 'Invalid action. Use: pending, structure, or users' });
             }
         } else if (req.method === 'POST') {
             let body = req.body;
@@ -51,14 +59,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 body = JSON.parse(body);
             }
 
-            const { action: bodyAction } = body;
+            console.log('Admin API POST body:', JSON.stringify(body, null, 2));
 
-            if (bodyAction === 'approve' || bodyAction === 'reject') {
+            const { action: bodyAction, userAction } = body;
+
+            if (userAction) {
+                return await handleUserAction(body, res);
+            } else if (bodyAction === 'approve' || bodyAction === 'reject') {
                 return await handleResourceAction(body, res);
             } else if (bodyAction === 'structure') {
                 return await handleUpdateStructure(body, res);
             } else {
-                return res.status(400).json({ message: 'Invalid action. Use: approve, reject, or structure' });
+                console.log('Invalid action received:', bodyAction);
+                return res.status(400).json({ message: 'Invalid action. Use: approve, reject, structure, or user management' });
             }
         } else {
             return res.status(405).json({ message: 'Method not allowed' });
@@ -86,13 +99,28 @@ async function handleGetStructure(res: VercelResponse) {
     const structure = await db.collection('academic_structure').findOne({ _id: 'main' } as any);
 
     if (!structure) {
-        // Initialize with default structure
+        // Initialize with default hierarchical structure
         const defaultStructure: any = {
             _id: 'main',
-            programs: ['B.Tech', 'M.Tech', 'MBA', 'MCA'],
-            years: ['1st Year', '2nd Year', '3rd Year', '4th Year'],
-            branches: ['Computer Science', 'Electronics', 'Mechanical', 'Civil'],
-            subjects: ['Mathematics', 'Physics', 'Chemistry', 'Programming']
+            programs: [
+                {
+                    id: 'btech',
+                    name: 'B.Tech',
+                    years: [
+                        {
+                            id: '1',
+                            name: '1st Year',
+                            courses: [
+                                {
+                                    id: 'cse',
+                                    name: 'Computer Science',
+                                    subjects: ['Data Structures', 'Algorithms', 'Programming']
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
         };
 
         await db.collection('academic_structure').insertOne(defaultStructure);
@@ -147,36 +175,241 @@ async function handleResourceAction(body: any, res: VercelResponse) {
 }
 
 async function handleUpdateStructure(body: any, res: VercelResponse) {
-    const { type, value, structureAction } = body;
+    const { structureAction, programId, yearId, courseId, name, value } = body;
+    console.log('handleUpdateStructure:', { structureAction, programId, yearId, courseId, name, value });
 
-    if (!type || !value || !structureAction) {
-        return res.status(400).json({ message: 'Missing required fields: type, value, structureAction' });
+    const db = await getDb();
+
+    try {
+        if (structureAction === 'add-program') {
+            const newProgram = {
+                id: value.toLowerCase().replace(/\s+/g, '-'),
+                name: value,
+                years: []
+            };
+
+            await db.collection('academic_structure').updateOne(
+                { _id: 'main' } as any,
+                { $push: { programs: newProgram } } as any,
+                { upsert: true }
+            );
+        }
+        else if (structureAction === 'remove-program') {
+            await db.collection('academic_structure').updateOne(
+                { _id: 'main' } as any,
+                { $pull: { programs: { id: programId } } } as any
+            );
+        }
+        else if (structureAction === 'add-year') {
+            const newYear = {
+                id: value,
+                name: `${value}${value === '1' ? 'st' : value === '2' ? 'nd' : value === '3' ? 'rd' : 'th'} Year`,
+                courses: []
+            };
+
+            await db.collection('academic_structure').updateOne(
+                { _id: 'main', 'programs.id': programId } as any,
+                { $push: { 'programs.$.years': newYear } } as any
+            );
+        }
+        else if (structureAction === 'remove-year') {
+            await db.collection('academic_structure').updateOne(
+                { _id: 'main', 'programs.id': programId } as any,
+                { $pull: { 'programs.$.years': { id: yearId } } } as any
+            );
+        }
+        else if (structureAction === 'add-course') {
+            const newCourse = {
+                id: value.toLowerCase().replace(/\s+/g, '-'),
+                name: value,
+                subjects: []
+            };
+
+            await db.collection('academic_structure').updateOne(
+                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId } as any,
+                { $push: { 'programs.$[p].years.$[y].courses': newCourse } } as any,
+                { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }] }
+            );
+        }
+        else if (structureAction === 'remove-course') {
+            await db.collection('academic_structure').updateOne(
+                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId } as any,
+                { $pull: { 'programs.$[p].years.$[y].courses': { id: courseId } } } as any,
+                { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }] }
+            );
+        }
+        else if (structureAction === 'add-subject') {
+            await db.collection('academic_structure').updateOne(
+                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId } as any,
+                { $push: { 'programs.$[p].years.$[y].courses.$[c].subjects': value } } as any,
+                { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }] }
+            );
+        }
+        else if (structureAction === 'remove-subject') {
+            await db.collection('academic_structure').updateOne(
+                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId } as any,
+                { $pull: { 'programs.$[p].years.$[y].courses.$[c].subjects': { $in: [value] } } } as any,
+                { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }] }
+            );
+        }
+        else if (structureAction === 'add-unit') {
+            const { subjectName } = body;
+
+            // First, get the current subject to check if it's a string or object
+            const structure = await db.collection('academic_structure').findOne({ _id: 'main' } as any);
+            const program = structure?.programs?.find((p: any) => p.id === programId);
+            const year = program?.years?.find((y: any) => y.id === yearId);
+            const course = year?.courses?.find((c: any) => c.id === courseId);
+            const subject = course?.subjects?.find((s: any) =>
+                (typeof s === 'string' ? s : s.name).trim() === subjectName.trim()
+            );
+
+            console.log('add-unit debug:', { programId, yearId, courseId, subjectName, foundSubject: subject });
+
+            if (!subject) {
+                return res.status(404).json({ message: 'Subject not found' });
+            }
+
+            let result;
+            if (typeof subject === 'string') {
+                // Convert string subject to object with units array
+                result = await db.collection('academic_structure').updateOne(
+                    { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId } as any,
+                    {
+                        $set: {
+                            'programs.$[p].years.$[y].courses.$[c].subjects.$[s]': {
+                                name: subject,
+                                units: [value]
+                            }
+                        }
+                    } as any,
+                    { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 's': subject }] }
+                );
+            } else {
+                // Subject is already an object, just push the unit
+                console.log('Subject is object, pushing unit. Subject name:', subject.name);
+                const filters = [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 's.name': subject.name }];
+                console.log('Array filters:', JSON.stringify(filters));
+
+                result = await db.collection('academic_structure').updateOne(
+                    { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId } as any,
+                    { $push: { 'programs.$[p].years.$[y].courses.$[c].subjects.$[s].units': value } } as any,
+                    { arrayFilters: filters }
+                );
+            }
+            console.log('add-unit update result:', {
+                matchedCount: result.matchedCount,
+                modifiedCount: result.modifiedCount,
+                acknowledged: result.acknowledged
+            });
+        }
+        else if (structureAction === 'remove-unit') {
+            const { subjectName } = body;
+
+            await db.collection('academic_structure').updateOne(
+                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId } as any,
+                { $pull: { 'programs.$[p].years.$[y].courses.$[c].subjects.$[s].units': value } } as any,
+                { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 's.name': subjectName }] }
+            );
+        }
+
+        const updatedStructure = await db.collection('academic_structure').findOne({ _id: 'main' } as any);
+        return res.status(200).json(updatedStructure);
+    } catch (error) {
+        console.error('Structure Update Error:', error);
+        return res.status(500).json({ message: 'Failed to update structure', error: String(error) });
     }
+}
 
-    if (!['program', 'year', 'branch', 'subject'].includes(type)) {
-        return res.status(400).json({ message: 'Invalid type' });
-    }
+async function handleGetUsers(res: VercelResponse) {
+    const db = await getDb();
 
-    if (!['add', 'remove'].includes(structureAction)) {
-        return res.status(400).json({ message: 'Invalid structureAction' });
+    // Fetch all users (excluding passwords)
+    const users = await db.collection('users')
+        .find({}, { projection: { password: 0 } })
+        .sort({ createdAt: -1 })
+        .toArray();
+
+    return res.status(200).json({ users });
+}
+
+async function handleUserAction(body: any, res: VercelResponse) {
+    const { action, userId } = body;
+
+    console.log('handleUserAction called with action:', action, 'userId:', userId);
+
+    if (!userId) {
+        return res.status(400).json({ message: 'User ID is required' });
     }
 
     const db = await getDb();
-    const fieldName = type + 's'; // Convert to plural (programs, years, etc.)
 
-    let updateOperation;
-    if (structureAction === 'add') {
-        updateOperation = { $addToSet: { [fieldName]: value } };
-    } else {
-        updateOperation = { $pull: { [fieldName]: value } };
+    // Handle delete action separately as it requires deletion instead of update
+    if (action === 'delete') {
+        console.log('DELETE ACTION DETECTED - Starting user deletion process');
+        // First check if user exists
+        const user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
+
+        if (!user) {
+            console.log('User not found:', userId);
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        console.log('User found, deleting resources for userId:', userId);
+        // Delete all resources/uploads by this user
+        // Note: uploaderId is stored as a string in resources collection
+        const resourcesDeleted = await db.collection('resources').deleteMany({
+            uploaderId: userId
+        });
+        console.log('Resources deleted:', resourcesDeleted.deletedCount);
+
+        // Delete the user
+        const userDeleted = await db.collection('users').deleteOne({
+            _id: new ObjectId(userId)
+        });
+        console.log('User deleted:', userDeleted.deletedCount);
+
+        if (userDeleted.deletedCount === 0) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        return res.status(200).json({
+            message: 'User and all associated data deleted successfully',
+            deletedUser: user.name,
+            deletedResources: resourcesDeleted.deletedCount
+        });
     }
 
-    await db.collection('academic_structure').updateOne(
-        { _id: 'main' } as any,
+    console.log('Not a delete action, proceeding to switch statement');
+
+    let updateOperation: any = {};
+
+    switch (action) {
+        case 'ban':
+            updateOperation = { $set: { isBanned: true, canUpload: false } };
+            break;
+        case 'unban':
+            updateOperation = { $set: { isBanned: false, canUpload: true } };
+            break;
+        case 'restrict-upload':
+            updateOperation = { $set: { canUpload: false } };
+            break;
+        case 'allow-upload':
+            updateOperation = { $set: { canUpload: true } };
+            break;
+        default:
+            return res.status(400).json({ message: 'Invalid user action' });
+    }
+
+    const result = await db.collection('users').findOneAndUpdate(
+        { _id: new ObjectId(userId) },
         updateOperation,
-        { upsert: true }
+        { returnDocument: 'after', projection: { password: 0 } }
     );
 
-    const updatedStructure = await db.collection('academic_structure').findOne({ _id: 'main' } as any);
-    return res.status(200).json(updatedStructure);
+    if (!result) {
+        return res.status(404).json({ message: 'User not found' });
+    }
+
+    return res.status(200).json({ message: `User ${action} successful`, user: result });
 }
