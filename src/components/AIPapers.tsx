@@ -1,25 +1,9 @@
 import { useState, useEffect } from 'react'
-import {
-    FileText,
-    Loader2,
-    AlertTriangle,
-    GraduationCap,
-    Calendar,
-    Layers,
-    BookOpen,
-    Check,
-    Sparkles,
-    ChevronDown,
-    Printer,
-    Download,
-    CheckCircle,
-    RotateCcw
-} from 'lucide-react'
+import { FileText, Download, Loader2, AlertTriangle, GraduationCap, Calendar, Layers, BookOpen, Check, CheckCircle, Sparkles, ChevronDown, Printer } from 'lucide-react'
 import jsPDF from 'jspdf'
 // @ts-ignore
 import autoTable from 'jspdf-autotable'
 
-// --- Types (From Code 2) ---
 interface Program {
     id: string
     name: string
@@ -43,7 +27,7 @@ interface SubjectObject {
 }
 
 export default function AIPapers() {
-    // --- State Management (From Code 2) ---
+    // Structure State
     const [structure, setStructure] = useState<{ programs: Program[] }>({ programs: [] })
     const [loadingStructure, setLoadingStructure] = useState(true)
 
@@ -55,10 +39,9 @@ export default function AIPapers() {
 
     // Generation State
     const [generating, setGenerating] = useState(false)
-    const [attemptsLeft, setAttemptsLeft] = useState(3)
+    const [attemptsLeft, setAttemptsLeft] = useState(3) // Mock daily limit
     const [generatedPdf, setGeneratedPdf] = useState<{ blob: Blob, filename: string } | null>(null)
 
-    // --- Effects (From Code 2) ---
     useEffect(() => {
         // Fetch structure
         fetch('/api/admin?action=structure')
@@ -69,8 +52,6 @@ export default function AIPapers() {
             })
             .catch(err => {
                 console.error(err)
-                // Fallback for UI demonstration if API fails
-                setStructure({ programs: [] })
                 setLoadingStructure(false)
             })
 
@@ -90,7 +71,7 @@ export default function AIPapers() {
         }
     }, [])
 
-    // --- Derived State ---
+    // Derived State
     const programs = structure.programs || []
     const selectedProgram = programs.find(p => p.id === selectedProgramId)
     const years = selectedProgram?.years || []
@@ -99,7 +80,6 @@ export default function AIPapers() {
     const selectedCourse = courses.find(c => c.id === selectedCourseId)
     const subjects = selectedCourse?.subjects || []
 
-    // --- Logic: Handle Generate (From Code 2) ---
     const handleGenerate = async () => {
         if (attemptsLeft <= 0) return
         setGenerating(true)
@@ -120,11 +100,12 @@ export default function AIPapers() {
 
             const data = await res.json()
 
-            // Parse AI response
+            // Parse AI response (it might be a string JSON or object)
             let paperData
             try {
                 paperData = typeof data.answer === 'string' ? JSON.parse(data.answer) : data.answer
             } catch (e) {
+                // Fallback if AI returns markdown code block
                 const match = data.answer.match(/```json\n([\s\S]*)\n```/)
                 if (match) {
                     paperData = JSON.parse(match[1])
@@ -133,6 +114,7 @@ export default function AIPapers() {
                 }
             }
 
+            // Map AI data to the specific keys expected by the PDF generator
             const flatData = transformDataForPdf(paperData, selectedSubject, selectedCourse?.name || '', selectedProgram?.name || '')
 
             generatePDF(flatData)
@@ -150,7 +132,6 @@ export default function AIPapers() {
         }
     }
 
-    // --- Logic: Transform Data (From Code 2) ---
     const transformDataForPdf = (aiData: any, subject: string, branch: string, program: string) => {
         const flat: any = {
             EXAM_MONTH: new Date().toLocaleString('default', { month: 'short' }),
@@ -180,31 +161,47 @@ export default function AIPapers() {
         const sectionB = aiData.sections?.find((s: any) => s.name.includes('Section B'))
         if (sectionB && sectionB.questions) {
             const q = sectionB.questions
+
             // Q2
-            flat.Q2_PART_1 = q[0]?.text || ''; flat.Q2_PART_2 = q[1]?.text || ''; flat.Q2_PART_3 = q[2]?.text || ''; flat.Q2_OR_PART = q[3]?.text || ''
+            flat.Q2_PART_1 = q[0]?.text || ''
+            flat.Q2_PART_2 = q[1]?.text || ''
+            flat.Q2_PART_3 = q[2]?.text || ''
+            flat.Q2_OR_PART = q[3]?.text || ''
+
             // Q3
-            flat.Q3_PART_1 = q[4]?.text || ''; flat.Q3_PART_2 = q[5]?.text || ''; flat.Q3_OR_PART = q[6]?.text || ''
+            flat.Q3_PART_1 = q[4]?.text || ''
+            flat.Q3_PART_2 = q[5]?.text || ''
+            flat.Q3_OR_PART = q[6]?.text || ''
+
             // Q4
-            flat.Q4_PART_1 = q[7]?.text || ''; flat.Q4_PART_2 = q[8]?.text || ''; flat.Q4_OR_PART = q[9]?.text || ''
+            flat.Q4_PART_1 = q[7]?.text || ''
+            flat.Q4_PART_2 = q[8]?.text || ''
+            flat.Q4_OR_PART = q[9]?.text || ''
+
             // Q5
-            flat.Q5_PART_1 = q[10]?.text || ''; flat.Q5_PART_2 = q[11]?.text || ''; flat.Q5_OR_PART = q[12]?.text || ''
+            flat.Q5_PART_1 = q[10]?.text || ''
+            flat.Q5_PART_2 = q[11]?.text || ''
+            flat.Q5_OR_PART = q[12]?.text || ''
+
             // Q6
-            flat.Q6_PART_1 = q[13]?.text || ''; flat.Q6_PART_2 = q[14]?.text || ''; flat.Q6_PART_3 = q[15]?.text || ''
+            flat.Q6_PART_1 = q[13]?.text || ''
+            flat.Q6_PART_2 = q[14]?.text || ''
+            flat.Q6_PART_3 = q[15]?.text || ''
         }
+
         return flat
     }
 
-    // --- Logic: Generate PDF (From Code 2 - The Complex Layout) ---
     const generatePDF = (data: any) => {
         const doc = new jsPDF("landscape", "mm", "a4");
         const width = doc.internal.pageSize.getWidth();
         const height = doc.internal.pageSize.getHeight();
 
-        // Watermark
-        doc.setTextColor(220, 220, 220);
-        doc.setFontSize(50);
-        doc.setFont("times", "bold");
-        doc.text("MediNotes", width / 2, height / 2, { align: "center", angle: 45 });
+        // Watermark REMOVED
+        // doc.setTextColor(220, 220, 220);
+        // doc.setFontSize(50);
+        // doc.setFont("times", "bold");
+        // doc.text("MediNotes", width / 2, height / 2, { align: "center", angle: 45 });
 
         // Reset Text
         doc.setTextColor(0, 0, 0);
@@ -271,10 +268,21 @@ export default function AIPapers() {
             const optC = `(c) ${data[`${key}_OPTION_C`] || ''}`;
             const optD = `(d) ${data[`${key}_OPTION_D`] || ''}`;
 
-            const hBlock = (4 * lines.length) + 12;
+            // Wrap options to prevent collision
+            // Column 1 width ~55, Column 2 width ~60
+            const optALines = doc.splitTextToSize(optA, 55);
+            const optBLines = doc.splitTextToSize(optB, 60);
+            const optCLines = doc.splitTextToSize(optC, 55);
+            const optDLines = doc.splitTextToSize(optD, 60);
 
+            // Calculate Height
+            const hRow1 = Math.max(optALines.length, optBLines.length) * 4;
+            const hRow2 = Math.max(optCLines.length, optDLines.length) * 4;
+            const hBlock = (4 * lines.length) + hRow1 + hRow2 + 4;
+
+            // Check for Column Break
             if (i === 9 && (yPos + hBlock > 200)) {
-                savedQ9 = { qText, lines, optA, optB, optC, optD };
+                savedQ9 = { qText, lines, optALines, optBLines, optCLines, optDLines };
                 break;
             }
 
@@ -288,70 +296,203 @@ export default function AIPapers() {
             doc.setFont("times", "normal");
 
             yPos += (4 * lines.length);
-            doc.text(optA, 18, yPos); doc.text(optB, 75, yPos); yPos += 4.5;
-            doc.text(optC, 18, yPos); doc.text(optD, 75, yPos); yPos += 7.5;
+
+            // Row 1 Options
+            doc.text(optALines, 18, yPos);
+            doc.text(optBLines, 75, yPos);
+            yPos += hRow1 + 1; // +1 padding
+
+            // Row 2 Options
+            doc.text(optCLines, 18, yPos);
+            doc.text(optDLines, 75, yPos);
+            yPos += hRow2 + 3; // +3 padding before next question
         }
 
-        // Second Column
+        // --- Second Column (Right Side) ---
         let yCol2 = 15;
+
+        // Page Num Top Right
         doc.setFontSize(7);
         doc.text("[2]", 220, 8, { align: "center" });
         doc.setFontSize(9);
 
+        // Render Q9 if saved
         if (savedQ9) {
             doc.setFont("times", "normal");
-            doc.text("ix.", 156, yCol2); doc.text(savedQ9.lines, 160, yCol2);
-            doc.setFont("times", "bold"); doc.text("1", 285, yCol2); doc.setFont("times", "normal");
+            doc.text("ix.", 156, yCol2);
+            doc.text(savedQ9.lines, 160, yCol2);
+            doc.setFont("times", "bold");
+            doc.text("1", 285, yCol2);
+            doc.setFont("times", "normal");
             yCol2 += (4 * savedQ9.lines.length);
-            doc.text(savedQ9.optA, 160, yCol2); doc.text(savedQ9.optB, 220, yCol2); yCol2 += 4.5;
-            doc.text(savedQ9.optC, 160, yCol2); doc.text(savedQ9.optD, 220, yCol2); yCol2 += 11.5;
+
+            const hRow1 = Math.max(savedQ9.optALines.length, savedQ9.optBLines.length) * 4;
+            const hRow2 = Math.max(savedQ9.optCLines.length, savedQ9.optDLines.length) * 4;
+
+            doc.text(savedQ9.optALines, 160, yCol2);
+            doc.text(savedQ9.optBLines, 220, yCol2);
+            yCol2 += hRow1 + 1;
+
+            doc.text(savedQ9.optCLines, 160, yCol2);
+            doc.text(savedQ9.optDLines, 220, yCol2);
+            yCol2 += hRow2 + 3;
         }
 
-        // Q10
+        // Render Q10
         const q10Key = "MCQ_10";
         const q10Text = data[`${q10Key}_QUESTION`];
         if (q10Text) {
             const q10Lines = doc.splitTextToSize(q10Text, 120);
-            doc.text("x.", 156, yCol2); doc.text(q10Lines, 160, yCol2);
-            doc.setFont("times", "bold"); doc.text("1", 285, yCol2); doc.setFont("times", "normal");
+
+            doc.text("x.", 156, yCol2);
+            doc.text(q10Lines, 160, yCol2);
+            doc.setFont("times", "bold");
+            doc.text("1", 285, yCol2);
+            doc.setFont("times", "normal");
             yCol2 += (4 * q10Lines.length);
-            doc.text(`(a) ${data[`${q10Key}_OPTION_A`] || ''}`, 160, yCol2); doc.text(`(b) ${data[`${q10Key}_OPTION_B`] || ''}`, 220, yCol2); yCol2 += 4.5;
-            doc.text(`(c) ${data[`${q10Key}_OPTION_C`] || ''}`, 160, yCol2); doc.text(`(d) ${data[`${q10Key}_OPTION_D`] || ''}`, 220, yCol2); yCol2 += 10;
+
+            const optA = `(a) ${data[`${q10Key}_OPTION_A`] || ''}`;
+            const optB = `(b) ${data[`${q10Key}_OPTION_B`] || ''}`;
+            const optC = `(c) ${data[`${q10Key}_OPTION_C`] || ''}`;
+            const optD = `(d) ${data[`${q10Key}_OPTION_D`] || ''}`;
+
+            const optALines = doc.splitTextToSize(optA, 55);
+            const optBLines = doc.splitTextToSize(optB, 60);
+            const optCLines = doc.splitTextToSize(optC, 55);
+            const optDLines = doc.splitTextToSize(optD, 60);
+
+            const hRow1 = Math.max(optALines.length, optBLines.length) * 4;
+            const hRow2 = Math.max(optCLines.length, optDLines.length) * 4;
+
+            doc.text(optALines, 160, yCol2);
+            doc.text(optBLines, 220, yCol2);
+            yCol2 += hRow1 + 1;
+
+            doc.text(optCLines, 160, yCol2);
+            doc.text(optDLines, 220, yCol2);
+            yCol2 += hRow2 + 3;
         }
 
-        // Q2-Q6 Render Logic (Condensed for brevity, same as Code 2)
-        doc.setFont("times", "normal"); doc.text("Q.2", 150, yCol2);
-        const q2Parts = [{ l: "i.", t: data.Q2_PART_1, m: "2" }, { l: "ii.", t: data.Q2_PART_2, m: "3" }, { l: "iii.", t: data.Q2_PART_3, m: "5" }];
-        q2Parts.forEach(p => { if (!p.t) return; const pl = doc.splitTextToSize(p.t, 120); doc.text(p.l, 156, yCol2); doc.text(pl, 160, yCol2); doc.setFont("times", "bold"); doc.text(p.m, 285, yCol2); yCol2 += (4 * pl.length) + 2; });
-        if (data.Q2_OR_PART) { doc.setFont("times", "normal"); doc.text("OR", 150, yCol2); const q2Or = doc.splitTextToSize(data.Q2_OR_PART, 120); doc.text("iv.", 156, yCol2); doc.text(q2Or, 160, yCol2); doc.setFont("times", "bold"); doc.text("5", 285, yCol2); yCol2 += (4 * q2Or.length) + 6; }
+        // Descriptive Q2
+        doc.setFont("times", "normal");
+        doc.text("Q.2", 150, yCol2);
 
+        const q2Parts = [
+            { l: "i.", t: data.Q2_PART_1, m: "2" },
+            { l: "ii.", t: data.Q2_PART_2, m: "3" },
+            { l: "iii.", t: data.Q2_PART_3, m: "5" },
+        ];
+
+        q2Parts.forEach(part => {
+            if (!part.t) return;
+            doc.setFont("times", "normal");
+            const pl = doc.splitTextToSize(part.t, 120);
+            doc.text(part.l, 156, yCol2);
+            doc.text(pl, 160, yCol2);
+            doc.setFont("times", "bold");
+            doc.text(part.m, 285, yCol2);
+            yCol2 += (4 * pl.length) + 2;
+        });
+
+        if (data.Q2_OR_PART) {
+            doc.setFont("times", "normal");
+            doc.text("OR", 150, yCol2);
+            const q2Or = doc.splitTextToSize(data.Q2_OR_PART, 120);
+            doc.text("iv.", 156, yCol2);
+            doc.text(q2Or, 160, yCol2);
+            doc.setFont("times", "bold");
+            doc.text("5", 285, yCol2);
+            yCol2 += (4 * q2Or.length) + 6;
+        }
+
+        // Loop Q3 - Q5
         for (let q = 3; q <= 5; q++) {
             if (!data[`Q${q}_PART_1`]) continue;
-            doc.setFont("times", "normal"); doc.text(`Q.${q}`, 150, yCol2);
+
+            doc.setFont("times", "normal");
+            doc.text(`Q.${q}`, 150, yCol2);
+
             const marks = (q === 3 || q === 4) ? ["3", "7"] : ["2", "8"];
             const orMark = (q === 3 || q === 4) ? "7" : "8";
-            const parts = [{ l: "i.", t: data[`Q${q}_PART_1`], m: marks[0] }, { l: "ii.", t: data[`Q${q}_PART_2`], m: marks[1] }];
-            parts.forEach(p => { if (!p.t) return; const pl = doc.splitTextToSize(p.t, 120); doc.text(p.l, 156, yCol2); doc.text(pl, 160, yCol2); doc.setFont("times", "bold"); doc.text(p.m, 285, yCol2); yCol2 += (4 * pl.length) + 2; });
-            if (data[`Q${q}_OR_PART`]) { doc.setFont("times", "normal"); doc.text("OR", 150, yCol2); const orT = doc.splitTextToSize(data[`Q${q}_OR_PART`], 120); doc.text("iii.", 156, yCol2); doc.text(orT, 160, yCol2); doc.setFont("times", "bold"); doc.text(orMark, 285, yCol2); yCol2 += (4 * orT.length) + 6; }
+
+            const parts = [
+                { l: "i.", t: data[`Q${q}_PART_1`], m: marks[0] },
+                { l: "ii.", t: data[`Q${q}_PART_2`], m: marks[1] },
+            ];
+
+            parts.forEach(part => {
+                if (!part.t) return;
+                doc.setFont("times", "normal");
+                const pl = doc.splitTextToSize(part.t, 120);
+                doc.text(part.l, 156, yCol2);
+                doc.text(pl, 160, yCol2);
+                doc.setFont("times", "bold");
+                doc.text(part.m, 285, yCol2);
+                yCol2 += (4 * pl.length) + 2;
+            });
+
+            if (data[`Q${q}_OR_PART`]) {
+                doc.setFont("times", "normal");
+                doc.text("OR", 150, yCol2);
+                const orText = doc.splitTextToSize(data[`Q${q}_OR_PART`], 120);
+                doc.text("iii.", 156, yCol2);
+                doc.text(orText, 160, yCol2);
+                doc.setFont("times", "bold");
+                doc.text(orMark, 285, yCol2);
+                yCol2 += (4 * orText.length) + 6;
+            }
         }
 
+        // Q6
         if (data.Q6_PART_1) {
-            doc.setFont("times", "normal"); doc.text("Q.6", 150, yCol2); doc.text("Attempt any two:", 156, yCol2); yCol2 += 5;
-            const q6Parts = [{ l: "i.", t: data.Q6_PART_1 }, { l: "ii.", t: data.Q6_PART_2 }, { l: "iii.", t: data.Q6_PART_3 }];
-            q6Parts.forEach(p => {
-                if (!p.t) return; const pl = doc.splitTextToSize(p.t, 120); const h = (4 * pl.length) + 2;
-                if (yCol2 + h > 200) { doc.addPage(); yCol2 = 20; doc.setTextColor(220, 220, 220); doc.setFontSize(50); doc.setFont("times", "bold"); doc.text("MediNotes", width / 2, height / 2, { align: "center", angle: 45 }); doc.setTextColor(0, 0, 0); }
-                doc.setFont("times", "normal"); doc.setFontSize(9); doc.text(p.l, 156, yCol2); doc.text(pl, 160, yCol2); doc.setFont("times", "bold"); doc.text("5", 285, yCol2); yCol2 += h;
+            doc.setFont("times", "normal");
+            doc.text("Q.6", 150, yCol2);
+            doc.text("Attempt any two:", 156, yCol2);
+            yCol2 += 5;
+
+            const q6Parts = [
+                { l: "i.", t: data.Q6_PART_1 },
+                { l: "ii.", t: data.Q6_PART_2 },
+                { l: "iii.", t: data.Q6_PART_3 },
+            ];
+
+            q6Parts.forEach(part => {
+                if (!part.t) return;
+                const pl = doc.splitTextToSize(part.t, 120);
+                const heightNeeded = (4 * pl.length) + 2;
+
+                if (yCol2 + heightNeeded > 200) {
+                    doc.addPage();
+                    yCol2 = 20;
+                    // Add Watermark to new page REMOVED
+                    // doc.setTextColor(220, 220, 220);
+                    // doc.setFontSize(50);
+                    // doc.setFont("times", "bold");
+                    // doc.text("MediNotes", width / 2, height / 2, { align: "center", angle: 45 });
+                    // doc.setTextColor(0, 0, 0);
+                }
+
+                doc.setFont("times", "normal");
+                doc.setFontSize(9);
+                doc.text(part.l, 156, yCol2);
+                doc.text(pl, 160, yCol2);
+                doc.setFont("times", "bold");
+                doc.text("5", 285, yCol2);
+                yCol2 += heightNeeded;
             });
         }
-        yCol2 += 6; doc.setFontSize(11); doc.setFont("times", "bold"); doc.text("******", 220, yCol2, { align: "center" });
+
+        yCol2 += 6;
+        doc.setFontSize(11);
+        doc.setFont("times", "bold");
+        doc.text("******", 220, yCol2, { align: "center" });
 
         const pdfBlob = doc.output("blob");
         const filename = `${data.COURSE_CODE}_${data.SUBJECT_NAME.replace(/\s+/g, '_')}.pdf`;
+
         setGeneratedPdf({ blob: pdfBlob, filename });
     }
 
-    // --- Handlers (From Code 2) ---
     const handleDownload = () => {
         if (!generatedPdf) return;
         const url = URL.createObjectURL(generatedPdf.blob);
@@ -369,212 +510,184 @@ export default function AIPapers() {
         setSelectedSubject('')
     }
 
-    // --- Helpers (From Code 1 for UI) ---
-    const SelectInput = ({ label, icon: Icon, value, onChange, options, disabled, placeholder }: any) => (
-        <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide ml-1">
-                {label}
-            </label>
-            <div className="relative group">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors pointer-events-none">
-                    <Icon size={16} />
-                </div>
-                <select
-                    value={value}
-                    onChange={onChange}
-                    disabled={disabled}
-                    className="w-full pl-10 pr-10 py-3 bg-white dark:bg-black/20 border border-gray-200 dark:border-gray-800 rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none appearance-none disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer shadow-sm"
-                >
-                    <option value="" disabled>{placeholder}</option>
-                    {options.map((opt: any) => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                </select>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                    <ChevronDown size={14} />
-                </div>
-            </div>
-        </div>
-    )
-
-    if (loadingStructure) return (
-        <div className="h-screen flex items-center justify-center bg-white dark:bg-[#09090b] text-sm font-medium text-gray-400">
-            <Loader2 className="animate-spin mr-2" /> Loading Generator...
-        </div>
-    )
-
     return (
-        <div className="min-h-[calc(100vh-6rem)] w-full max-w-5xl mx-auto p-4 md:p-6 bg-white dark:bg-[#09090b] rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
+        <div className="min-h-screen bg-gray-50 dark:bg-[#050505] text-gray-900 dark:text-gray-100 font-sans p-4 md:p-8">
+            <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-            {/* --- HEADER (UI Code 1) --- */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-gray-100 dark:border-gray-800">
-                <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-                        <Printer size={24} strokeWidth={2} />
-                    </div>
-                    <div>
-                        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Exam Paper Generator</h1>
-                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">AI-powered university standard question papers</p>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-3 bg-gray-50 dark:bg-white/5 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-800">
-                    <div className="text-right">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Daily Limit</p>
-                        <p className={`text-sm font-bold ${attemptsLeft > 0 ? 'text-gray-900 dark:text-white' : 'text-red-500'}`}>
-                            {attemptsLeft} / 3 <span className="text-xs font-normal text-gray-500">Remaining</span>
-                        </p>
-                    </div>
-                    <div className={`h-8 w-8 rounded-full flex items-center justify-center ${attemptsLeft > 0 ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600' : 'bg-red-100 text-red-600'}`}>
-                        <Sparkles size={14} />
-                    </div>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-
-                {/* --- FORM SECTION (UI Code 1 Structure) --- */}
-                <div className="lg:col-span-8 space-y-6">
-                    <div className="bg-white dark:bg-transparent rounded-none">
+                {/* Left Column: Form */}
+                <div className="lg:col-span-2 space-y-6">
+                    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 md:p-8 shadow-sm">
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">
+                                    AI-Powered Sample Papers
+                                </h1>
+                                <p className="text-sm text-gray-500 mt-1">Generate realistic practice question papers in university format</p>
+                            </div>
+                            <div className="flex flex-col items-end">
+                                <span className={`text-2xl font-bold ${attemptsLeft > 0 ? 'text-blue-600' : 'text-red-500'}`}>
+                                    {attemptsLeft}/3
+                                </span>
+                                <span className="text-xs text-gray-400">left today</span>
+                            </div>
+                        </div>
 
                         {!generatedPdf ? (
-                            // INPUT STATE
-                            <>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                    <div className="md:col-span-2">
-                                        <SelectInput
-                                            label="Select Program"
-                                            icon={GraduationCap}
+                            <div className="space-y-4">
+                                {/* Program */}
+                                <div>
+                                    <label className="block text-sm font-medium mb-1.5 text-gray-700 dark:text-gray-300">Program</label>
+                                    <div className="relative">
+                                        <GraduationCap className="absolute left-3 top-3 text-gray-400" size={18} />
+                                        <select
                                             value={selectedProgramId}
-                                            onChange={(e: any) => { setSelectedProgramId(e.target.value); setSelectedYearId(''); setSelectedCourseId(''); setSelectedSubject('') }}
-                                            placeholder="Choose Academic Program"
-                                            options={programs.map(p => ({ value: p.id, label: p.name }))}
-                                        />
+                                            onChange={(e) => { setSelectedProgramId(e.target.value); setSelectedYearId(''); setSelectedCourseId(''); setSelectedSubject('') }}
+                                            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-black focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
+                                        >
+                                            <option value="">Select Program</option>
+                                            {programs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                        </select>
                                     </div>
+                                </div>
 
-                                    <SelectInput
-                                        label="Academic Year"
-                                        icon={Calendar}
-                                        value={selectedYearId}
-                                        onChange={(e: any) => { setSelectedYearId(e.target.value); setSelectedCourseId(''); setSelectedSubject('') }}
-                                        disabled={!selectedProgramId}
-                                        placeholder="Select Year"
-                                        options={years.map(y => ({ value: y.id, label: y.name }))}
-                                    />
+                                {/* Year */}
+                                <div>
+                                    <label className="block text-sm font-medium mb-1.5 text-gray-700 dark:text-gray-300">Year</label>
+                                    <div className="relative">
+                                        <Calendar className="absolute left-3 top-3 text-gray-400" size={18} />
+                                        <select
+                                            value={selectedYearId}
+                                            onChange={(e) => { setSelectedYearId(e.target.value); setSelectedCourseId(''); setSelectedSubject('') }}
+                                            disabled={!selectedProgramId}
+                                            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-black focus:ring-2 focus:ring-blue-500 outline-none appearance-none disabled:opacity-50"
+                                        >
+                                            <option value="">Select Year</option>
+                                            {years.map(y => <option key={y.id} value={y.id}>{y.name}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
 
-                                    <SelectInput
-                                        label="Branch / Course"
-                                        icon={Layers}
-                                        value={selectedCourseId}
-                                        onChange={(e: any) => { setSelectedCourseId(e.target.value); setSelectedSubject('') }}
-                                        disabled={!selectedYearId}
-                                        placeholder="Select Branch"
-                                        options={courses.map(c => ({ value: c.id, label: c.name }))}
-                                    />
+                                {/* Branch */}
+                                <div>
+                                    <label className="block text-sm font-medium mb-1.5 text-gray-700 dark:text-gray-300">Branch</label>
+                                    <div className="relative">
+                                        <Layers className="absolute left-3 top-3 text-gray-400" size={18} />
+                                        <select
+                                            value={selectedCourseId}
+                                            onChange={(e) => { setSelectedCourseId(e.target.value); setSelectedSubject('') }}
+                                            disabled={!selectedYearId}
+                                            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-black focus:ring-2 focus:ring-blue-500 outline-none appearance-none disabled:opacity-50"
+                                        >
+                                            <option value="">Select Branch</option>
+                                            {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
 
-                                    <div className="md:col-span-2">
-                                        <SelectInput
-                                            label="Target Subject"
-                                            icon={BookOpen}
+                                {/* Subject */}
+                                <div>
+                                    <label className="block text-sm font-medium mb-1.5 text-gray-700 dark:text-gray-300">Subject</label>
+                                    <div className="relative">
+                                        <BookOpen className="absolute left-3 top-3 text-gray-400" size={18} />
+                                        <select
                                             value={selectedSubject}
-                                            onChange={(e: any) => setSelectedSubject(e.target.value)}
+                                            onChange={(e) => setSelectedSubject(e.target.value)}
                                             disabled={!selectedCourseId}
-                                            placeholder="Choose Subject to Generate Paper"
-                                            options={subjects.map(s => {
+                                            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-black focus:ring-2 focus:ring-blue-500 outline-none appearance-none disabled:opacity-50"
+                                        >
+                                            <option value="">Select Subject</option>
+                                            {subjects.map((s, i) => {
                                                 const name = typeof s === 'string' ? s : s.name
-                                                return { value: name, label: name }
+                                                return <option key={i} value={name}>{name}</option>
                                             })}
-                                        />
+                                        </select>
                                     </div>
                                 </div>
 
-                                <div className="mt-8">
-                                    <button
-                                        onClick={handleGenerate}
-                                        disabled={generating || !selectedSubject || attemptsLeft <= 0}
-                                        className={`
-                                            w-full flex items-center justify-center gap-3 py-4 rounded-xl font-bold text-sm transition-all transform active:scale-[0.99]
-                                            ${generating || !selectedSubject || attemptsLeft <= 0
-                                                ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
-                                                : 'bg-black dark:bg-white text-white dark:text-black hover:opacity-90 shadow-xl shadow-black/5 dark:shadow-white/5'}
-                                        `}
-                                    >
-                                        {generating ? (
-                                            <>
-                                                <Loader2 className="animate-spin" size={18} />
-                                                <span>Designing Question Paper...</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <FileText size={18} />
-                                                <span>Generate PDF Paper</span>
-                                            </>
-                                        )}
-                                    </button>
-                                    <p className="text-center text-[10px] text-gray-400 mt-3">
-                                        {attemptsLeft <= 0
-                                            ? "Daily limit reached. Please come back tomorrow."
-                                            : "Generates a printable PDF based on your syllabus structure."}
-                                    </p>
-                                </div>
-                            </>
+                                <button
+                                    onClick={handleGenerate}
+                                    disabled={generating || !selectedSubject || attemptsLeft <= 0}
+                                    className={`
+                                        w-full mt-4 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-white transition-all
+                                        ${generating || !selectedSubject || attemptsLeft <= 0
+                                            ? 'bg-gray-300 dark:bg-gray-800 cursor-not-allowed'
+                                            : 'bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20'}
+                                    `}
+                                >
+                                    {generating ? (
+                                        <>
+                                            <Loader2 className="animate-spin" size={20} />
+                                            Generating Paper...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <FileText size={20} />
+                                            Generate Paper
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         ) : (
-                            // SUCCESS STATE (Adapted to UI Code 1 style)
-                            <div className="flex flex-col items-center justify-center py-8 text-center animate-in fade-in duration-300">
-                                <div className="h-20 w-20 bg-green-50 dark:bg-green-900/10 rounded-full flex items-center justify-center mb-6">
-                                    <CheckCircle className="h-10 w-10 text-green-500" />
+                            // Success State
+                            <div className="space-y-6 py-4">
+                                <div className="text-center space-y-2">
+                                    <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Paper Generated Successfully!</h3>
+                                    <p className="text-gray-500 dark:text-gray-400">Your practice paper for {selectedSubject} is ready.</p>
                                 </div>
-                                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Paper Generated!</h2>
-                                <p className="text-gray-500 dark:text-gray-400 max-w-sm mb-8 text-sm">
-                                    Your practice paper for <span className="font-semibold text-gray-900 dark:text-white">{selectedSubject}</span> is ready to download.
-                                </p>
 
-                                <div className="flex flex-col w-full max-w-sm gap-3">
+                                <div className="space-y-3">
                                     <button
                                         onClick={handleDownload}
-                                        className="w-full flex items-center justify-center gap-3 py-4 bg-black dark:bg-white text-white dark:text-black rounded-xl font-bold text-sm hover:opacity-90 shadow-xl shadow-black/5 dark:shadow-white/5 transition-all"
+                                        className="w-full flex items-center justify-center gap-2 py-3 bg-black dark:bg-white text-white dark:text-black rounded-xl font-semibold hover:opacity-90 transition-opacity"
                                     >
-                                        <Download size={18} />
+                                        <Download size={20} />
                                         Download PDF
                                     </button>
+
                                     <button
                                         onClick={resetForm}
-                                        className="w-full flex items-center justify-center gap-3 py-4 bg-white dark:bg-transparent border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-sm hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
+                                        className="w-full flex items-center justify-center gap-2 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                                     >
-                                        <RotateCcw size={18} />
-                                        Create Another
+                                        Generate Another Paper
                                     </button>
                                 </div>
                             </div>
                         )}
                     </div>
+
+                    <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/30 rounded-xl p-4 flex gap-3">
+                        <AlertTriangle className="text-orange-600 dark:text-orange-400 shrink-0" size={20} />
+                        <p className="text-sm text-orange-800 dark:text-orange-300">
+                            <strong>Important:</strong> These are practice papers generated by AI for study purposes only. They are not official university papers. Misuse may lead to disciplinary action.
+                        </p>
+                    </div>
                 </div>
 
-                {/* --- FEATURES / INFO SECTION (UI Code 1) --- */}
-                <div className="lg:col-span-4 space-y-4">
-                    <div className="p-5 bg-gray-50 dark:bg-[#121214] rounded-2xl border border-gray-100 dark:border-gray-800">
-                        <h3 className="font-bold text-sm text-gray-900 dark:text-white mb-4">Paper Features</h3>
+                {/* Right Column: Features */}
+                <div className="space-y-6">
+                    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 shadow-sm">
+                        <h3 className="font-semibold text-lg mb-4">What You Get</h3>
                         <div className="space-y-4">
                             <FeatureItem
-                                title="Standard Format"
-                                desc="Follows university exam patterns including sections and marks distribution."
+                                title="University Format"
+                                desc="Standard university question paper layout with proper headers and formatting"
                             />
                             <FeatureItem
-                                title="Syllabus Aligned"
-                                desc="Questions are derived strictly from the subject units provided."
+                                title="Syllabus-Based Content"
+                                desc="Questions generated from comprehensive syllabus data using advanced AI"
                             />
                             <FeatureItem
-                                title="Instant PDF"
-                                desc="Ready-to-print file generated instantly in your browser."
+                                title="Complete Structure"
+                                desc="10 MCQs + descriptive questions with proper marks distribution (60 marks)"
+                            />
+                            <FeatureItem
+                                title="Instant Download"
+                                desc="PDF generated instantly with proper course codes and subject details"
                             />
                         </div>
-                    </div>
-
-                    <div className="p-4 bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/20 rounded-xl flex gap-3">
-                        <AlertTriangle className="text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" size={16} />
-                        <p className="text-xs text-orange-800 dark:text-orange-300 leading-relaxed">
-                            <strong>Note:</strong> These papers are AI-generated for practice purposes. They are not official predictions for upcoming exams.
-                        </p>
                     </div>
                 </div>
             </div>
@@ -582,16 +695,15 @@ export default function AIPapers() {
     )
 }
 
-// --- Component Helper (From UI Code 1) ---
 function FeatureItem({ title, desc }: { title: string, desc: string }) {
     return (
         <div className="flex gap-3">
-            <div className="shrink-0 w-6 h-6 rounded-full bg-white dark:bg-white/10 shadow-sm flex items-center justify-center text-green-600 dark:text-green-400">
+            <div className="shrink-0 w-5 h-5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center mt-0.5">
                 <Check size={12} strokeWidth={3} />
             </div>
             <div>
-                <h4 className="font-bold text-xs text-gray-900 dark:text-gray-100">{title}</h4>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{desc}</p>
+                <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">{title}</h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{desc}</p>
             </div>
         </div>
     )
