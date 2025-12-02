@@ -313,20 +313,26 @@ function AppContent() {
 
           {/* My Uploads Route (Protected) */}
           <Route path="/uploads" element={
-            user ? (
+            <ProtectedRoute onAuthRequired={() => {
+              setAuthModalInitialView('login')
+              setIsAuthModalOpen(true)
+            }}>
               <div className="space-y-6">
                 <h1 className="text-3xl font-bold tracking-tight">My Contributions</h1>
                 <ResourceGrid view="uploads" searchQuery={searchQuery} onUploadRequest={handleUploadWithData} />
               </div>
-            ) : (
-              <Navigate to="/" replace />
-            )
+            </ProtectedRoute>
           } />
 
 
           {/* Profile Route (Protected) */}
           <Route path="/profile" element={
-            user ? <ProfilePage /> : <Navigate to="/" replace />
+            <ProtectedRoute onAuthRequired={() => {
+              setAuthModalInitialView('login')
+              setIsAuthModalOpen(true)
+            }}>
+              <ProfilePage />
+            </ProtectedRoute>
           } />
 
           {/* About Route */}
