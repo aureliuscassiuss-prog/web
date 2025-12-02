@@ -12,7 +12,6 @@ interface Semester {
     id: string
     number: number
     courses: Course[]
-    sgpa: number
 }
 
 const gradePoints: { [key: string]: number } = {
@@ -41,8 +40,7 @@ export default function CGPACalculator() {
         {
             id: '1',
             number: 1,
-            courses: [{ id: '1', name: '', credits: 3, grade: 'A' }],
-            sgpa: 0
+            courses: [{ id: '1', name: '', credits: 3, grade: 'A' }]
         }
     ])
     const [cgpa, setCgpa] = useState(0)
@@ -50,39 +48,33 @@ export default function CGPACalculator() {
     const [effectiveCredits, setEffectiveCredits] = useState(0)
 
     useEffect(() => {
-        calculateAll()
+        calculateCGPA()
     }, [semesters])
 
-    const calculateAll = () => {
-        // Calculate SGPA for each semester
-        const updatedSemesters = semesters.map(sem => {
-            const validCourses = sem.courses.filter(c =>
-                c.name.trim() !== '' &&
-                c.grade !== '' &&
-                c.grade !== 'Q'  // Exclude Q grades
-            )
+    const calculateSGPA = (courses: Course[]) => {
+        const validCourses = courses.filter(c =>
+            c.name.trim() !== '' &&
+            c.grade !== '' &&
+            c.grade !== 'Q'
+        )
 
-            if (validCourses.length === 0) {
-                return { ...sem, sgpa: 0 }
-            }
+        if (validCourses.length === 0) return 0
 
-            const totalCredits = validCourses.reduce((sum, course) => sum + course.credits, 0)
-            const weightedSum = validCourses.reduce((sum, course) => {
-                return sum + (course.credits * gradePoints[course.grade])
-            }, 0)
+        const totalCredits = validCourses.reduce((sum, course) => sum + course.credits, 0)
+        const weightedSum = validCourses.reduce((sum, course) => {
+            return sum + (course.credits * gradePoints[course.grade])
+        }, 0)
 
-            const sgpa = totalCredits > 0 ? weightedSum / totalCredits : 0
-            return { ...sem, sgpa: Math.round(sgpa * 100) / 100 }
-        })
+        return totalCredits > 0 ? Math.round((weightedSum / totalCredits) * 100) / 100 : 0
+    }
 
-        setSemesters(updatedSemesters)
-
+    const calculateCGPA = () => {
         // Calculate CGPA (cumulative across ALL courses, excluding Q)
         let allCredits = 0
         let effectiveCreditsCount = 0
         let allWeightedSum = 0
 
-        updatedSemesters.forEach(sem => {
+        semesters.forEach(sem => {
             sem.courses.forEach(course => {
                 if (course.name.trim() !== '' && course.grade !== '') {
                     allCredits += course.credits
@@ -107,8 +99,7 @@ export default function CGPACalculator() {
         const newSemester: Semester = {
             id: Date.now().toString(),
             number: nextNumber,
-            courses: [{ id: '1', name: '', credits: 3, grade: 'A' }],
-            sgpa: 0
+            courses: [{ id: '1', name: '', credits: 3, grade: 'A' }]
         }
         setSemesters([...semesters, newSemester])
     }
@@ -162,8 +153,7 @@ export default function CGPACalculator() {
             {
                 id: '1',
                 number: 1,
-                courses: [{ id: '1', name: '', credits: 3, grade: 'A' }],
-                sgpa: 0
+                courses: [{ id: '1', name: '', credits: 3, grade: 'A' }]
             }
         ])
         setCgpa(0)
@@ -206,11 +196,14 @@ export default function CGPACalculator() {
                                     <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                                         Semester {semester.number}
                                     </h2>
-                                    {semester.sgpa > 0 && (
-                                        <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
-                                            SGPA: {semester.sgpa.toFixed(2)}
-                                        </span>
-                                    )}
+                                    {(() => {
+                                        const sgpa = calculateSGPA(semester.courses)
+                                        return sgpa > 0 && (
+                                            <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+                                                SGPA: {sgpa.toFixed(2)}
+                                            </span>
+                                        )
+                                    })()}
                                 </div>
                                 <button
                                     onClick={() => removeSemester(semester.id)}
