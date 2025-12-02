@@ -239,16 +239,27 @@ function AppContent() {
           {/* Browse Resources Route */}
           <Route path="/resources" element={<BrowseResources onUploadRequest={handleUploadWithData} />} />
 
-          {/* AI Assistant Route */}
-          <Route path="/ai-assistant" element={<AIAssistantPage />} />
+          {/* AI Assistant Route (Protected) */}
+          <Route path="/ai-assistant" element={
+            user ? <AIAssistantPage /> : <Navigate to="/" replace />
+          } />
 
           {/* Leaderboard Route */}
           <Route path="/leaderboard" element={
             <ResourceGrid view="leaderboard" searchQuery={searchQuery} />
           } />
-          <Route path="/preparation" element={<Preparation />} />
-          <Route path="/preparation/play" element={<CoursePlayer />} />
-          <Route path="/ai-papers" element={<AIPapers />} />
+          {/* Preparation Routes (Protected) */}
+          <Route path="/preparation" element={
+            user ? <Preparation /> : <Navigate to="/" replace />
+          } />
+          <Route path="/preparation/play" element={
+            user ? <CoursePlayer /> : <Navigate to="/" replace />
+          } />
+
+          {/* AI Papers Route (Protected) */}
+          <Route path="/ai-papers" element={
+            user ? <AIPapers /> : <Navigate to="/" replace />
+          } />
 
           {/* Admin Route (Protected) */}
           <Route path="/admin" element={
