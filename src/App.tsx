@@ -107,9 +107,7 @@ function Layout({
               {/* Header with Logo and Close Button */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-md flex items-center justify-center">
-                    <span className="text-white font-bold text-xs">UN</span>
-                  </div>
+                  <img src="/LOGO.png" alt="Extrovert Logo" className="w-6 h-6 rounded-md object-contain" />
                   <span className="font-semibold text-base text-gray-900 dark:text-white">Extrovert</span>
                 </div>
                 <button
