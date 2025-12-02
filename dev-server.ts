@@ -10,6 +10,7 @@ import profileHandler from './api/profile.ts';
 import adminHandler from './api/admin.ts';
 import aiHandler from './api/ai.ts';
 import leaderboardHandler from './api/leaderboard.ts';
+import statsHandler from './api/stats.ts';
 
 // Handler adapter for Vercel-style handlers
 const adaptHandler = (handler: any) => async (req: Request, res: Response) => {
@@ -81,6 +82,9 @@ app.all('/api/ai', jsonParser, adaptHandler(aiHandler));
 // 6. Leaderboard
 app.all('/api/leaderboard', jsonParser, adaptHandler(leaderboardHandler));
 
+// 7. Stats
+app.all('/api/stats', jsonParser, adaptHandler(statsHandler));
+
 
 // Listen on 0.0.0.0 to be accessible from network
 app.listen(PORT, '0.0.0.0', () => {
@@ -95,5 +99,6 @@ Endpoints:
 - Admin:       http://localhost:${PORT}/api/admin
 - AI:          http://localhost:${PORT}/api/ai
 - Leaderboard: http://localhost:${PORT}/api/leaderboard
+- Stats:       http://localhost:${PORT}/api/stats
     `);
 });

@@ -10,6 +10,7 @@ import Sidebar from './components/Sidebar'
 import Header from './components/Header'
 import Footer from './components/Footer'
 import Hero from './components/Hero'
+import Dashboard from './components/Dashboard'
 import ResourceGrid from './components/ResourceGrid'
 import AIAssistantPage from './components/AIAssistantPage'
 import UploadModal from './components/UploadModal'
@@ -257,7 +258,7 @@ function AppContent() {
           {/* Home Route */}
           <Route path="/" element={
             <div className="space-y-8">
-              <Hero onGetStarted={handleGetStarted} user={user} />
+              {user ? <Dashboard /> : <Hero onGetStarted={handleGetStarted} user={user} />}
             </div>
           } />
 
