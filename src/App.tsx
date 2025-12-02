@@ -252,7 +252,7 @@ function AppContent() {
 
           {/* Admin Route (Protected) */}
           <Route path="/admin" element={
-            user && user.role === 'admin' ? <AdminPanel /> : <Navigate to="/" replace />
+            user && ['admin', 'semi-admin', 'content-reviewer', 'structure-manager'].includes(user.role || '') ? <AdminPanel /> : <Navigate to="/" replace />
           } />
 
 
@@ -266,11 +266,6 @@ function AppContent() {
             ) : (
               <Navigate to="/" replace />
             )
-          } />
-
-          {/* Admin Route (Protected) */}
-          <Route path="/admin" element={
-            user && user.role === 'admin' ? <AdminPanel /> : <Navigate to="/" replace />
           } />
 
 
