@@ -112,6 +112,7 @@ const ActionCard = ({ action }) => (
 
 export default function Dashboard() {
     const { user } = useAuth();
+    const AvatarComponent = user?.avatar ? getAvatarComponent(user.avatar) : null;
     const [greeting, setGreeting] = useState('');
     const [stats, setStats] = useState([
         { label: 'Resources', value: '...', icon: BookOpen, color: 'text-blue-500' },
@@ -221,8 +222,16 @@ export default function Dashboard() {
                         <div className="flex items-center gap-4">
                             <div className="relative shrink-0 group">
                                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl blur-lg opacity-40 group-hover:opacity-60 transition-opacity" />
-                                <div className="relative w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
-                                    <span className="text-white font-black text-2xl md:text-3xl">UN</span>
+                                <div className="relative w-16 h-16 md:w-20 md:h-20 bg-white dark:bg-black rounded-2xl flex items-center justify-center shadow-lg overflow-hidden border-2 border-white/20">
+                                    {AvatarComponent ? (
+                                        <AvatarComponent className="w-full h-full" />
+                                    ) : user?.avatar ? (
+                                        <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                                            <span className="text-white font-black text-2xl md:text-3xl">{user?.name?.[0] || 'E'}</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <div>
