@@ -21,6 +21,7 @@ import AdminPanel from './components/AdminPanel'
 import Preparation from './components/Preparation'
 import CoursePlayer from './components/CoursePlayer'
 import AIPapers from './components/AIPapers'
+import CGPACalculator from './components/CGPACalculator'
 import AboutPage from './components/AboutPage'
 import ContactPage from './components/ContactPage'
 import DocsPage from './components/DocsPage'
@@ -262,6 +263,9 @@ function AppContent() {
 
           {/* Browse Resources Route */}
           <Route path="/resources" element={<BrowseResources onUploadRequest={handleUploadWithData} />} />
+
+          {/* CGPA Calculator Route (Public) */}
+          <Route path="/cgpa-calculator" element={<CGPACalculator />} />
 
           {/* AI Assistant Route (Protected) */}
           <Route path="/ai-assistant" element={
