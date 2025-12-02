@@ -218,14 +218,17 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
                             </button>
                         </div>
                         <div className="space-y-2">
-                            {units.map((unit: string) => (
-                                <ListItem
-                                    key={unit}
-                                    onClick={() => handleSelect('unit', unit, 6)}
-                                    title={unit}
-                                    icon={<Hash className="h-4 w-4" />}
-                                />
-                            ))}
+                            {units.map((unit: any) => {
+                                const unitName = typeof unit === 'string' ? unit : unit.name;
+                                return (
+                                    <ListItem
+                                        key={unitName}
+                                        onClick={() => handleSelect('unit', unitName, 6)}
+                                        title={unitName}
+                                        icon={<Hash className="h-4 w-4" />}
+                                    />
+                                );
+                            })}
                         </div>
                     </div>
                 )}
