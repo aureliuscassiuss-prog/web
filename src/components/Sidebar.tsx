@@ -26,6 +26,18 @@ interface SidebarProps {
 export default function Sidebar({ onMobileMenuClose, isDark, toggleTheme, spotlight }: SidebarProps) {
     const { user } = useAuth();
 
+    // Helper to check if user has any admin role
+    const hasAdminRole = user?.role && ['admin', 'semi-admin', 'content-reviewer', 'structure-manager'].includes(user.role);
+
+    // Get admin panel label based on role
+    const getAdminLabel = () => {
+        if (user?.role === 'admin') return 'Admin Panel';
+        if (user?.role === 'semi-admin') return 'Admin Panel';
+        if (user?.role === 'content-reviewer') return 'Content Review';
+        if (user?.role === 'structure-manager') return 'Structure Manager';
+        return 'Admin Panel';
+    };
+
     // Grouping items creates a better visual hierarchy
     const menuGroups = [
         {
@@ -44,7 +56,7 @@ export default function Sidebar({ onMobileMenuClose, isDark, toggleTheme, spotli
             items: [
                 { path: '/uploads', label: 'My Uploads', icon: Upload },
                 { path: '/profile', label: 'Profile Settings', icon: User },
-                ...(user?.role === 'admin' ? [{ path: '/admin', label: 'Admin Panel', icon: ShieldCheck }] : [])
+                ...(hasAdminRole ? [{ path: '/admin', label: getAdminLabel(), icon: ShieldCheck }] : [])
             ]
         }
     ];

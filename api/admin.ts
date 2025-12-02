@@ -39,16 +39,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const db = await getDb();
         const user = await db.collection('users').findOne({ _id: new ObjectId(decoded.userId) });
 
-        if (!user || user.role !== 'admin') {
+        // Check if user has any admin-related role
+        const allowedRoles = ['admin', 'semi-admin', 'content-reviewer', 'structure-manager'];
+        if (!user || !allowedRoles.includes(user.role)) {
             return res.status(403).json({ message: 'Forbidden: Admin access required' });
         }
 
+        // Helper function to check permissions
+        const hasPermission = (requiredRoles: string[]) => {
+            return requiredRoles.includes(user.role);
+        };
+
         if (req.method === 'GET') {
             if (action === 'pending') {
+                // Approvals: admin, semi-admin, content-reviewer
+                if (!hasPermission(['admin', 'semi-admin', 'content-reviewer'])) {
+                    return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
+                }
                 return await handleGetPending(res);
             } else if (action === 'structure') {
+                // Structure view: admin, semi-admin, structure-manager
+                if (!hasPermission(['admin', 'semi-admin', 'structure-manager'])) {
+                    return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
+                }
                 return await handleGetStructure(res);
             } else if (action === 'users') {
+                // Users view: admin, semi-admin
+                if (!hasPermission(['admin', 'semi-admin'])) {
+                    return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
+                }
                 return await handleGetUsers(res);
             } else {
                 return res.status(400).json({ message: 'Invalid action. Use: pending, structure, or users' });
@@ -64,10 +83,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const { action: bodyAction, userAction } = body;
 
             if (userAction) {
+                // User management: admin only
+                if (!hasPermission(['admin'])) {
+                    return res.status(403).json({ message: 'Forbidden: Admin access required for user management' });
+                }
                 return await handleUserAction(body, res);
             } else if (bodyAction === 'approve' || bodyAction === 'reject') {
+                // Resource approval: admin, semi-admin, content-reviewer
+                if (!hasPermission(['admin', 'semi-admin', 'content-reviewer'])) {
+                    return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
+                }
                 return await handleResourceAction(body, res);
             } else if (bodyAction === 'structure') {
+                // Structure management: admin, structure-manager
+                if (!hasPermission(['admin', 'structure-manager'])) {
+                    return res.status(403).json({ message: 'Forbidden: Insufficient permissions for structure management' });
+                }
                 return await handleUpdateStructure(body, res);
             } else {
                 console.log('Invalid action received:', bodyAction);

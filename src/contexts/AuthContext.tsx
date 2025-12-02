@@ -13,7 +13,7 @@ interface User {
     course?: string // Program
     year?: number
     gender?: 'male' | 'female' | 'other'
-    role?: 'user' | 'admin'
+    role?: 'user' | 'admin' | 'semi-admin' | 'content-reviewer' | 'structure-manager'
     isBanned?: boolean
     canUpload?: boolean
 }
