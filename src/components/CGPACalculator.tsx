@@ -136,7 +136,7 @@ export default function CGPACalculator() {
     const clearAll = () => {
         setSemesters([{ id: '1', number: 1, sgpa: '', credits: '' }])
         setCgpa(0)
-        setTotal Credits(0)
+        setTotalCredits(0)
         setNextSemCredits('')
         setTargetCGPA('')
         setPrediction(null)
@@ -288,8 +288,8 @@ export default function CGPACalculator() {
 
                             {prediction && (
                                 <div className={`p-4 rounded-xl border ${prediction.achievable
-                                        ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-900/20'
-                                        : 'bg-orange-50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-900/20'
+                                    ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-900/20'
+                                    : 'bg-orange-50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-900/20'
                                     }`}>
                                     {prediction.achievable ? (
                                         <div>
