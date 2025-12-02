@@ -9,7 +9,7 @@ export default function TermsPage() {
                     Terms of Service
                 </h1>
                 <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-                    Please read these terms carefully before using UniNotes.
+                    Please read these terms carefully before using Extrovert.
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-500">
                     Last updated: December 1, 2025
@@ -49,7 +49,7 @@ export default function TermsPage() {
                 <div className="bg-white dark:bg-gray-950 rounded-xl border border-gray-200 dark:border-gray-800 p-8 space-y-4">
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white">1. Acceptance of Terms</h2>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                        By accessing and using UniNotes, you accept and agree to be bound by these Terms of Service.
+                        By accessing and using Extrovert, you accept and agree to be bound by these Terms of Service.
                         If you do not agree to these terms, please do not use our platform.
                     </p>
                 </div>
@@ -102,9 +102,9 @@ export default function TermsPage() {
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white">4. Intellectual Property</h2>
                     <ul className="list-disc list-inside space-y-2 text-sm text-gray-600 dark:text-gray-400">
                         <li>You retain ownership of content you upload</li>
-                        <li>By uploading, you grant UniNotes a license to display and distribute your content</li>
+                        <li>By uploading, you grant Extrovert a license to display and distribute your content</li>
                         <li>You must have the right to share any content you upload</li>
-                        <li>UniNotes respects intellectual property rights and will remove infringing content</li>
+                        <li>Extrovert respects intellectual property rights and will remove infringing content</li>
                     </ul>
                 </div>
 
@@ -124,7 +124,7 @@ export default function TermsPage() {
                 <div className="bg-white dark:bg-gray-950 rounded-xl border border-gray-200 dark:border-gray-800 p-8 space-y-4">
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white">6. Disclaimer</h2>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                        UniNotes is provided "as is" without warranties of any kind. We do not guarantee the accuracy,
+                        Extrovert is provided "as is" without warranties of any kind. We do not guarantee the accuracy,
                         completeness, or reliability of any content on the platform. Use of the platform is at your own risk.
                     </p>
                 </div>
@@ -132,7 +132,7 @@ export default function TermsPage() {
                 <div className="bg-white dark:bg-gray-950 rounded-xl border border-gray-200 dark:border-gray-800 p-8 space-y-4">
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white">7. Limitation of Liability</h2>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                        UniNotes and its operators shall not be liable for any indirect, incidental, special, or consequential
+                        Extrovert and its operators shall not be liable for any indirect, incidental, special, or consequential
                         damages arising from your use of the platform.
                     </p>
                 </div>
@@ -157,8 +157,8 @@ export default function TermsPage() {
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white">10. Contact</h2>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                         For questions about these terms, please contact us at{' '}
-                        <a href="mailto:legal@uninotes.com" className="text-blue-600 dark:text-blue-400 hover:underline">
-                            legal@uninotes.com
+                        <a href="mailto:legal@extrovert.site" className="text-blue-600 dark:text-blue-400 hover:underline">
+                            legal@extrovert.site
                         </a>
                     </p>
                 </div>
@@ -171,7 +171,7 @@ export default function TermsPage() {
                     <p className="font-semibold text-gray-900 dark:text-white text-sm">Important Notice</p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                         Violation of these terms may result in account suspension or termination.
-                        Please use UniNotes responsibly and help us maintain a positive learning environment.
+                        Please use Extrovert responsibly and help us maintain a positive learning environment.
                     </p>
                 </div>
             </div>

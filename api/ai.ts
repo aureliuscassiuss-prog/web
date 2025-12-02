@@ -61,7 +61,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             {
                 role: 'system',
                 content: systemPrompt ||
-                    `You are MediNotes AI, a helpful educational assistant for university students. 
+                    `You are Extrovert AI, a helpful educational assistant for university students. 
                     You help with studying, understanding concepts, creating flashcards, answering questions, and preparing for exams. 
                     Keep answers concise, clear, and educational. ${context ? `User context: ${context}` : ''}
                     ${isChat ? 'When creating flashcards or quizzes, remember the context of previous questions and answers in the conversation.' : ''}`

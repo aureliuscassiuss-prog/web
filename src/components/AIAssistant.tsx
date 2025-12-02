@@ -16,7 +16,7 @@ export default function AIAssistant() {
     const { token } = useAuth()
     const [isOpen, setIsOpen] = useState(false)
     const [messages, setMessages] = useState<Message[]>([
-        { text: "Hello! I'm your MediNotes AI tutor. I can help you study, create flashcards, or quiz you on any topic. How can I assist you today?", sender: 'bot' }
+        { text: "Hello! I'm your Extrovert AI tutor. I can help you study, create flashcards, or quiz you on any topic. How can I assist you today?", sender: 'bot' }
     ])
     const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([])
     const [input, setInput] = useState('')
@@ -73,7 +73,7 @@ export default function AIAssistant() {
 
     const resetConversation = () => {
         setMessages([
-            { text: "Hello! I'm your MediNotes AI tutor. How can I assist you today?", sender: 'bot' }
+            { text: "Hello! I'm your Extrovert AI tutor. How can I assist you today?", sender: 'bot' }
         ])
         setConversationHistory([])
     }

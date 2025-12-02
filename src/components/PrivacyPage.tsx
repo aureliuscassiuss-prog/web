@@ -128,8 +128,8 @@ export default function PrivacyPage() {
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Questions?</h2>
                 <p className="text-gray-600 dark:text-gray-400">
                     If you have any questions about our privacy policy, please contact us at{' '}
-                    <a href="mailto:privacy@uninotes.com" className="text-blue-600 dark:text-blue-400 hover:underline">
-                        privacy@uninotes.com
+                    <a href="mailto:privacy@extrovert.site" className="text-blue-600 dark:text-blue-400 hover:underline">
+                        privacy@extrovert.site
                     </a>
                 </p>
             </div>

@@ -226,7 +226,7 @@ export default function Dashboard() {
                             </div>
                             <div>
                                 <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-                                    UniNotes
+                                    Extrovert
                                 </h1>
                                 <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 font-medium">
                                     Your Academic Companion

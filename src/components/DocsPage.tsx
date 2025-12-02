@@ -9,7 +9,7 @@ export default function DocsPage() {
                     Documentation
                 </h1>
                 <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-                    Everything you need to know about using UniNotes effectively.
+                    Everything you need to know about using Extrovert effectively.
                 </p>
             </div>
 
@@ -120,9 +120,9 @@ export default function DocsPage() {
 
                 <div className="space-y-4">
                     <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Is UniNotes free?</h3>
+                        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Is Extrovert free?</h3>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Yes! UniNotes is completely free for all students and will remain free forever.
+                            Yes! Extrovert is completely free for all students and will remain free forever.
                         </p>
                     </div>
 

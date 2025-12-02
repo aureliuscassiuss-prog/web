@@ -26,7 +26,7 @@ export default function AIAssistantPage() {
     const [messages, setMessages] = useState<Message[]>([
         {
             id: 'init-1',
-            text: "Hello! I'm your UniNotes AI tutor. I can help you study, create flashcards, quiz you on any topic, or explain complex concepts.",
+            text: "Hello! I'm your Extrovert AI tutor. I can help you study, create flashcards, quiz you on any topic, or explain complex concepts.",
             sender: 'bot',
             feedback: null,
             timestamp: new Date()
@@ -123,7 +123,7 @@ export default function AIAssistantPage() {
     const resetConversation = () => {
         setMessages([{
             id: Date.now().toString(),
-            text: "Hello! I'm your UniNotes AI tutor. How can I assist you today?",
+            text: "Hello! I'm your Extrovert AI tutor. How can I assist you today?",
             sender: 'bot',
             feedback: null,
             timestamp: new Date()

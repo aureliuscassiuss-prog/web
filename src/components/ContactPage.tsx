@@ -136,8 +136,8 @@ export default function ContactPage() {
                             </div>
                             <div>
                                 <h3 className="font-semibold text-gray-900 dark:text-white">Email</h3>
-                                <a href="mailto:support@uninotes.com" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
-                                    support@uninotes.com
+                                <a href="mailto:support@extrovert.site" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
+                                    support@extrovert.site
                                 </a>
                             </div>
                         </div>

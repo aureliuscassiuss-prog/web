@@ -110,7 +110,7 @@ function Layout({
                   <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-md flex items-center justify-center">
                     <span className="text-white font-bold text-xs">UN</span>
                   </div>
-                  <span className="font-semibold text-base text-gray-900 dark:text-white">UniNotes</span>
+                  <span className="font-semibold text-base text-gray-900 dark:text-white">Extrovert</span>
                 </div>
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}

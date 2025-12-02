@@ -6,7 +6,7 @@ export default function AboutPage() {
             {/* Header */}
             <div className="text-center space-y-4">
                 <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
-                    About UniNotes
+                    About Extrovert
                 </h1>
                 <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
                     A collaborative platform built by students, for students. Share knowledge, ace your exams, and grow together.
@@ -22,7 +22,7 @@ export default function AboutPage() {
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Our Mission</h2>
                 </div>
                 <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                    UniNotes was created to solve a simple problem: students need access to quality study materials,
+                    Extrovert was created to solve a simple problem: students need access to quality study materials,
                     and the best resources often come from fellow students who've already mastered the content.
                     We're building a community where knowledge sharing is rewarded and everyone benefits.
                 </p>
@@ -56,7 +56,7 @@ export default function AboutPage() {
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Free Forever</h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Education should be accessible. UniNotes will always be free for students.
+                        Education should be accessible. Extrovert will always be free for students.
                     </p>
                 </div>
 
@@ -75,7 +75,7 @@ export default function AboutPage() {
             <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/10 dark:to-purple-900/10 rounded-xl border border-blue-100 dark:border-blue-900/30 p-8 text-center space-y-4">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Built by Students</h2>
                 <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-                    UniNotes is developed and maintained by a team of passionate students who understand
+                    Extrovert is developed and maintained by a team of passionate students who understand
                     the challenges of college life. We're constantly improving based on your feedback.
                 </p>
             </div>
