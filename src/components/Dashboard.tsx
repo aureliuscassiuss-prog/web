@@ -18,7 +18,6 @@ import { Link } from 'react-router-dom';
 import { getAvatarComponent } from '../data/premiumAvatars';
 
 // --- Sub-components to optimize performance ---
-
 // 1. Time Component (Prevents full dashboard re-render every second)
 const TimeDisplay = memo(() => {
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -46,11 +45,11 @@ const TimeDisplay = memo(() => {
 
     return (
         <div className="flex flex-col items-end">
-            <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-300 mb-0.5 bg-white/50 dark:bg-black/20 px-3 py-1 rounded-full backdrop-blur-sm">
-                <Calendar className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-300 mb-0.5 bg-white/60 dark:bg-black/20 px-3 py-1 rounded-full backdrop-blur-md border border-white/20 dark:border-black/20">
+                <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
                 <span className="text-xs font-semibold uppercase tracking-wide">{formatDate(currentTime)}</span>
             </div>
-            <div className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent font-mono tracking-tight">
+            <div className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-400 dark:via-indigo-400 dark:to-purple-400 bg-clip-text text-transparent font-mono tracking-tight -mb-1">
                 {formatTime(currentTime)}
             </div>
         </div>
@@ -58,55 +57,56 @@ const TimeDisplay = memo(() => {
 });
 
 // 2. Stat Card Component
-const StatCard = ({ label, value, icon: Icon, color }) => (
-    <div className="relative group bg-white dark:bg-gray-800/50 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-200">
+const StatCard = ({ label, value, icon: Icon, color }: { label: string; value: string; icon: any; color: string }) => (
+    <div className="relative group bg-white/70 dark:bg-gray-800/30 backdrop-blur-sm rounded-2xl p-4 sm:p-5 border border-gray-100/40 dark:border-gray-700/40 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
+        <div className="absolute inset-0 bg-gradient-to-br from-white/30 to-transparent dark:from-black/10 rounded-2xl -z-10" />
         <div className="flex items-center justify-between mb-2">
-            <div className={`p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50 ${color.replace('text-', 'text-opacity-100 ')}`}>
+            <div className={`p-2 rounded-lg bg-gradient-to-br ${color.replace('text-', 'from-')} to-gray-100 dark:to-gray-700/50 border border-white/30 dark:border-gray-600/30`}>
                 <Icon className={`w-5 h-5 ${color}`} />
             </div>
         </div>
-        <div className="text-2xl font-bold text-gray-900 dark:text-white">
+        <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
             {value}
         </div>
-        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-1">
+        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-wide">
             {label}
         </div>
     </div>
 );
 
 // 3. Action Card Component
-const ActionCard = ({ action }) => (
+const ActionCard = ({ action }: { action: any }) => (
     <Link
         to={action.link}
-        className="group relative flex items-center p-4 bg-white dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-800 transition-all duration-200 active:scale-[0.98]">
+        className="group relative flex items-center p-4 bg-white/70 dark:bg-gray-800/30 backdrop-blur-sm rounded-2xl border border-gray-100/40 dark:border-gray-700/40 hover:border-blue-200/60 dark:hover:border-blue-800/60 transition-all duration-300 active:scale-[0.98] hover:shadow-md"
+    >
         {/* Gradient Background on Hover */}
-        <div className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${action.color} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
-
+        <div className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${action.color} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
         {/* Icon Container */}
-        <div className={`relative shrink-0 w-12 h-12 flex items-center justify-center rounded-xl ${action.bgColor} mr-4 group-hover:scale-105 transition-transform duration-300`}>
-            <action.icon className="w-6 h-6 text-gray-700 dark:text-white z-10" />
+        <div className={`relative shrink-0 w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl ${action.bgColor} mr-3 sm:mr-4 group-hover:scale-105 transition-transform duration-300 border border-white/30 dark:border-gray-600/30 overflow-hidden`}>
+            <action.icon className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700 dark:text-white z-10 relative" />
             {/* Subtle color glow behind icon */}
-            <div className={`absolute inset-0 opacity-20 bg-gradient-to-br ${action.color} rounded-xl`} />
+            <div className={`absolute inset-0 opacity-30 bg-gradient-to-br ${action.color} rounded-xl blur-sm`} />
         </div>
 
         {/* Text Content */}
         <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
-                <h4 className="text-base font-bold text-gray-900 dark:text-white truncate">
+                <h4 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white truncate leading-tight">
                     {action.title}
                 </h4>
                 {action.badge && (
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-gradient-to-r ${action.color} text-white shadow-sm`}>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-gradient-to-r ${action.color} text-white shadow-sm border border-white/20`}>
                         {action.badge}
                     </span>
                 )}
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate leading-relaxed">
                 {action.description}
             </p>
         </div>
 
-        <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-500 transition-colors shrink-0" />
+        <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300 group-hover:text-blue-500 transition-colors shrink-0 ml-2" />
     </Link>
 );
 
@@ -129,8 +129,8 @@ export default function Dashboard() {
                 if (response.ok) {
                     const data = await response.json();
                     setStats([
-                        { label: 'Resources', value: `${data.totalResources}+`, icon: BookOpen, color: 'text-blue-500' },
-                        { label: 'Users', value: `${data.totalUsers}+`, icon: TrendingUp, color: 'text-green-500' },
+                        { label: 'Resources', value: `${data.totalResources || 0}+`, icon: BookOpen, color: 'text-blue-500' },
+                        { label: 'Users', value: `${data.totalUsers || 0}+`, icon: TrendingUp, color: 'text-green-500' },
                         { label: 'Queries', value: '10k+', icon: Sparkles, color: 'text-purple-500' },
                         { label: 'Papers', value: '3k+', icon: FileText, color: 'text-orange-500' }
                     ]);
@@ -157,7 +157,7 @@ export default function Dashboard() {
             icon: BookOpen,
             link: '/resources',
             color: 'from-blue-500 to-cyan-500',
-            bgColor: 'bg-blue-50 dark:bg-blue-900/30'
+            bgColor: 'bg-blue-50/70 dark:bg-blue-900/20'
         },
         {
             title: 'AI Assistant',
@@ -165,7 +165,7 @@ export default function Dashboard() {
             icon: Bot,
             link: '/ai-assistant',
             color: 'from-purple-500 to-pink-500',
-            bgColor: 'bg-purple-50 dark:bg-purple-900/30',
+            bgColor: 'bg-purple-50/70 dark:bg-purple-900/20',
             badge: 'New'
         },
         {
@@ -174,7 +174,7 @@ export default function Dashboard() {
             icon: Calculator,
             link: '/cgpa-calculator',
             color: 'from-green-500 to-emerald-500',
-            bgColor: 'bg-green-50 dark:bg-green-900/30'
+            bgColor: 'bg-green-50/70 dark:bg-green-900/20'
         },
         {
             title: 'AI Papers',
@@ -182,7 +182,7 @@ export default function Dashboard() {
             icon: FileText,
             link: '/ai-papers',
             color: 'from-orange-500 to-red-500',
-            bgColor: 'bg-orange-50 dark:bg-orange-900/30',
+            bgColor: 'bg-orange-50/70 dark:bg-orange-900/20',
             badge: 'Beta'
         },
         {
@@ -191,7 +191,7 @@ export default function Dashboard() {
             icon: Trophy,
             link: '/leaderboard',
             color: 'from-yellow-500 to-amber-500',
-            bgColor: 'bg-yellow-50 dark:bg-yellow-900/30'
+            bgColor: 'bg-yellow-50/70 dark:bg-yellow-900/20'
         },
         {
             title: 'Uploads',
@@ -199,46 +199,45 @@ export default function Dashboard() {
             icon: Upload,
             link: '/uploads',
             color: 'from-indigo-500 to-blue-500',
-            bgColor: 'bg-indigo-50 dark:bg-indigo-900/30'
+            bgColor: 'bg-indigo-50/70 dark:bg-indigo-900/20'
         }
     ];
 
     return (
-        <div className="w-full min-h-[calc(100vh-80px)] pb-20 px-4 md:px-6 lg:px-8 overflow-x-hidden">
-
+        <div className="w-full min-h-[calc(100vh-80px)] pb-20 px-4 sm:px-6 lg:px-8 overflow-x-hidden">
             {/* --- Hero Section --- */}
-            <div className="relative mt-4 md:mt-6 overflow-hidden rounded-[2rem] bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-xl shadow-blue-900/5 mb-6">
-
-                {/* Gradient Mesh Background */}
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/80 via-purple-50/50 to-pink-50/80 dark:from-blue-950/20 dark:via-purple-950/10 dark:to-pink-950/20" />
-                <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-blue-200/30 to-transparent dark:from-blue-800/10 blur-3xl" />
-                <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-purple-200/30 to-transparent dark:from-purple-800/10 blur-3xl" />
+            <div className="relative mt-4 sm:mt-6 overflow-hidden rounded-3xl bg-white/60 dark:bg-gray-900/30 backdrop-blur-xl border border-gray-100/30 dark:border-gray-800/30 shadow-2xl shadow-blue-500/10 dark:shadow-purple-500/10 mb-6">
+                {/* Enhanced Gradient Mesh Background */}
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/80 via-purple-50/40 to-pink-50/80 dark:from-blue-950/20 dark:via-purple-950/10 dark:to-pink-950/20" />
+                <div className="absolute top-0 right-0 w-64 h-64 sm:w-96 sm:h-96 bg-gradient-to-bl from-blue-200/30 to-transparent dark:from-blue-800/10 blur-3xl" />
+                <div className="absolute bottom-0 left-0 w-64 h-64 sm:w-96 sm:h-96 bg-gradient-to-tr from-purple-200/30 to-transparent dark:from-purple-800/10 blur-3xl" />
+                <div className="absolute top-4 right-4 w-32 h-32 bg-gradient-to-r from-yellow-300/20 to-orange-300/20 rounded-full blur-xl opacity-50" />
 
                 {/* Content */}
-                <div className="relative p-6 md:p-10">
+                <div className="relative p-5 sm:p-6 lg:p-10">
                     {/* Top Row: Logo + Time */}
-                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8">
+                    <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 sm:gap-6 mb-6 sm:mb-8">
                         {/* Logo */}
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3 sm:gap-4">
                             <div className="relative shrink-0 group">
-                                <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl blur-lg opacity-40 group-hover:opacity-60 transition-opacity" />
-                                <div className="relative w-16 h-16 md:w-20 md:h-20 bg-white dark:bg-black rounded-2xl flex items-center justify-center shadow-lg overflow-hidden border-2 border-white/20">
+                                <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity duration-500" />
+                                <div className="relative w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 bg-white/80 dark:bg-black/30 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-xl overflow-hidden border-2 border-white/40 dark:border-gray-600/40 ring-1 ring-blue-200/30 dark:ring-purple-800/20">
                                     {AvatarComponent ? (
                                         <AvatarComponent className="w-full h-full" />
                                     ) : user?.avatar ? (
-                                        <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                                        <img src={user.avatar} alt={user.name} className="w-full h-full object-cover rounded-lg" />
                                     ) : (
-                                        <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                                            <span className="text-white font-black text-2xl md:text-3xl">{user?.name?.[0] || 'E'}</span>
+                                        <div className="w-full h-full bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 flex items-center justify-center">
+                                            <span className="text-white font-black text-xl sm:text-2xl lg:text-3xl">{user?.name?.[0] || 'E'}</span>
                                         </div>
                                     )}
                                 </div>
                             </div>
-                            <div>
-                                <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+                            <div className="min-w-0">
+                                <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-gray-900 dark:text-white tracking-tight leading-tight truncate">
                                     Extrovert
                                 </h1>
-                                <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 font-medium">
+                                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
                                     Your Academic Companion
                                 </p>
                             </div>
@@ -249,11 +248,11 @@ export default function Dashboard() {
                     </div>
 
                     {/* Greeting */}
-                    <div className="space-y-2">
-                        <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 dark:text-white leading-tight">
-                            {greeting}, <span className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">{user?.name || 'Student'}</span>!
+                    <div className="space-y-2 sm:space-y-3">
+                        <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-black text-gray-900 dark:text-white leading-tight">
+                            {greeting}, <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-400 dark:via-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">{user?.name || 'Student'}</span>!
                         </h2>
-                        <p className="text-base md:text-lg text-gray-600 dark:text-gray-400 font-medium">
+                        <p className="text-sm sm:text-base lg:text-lg text-gray-600 dark:text-gray-400 font-medium leading-relaxed">
                             Ready to ace your studies today? 🚀
                         </p>
                     </div>
@@ -261,7 +260,7 @@ export default function Dashboard() {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
                 {stats.map((stat) => (
                     <StatCard key={stat.label} {...stat} />
                 ))}
@@ -270,13 +269,13 @@ export default function Dashboard() {
             {/* Quick Actions */}
             <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+                    <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">
                         Quick Actions
                     </h3>
-                    <Zap className="w-5 h-5 text-yellow-500" />
+                    <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     {quickActions.map((action) => (
                         <ActionCard key={action.title} action={action} />
                     ))}
@@ -284,28 +283,30 @@ export default function Dashboard() {
             </div>
 
             {/* Motivational Banner */}
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-500 dark:to-purple-500 p-6 md:p-8 text-white shadow-xl">
-                {/* Pattern */}
-                <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,.05)_25%,rgba(255,255,255,.05)_50%,transparent_50%,transparent_75%,rgba(255,255,255,.05)_75%,rgba(255,255,255,.05))] bg-[length:60px_60px] opacity-20" />
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-500 dark:via-indigo-500 dark:to-purple-500 p-5 sm:p-6 lg:p-8 text-white shadow-2xl shadow-blue-500/20 dark:shadow-purple-500/20 border border-white/10">
+                {/* Enhanced Pattern */}
+                <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,.08)_25%,rgba(255,255,255,.08)_50%,transparent_50%,transparent_75%,rgba(255,255,255,.08)_75%,rgba(255,255,255,.08))] bg-[length:40px_40px] opacity-30" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_80%,rgba(255,255,255,.1),transparent_50%)] opacity-50" />
 
-                <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                            <Star className="w-5 h-5 fill-yellow-300 text-yellow-300" />
+                            <Star className="w-4 h-4 sm:w-5 sm:h-5 fill-yellow-300 text-yellow-300" />
                             <span className="text-xs font-bold uppercase tracking-wider">Pro Tip</span>
                         </div>
-                        <h3 className="text-xl md:text-2xl font-bold mb-1">
+                        <h3 className="text-lg sm:text-xl lg:text-2xl font-bold mb-1 leading-tight">
                             Consistency is the key to success!
                         </h3>
-                        <p className="text-blue-100 text-sm md:text-base">
+                        <p className="text-blue-100 text-sm sm:text-base leading-relaxed">
                             Study daily and use our AI assistant when stuck!
                         </p>
                     </div>
                     <Link
                         to="/ai-assistant"
-                        className="shrink-0 px-5 py-2.5 bg-white text-blue-600 rounded-xl font-bold text-sm hover:bg-blue-50 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center gap-2">
+                        className="shrink-0 px-4 sm:px-5 py-2.5 sm:py-2 bg-white/95 dark:bg-black/20 text-blue-600 dark:text-white rounded-xl font-bold text-sm hover:bg-white/100 dark:hover:bg-black/30 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center gap-2 backdrop-blur-sm border border-white/20"
+                    >
                         Try AI Assistant
-                        <Sparkles className="w-4 h-4" />
+                        <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
                     </Link>
                 </div>
             </div>
