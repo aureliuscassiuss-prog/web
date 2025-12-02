@@ -15,6 +15,7 @@ import {
     Calendar
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { getAvatarComponent } from '../data/premiumAvatars';
 
 // --- Sub-components to optimize performance ---
 
