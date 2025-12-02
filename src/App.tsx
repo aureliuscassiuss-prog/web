@@ -136,6 +136,23 @@ function Layout({
   )
 }
 
+// Protected Route Component - Shows auth modal for non-logged users
+function ProtectedRoute({ children, onAuthRequired }: { children: React.ReactNode, onAuthRequired: () => void }) {
+  const { user } = useAuth()
+
+  useEffect(() => {
+    if (!user) {
+      onAuthRequired()
+    }
+  }, [user, onAuthRequired])
+
+  if (!user) {
+    return null // Don't render anything while showing auth modal
+  }
+
+  return <>{children}</>
+}
+
 function AppContent() {
   const { user } = useAuth()
 
@@ -241,7 +258,12 @@ function AppContent() {
 
           {/* AI Assistant Route (Protected) */}
           <Route path="/ai-assistant" element={
-            user ? <AIAssistantPage /> : <Navigate to="/" replace />
+            <ProtectedRoute onAuthRequired={() => {
+              setAuthModalInitialView('login')
+              setIsAuthModalOpen(true)
+            }}>
+              <AIAssistantPage />
+            </ProtectedRoute>
           } />
 
           {/* Leaderboard Route */}
@@ -250,15 +272,30 @@ function AppContent() {
           } />
           {/* Preparation Routes (Protected) */}
           <Route path="/preparation" element={
-            user ? <Preparation /> : <Navigate to="/" replace />
+            <ProtectedRoute onAuthRequired={() => {
+              setAuthModalInitialView('login')
+              setIsAuthModalOpen(true)
+            }}>
+              <Preparation />
+            </ProtectedRoute>
           } />
           <Route path="/preparation/play" element={
-            user ? <CoursePlayer /> : <Navigate to="/" replace />
+            <ProtectedRoute onAuthRequired={() => {
+              setAuthModalInitialView('login')
+              setIsAuthModalOpen(true)
+            }}>
+              <CoursePlayer />
+            </ProtectedRoute>
           } />
 
           {/* AI Papers Route (Protected) */}
           <Route path="/ai-papers" element={
-            user ? <AIPapers /> : <Navigate to="/" replace />
+            <ProtectedRoute onAuthRequired={() => {
+              setAuthModalInitialView('login')
+              setIsAuthModalOpen(true)
+            }}>
+              <AIPapers />
+            </ProtectedRoute>
           } />
 
           {/* Admin Route (Protected) */}
