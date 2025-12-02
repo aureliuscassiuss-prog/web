@@ -21,6 +21,8 @@ interface User {
     year?: number;
     gender?: 'male' | 'female' | 'other';
     isBanned?: boolean;
+    isRestricted?: boolean;
+    isTrusted?: boolean;
     canUpload?: boolean;
     createdAt: Date;
     updatedAt?: Date;
@@ -115,6 +117,10 @@ async function handleLogin(body: any, res: VercelResponse) {
         return res.status(401).json({ message: 'Invalid credentials' });
     }
 
+    if (user.isBanned) {
+        return res.status(403).json({ message: 'Account was suspended' });
+    }
+
     const isValidPassword = await bcrypt.compare(password, user.password);
 
     if (!isValidPassword) {
@@ -151,7 +157,9 @@ async function handleLogin(body: any, res: VercelResponse) {
             branch: user.branch,
             course: user.course,
             year: user.year,
-            role: isAdmin ? 'admin' : (user.role || 'user')
+            role: isAdmin ? 'admin' : (user.role || 'user'),
+            isRestricted: user.isRestricted,
+            isTrusted: user.isTrusted
         }
     });
 }

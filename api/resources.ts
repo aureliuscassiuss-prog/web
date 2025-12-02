@@ -147,7 +147,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(403).json({ message: 'Your account has been banned. You cannot upload resources.' });
             }
 
-            if (user.canUpload === false) {
+            if (user.isRestricted || user.canUpload === false) {
                 return res.status(403).json({ message: 'You have been restricted from uploading resources. Contact admin for more information.' });
             }
 
@@ -175,6 +175,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(400).json({ message: 'Invalid Google Drive link' });
             }
 
+            // Determine status based on user trust level
+            const status = user.isTrusted ? 'approved' : 'pending';
+
             // Create resource document
             const resource = {
                 title,
@@ -186,7 +189,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 unit,
                 resourceType,
                 driveLink, // Store the link directly
-                status: 'pending', // Default to pending for admin approval
+                status,
                 uploader: decoded.name || 'Anonymous',
                 uploaderId: decoded.userId,
                 downloads: 0,
@@ -198,23 +201,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             // Insert resource
             const result = await db.collection('resources').insertOne(resource);
 
-            // Update user's reputation (optional, maybe only after approval?)
-            // For now, let's give points immediately or wait?
-            // The original code gave points immediately. Let's keep it for now, or maybe reduce it?
-            // Actually, if status is pending, maybe don't give points yet?
-            // But the original code had status: 'approved'.
-            // Wait, the original code had status: 'approved' (Line 69 of api/upload/resource.ts).
-            // But the user wanted an admin panel to approve uploads.
-            // So I should set it to 'pending'.
-            // And maybe NOT give points yet.
-            // But for now, to minimize changes, I'll stick to the original logic but set status to 'pending' if that was the plan.
-            // Actually, in the previous session summary, it said "New uploads will have a 'pending' status".
-            // So I will set status to 'pending'.
-            // And I will comment out the reputation update for now, or maybe keep it.
-            // Let's keep the reputation update for now to avoid user complaints about missing points, but ideally it should be on approval.
-            // However, the original code I read (Step 379) had `status: 'approved'`.
-            // I will change it to `status: 'pending'` as per the Admin Panel requirements.
-
+            // Update user's reputation and uploads list
             await db.collection('users').updateOne(
                 { _id: new ObjectId(decoded.userId) },
                 {

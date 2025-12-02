@@ -405,7 +405,7 @@ async function handleGetUsers(res: VercelResponse) {
 }
 
 async function handleUserAction(body: any, res: VercelResponse) {
-    const { action, userId } = body;
+    const { action, userId, role } = body;
 
     console.log('handleUserAction called with action:', action, 'userId:', userId);
 
@@ -463,10 +463,28 @@ async function handleUserAction(body: any, res: VercelResponse) {
             updateOperation = { $set: { isBanned: false, canUpload: true } };
             break;
         case 'restrict-upload':
-            updateOperation = { $set: { canUpload: false } };
+            // Legacy support, maps to restrict
+            updateOperation = { $set: { isRestricted: true, canUpload: false } };
             break;
         case 'allow-upload':
-            updateOperation = { $set: { canUpload: true } };
+            // Legacy support, maps to unrestrict
+            updateOperation = { $set: { isRestricted: false, canUpload: true } };
+            break;
+        case 'restrict':
+            updateOperation = { $set: { isRestricted: true, canUpload: false } };
+            break;
+        case 'unrestrict':
+            updateOperation = { $set: { isRestricted: false, canUpload: true } };
+            break;
+        case 'trust':
+            updateOperation = { $set: { isTrusted: true } };
+            break;
+        case 'untrust':
+            updateOperation = { $set: { isTrusted: false } };
+            break;
+        case 'assign-role':
+            if (!role) return res.status(400).json({ message: 'Role is required' });
+            updateOperation = { $set: { role: role } };
             break;
         default:
             return res.status(400).json({ message: 'Invalid user action' });

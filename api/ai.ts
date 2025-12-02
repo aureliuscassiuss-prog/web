@@ -40,6 +40,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             try {
                 const decoded = jwt.verify(token, process.env.JWT_SECRET) as { userId: string };
                 userId = decoded.userId;
+
+                // Check if user is restricted
+                const db = await getDb();
+                const user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
+
+                if (user && (user.isRestricted || user.isBanned)) {
+                    return res.status(403).json({ message: 'You have been restricted from using AI services.' });
+                }
             } catch (e) {
                 // Token invalid, continue as guest
             }
