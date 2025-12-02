@@ -139,15 +139,22 @@ function Layout({
 // Protected Route Component - Shows auth modal for non-logged users
 function ProtectedRoute({ children, onAuthRequired }: { children: React.ReactNode, onAuthRequired: () => void }) {
   const { user } = useAuth()
+  const navigate = useNavigate()
+  const [hasShownModal, setHasShownModal] = useState(false)
 
   useEffect(() => {
-    if (!user) {
+    if (!user && !hasShownModal) {
       onAuthRequired()
+      setHasShownModal(true)
+      // Redirect to home after a brief delay to allow modal to show
+      setTimeout(() => {
+        navigate('/')
+      }, 100)
     }
-  }, [user, onAuthRequired])
+  }, [user, hasShownModal, onAuthRequired, navigate])
 
   if (!user) {
-    return null // Don't render anything while showing auth modal
+    return null // Don't render anything while redirecting
   }
 
   return <>{children}</>
