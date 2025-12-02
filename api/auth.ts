@@ -118,7 +118,7 @@ async function handleLogin(body: any, res: VercelResponse) {
     }
 
     if (user.isBanned) {
-        return res.status(403).json({ message: 'Account was suspended' });
+        return res.status(403).json({ message: 'Your account has been suspended. Please contact support for assistance.' });
     }
 
     const isValidPassword = await bcrypt.compare(password, user.password);
@@ -369,6 +369,11 @@ async function handleGoogleAuth(body: any, res: VercelResponse) {
         const result = await usersCollection.insertOne(newUser);
         user = { ...newUser, _id: result.insertedId } as User;
     } else {
+        // Check if user is banned
+        if (user.isBanned) {
+            return res.status(403).json({ message: 'Your account has been suspended. Please contact support for assistance.' });
+        }
+
         // Update existing user with Google info if missing
         const updateFields: any = {
             updatedAt: new Date()
