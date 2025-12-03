@@ -390,6 +390,7 @@ const GridCard = ({ resource, onDelete }: { resource: any, onDelete?: (id: strin
         downloads: resource.downloads || 0,
         flags: resource.flags || 0
     });
+    const [isInteracting, setIsInteracting] = useState(false);
 
     // Sync state ONLY when the resource itself changes (different resource)
     // This ensures state updates after page refresh but doesn't interfere with optimistic updates
@@ -451,7 +452,10 @@ const GridCard = ({ resource, onDelete }: { resource: any, onDelete?: (id: strin
     };
 
     const handleLike = () => {
+        if (!token || isInteracting) return;
+
         const newValue = userVote !== 'like';
+        setIsInteracting(true);
 
         // Optimistic update - instant UI feedback
         if (newValue) {
@@ -470,11 +474,14 @@ const GridCard = ({ resource, onDelete }: { resource: any, onDelete?: (id: strin
             setUserVote(null);
         }
 
-        handleInteraction('like', newValue);
+        handleInteraction('like', newValue).finally(() => setIsInteracting(false));
     };
 
     const handleDislike = () => {
+        if (!token || isInteracting) return;
+
         const newValue = userVote !== 'dislike';
+        setIsInteracting(true);
 
         // Optimistic update - instant UI feedback
         if (newValue) {
@@ -493,30 +500,37 @@ const GridCard = ({ resource, onDelete }: { resource: any, onDelete?: (id: strin
             setUserVote(null);
         }
 
-        handleInteraction('dislike', newValue);
+        handleInteraction('dislike', newValue).finally(() => setIsInteracting(false));
     };
 
     const handleSave = () => {
+        if (!token || isInteracting) return;
+
+        setIsInteracting(true);
         // Optimistic update - instant UI feedback
         setIsSaved(!isSaved);
-        handleInteraction('save', !isSaved);
+        handleInteraction('save', !isSaved).finally(() => setIsInteracting(false));
     };
 
     const handleFlag = () => {
-        if (!isReported) {
-            if (confirm('Are you sure you want to flag this resource as risky? This action cannot be undone.')) {
-                // Optimistic update - instant UI feedback
-                setIsReported(true);
-                setCounts(prev => ({ ...prev, flags: prev.flags + 1 }));
-                handleInteraction('flag', true);
-            }
+        if (!token || isInteracting || isReported) return;
+
+        if (confirm('Are you sure you want to flag this resource as risky? This action cannot be undone.')) {
+            setIsInteracting(true);
+            // Optimistic update - instant UI feedback
+            setIsReported(true);
+            setCounts(prev => ({ ...prev, flags: prev.flags + 1 }));
+            handleInteraction('flag', true).finally(() => setIsInteracting(false));
         }
     };
 
     const handleDownload = () => {
+        if (isInteracting) return;
+
+        setIsInteracting(true);
         // Optimistic update - instant UI feedback
         setCounts(prev => ({ ...prev, downloads: prev.downloads + 1 }));
-        handleInteraction('download', true);
+        handleInteraction('download', true).finally(() => setIsInteracting(false));
     };
 
     return (
@@ -580,41 +594,14 @@ const GridCard = ({ resource, onDelete }: { resource: any, onDelete?: (id: strin
                         View file details &rarr;
                     </p>
                 </a>
-            </div>
+            </span>
+        </>
+    )
+}
+                </div >
 
-            {/* ACTION BAR: Likes/Dislikes & Download */}
-            <div className="pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between mt-auto">
-
-                {/* Left: Voting */}
-                <div className="flex items-center gap-1 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-1">
-                    <button
-                        onClick={handleLike}
-                        className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors ${userVote === 'like' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-                    >
-                        <ThumbsUp className="w-3 h-3" />
-                        <span>{counts.likes}</span>
-                    </button>
-                    <div className="w-px h-3 bg-gray-200 dark:bg-gray-700"></div>
-                    <button
-                        onClick={handleDislike}
-                        className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors ${userVote === 'dislike' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-                    >
-                        <ThumbsDown className="w-3 h-3" />
-                        <span>{counts.dislikes}</span>
-                    </button>
-                    {counts.flags > 0 && (
-                        <>
-                            <div className="w-px h-3 bg-gray-200 dark:bg-gray-700"></div>
-                            <span className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-orange-600">
-                                <Flag className="w-3 h-3" />
-                                {counts.flags}
-                            </span>
-                        </>
-                    )}
-                </div>
-
-                {/* Right: Uploader & Download */}
-                <div className="flex items-center gap-3">
+    {/* Right: Uploader & Download */ }
+    < div className = "flex items-center gap-3" >
                     <div className="flex items-center gap-1.5">
                         {resource.uploaderAvatar ? (
                             <img src={resource.uploaderAvatar} alt="User" className="w-4 h-4 rounded-full object-cover" />
@@ -640,9 +627,9 @@ const GridCard = ({ resource, onDelete }: { resource: any, onDelete?: (id: strin
                         <Download className="w-3 h-3" />
                         {counts.downloads}
                     </a>
-                </div>
-            </div>
-        </div>
+                </div >
+            </div >
+        </div >
     );
 }
 
