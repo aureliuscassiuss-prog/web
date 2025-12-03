@@ -2,8 +2,7 @@ import {
     Upload as UploadIcon, FileText, User,
     Trophy, Sparkles, FileQuestion, ArrowUp,
     Copy, ThumbsUp, ThumbsDown, Trash2, Bot, Download,
-    Check, ChevronRight, Bookmark, Flag, AlertTriangle
-, Loader2
+    Check, ChevronRight, Bookmark, Flag, AlertTriangle, Loader2
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
