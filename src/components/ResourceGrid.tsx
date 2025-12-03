@@ -387,18 +387,6 @@ const GridCard = ({ resource, onDelete }: { resource: any, onDelete?: (id: strin
         flags: resource.flags || 0
     });
 
-    // Sync state when resource or token changes (login/logout)
-    useEffect(() => {
-        setIsSaved(resource.userSaved || false);
-        setIsReported(resource.userFlagged || false);
-        setUserVote(resource.userLiked ? 'like' : resource.userDisliked ? 'dislike' : null);
-        setCounts({
-            likes: resource.likes || 0,
-            dislikes: resource.dislikes || 0,
-            downloads: resource.downloads || 0,
-            flags: resource.flags || 0
-        });
-    }, [resource._id, resource.userSaved, resource.userFlagged, resource.userLiked, resource.userDisliked, resource.likes, resource.dislikes, resource.downloads, resource.flags, token]);
 
     const handleInteraction = async (action: string, value: boolean) => {
         if (!token) {
