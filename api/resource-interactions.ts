@@ -50,131 +50,121 @@ async function handleInteraction(req: VercelRequest, userId: string, res: Vercel
     }
 
     const db = await getDb();
-    const resource = await db.collection('resources').findOne({ _id: new ObjectId(resourceId) });
+    const objectId = new ObjectId(resourceId);
 
-    if (!resource) {
-        return res.status(404).json({ message: 'Resource not found' });
-    }
-
-    // Initialize arrays if they don't exist
-    const likedBy = resource.likedBy || [];
-    const dislikedBy = resource.dislikedBy || [];
-    const savedBy = resource.savedBy || [];
-    const flaggedBy = resource.flaggedBy || [];
-
-    let updateQuery: any = {};
-    let userLiked = likedBy.includes(userId);
-    let userDisliked = dislikedBy.includes(userId);
-    let userSaved = savedBy.includes(userId);
-    let userFlagged = flaggedBy.includes(userId);
-
-    switch (action) {
-        case 'like':
-            if (value) {
-                // Add like
-                if (!userLiked) {
-                    updateQuery.$addToSet = { likedBy: userId };
-                    updateQuery.$inc = { likes: 1 };
-                    userLiked = true;
+    try {
+        switch (action) {
+            case 'like':
+                if (value) {
+                    // Atomic: Add like only if not already liked
+                    await db.collection('resources').updateOne(
+                        { _id: objectId, likedBy: { $ne: userId } },
+                        { $addToSet: { likedBy: userId }, $inc: { likes: 1 } } as any
+                    );
+                    // Atomic: Remove dislike if present
+                    await db.collection('resources').updateOne(
+                        { _id: objectId, dislikedBy: userId },
+                        { $pull: { dislikedBy: userId }, $inc: { dislikes: -1 } } as any
+                    );
+                } else {
+                    // Atomic: Remove like
+                    await db.collection('resources').updateOne(
+                        { _id: objectId, likedBy: userId },
+                        { $pull: { likedBy: userId }, $inc: { likes: -1 } } as any
+                    );
                 }
-                // Remove dislike if exists
-                if (userDisliked) {
-                    updateQuery.$pull = { dislikedBy: userId };
-                    updateQuery.$inc = { ...updateQuery.$inc, dislikes: -1 };
-                    userDisliked = false;
+                break;
+
+            case 'dislike':
+                if (value) {
+                    // Atomic: Add dislike only if not already disliked
+                    await db.collection('resources').updateOne(
+                        { _id: objectId, dislikedBy: { $ne: userId } },
+                        { $addToSet: { dislikedBy: userId }, $inc: { dislikes: 1 } } as any
+                    );
+                    // Atomic: Remove like if present
+                    await db.collection('resources').updateOne(
+                        { _id: objectId, likedBy: userId },
+                        { $pull: { likedBy: userId }, $inc: { likes: -1 } } as any
+                    );
+                } else {
+                    // Atomic: Remove dislike
+                    await db.collection('resources').updateOne(
+                        { _id: objectId, dislikedBy: userId },
+                        { $pull: { dislikedBy: userId }, $inc: { dislikes: -1 } } as any
+                    );
                 }
-            } else {
-                // Remove like
-                if (userLiked) {
-                    updateQuery.$pull = { likedBy: userId };
-                    updateQuery.$inc = { likes: -1 };
-                    userLiked = false;
+                break;
+
+            case 'save':
+                if (value) {
+                    // Atomic: Add save
+                    await db.collection('resources').updateOne(
+                        { _id: objectId, savedBy: { $ne: userId } },
+                        { $addToSet: { savedBy: userId } } as any
+                    );
+                } else {
+                    // Atomic: Remove save
+                    await db.collection('resources').updateOne(
+                        { _id: objectId, savedBy: userId },
+                        { $pull: { savedBy: userId } } as any
+                    );
                 }
-            }
-            break;
+                break;
 
-        case 'dislike':
-            if (value) {
-                // Add dislike
-                if (!userDisliked) {
-                    updateQuery.$addToSet = { dislikedBy: userId };
-                    updateQuery.$inc = { dislikes: 1 };
-                    userDisliked = true;
+            case 'flag':
+                if (value) {
+                    // Atomic: Add flag only if not already flagged
+                    await db.collection('resources').updateOne(
+                        { _id: objectId, flaggedBy: { $ne: userId } },
+                        { $addToSet: { flaggedBy: userId }, $inc: { flags: 1 } } as any
+                    );
                 }
-                // Remove like if exists
-                if (userLiked) {
-                    updateQuery.$pull = { likedBy: userId };
-                    updateQuery.$inc = { ...updateQuery.$inc, likes: -1 };
-                    userLiked = false;
-                }
-            } else {
-                // Remove dislike
-                if (userDisliked) {
-                    updateQuery.$pull = { dislikedBy: userId };
-                    updateQuery.$inc = { dislikes: -1 };
-                    userDisliked = false;
-                }
-            }
-            break;
+                break;
 
-        case 'save':
-            if (value) {
-                // Add save
-                if (!userSaved) {
-                    updateQuery.$addToSet = { savedBy: userId };
-                    userSaved = true;
-                }
-            } else {
-                // Remove save
-                if (userSaved) {
-                    updateQuery.$pull = { savedBy: userId };
-                    userSaved = false;
-                }
-            }
-            break;
+            case 'download':
+                // Atomic: Increment download count
+                await db.collection('resources').updateOne(
+                    { _id: objectId },
+                    { $inc: { downloads: 1 } } as any
+                );
+                break;
 
-        case 'flag':
-            // Flags cannot be removed once added
-            if (value && !userFlagged) {
-                updateQuery.$addToSet = { flaggedBy: userId };
-                updateQuery.$inc = { flags: 1 };
-                userFlagged = true;
-            }
-            break;
-
-        case 'download':
-            // Just increment download count
-            updateQuery.$inc = { downloads: 1 };
-            break;
-
-        default:
-            return res.status(400).json({ message: 'Invalid action' });
-    }
-
-    // Update resource if there are changes
-    if (Object.keys(updateQuery).length > 0) {
-        await db.collection('resources').updateOne(
-            { _id: new ObjectId(resourceId) },
-            updateQuery
-        );
-    }
-
-    // Get updated resource
-    const updatedResource = await db.collection('resources').findOne({ _id: new ObjectId(resourceId) });
-
-    return res.status(200).json({
-        success: true,
-        resource: {
-            likes: updatedResource?.likes || 0,
-            dislikes: updatedResource?.dislikes || 0,
-            downloads: updatedResource?.downloads || 0,
-            flags: updatedResource?.flags || 0,
-            userLiked,
-            userDisliked,
-            userSaved,
-            userFlagged
+            default:
+                return res.status(400).json({ message: 'Invalid action' });
         }
-    });
+
+        // Get updated resource to return fresh state
+        const updatedResource = await db.collection('resources').findOne({ _id: objectId });
+
+        if (!updatedResource) {
+            return res.status(404).json({ message: 'Resource not found' });
+        }
+
+        // Calculate user states based on the fresh data
+        const userLiked = updatedResource.likedBy?.includes(userId) || false;
+        const userDisliked = updatedResource.dislikedBy?.includes(userId) || false;
+        const userSaved = updatedResource.savedBy?.includes(userId) || false;
+        const userFlagged = updatedResource.flaggedBy?.includes(userId) || false;
+
+        return res.status(200).json({
+            success: true,
+            resource: {
+                likes: updatedResource.likes || 0,
+                dislikes: updatedResource.dislikes || 0,
+                downloads: updatedResource.downloads || 0,
+                flags: updatedResource.flags || 0,
+                userLiked,
+                userDisliked,
+                userSaved,
+                userFlagged
+            }
+        });
+
+    } catch (error) {
+        console.error('Interaction update error:', error);
+        return res.status(500).json({ message: 'Failed to update interaction' });
+    }
 }
 
 async function getSavedResources(userId: string, res: VercelResponse) {
