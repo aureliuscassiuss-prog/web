@@ -46,14 +46,32 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
     const [chatMessages, setChatMessages] = useState<Message[]>([
         { role: 'assistant', content: "Hi! I'm your AI tutor. I can help you with concepts, solve problems, or explain topics. What are we studying today?" }
     ])
-    const [isAiLoading, setIsAiLoading] = useState(false)
+        const [isAiLoading, setIsAiLoading] = useState(false)
+    
+    // AI Paper Generation States
+    const [generating, setGenerating] = useState(false)
+    const [attemptsLeft, setAttemptsLeft] = useState(3)
 
     // Scroll to bottom of chat
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
     }, [chatMessages, isAiLoading])
 
-    const buildQueryParams = (type?: string) => {
+    // Track AI paper generation attempts
+    useEffect(() => {
+        const stored = localStorage.getItem('paper_attempts')
+        if (stored) {
+            const { date, count } = JSON.parse(stored)
+            if (date === new Date().toDateString()) {
+                setAttemptsLeft(count)
+            } else {
+                setAttemptsLeft(3)
+                localStorage.setItem('paper_attempts', JSON.stringify({ date: new Date().toDateString(), count: 3 }))
+            }
+        }
+    }, [])
+
+        const buildQueryParams = (type?: string) => {
         const params = new URLSearchParams()
         if (searchQuery) params.append('search', searchQuery)
         if (filters?.branch) params.append('branch', filters.branch)
@@ -153,7 +171,212 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
         return () => { isMounted = false }
     }, [view, activeTab, searchQuery, filters, token])
 
-    const handleDelete = async (resourceId: string) => {
+    // AI Paper Generation Functions
+    const transformDataForPdf = (aiData: any, filters: any) => {
+        const flat: any = {
+            EXAM_MONTH: new Date().toLocaleString('default', { month: 'short' }),
+            EXAM_YEAR: new Date().getFullYear().toString(),
+            COURSE_CODE: aiData.courseCode || 'CS-101',
+            SUBJECT_NAME: filters.subject || 'Subject',
+            PROGRAMME: filters.course || 'Programme',
+            BRANCH: filters.branch || 'Branch',
+        }
+
+        const sectionA = aiData.sections?.find((s: any) => s.name.includes('Section A'))
+        if (sectionA && sectionA.questions) {
+            sectionA.questions.forEach((q: any, i: number) => {
+                flat[`MCQ_${i + 1}_QUESTION`] = q.text || ''
+                flat[`MCQ_${i + 1}_OPTION_A`] = q.options?.[0] || ''
+                flat[`MCQ_${i + 1}_OPTION_B`] = q.options?.[1] || ''
+                flat[`MCQ_${i + 1}_OPTION_C`] = q.options?.[2] || ''
+                flat[`MCQ_${i + 1}_OPTION_D`] = q.options?.[3] || ''
+            })
+        }
+
+        const sectionB = aiData.sections?.find((s: any) => s.name.includes('Section B'))
+        if (sectionB && sectionB.questions) {
+            const q = sectionB.questions
+            flat.Q2_PART_1 = q[0]?.text || ''
+            flat.Q2_PART_2 = q[1]?.text || ''
+            flat.Q2_OR_PART = q[2]?.text || ''
+            flat.Q3_PART_1 = q[3]?.text || ''
+            flat.Q3_PART_2 = q[4]?.text || ''
+            flat.Q3_OR_PART = q[5]?.text || ''
+            flat.Q4_PART_1 = q[6]?.text || ''
+            flat.Q4_PART_2 = q[7]?.text || ''
+            flat.Q4_OR_PART = q[8]?.text || ''
+            flat.Q5_PART_1 = q[9]?.text || ''
+            flat.Q5_PART_2 = q[10]?.text || ''
+            flat.Q5_OR_PART = q[11]?.text || ''
+            flat.Q6_PART_1 = q[12]?.text || ''
+            flat.Q6_PART_2 = q[13]?.text || ''
+            flat.Q6_PART_3 = q[14]?.text || ''
+        }
+
+        return flat
+    }
+
+    const generatePDF = (data: any) => {
+        const doc = new jsPDF("landscape", "mm", "a4")
+        const width = doc.internal.pageSize.getWidth()
+        const height = doc.internal.pageSize.getHeight()
+
+        doc.setTextColor(0, 0, 0)
+        doc.setFont("times", "italic")
+        doc.setFontSize(9)
+
+        doc.text("Total No. of Questions: 6", 12, 10)
+        doc.text("Total No. of Printed Pages: 2", 135, 10, { align: "right" })
+
+        doc.setFont("times", "bold")
+        doc.setFontSize(10)
+        doc.text("Enrollment No.....................................", 135, 16, { align: "right" })
+
+        doc.setFont("times", "normal")
+        doc.setFontSize(13)
+        doc.text("Faculty of Engineering", 85, 26, { align: "center" })
+        doc.text(`End Sem Examination ${data.EXAM_MONTH}-${data.EXAM_YEAR}`, 85, 32, { align: "center" })
+
+        doc.setFontSize(11)
+        doc.text(`${data.COURSE_CODE} ${data.SUBJECT_NAME}`, 85, 38, { align: "center" })
+
+        doc.setFont("times", "normal")
+        doc.setFontSize(9)
+        doc.text(`Programme: ${data.PROGRAMME}`, 40, 43)
+        doc.text(`Branch/Specialisation: ${data.BRANCH}`, 135, 43, { align: "right" })
+
+        doc.setFont("times", "bold")
+        doc.setFontSize(9)
+        doc.text("Duration: 3 Hrs.", 10, 48)
+        doc.text("Maximum Marks: 60", 135, 48, { align: "right" })
+
+        doc.setLineWidth(0.3)
+        doc.line(10, 50, 140, 50)
+
+        doc.setTextColor(255, 0, 0)
+        doc.setFont("times", "normal")
+        doc.setFontSize(8)
+        const disclaimer = "DISCLAIMER: This is a mock question paper by UniNotes for practice only. NOT a university paper."
+        const splitDisclaimer = doc.splitTextToSize(disclaimer, 130)
+        doc.text(splitDisclaimer, 10, 54)
+        doc.setTextColor(0, 0, 0)
+
+        let yPos = 54 + (3 * splitDisclaimer.length) + 5
+
+        doc.setFontSize(9)
+        doc.text("Q.1", 8, yPos)
+
+        let savedQ9 = null
+        for (let i = 1; i <= 9; i++) {
+            const key = `MCQ_${i}`
+            const romans = ["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix"]
+
+            doc.setFont("times", "normal")
+            const qText = data[`${key}_QUESTION`] || "Question text missing"
+            const lines = doc.splitTextToSize(qText, 115)
+
+            const optA = `(a) ${data[`${key}_OPTION_A`] || ''}`
+            const optB = `(b) ${data[`${key}_OPTION_B`] || ''}`
+            const optC = `(c) ${data[`${key}_OPTION_C`] || ''}`
+            const optD = `(d) ${data[`${key}_OPTION_D`] || ''}`
+
+            const optALines = doc.splitTextToSize(optA, 55)
+            const optBLines = doc.splitTextToSize(optB, 60)
+            const optCLines = doc.splitTextToSize(optC, 55)
+            const optDLines = doc.splitTextToSize(optD, 60)
+
+            const hRow1 = Math.max(optALines.length, optBLines.length) * 4
+            const hRow2 = Math.max(optCLines.length, optDLines.length) * 4
+            const hBlock = (4 * lines.length) + hRow1 + hRow2 + 4
+
+            if (i === 9 && (yPos + hBlock > 200)) {
+                savedQ9 = { qText, lines, optALines, optBLines, optCLines, optDLines }
+                break
+            }
+
+            const roman = romans[i - 1]
+            doc.text(`${roman}.`, 14, yPos)
+            const indent = (roman === "viii") ? 20 : (roman === "vii" ? 19 : 18)
+
+            doc.text(lines, indent, yPos)
+            doc.setFont("times", "bold")
+            doc.text("1", 135, yPos)
+            doc.setFont("times", "normal")
+
+            yPos += (4 * lines.length)
+
+            doc.text(optALines, 18, yPos)
+            doc.text(optBLines, 75, yPos)
+            yPos += hRow1 + 1
+
+            doc.text(optCLines, 18, yPos)
+            doc.text(optDLines, 75, yPos)
+            yPos += hRow2 + 3
+        }
+
+        // Save and auto download
+        const filename = `Sample_Paper_${data.SUBJECT_NAME.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`
+        doc.save(filename)
+    }
+
+    const handleGeneratePaper = async () => {
+        if (user?.role !== 'admin' && attemptsLeft <= 0) {
+            alert('You have reached your daily limit. Try again tomorrow!')
+            return
+        }
+        
+        if (!filters?.subject) {
+            alert('Please select a subject first')
+            return
+        }
+
+        setGenerating(true)
+
+        try {
+            const res = await fetch('/api/ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'generate-paper',
+                    program: filters.course,
+                    year: filters.year,
+                    branch: filters.branch,
+                    subject: filters.subject
+                })
+            })
+
+            const data = await res.json()
+
+            let paperData
+            try {
+                paperData = typeof data.answer === 'string' ? JSON.parse(data.answer) : data.answer
+            } catch (e) {
+                const match = data.answer.match(/```json\n([\s\S]*)\n```/)
+                if (match) {
+                    paperData = JSON.parse(match[1])
+                } else {
+                    throw new Error('Failed to parse AI response')
+                }
+            }
+
+            const flatData = transformDataForPdf(paperData, filters)
+            generatePDF(flatData)
+
+            if (user?.role !== 'admin') {
+                const newCount = attemptsLeft - 1
+                setAttemptsLeft(newCount)
+                localStorage.setItem('paper_attempts', JSON.stringify({ date: new Date().toDateString(), count: newCount }))
+            }
+
+        } catch (error) {
+            console.error('Generation failed:', error)
+            alert('Failed to generate paper. Please try again.')
+        } finally {
+            setGenerating(false)
+        }
+    }
+
+        const handleDelete = async (resourceId: string) => {
         if (!confirm('Are you sure you want to delete this resource?')) return
 
         try {
@@ -213,7 +436,21 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                             </h2>
                         
                         <div className="flex items-center gap-2">
-                            {onUploadRequest && (
+                                                        {activeTab === 'pyqs' && (
+                                <button
+                                    onClick={handleGeneratePaper}
+                                    disabled={generating}
+                                    className="flex items-center gap-1 px-2 py-1 bg-violet-600 text-white text-[10px] sm:text-xs font-bold rounded-lg hover:bg-violet-700 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {generating ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                        <Sparkles className="w-3 h-3" />
+                                    )}
+                                    <span className="hidden sm:inline">{generating ? 'Generating...' : 'Generate Sample Paper'}</span>
+                                </button>
+                            )}
+{onUploadRequest && (
                                 <button
                                     onClick={() => onUploadRequest({ filters, activeTab })}
                                     className="flex items-center gap-1 px-2 py-1 bg-black dark:bg-white text-white dark:text-black text-[10px] sm:text-xs font-bold whitespace-nowrap rounded-lg hover:opacity-80 transition-opacity"
@@ -690,7 +927,21 @@ const EmptyState = ({ icon: Icon, title, description, onUploadRequest, filters, 
         </div>
         <p className="text-sm font-medium text-gray-900 dark:text-white">{title}</p>
         <p className="text-xs text-gray-500 mb-4">{description}</p>
-        {onUploadRequest && (
+                                    {activeTab === 'pyqs' && (
+                                <button
+                                    onClick={handleGeneratePaper}
+                                    disabled={generating}
+                                    className="flex items-center gap-1 px-2 py-1 bg-violet-600 text-white text-[10px] sm:text-xs font-bold rounded-lg hover:bg-violet-700 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {generating ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                        <Sparkles className="w-3 h-3" />
+                                    )}
+                                    <span className="hidden sm:inline">{generating ? 'Generating...' : 'Generate Sample Paper'}</span>
+                                </button>
+                            )}
+{onUploadRequest && (
             <button
                 onClick={() => onUploadRequest({ filters, activeTab })}
                 className="text-xs flex items-center gap-1 text-blue-600 font-medium hover:underline"
