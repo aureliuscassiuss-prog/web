@@ -387,6 +387,20 @@ const GridCard = ({ resource, onDelete }: { resource: any, onDelete?: (id: strin
         flags: resource.flags || 0
     });
 
+    // Sync state ONLY when the resource itself changes (different resource)
+    // This ensures state updates after page refresh but doesn't interfere with optimistic updates
+    useEffect(() => {
+        setIsSaved(resource.userSaved || false);
+        setIsReported(resource.userFlagged || false);
+        setUserVote(resource.userLiked ? 'like' : resource.userDisliked ? 'dislike' : null);
+        setCounts({
+            likes: resource.likes || 0,
+            dislikes: resource.dislikes || 0,
+            downloads: resource.downloads || 0,
+            flags: resource.flags || 0
+        });
+    }, [resource._id]); // Only re-run when resource ID changes
+
 
     const handleInteraction = async (action: string, value: boolean) => {
         if (!token) {
