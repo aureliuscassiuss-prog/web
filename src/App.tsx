@@ -184,11 +184,24 @@ function AppContent() {
   // Spotlight State
   const [spotlight, setSpotlight] = useState<string | null>(null)
 
+  // Helper function to determine theme based on time of day
+  const getThemeByTime = () => {
+    const hour = new Date().getHours()
+    // Dark mode: 6 PM (18:00) to 6 AM (06:00)
+    return hour >= 18 || hour < 6
+  }
+
   // Theme State
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('theme') === 'dark' ||
-        (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      const savedTheme = localStorage.getItem('theme')
+
+      // Priority: saved preference → time-based → system preference
+      if (savedTheme === 'dark') return true
+      if (savedTheme === 'light') return false
+
+      // If no saved preference, use time-based theme
+      return getThemeByTime()
     }
     return false
   })
