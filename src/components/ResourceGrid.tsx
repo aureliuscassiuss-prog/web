@@ -340,31 +340,53 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
 
             const data = await res.json()
 
-                        let paperData
+                                    let paperData
             const answer = data.answer
             
+            const cleanAndParse = (str: string) => {
+                // Remove trailing commas which are valid in JS but not JSON
+                const cleaned = str.replace(/,(\s*[}\]])/g, '$1')
+                return JSON.parse(cleaned)
+            }
+
             try {
                 // 1. Try direct parse
-                paperData = typeof answer === 'string' ? JSON.parse(answer) : answer
+                paperData = typeof answer === 'string' ? cleanAndParse(answer) : answer
             } catch (e) {
                 try {
                     // 2. Try extracting from markdown code block
                     const codeBlockMatch = answer.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
                     if (codeBlockMatch) {
-                        paperData = JSON.parse(codeBlockMatch[1])
+                        paperData = cleanAndParse(codeBlockMatch[1])
                     } else {
                         // 3. Try finding first { and last }
                         const start = answer.indexOf('{')
                         const end = answer.lastIndexOf('}')
                         if (start !== -1 && end !== -1) {
-                            paperData = JSON.parse(answer.substring(start, end + 1))
+                            paperData = cleanAndParse(answer.substring(start, end + 1))
                         } else {
                             throw new Error('No JSON found')
                         }
                     }
                 } catch (e2) {
                     console.error('Parsing error:', e2)
-                    throw new Error('Failed to parse AI response')
+                    // Fallback: Try to use Function constructor for loose JSON (last resort)
+                    try {
+                         // Security note: This is risky but handles loose JSON like {a:1} (no quotes)
+                         // We only do this if standard parsing fails and we really need the data
+                         // We'll try to extract the object part first
+                         const start = answer.indexOf('{')
+                         const end = answer.lastIndexOf('}')
+                         if (start !== -1 && end !== -1) {
+                             const jsonStr = answer.substring(start, end + 1)
+                             paperData = new Function('return ' + jsonStr)()
+                         } else {
+                             throw e2
+                         }
+                    } catch (e3) {
+                        console.error('Final parsing failure:', e3)
+                        throw new Error('Failed to parse AI response')
+                    }
                 }
             }
 
