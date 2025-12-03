@@ -154,6 +154,7 @@ async function handleUpdateProfile(req: VercelRequest, userId: string, res: Verc
             semester: result.semester,
             college: result.college,
             branch: result.branch,
+            course: result.course,
             year: result.year,
             gender: result.gender,
             reputation: result.reputation || 0
