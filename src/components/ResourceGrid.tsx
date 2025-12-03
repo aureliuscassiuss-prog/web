@@ -208,25 +208,27 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                 <div className="space-y-4">
                     {/* PROFESSIONAL HEADER WITH UPLOAD BUTTON */}
                     <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-800">
-                        <div className="flex items-center gap-3">
-                            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                        <h2 className="text-base sm:text-lg font-bold text-gray-900 whitespace-nowrap dark:text-white">
                                 {activeTab === 'notes' ? 'Lecture Notes' : activeTab === 'pyqs' ? 'Previous Papers' : 'Formula Sheets'}
                             </h2>
+                        
+                        <div className="flex items-center gap-2">
                             {onUploadRequest && (
                                 <button
                                     onClick={() => onUploadRequest({ filters, activeTab })}
-                                    className="flex items-center gap-2 px-3 py-1.5 bg-black dark:bg-white text-white dark:text-black text-xs font-bold rounded-lg hover:opacity-80 transition-opacity"
+                                    className="flex items-center gap-1 px-2 py-1 bg-black dark:bg-white text-white dark:text-black text-[10px] sm:text-xs font-bold whitespace-nowrap rounded-lg hover:opacity-80 transition-opacity"
                                 >
-                                    <UploadIcon className="w-3.5 h-3.5" />
-                                    Upload Resource
+                                    <UploadIcon className="w-3 h-3" />
+                                    <span className="hidden sm:inline">Upload</span>
                                 </button>
                             )}
-                        </div>
+                        
 
-                        {/* Result Counter */}
-                        <span className="text-xs font-medium px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-full">
+                            {/* Result Counter */}
+                        <span className="text-[10px] sm:text-xs font-medium px-2 py-1 bg-gray-100 whitespace-nowrap dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-full">
                             {resources.length} Result{resources.length !== 1 && 's'}
-                        </span>
+                            </span>
+                        </div>
                     </div>
 
                     {resources.length === 0 ? (
@@ -278,10 +280,10 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                                             user?.avatar ? (
                                                 <img src={user.avatar} alt="User" className="w-full h-full object-cover" />
                                             ) : (
-                                                <User className="w-3.5 h-3.5" />
+                                                <User className="w-3 h-3" />
                                             )
                                         ) : (
-                                            <Sparkles className="w-3.5 h-3.5" />
+                                            <Sparkles className="w-3 h-3" />
                                         )}
                                     </div>
 
@@ -651,7 +653,7 @@ const UploadsView = ({ uploads, onUploadRequest, onDelete }: any) => (
         <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/10 dark:to-pink-900/10 border border-purple-100 dark:border-purple-900/30 rounded-xl p-5 mb-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">Your Uploads</h2>
+                    <h2 className="text-base sm:text-lg font-bold text-gray-900 whitespace-nowrap dark:text-white">Your Uploads</h2>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                         You have contributed <strong>{uploads.length}</strong> resources.
                     </p>
