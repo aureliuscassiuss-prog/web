@@ -170,23 +170,56 @@ async function handleInteraction(req: VercelRequest, userId: string, res: Vercel
 async function getSavedResources(userId: string, res: VercelResponse) {
     const db = await getDb();
 
-    // Get all resources where user has saved them
-    const resources = await db.collection('resources')
-        .find({
-            savedBy: userId,
-            status: 'approved'
-        })
-        .sort({ createdAt: -1 })
-        .toArray();
+    try {
+        // Use aggregation to join with users collection and get avatar
+        const resources = await db.collection('resources').aggregate([
+            {
+                $match: {
+                    savedBy: userId,
+                    status: 'approved'
+                }
+            },
+            { $sort: { createdAt: -1 } },
+            {
+                $lookup: {
+                    from: 'users',
+                    let: {
+                        uploaderIdObj: {
+                            $convert: {
+                                input: '$uploaderId',
+                                to: 'objectId',
+                                onError: null,
+                                onNull: null
+                            }
+                        }
+                    },
+                    pipeline: [
+                        { $match: { $expr: { $eq: ['$_id', '$$uploaderIdObj'] } } },
+                        { $project: { avatar: 1 } }
+                    ],
+                    as: 'uploaderDetails'
+                }
+            },
+            {
+                $addFields: {
+                    uploaderAvatar: { $arrayElemAt: ['$uploaderDetails.avatar', 0] }
+                }
+            },
+            { $project: { uploaderDetails: 0 } }
+        ]).toArray();
 
-    // Add user interaction states to each resource
-    const resourcesWithStates = resources.map(resource => ({
-        ...resource,
-        userLiked: resource.likedBy?.includes(userId) || false,
-        userDisliked: resource.dislikedBy?.includes(userId) || false,
-        userSaved: true, // Always true for saved resources
-        userFlagged: resource.flaggedBy?.includes(userId) || false
-    }));
+        // Add user interaction states to each resource
+        const resourcesWithStates = resources.map(resource => ({
+            ...resource,
+            userLiked: resource.likedBy?.includes(userId) || false,
+            userDisliked: resource.dislikedBy?.includes(userId) || false,
+            userSaved: true, // Always true for saved resources
+            userFlagged: resource.flaggedBy?.includes(userId) || false
+        }));
 
-    return res.status(200).json({ resources: resourcesWithStates });
+        return res.status(200).json({ resources: resourcesWithStates });
+    } catch (error) {
+        console.error('Error fetching saved resources:', error);
+        return res.status(500).json({ message: 'Failed to fetch saved resources' });
+    }
 }
