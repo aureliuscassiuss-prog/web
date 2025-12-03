@@ -3,11 +3,15 @@ import {
     Trophy, Sparkles, FileQuestion, ArrowUp,
     Copy, ThumbsUp, ThumbsDown, Trash2, Bot, Download,
     Check, ChevronRight, Bookmark, Flag, AlertTriangle
+, Loader2
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import ReactMarkdown from 'react-markdown'
 import LeaderboardView from './LeaderboardView'
+import jsPDF from 'jspdf'
+// @ts-ignore
+import autoTable from 'jspdf-autotable'
 
 interface ResourceGridProps {
     view: 'resources' | 'leaderboard' | 'papers' | 'uploads'
@@ -46,8 +50,8 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
     const [chatMessages, setChatMessages] = useState<Message[]>([
         { role: 'assistant', content: "Hi! I'm your AI tutor. I can help you with concepts, solve problems, or explain topics. What are we studying today?" }
     ])
-        const [isAiLoading, setIsAiLoading] = useState(false)
-    
+    const [isAiLoading, setIsAiLoading] = useState(false)
+
     // AI Paper Generation States
     const [generating, setGenerating] = useState(false)
     const [attemptsLeft, setAttemptsLeft] = useState(3)
@@ -71,7 +75,7 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
         }
     }, [])
 
-        const buildQueryParams = (type?: string) => {
+    const buildQueryParams = (type?: string) => {
         const params = new URLSearchParams()
         if (searchQuery) params.append('search', searchQuery)
         if (filters?.branch) params.append('branch', filters.branch)
@@ -324,7 +328,7 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
             alert('You have reached your daily limit. Try again tomorrow!')
             return
         }
-        
+
         if (!filters?.subject) {
             alert('Please select a subject first')
             return
@@ -376,7 +380,7 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
         }
     }
 
-        const handleDelete = async (resourceId: string) => {
+    const handleDelete = async (resourceId: string) => {
         if (!confirm('Are you sure you want to delete this resource?')) return
 
         try {
@@ -432,11 +436,11 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                     {/* PROFESSIONAL HEADER WITH UPLOAD BUTTON */}
                     <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-800">
                         <h2 className="text-base sm:text-lg font-bold text-gray-900 whitespace-nowrap dark:text-white">
-                                {activeTab === 'notes' ? 'Lecture Notes' : activeTab === 'pyqs' ? 'Previous Papers' : 'Formula Sheets'}
-                            </h2>
-                        
+                            {activeTab === 'notes' ? 'Lecture Notes' : activeTab === 'pyqs' ? 'Previous Papers' : 'Formula Sheets'}
+                        </h2>
+
                         <div className="flex items-center gap-2">
-                                                        {activeTab === 'pyqs' && (
+                            {activeTab === 'pyqs' && (
                                 <button
                                     onClick={handleGeneratePaper}
                                     disabled={generating}
@@ -450,7 +454,7 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                                     <span className="hidden sm:inline">{generating ? 'Generating...' : 'Generate Sample Paper'}</span>
                                 </button>
                             )}
-{onUploadRequest && (
+                            {onUploadRequest && (
                                 <button
                                     onClick={() => onUploadRequest({ filters, activeTab })}
                                     className="flex items-center gap-1 px-2 py-1 bg-black dark:bg-white text-white dark:text-black text-[10px] sm:text-xs font-bold whitespace-nowrap rounded-lg hover:opacity-80 transition-opacity"
@@ -459,11 +463,11 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                                     <span className="hidden sm:inline">Upload</span>
                                 </button>
                             )}
-                        
+
 
                             {/* Result Counter */}
-                        <span className="text-[10px] sm:text-xs font-medium px-2 py-1 bg-gray-100 whitespace-nowrap dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-full">
-                            {resources.length} Result{resources.length !== 1 && 's'}
+                            <span className="text-[10px] sm:text-xs font-medium px-2 py-1 bg-gray-100 whitespace-nowrap dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-full">
+                                {resources.length} Result{resources.length !== 1 && 's'}
                             </span>
                         </div>
                     </div>
@@ -927,21 +931,21 @@ const EmptyState = ({ icon: Icon, title, description, onUploadRequest, filters, 
         </div>
         <p className="text-sm font-medium text-gray-900 dark:text-white">{title}</p>
         <p className="text-xs text-gray-500 mb-4">{description}</p>
-                                    {activeTab === 'pyqs' && (
-                                <button
-                                    onClick={handleGeneratePaper}
-                                    disabled={generating}
-                                    className="flex items-center gap-1 px-2 py-1 bg-violet-600 text-white text-[10px] sm:text-xs font-bold rounded-lg hover:bg-violet-700 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {generating ? (
-                                        <Loader2 className="w-3 h-3 animate-spin" />
-                                    ) : (
-                                        <Sparkles className="w-3 h-3" />
-                                    )}
-                                    <span className="hidden sm:inline">{generating ? 'Generating...' : 'Generate Sample Paper'}</span>
-                                </button>
-                            )}
-{onUploadRequest && (
+        {activeTab === 'pyqs' && (
+            <button
+                onClick={handleGeneratePaper}
+                disabled={generating}
+                className="flex items-center gap-1 px-2 py-1 bg-violet-600 text-white text-[10px] sm:text-xs font-bold rounded-lg hover:bg-violet-700 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                {generating ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                    <Sparkles className="w-3 h-3" />
+                )}
+                <span className="hidden sm:inline">{generating ? 'Generating...' : 'Generate Sample Paper'}</span>
+            </button>
+        )}
+        {onUploadRequest && (
             <button
                 onClick={() => onUploadRequest({ filters, activeTab })}
                 className="text-xs flex items-center gap-1 text-blue-600 font-medium hover:underline"
