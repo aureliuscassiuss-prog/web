@@ -258,7 +258,7 @@ export default function AdminPanel() {
     const videos = selectedUnit ? selectedUnit.videos || [] : []
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-[#050505] text-gray-900 dark:text-gray-100 font-sans">
+        <div className="min-h-screen bg-white dark:bg-[#050505] text-gray-900 dark:text-gray-100 font-sans">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
                     <div>
@@ -289,7 +289,7 @@ export default function AdminPanel() {
                             {activeTab === 'pending' && <PendingView resources={pendingResources} processingId={processingId} onAction={handleResourceAction} />}
                             {activeTab === 'users' && <UsersView users={users} processingId={processingId} onAction={handleUserAction} />}
                             {activeTab === 'structure' && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 items-start overflow-x-auto pb-8">
+                                <div className="grid grid-cols-1 md:flex md:gap-6 md:overflow-x-auto md:pb-8 gap-6">
                                     <StructureCard title="Programs" step="01" items={programs.map(p => ({ id: p.id, name: p.name }))} value={newProgram} setValue={setNewProgram} onAdd={() => handleStructureAdd('program', newProgram)} onRemove={(id: string) => handleStructureRemove('program', id)} activeId={selectedProgramId} onSelect={setSelectedProgramId} />
                                     <StructureCard title="Years" step="02" items={years.map(y => ({ id: y.id, name: y.name }))} value={newYear} setValue={setNewYear} onAdd={() => handleStructureAdd('year', newYear)} onRemove={(id: string) => handleStructureRemove('year', id)} activeId={selectedYearId} onSelect={setSelectedYearId} disabled={!selectedProgramId} parentName={selectedProgram?.name} />
                                     <StructureCard title="Branches" step="03" items={courses.map(c => ({ id: c.id, name: c.name }))} value={newBranch} setValue={setNewBranch} onAdd={() => handleStructureAdd('course', newBranch)} onRemove={(id: string) => handleStructureRemove('course', id)} activeId={selectedCourseId} onSelect={setSelectedCourseId} disabled={!selectedYearId} parentName={selectedYear?.name} />

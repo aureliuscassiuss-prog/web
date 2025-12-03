@@ -13,6 +13,27 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap"
     rel="stylesheet">
+  <script>
+    // Prevent flash of wrong theme - runs BEFORE page renders
+    (function () {
+      const theme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (theme === 'dark' || (!theme && prefersDark)) {
+        document.documentElement.classList.add('dark');
+      }
+    })();
+  </script>
+  <style>
+    /* Prevent flash of unauthenticated content */
+    #root {
+      opacity: 0;
+      transition: opacity 0.15s ease-in;
+    }
+
+    #root.ready {
+      opacity: 1;
+    }
+  </style>
 </head>
 
 <body>

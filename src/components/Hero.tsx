@@ -1,5 +1,7 @@
 import { ArrowRight, Sparkles, ChevronRight, Star, Users, Menu } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { getAvatarComponent } from '../data/premiumAvatars'
 
 interface HeroProps {
     onGetStarted?: () => void
@@ -7,6 +9,32 @@ interface HeroProps {
 }
 
 export default function Hero({ onGetStarted, user }: HeroProps) {
+    const [studentCount, setStudentCount] = useState(0)
+    const [recentStudents, setRecentStudents] = useState<any[]>([])
+
+    useEffect(() => {
+        // Fetch real student data
+        const fetchStudentData = async () => {
+            try {
+                const response = await fetch('/api/stats')
+                if (response.ok) {
+                    const data = await response.json()
+                    setStudentCount(data.totalUsers || 0)
+                }
+
+                // Fetch recent users for avatars
+                const leaderboardResponse = await fetch('/api/leaderboard')
+                if (leaderboardResponse.ok) {
+                    const leaderboardData = await leaderboardResponse.json()
+                    setRecentStudents(leaderboardData.leaderboard?.slice(0, 4) || [])
+                }
+            } catch (error) {
+                console.error('Failed to fetch student data:', error)
+            }
+        }
+        fetchStudentData()
+    }, [])
+
     return (
         <section className="relative flex flex-col items-center justify-center pt-16 pb-24 px-4 text-center md:pt-32 md:pb-48 overflow-hidden bg-white dark:bg-[#030303] selection:bg-blue-500/30">
 
@@ -31,14 +59,14 @@ export default function Hero({ onGetStarted, user }: HeroProps) {
 
             {/* Headline */}
             <h1 className="max-w-6xl text-5xl font-bold tracking-tighter text-gray-900 dark:text-white md:text-8xl animate-slide-up opacity-0 [animation-fill-mode:forwards] [animation-delay:0.1s]">
-                Study smarter. <br className="hidden md:block" />
-                <span className="inline-block text-transparent bg-clip-text bg-gradient-to-b from-gray-900 to-gray-500 dark:from-white dark:to-gray-400">
-                    Achieve more.
+                Learn together. <br className="hidden md:block" />
+                <span className="inline-block text-transparent bg-clip-text bg-gradient-to-b from-gray-700 to-gray-400 dark:from-white dark:to-gray-400">
+                    Excel together.
                 </span>
             </h1>
 
             {/* Subheading */}
-            <p className="mt-6 md:mt-8 max-w-2xl text-base md:text-xl text-gray-600 dark:text-gray-400 animate-slide-up opacity-0 [animation-fill-mode:forwards] [animation-delay:0.2s] leading-relaxed px-4">
+            <p className="mt-10 md:mt-12 max-w-2xl text-base md:text-xl text-gray-600 dark:text-gray-400 animate-slide-up opacity-0 [animation-fill-mode:forwards] [animation-delay:0.2s] leading-relaxed px-4">
                 The all-in-one academic platform for Medicaps University. Access premium notes, PYQs, and get instant guidance from your personal AI Tutor.
             </p>
 
@@ -70,16 +98,34 @@ export default function Hero({ onGetStarted, user }: HeroProps) {
                 </Link>
             </div>
 
-            {/* Social Proof (New Content) */}
+            {/* Social Proof (Real Data) */}
             <div className="mt-8 md:mt-10 flex flex-col md:flex-row items-center gap-4 animate-fade-in opacity-0 [animation-fill-mode:forwards] [animation-delay:0.4s]">
                 <div className="flex -space-x-3">
-                    {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="h-8 w-8 rounded-full border-2 border-white dark:border-black bg-gray-200 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
-                            <Users className="h-4 w-4 text-gray-400" />
-                        </div>
-                    ))}
-                    <div className="h-8 w-8 rounded-full border-2 border-white dark:border-black bg-gray-100 dark:bg-gray-900 flex items-center justify-center text-[10px] font-bold text-gray-600 dark:text-gray-400">
-                        2k+
+                    {recentStudents.length > 0 ? (
+                        <>
+                            {recentStudents.map((student, i) => (
+                                <div key={i} className="h-8 w-8 rounded-full border-2 border-white dark:border-black overflow-hidden bg-gray-200 dark:bg-gray-800">
+                                    {student.avatar ? (
+                                        <img src={student.avatar} alt={student.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
+                                            {student.name?.[0] || 'U'}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </>
+                    ) : (
+                        <>
+                            {[1, 2, 3, 4].map((i) => (
+                                <div key={i} className="h-8 w-8 rounded-full border-2 border-white dark:border-black bg-gray-200 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
+                                    <Users className="h-4 w-4 text-gray-400" />
+                                </div>
+                            ))}
+                        </>
+                    )}
+                    <div className="h-8 min-w-[2rem] px-2 rounded-full border-2 border-white dark:border-black bg-gray-100 dark:bg-gray-900 flex items-center justify-center text-[10px] font-bold text-gray-600 dark:text-gray-400">
+                        {studentCount > 0 ? `${studentCount}+` : '2k+'}
                     </div>
                 </div>
                 <div className="flex items-center gap-1">

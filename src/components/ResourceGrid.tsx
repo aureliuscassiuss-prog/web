@@ -7,6 +7,7 @@ import {
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import LeaderboardView from './LeaderboardView'
+import { SkeletonList } from './Skeleton'
 
 interface ResourceGridProps {
     view: 'resources' | 'leaderboard' | 'papers' | 'uploads'

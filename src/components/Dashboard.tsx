@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getAvatarComponent } from '../data/premiumAvatars';
+import { SkeletonDashboard } from './Skeleton';
 
 // --- Sub-components to optimize performance ---
 // 1. Time Component (Prevents full dashboard re-render every second)
@@ -120,6 +121,7 @@ export default function Dashboard() {
         { label: 'Queries', value: '10k+', icon: Sparkles, color: 'text-purple-500' },
         { label: 'Papers', value: '3k+', icon: FileText, color: 'text-orange-500' }
     ]);
+    const [isLoading, setIsLoading] = useState(true);
 
     // Fetch real stats from database
     useEffect(() => {
@@ -140,6 +142,8 @@ export default function Dashboard() {
             }
         };
         fetchStats();
+        // Simulate minimum loading time for smooth UX
+        setTimeout(() => setIsLoading(false), 800);
     }, []);
 
     useEffect(() => {
@@ -202,6 +206,11 @@ export default function Dashboard() {
             bgColor: 'bg-indigo-50/70 dark:bg-indigo-900/20'
         }
     ];
+
+    // Show skeleton while loading
+    if (isLoading) {
+        return <SkeletonDashboard />;
+    }
 
     return (
         <div className="w-full min-h-[calc(100vh-80px)] pb-20 px-4 sm:px-6 lg:px-8 overflow-x-hidden">
