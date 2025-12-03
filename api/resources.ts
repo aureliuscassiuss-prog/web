@@ -120,7 +120,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 { $project: { uploaderDetails: 0 } }
             ]).toArray();
 
-            return res.status(200).json({ resources });
+            // Get user ID if authenticated
+            let userId: string | null = null;
+            try {
+                const token = req.headers.authorization?.replace('Bearer ', '');
+                if (token && process.env.JWT_SECRET) {
+                    const decoded = jwt.verify(token, process.env.JWT_SECRET) as { userId: string };
+                    userId = decoded.userId;
+                }
+            } catch (e) {
+                // Not authenticated, continue without user ID
+            }
+
+            // Add user interaction states if authenticated
+            const resourcesWithStates = resources.map((resource: any) => ({
+                ...resource,
+                ...(userId ? {
+                    userLiked: resource.likedBy?.includes(userId) || false,
+                    userDisliked: resource.dislikedBy?.includes(userId) || false,
+                    userSaved: resource.savedBy?.includes(userId) || false,
+                    userFlagged: resource.flaggedBy?.includes(userId) || false
+                } : {})
+            }));
+
+            return res.status(200).json({ resources: resourcesWithStates });
 
         } else if (req.method === 'POST') {
             if (!process.env.JWT_SECRET) {
@@ -193,6 +216,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 uploader: decoded.name || 'Anonymous',
                 uploaderId: decoded.userId,
                 downloads: 0,
+                likes: 0,
+                dislikes: 0,
+                flags: 0,
+                likedBy: [],
+                dislikedBy: [],
+                savedBy: [],
+                flaggedBy: [],
                 rating: 0,
                 createdAt: new Date(),
                 updatedAt: new Date()
