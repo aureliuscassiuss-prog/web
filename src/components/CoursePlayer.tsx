@@ -14,6 +14,7 @@ import {
     Clock,
     Check
 } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
 
 // --- Types ---
 interface VideoObject {
@@ -50,6 +51,39 @@ export default function CoursePlayer() {
 
     // Progress State
     const [watchedVideos, setWatchedVideos] = useState<Set<string>>(new Set())
+
+    // Get user and token
+    const { user } = useAuth()
+    const token = localStorage.getItem('token')
+
+    // Fetch user's video progress from API
+    useEffect(() => {
+        const fetchProgress = async () => {
+            if (!token) return
+
+            try {
+                const res = await fetch('/api/progress', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                })
+                const data = await res.json()
+
+                // Convert progress map to Set of completed video IDs
+                const completedIds = new Set<string>()
+                Object.entries(data.progress || {}).forEach(([videoId, info]: [string, any]) => {
+                    if (info.completed) {
+                        completedIds.add(videoId)
+                    }
+                })
+                setWatchedVideos(completedIds)
+            } catch (error) {
+                console.error('Failed to fetch progress:', error)
+            }
+        }
+
+        fetchProgress()
+    }, [token])
 
     useEffect(() => {
         // Scroll top on mount
@@ -148,11 +182,42 @@ export default function CoursePlayer() {
         return (match && match[2].length === 11) ? match[2] : null
     }
 
-    const toggleWatched = (videoId: string) => {
+    const toggleWatched = async (videoId: string) => {
+        const newCompleted = !watchedVideos.has(videoId)
+
+        // Optimistically update UI
         const newWatched = new Set(watchedVideos)
-        if (newWatched.has(videoId)) newWatched.delete(videoId)
-        else newWatched.add(videoId)
+        if (newCompleted) {
+            newWatched.add(videoId)
+        } else {
+            newWatched.delete(videoId)
+        }
         setWatchedVideos(newWatched)
+
+        // Save to database
+        if (!token) return
+
+        try {
+            await fetch('/api/progress', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    videoId,
+                    completed: newCompleted,
+                    subjectName,
+                    programId,
+                    yearId,
+                    courseId
+                })
+            })
+        } catch (error) {
+            console.error('Failed to save progress:', error)
+            // Revert on error
+            setWatchedVideos(watchedVideos)
+        }
     }
 
     const toggleUnit = (index: number) => {

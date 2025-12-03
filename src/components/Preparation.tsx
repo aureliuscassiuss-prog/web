@@ -47,20 +47,52 @@ export default function Preparation() {
     const [structure, setStructure] = useState<{ programs: Program[] }>({ programs: [] })
     const [loading, setLoading] = useState(true)
 
-    // Selection State
-    const [selProgramId, setSelProgramId] = useState<string>('')
-    const [selYearId, setSelYearId] = useState<string>('')
-    const [selCourseId, setSelCourseId] = useState<string>('')
+    // Selection State with localStorage persistence
+    const [selProgramId, setSelProgramId] = useState<string>(() => {
+        return localStorage.getItem('preparationProgramId') || ''
+    })
+    const [selYearId, setSelYearId] = useState<string>(() => {
+        return localStorage.getItem('preparationYearId') || ''
+    })
+    const [selCourseId, setSelCourseId] = useState<string>(() => {
+        return localStorage.getItem('preparationCourseId') || ''
+    })
 
     // UI State
     const [openDropdown, setOpenDropdown] = useState<'program' | 'year' | 'course' | null>(null)
     const [expandedSubject, setExpandedSubject] = useState<string | null>(null)
+
+    // --- Persist selections to localStorage ---
+    useEffect(() => {
+        if (selProgramId) {
+            localStorage.setItem('preparationProgramId', selProgramId)
+        } else {
+            localStorage.removeItem('preparationProgramId')
+        }
+    }, [selProgramId])
+
+    useEffect(() => {
+        if (selYearId) {
+            localStorage.setItem('preparationYearId', selYearId)
+        } else {
+            localStorage.removeItem('preparationYearId')
+        }
+    }, [selYearId])
+
+    useEffect(() => {
+        if (selCourseId) {
+            localStorage.setItem('preparationCourseId', selCourseId)
+        } else {
+            localStorage.removeItem('preparationCourseId')
+        }
+    }, [selCourseId])
 
     // --- Auto-select based on User Profile ---
     const { user } = useAuth()
     const autoSelectedRef = useRef(false)
 
     useEffect(() => {
+        // Only auto-select if nothing is selected yet (not even from localStorage)
         if (!autoSelectedRef.current && user && structure.programs.length > 0 && !selProgramId) {
             const program = structure.programs.find(p => p.name === user.course)
             if (program) {
