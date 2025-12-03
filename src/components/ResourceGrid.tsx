@@ -387,6 +387,19 @@ const GridCard = ({ resource, onDelete }: { resource: any, onDelete?: (id: strin
         flags: resource.flags || 0
     });
 
+    // Sync state when resource or token changes (login/logout)
+    useEffect(() => {
+        setIsSaved(resource.userSaved || false);
+        setIsReported(resource.userFlagged || false);
+        setUserVote(resource.userLiked ? 'like' : resource.userDisliked ? 'dislike' : null);
+        setCounts({
+            likes: resource.likes || 0,
+            dislikes: resource.dislikes || 0,
+            downloads: resource.downloads || 0,
+            flags: resource.flags || 0
+        });
+    }, [resource._id, resource.userSaved, resource.userFlagged, resource.userLiked, resource.userDisliked, resource.likes, resource.dislikes, resource.downloads, resource.flags, token]);
+
     const handleInteraction = async (action: string, value: boolean) => {
         if (!token) {
             alert('Please sign in to interact with resources');
@@ -433,27 +446,70 @@ const GridCard = ({ resource, onDelete }: { resource: any, onDelete?: (id: strin
 
     const handleLike = () => {
         const newValue = userVote !== 'like';
+
+        // Optimistic update - instant UI feedback
+        if (newValue) {
+            // Adding like
+            if (userVote === 'dislike') {
+                // Remove dislike, add like
+                setCounts(prev => ({ ...prev, likes: prev.likes + 1, dislikes: prev.dislikes - 1 }));
+            } else {
+                // Just add like
+                setCounts(prev => ({ ...prev, likes: prev.likes + 1 }));
+            }
+            setUserVote('like');
+        } else {
+            // Removing like
+            setCounts(prev => ({ ...prev, likes: prev.likes - 1 }));
+            setUserVote(null);
+        }
+
         handleInteraction('like', newValue);
     };
 
     const handleDislike = () => {
         const newValue = userVote !== 'dislike';
+
+        // Optimistic update - instant UI feedback
+        if (newValue) {
+            // Adding dislike
+            if (userVote === 'like') {
+                // Remove like, add dislike
+                setCounts(prev => ({ ...prev, dislikes: prev.dislikes + 1, likes: prev.likes - 1 }));
+            } else {
+                // Just add dislike
+                setCounts(prev => ({ ...prev, dislikes: prev.dislikes + 1 }));
+            }
+            setUserVote('dislike');
+        } else {
+            // Removing dislike
+            setCounts(prev => ({ ...prev, dislikes: prev.dislikes - 1 }));
+            setUserVote(null);
+        }
+
         handleInteraction('dislike', newValue);
     };
 
     const handleSave = () => {
+        // Optimistic update - instant UI feedback
+        setIsSaved(!isSaved);
         handleInteraction('save', !isSaved);
     };
 
     const handleFlag = () => {
         if (!isReported) {
             if (confirm('Are you sure you want to flag this resource as risky? This action cannot be undone.')) {
+                // Optimistic update - instant UI feedback
+                setIsReported(true);
+                setCounts(prev => ({ ...prev, flags: prev.flags + 1 }));
                 handleInteraction('flag', true);
             }
         }
     };
 
     const handleDownload = () => {
+        // Optimistic update - instant UI feedback
+        setCounts(prev => ({ ...prev, downloads: prev.downloads + 1 }));
         handleInteraction('download', true);
     };
 
