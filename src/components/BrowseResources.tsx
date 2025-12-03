@@ -33,11 +33,11 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
 
     useEffect(() => {
         if (!autoSelectedRef.current && user && structure && !selections.program) {
-            const program = structure.programs.find((p: any) => p.name === user.course);
+            const program = structure.programs.find((p: any) => p.id === user.course);
             if (program) {
-                const year = program.years.find((y: any) => y.name.includes(user.year?.toString() || ''));
+                const year = program.years.find((y: any) => y.id === user.year?.toString());
                 if (year) {
-                    const course = year.courses.find((c: any) => c.name === user.branch);
+                    const course = year.courses.find((c: any) => c.id === user.branch);
                     if (course) {
                         setSelections({
                             program: program.id,

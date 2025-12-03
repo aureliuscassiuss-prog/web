@@ -94,11 +94,11 @@ export default function Preparation() {
     useEffect(() => {
         // Only auto-select if nothing is selected yet (not even from localStorage)
         if (!autoSelectedRef.current && user && structure.programs.length > 0 && !selProgramId) {
-            const program = structure.programs.find(p => p.name === user.course)
+            const program = structure.programs.find(p => p.id === user.course)
             if (program) {
-                const year = program.years.find(y => y.name.includes(user.year?.toString() || ''))
+                const year = program.years.find(y => y.id === user.year?.toString())
                 if (year) {
-                    const course = year.courses.find(c => c.name === user.branch)
+                    const course = year.courses.find(c => c.id === user.branch)
                     if (course) {
                         setSelProgramId(program.id)
                         setSelYearId(year.id)
