@@ -234,104 +234,289 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
     }
 
     const generatePDF = (data: any) => {
-        const doc = new jsPDF("landscape", "mm", "a4")
-        const width = doc.internal.pageSize.getWidth()
-        const height = doc.internal.pageSize.getHeight()
+        const doc = new jsPDF("landscape", "mm", "a4");
+        const width = doc.internal.pageSize.getWidth();
+        const height = doc.internal.pageSize.getHeight();
 
-        doc.setTextColor(0, 0, 0)
-        doc.setFont("times", "italic")
-        doc.setFontSize(9)
+        // Reset Text
+        doc.setTextColor(0, 0, 0);
+        doc.setFont("times", "italic");
+        doc.setFontSize(9);
 
-        doc.text("Total No. of Questions: 6", 12, 10)
-        doc.text("Total No. of Printed Pages: 2", 135, 10, { align: "right" })
+        // Header
+        doc.text("Total No. of Questions: 6", 12, 10);
+        doc.text("Total No. of Printed Pages: 2", 135, 10, { align: "right" });
 
-        doc.setFont("times", "bold")
-        doc.setFontSize(10)
-        doc.text("Enrollment No.....................................", 135, 16, { align: "right" })
+        doc.setFont("times", "bold");
+        doc.setFontSize(10);
+        doc.text("Enrollment No.....................................", 135, 16, { align: "right" });
 
-        doc.setFont("times", "normal")
-        doc.setFontSize(13)
-        doc.text("Faculty of Engineering", 85, 26, { align: "center" })
-        doc.text(`End Sem Examination ${data.EXAM_MONTH}-${data.EXAM_YEAR}`, 85, 32, { align: "center" })
+        doc.setFont("times", "normal");
+        doc.setFontSize(13);
+        doc.text("Faculty of Engineering", 85, 26, { align: "center" });
+        doc.text(`End Sem Examination ${data.EXAM_MONTH}-${data.EXAM_YEAR}`, 85, 32, { align: "center" });
 
-        doc.setFontSize(11)
-        doc.text(`${data.COURSE_CODE} ${data.SUBJECT_NAME}`, 85, 38, { align: "center" })
+        doc.setFontSize(11);
+        doc.text(`${data.COURSE_CODE} ${data.SUBJECT_NAME}`, 85, 38, { align: "center" });
 
-        doc.setFont("times", "normal")
-        doc.setFontSize(9)
-        doc.text(`Programme: ${data.PROGRAMME}`, 40, 43)
-        doc.text(`Branch/Specialisation: ${data.BRANCH}`, 135, 43, { align: "right" })
+        doc.setFont("times", "normal");
+        doc.setFontSize(9);
+        doc.text(`Programme: ${data.PROGRAMME}`, 40, 43);
+        doc.text(`Branch/Specialisation: ${data.BRANCH}`, 135, 43, { align: "right" });
 
-        doc.setFont("times", "bold")
-        doc.setFontSize(9)
-        doc.text("Duration: 3 Hrs.", 10, 48)
-        doc.text("Maximum Marks: 60", 135, 48, { align: "right" })
+        doc.setFont("times", "bold");
+        doc.setFontSize(9);
+        doc.text("Duration: 3 Hrs.", 10, 48);
+        doc.text("Maximum Marks: 60", 135, 48, { align: "right" });
 
-        doc.setLineWidth(0.3)
-        doc.line(10, 50, 140, 50)
+        doc.setLineWidth(0.3);
+        doc.line(10, 50, 140, 50);
 
-        doc.setTextColor(255, 0, 0)
-        doc.setFont("times", "normal")
-        doc.setFontSize(8)
-        const disclaimer = "DISCLAIMER: This is a mock question paper by UniNotes for practice only. NOT a university paper."
-        const splitDisclaimer = doc.splitTextToSize(disclaimer, 130)
-        doc.text(splitDisclaimer, 10, 54)
-        doc.setTextColor(0, 0, 0)
+        // Disclaimer
+        doc.setTextColor(255, 0, 0);
+        doc.setFont("times", "normal");
+        doc.setFontSize(8);
+        const disclaimer = "DISCLAIMER: This is a mock question paper by MediNotes for practice only. NOT a university paper. Misusing this document may lead to serious disciplinary action.";
+        const splitDisclaimer = doc.splitTextToSize(disclaimer, 130);
+        doc.text(splitDisclaimer, 10, 54);
+        doc.setTextColor(0, 0, 0);
 
-        let yPos = 54 + (3 * splitDisclaimer.length) + 5
+        let yPos = 54 + (3 * splitDisclaimer.length) + 5;
 
-        doc.setFontSize(9)
-        doc.text("Q.1", 8, yPos)
+        // Q1 Header
+        doc.setFontSize(9);
+        doc.text("Q.1", 8, yPos);
 
-        let savedQ9 = null
+        // Render MCQs 1-8
+        let savedQ9 = null;
+
         for (let i = 1; i <= 9; i++) {
-            const key = `MCQ_${i}`
-            const romans = ["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix"]
+            const key = `MCQ_${i}`;
+            const romans = ["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix"];
 
-            doc.setFont("times", "normal")
-            const qText = data[`${key}_QUESTION`] || "Question text missing"
-            const lines = doc.splitTextToSize(qText, 115)
+            doc.setFont("times", "normal");
+            const qText = data[`${key}_QUESTION`] || "Question text missing";
+            const lines = doc.splitTextToSize(qText, 115);
 
-            const optA = `(a) ${data[`${key}_OPTION_A`] || ''}`
-            const optB = `(b) ${data[`${key}_OPTION_B`] || ''}`
-            const optC = `(c) ${data[`${key}_OPTION_C`] || ''}`
-            const optD = `(d) ${data[`${key}_OPTION_D`] || ''}`
+            const optA = `(a) ${data[`${key}_OPTION_A`] || ''}`;
+            const optB = `(b) ${data[`${key}_OPTION_B`] || ''}`;
+            const optC = `(c) ${data[`${key}_OPTION_C`] || ''}`;
+            const optD = `(d) ${data[`${key}_OPTION_D`] || ''}`;
 
-            const optALines = doc.splitTextToSize(optA, 55)
-            const optBLines = doc.splitTextToSize(optB, 60)
-            const optCLines = doc.splitTextToSize(optC, 55)
-            const optDLines = doc.splitTextToSize(optD, 60)
+            // Wrap options to prevent collision
+            // Column 1 width ~55, Column 2 width ~60
+            const optALines = doc.splitTextToSize(optA, 55);
+            const optBLines = doc.splitTextToSize(optB, 60);
+            const optCLines = doc.splitTextToSize(optC, 55);
+            const optDLines = doc.splitTextToSize(optD, 60);
 
-            const hRow1 = Math.max(optALines.length, optBLines.length) * 4
-            const hRow2 = Math.max(optCLines.length, optDLines.length) * 4
-            const hBlock = (4 * lines.length) + hRow1 + hRow2 + 4
+            // Calculate Height
+            const hRow1 = Math.max(optALines.length, optBLines.length) * 4;
+            const hRow2 = Math.max(optCLines.length, optDLines.length) * 4;
+            const hBlock = (4 * lines.length) + hRow1 + hRow2 + 4;
 
+            // Check for Column Break
             if (i === 9 && (yPos + hBlock > 200)) {
-                savedQ9 = { qText, lines, optALines, optBLines, optCLines, optDLines }
-                break
+                savedQ9 = { qText, lines, optALines, optBLines, optCLines, optDLines };
+                break;
             }
 
-            const roman = romans[i - 1]
-            doc.text(`${roman}.`, 14, yPos)
-            const indent = (roman ====== "vii" ? 19 : 18)
+            const roman = romans[i - 1];
+            doc.text(`${roman}.`, 14, yPos);
+            const indent = (roman === "viii") ? 20 : (roman === "vii" ? 19 : 18);
 
-            doc.text(lines, indent, yPos)
-            doc.setFont("times", "bold")
-            doc.text("1", 135, yPos)
-            doc.setFont("times", "normal")
+            doc.text(lines, indent, yPos);
+            doc.setFont("times", "bold");
+            doc.text("1", 135, yPos);
+            doc.setFont("times", "normal");
 
-            yPos += (4 * lines.length)
+            yPos += (4 * lines.length);
 
-            doc.text(optALines, 18, yPos)
-            doc.text(optBLines, 75, yPos)
-            yPos += hRow1 + 1
+            // Row 1 Options
+            doc.text(optALines, 18, yPos);
+            doc.text(optBLines, 75, yPos);
+            yPos += hRow1 + 1; // +1 padding
 
-            doc.text(optCLines, 18, yPos)
-            doc.text(optDLines, 75, yPos)
-            yPos += hRow2 + 3
+            // Row 2 Options
+            doc.text(optCLines, 18, yPos);
+            doc.text(optDLines, 75, yPos);
+            yPos += hRow2 + 3; // +3 padding before next question
         }
 
-        // Save and auto download
+        // --- Second Column (Right Side) ---
+        let yCol2 = 15;
+
+        // Page Num Top Right
+        doc.setFontSize(7);
+        doc.text("[2]", 220, 8, { align: "center" });
+        doc.setFontSize(9);
+
+        // Render Q9 if saved
+        if (savedQ9) {
+            doc.setFont("times", "normal");
+            doc.text("ix.", 156, yCol2);
+            doc.text(savedQ9.lines, 160, yCol2);
+            doc.setFont("times", "bold");
+            doc.text("1", 285, yCol2);
+            doc.setFont("times", "normal");
+            yCol2 += (4 * savedQ9.lines.length);
+
+            const hRow1 = Math.max(savedQ9.optALines.length, savedQ9.optBLines.length) * 4;
+            const hRow2 = Math.max(savedQ9.optCLines.length, savedQ9.optDLines.length) * 4;
+
+            doc.text(savedQ9.optALines, 160, yCol2);
+            doc.text(savedQ9.optBLines, 220, yCol2);
+            yCol2 += hRow1 + 1;
+
+            doc.text(savedQ9.optCLines, 160, yCol2);
+            doc.text(savedQ9.optDLines, 220, yCol2);
+            yCol2 += hRow2 + 3;
+        }
+
+        // Render Q10
+        const q10Key = "MCQ_10";
+        const q10Text = data[`${q10Key}_QUESTION`];
+        if (q10Text) {
+            const q10Lines = doc.splitTextToSize(q10Text, 120);
+
+            doc.text("x.", 156, yCol2);
+            doc.text(q10Lines, 160, yCol2);
+            doc.setFont("times", "bold");
+            doc.text("1", 285, yCol2);
+            doc.setFont("times", "normal");
+            yCol2 += (4 * q10Lines.length);
+
+            const optA = `(a) ${data[`${q10Key}_OPTION_A`] || ''}`;
+            const optB = `(b) ${data[`${q10Key}_OPTION_B`] || ''}`;
+            const optC = `(c) ${data[`${q10Key}_OPTION_C`] || ''}`;
+            const optD = `(d) ${data[`${q10Key}_OPTION_D`] || ''}`;
+
+            const optALines = doc.splitTextToSize(optA, 55);
+            const optBLines = doc.splitTextToSize(optB, 60);
+            const optCLines = doc.splitTextToSize(optC, 55);
+            const optDLines = doc.splitTextToSize(optD, 60);
+
+            const hRow1 = Math.max(optALines.length, optBLines.length) * 4;
+            const hRow2 = Math.max(optCLines.length, optDLines.length) * 4;
+
+            doc.text(optALines, 160, yCol2);
+            doc.text(optBLines, 220, yCol2);
+            yCol2 += hRow1 + 1;
+
+            doc.text(optCLines, 160, yCol2);
+            doc.text(optDLines, 220, yCol2);
+            yCol2 += hRow2 + 3;
+        }
+
+        // Descriptive Q2
+        doc.setFont("times", "normal");
+        doc.text("Q.2", 150, yCol2);
+
+        const q2Parts = [
+            { l: "i.", t: data.Q2_PART_1, m: "2" },
+            { l: "ii.", t: data.Q2_PART_2, m: "3" },
+            { l: "iii.", t: data.Q2_PART_3, m: "5" },
+        ];
+
+        q2Parts.forEach(part => {
+            if (!part.t) return;
+            doc.setFont("times", "normal");
+            const pl = doc.splitTextToSize(part.t, 120);
+            doc.text(part.l, 156, yCol2);
+            doc.text(pl, 160, yCol2);
+            doc.setFont("times", "bold");
+            doc.text(part.m, 285, yCol2);
+            yCol2 += (4 * pl.length) + 2;
+        });
+
+        if (data.Q2_OR_PART) {
+            doc.setFont("times", "normal");
+            doc.text("OR", 150, yCol2);
+            const q2Or = doc.splitTextToSize(data.Q2_OR_PART, 120);
+            doc.text("iv.", 156, yCol2);
+            doc.text(q2Or, 160, yCol2);
+            doc.setFont("times", "bold");
+            doc.text("5", 285, yCol2);
+            yCol2 += (4 * q2Or.length) + 6;
+        }
+
+        // Loop Q3 - Q5
+        for (let q = 3; q <= 5; q++) {
+            if (!data[`Q${q}_PART_1`]) continue;
+
+            doc.setFont("times", "normal");
+            doc.text(`Q.${q}`, 150, yCol2);
+
+            const marks = (q === 3 || q === 4) ? ["3", "7"] : ["2", "8"];
+            const orMark = (q === 3 || q === 4) ? "7" : "8";
+
+            const parts = [
+                { l: "i.", t: data[`Q${q}_PART_1`], m: marks[0] },
+                { l: "ii.", t: data[`Q${q}_PART_2`], m: marks[1] },
+            ];
+
+            parts.forEach(part => {
+                if (!part.t) return;
+                doc.setFont("times", "normal");
+                const pl = doc.splitTextToSize(part.t, 120);
+                doc.text(part.l, 156, yCol2);
+                doc.text(pl, 160, yCol2);
+                doc.setFont("times", "bold");
+                doc.text(part.m, 285, yCol2);
+                yCol2 += (4 * pl.length) + 2;
+            });
+
+            if (data[`Q${q}_OR_PART`]) {
+                doc.setFont("times", "normal");
+                doc.text("OR", 150, yCol2);
+                const orText = doc.splitTextToSize(data[`Q${q}_OR_PART`], 120);
+                doc.text("iii.", 156, yCol2);
+                doc.text(orText, 160, yCol2);
+                doc.setFont("times", "bold");
+                doc.text(orMark, 285, yCol2);
+                yCol2 += (4 * orText.length) + 6;
+            }
+        }
+
+        // Q6
+        if (data.Q6_PART_1) {
+            doc.setFont("times", "normal");
+            doc.text("Q.6", 150, yCol2);
+            doc.text("Attempt any two:", 156, yCol2);
+            yCol2 += 5;
+
+            const q6Parts = [
+                { l: "i.", t: data.Q6_PART_1 },
+                { l: "ii.", t: data.Q6_PART_2 },
+                { l: "iii.", t: data.Q6_PART_3 },
+            ];
+
+            q6Parts.forEach(part => {
+                if (!part.t) return;
+                const pl = doc.splitTextToSize(part.t, 120);
+                const heightNeeded = (4 * pl.length) + 2;
+
+                if (yCol2 + heightNeeded > 200) {
+                    doc.addPage();
+                    yCol2 = 20;
+                }
+
+                doc.setFont("times", "normal");
+                doc.setFontSize(9);
+                doc.text(part.l, 156, yCol2);
+                doc.text(pl, 160, yCol2);
+                doc.setFont("times", "bold");
+                doc.text("5", 285, yCol2);
+                yCol2 += heightNeeded;
+            });
+        }
+
+        yCol2 += 6;
+        doc.setFontSize(11);
+        doc.setFont("times", "bold");
+        doc.text("******", 220, yCol2, { align: "center" });
+
+        
         const filename = `Sample_Paper_${data.SUBJECT_NAME.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`
         doc.save(filename)
     }
@@ -458,7 +643,7 @@ FUNCS
                                 <button
                                     onClick={handleGeneratePaper}
                                     disabled={generating}
-                                    className="group flex items-center gap-2 px-3 py-1.5 bg-zinc-900 dark:bg-white text-white dark:text-black text-xs font-medium rounded-lg hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed border border-zinc-800 dark:border-zinc-200 shadow-sm"
+                                    className="hidden sm:flex group items-center gap-2 px-3 py-1.5 bg-zinc-900 dark:bg-white text-white dark:text-black text-xs font-medium rounded-lg hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed border border-zinc-800 dark:border-zinc-200 shadow-sm"
                                 >
                                     {generating ? (
                                         <Loader2 className="w-3.5 h-3.5 animate-spin text-green-500" />
@@ -488,6 +673,24 @@ FUNCS
                             </span>
                         </div>
                     </div>
+                    {/* Mobile Generate Button */}
+                    {activeTab === 'pyqs' && (
+                        <button
+                            onClick={handleGeneratePaper}
+                            disabled={generating}
+                            className="flex sm:hidden w-full items-center justify-center gap-2 mt-3 px-4 py-3 bg-zinc-900 dark:bg-white text-white dark:text-black text-sm font-medium rounded-xl hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                        >
+                            {generating ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-green-500" />
+                            ) : (
+                                <div className="flex items-center justify-center w-5 h-5 rounded-full bg-green-500/10 text-green-500 text-[10px] font-bold ring-1 ring-green-500/50">
+                                    {user?.role === 'admin' ? '∞' : attemptsLeft}
+                                </div>
+                            )}
+                            <span>{generating ? 'Generating Paper...' : 'Generate Sample Paper'}</span>
+                        </button>
+                    )}
+
 
                     {resources.length === 0 ? (
                         <EmptyState
