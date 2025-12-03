@@ -51,6 +51,13 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
     ])
     const [isAiLoading, setIsAiLoading] = useState(false)
 
+
+    // AI Paper Generation States
+    const [generating, setGenerating] = useState(false)
+    const [attemptsLeft, setAttemptsLeft] = useState(3)
+
+
+
     // AI Paper Generation States
     const [generating, setGenerating] = useState(false)
     const [attemptsLeft, setAttemptsLeft] = useState(3)
@@ -74,6 +81,13 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
         }
     }, [])
 
+
+    // Track AI paper generation attempts
+    useEffect(() => {
+        const stored = localStorage.getItem('paper_attempts')
+        if (stored) {
+            const { date, count } = JSON.parse(stored)
+            if (date 
     const buildQueryParams = (type?: string) => {
         const params = new URLSearchParams()
         if (searchQuery) params.append('search', searchQuery)
@@ -221,6 +235,8 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
 
     const generatePDF = (data: any) => {
         const doc = new jsPDF("landscape", "mm", "a4")
+        const width = doc.internal.pageSize.getWidth()
+        const height = doc.internal.pageSize.getHeight()
 
         doc.setTextColor(0, 0, 0)
         doc.setFont("times", "italic")
@@ -267,6 +283,7 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
         doc.setFontSize(9)
         doc.text("Q.1", 8, yPos)
 
+        let savedQ9 = null
         for (let i = 1; i <= 9; i++) {
             const key = `MCQ_${i}`
             const romans = ["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix"]
@@ -287,10 +304,16 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
 
             const hRow1 = Math.max(optALines.length, optBLines.length) * 4
             const hRow2 = Math.max(optCLines.length, optDLines.length) * 4
+            const hBlock = (4 * lines.length) + hRow1 + hRow2 + 4
+
+            if (i === 9 && (yPos + hBlock > 200)) {
+                savedQ9 = { qText, lines, optALines, optBLines, optCLines, optDLines }
+                break
+            }
 
             const roman = romans[i - 1]
             doc.text(`${roman}.`, 14, yPos)
-            const indent = (roman === "viii") ? 20 : (roman === "vii" ? 19 : 18)
+            const indent = (roman ====== "vii" ? 19 : 18)
 
             doc.text(lines, indent, yPos)
             doc.setFont("times", "bold")
@@ -308,6 +331,7 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
             yPos += hRow2 + 3
         }
 
+        // Save and auto download
         const filename = `Sample_Paper_${data.SUBJECT_NAME.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`
         doc.save(filename)
     }
@@ -317,7 +341,7 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
             alert('You have reached your daily limit. Try again tomorrow!')
             return
         }
-        
+
         if (!filters?.subject) {
             alert('Please select a subject first')
             return
@@ -340,57 +364,15 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
 
             const data = await res.json()
 
-                                                let paperData
-            const answer = data.answer
-            
-            const cleanAndParse = (str: string) => {
-                if (typeof str !== 'string') return str;
-                
-                let cleaned = str;
-                
-                // 1. Extract from Markdown or find braces
-                const codeBlockMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-                if (codeBlockMatch) {
-                    cleaned = codeBlockMatch[1];
-                } else {
-                    const start = cleaned.indexOf('{');
-                    const end = cleaned.lastIndexOf('}');
-                    if (start !== -1 && end !== -1) {
-                        cleaned = cleaned.substring(start, end + 1);
-                    }
-                }
-
-                // 2. Fix trailing commas (valid in JS, invalid in JSON)
-                cleaned = cleaned.replace(/,(\s*[}\]])/g, '$1');
-
-                // 3. Fix missing commas between array items (common AI error)
-                // Matches: "string" "string" OR } { OR ] [ etc.
-                // We insert a comma if we see a closing token followed by whitespace/newline and then an opening token
-                cleaned = cleaned.replace(/(["\]}])\s*(\r?\n|\r)\s*(["{\[])/g, '$1,$2$3');
-                cleaned = cleaned.replace(/(["\]}])\s+(["{\[])/g, '$1, $2');
-
-                return JSON.parse(cleaned);
-            }
-
+            let paperData
             try {
-                paperData = typeof answer === 'string' ? cleanAndParse(answer) : answer;
+                paperData = typeof data.answer === 'string' ? JSON.parse(data.answer) : data.answer
             } catch (e) {
-                console.error('Strict parsing failed, trying loose parsing:', e);
-                try {
-                    // Fallback: Use Function constructor for loose JSON (handles missing quotes on keys, single quotes, etc.)
-                    // We re-extract to be safe
-                    let loose = answer;
-                    const start = loose.indexOf('{');
-                    const end = loose.lastIndexOf('}');
-                    if (start !== -1 && end !== -1) {
-                        loose = loose.substring(start, end + 1);
-                        paperData = new Function('return ' + loose)();
-                    } else {
-                        throw new Error('No JSON object found');
-                    }
-                } catch (e2) {
-                    console.error('Final parsing failure:', e2);
-                    throw new Error('Failed to parse AI response. Please try again.');
+                const match = data.answer.match(/```json\n([\s\S]*)\n```/)
+                if (match) {
+                    paperData = JSON.parse(match[1])
+                } else {
+                    throw new Error('Failed to parse AI response')
                 }
             }
 
@@ -411,6 +393,7 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
         }
     }
 
+FUNCS
     const handleDelete = async (resourceId: string) => {
         if (!confirm('Are you sure you want to delete this resource?')) return
 
@@ -467,9 +450,9 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                     {/* PROFESSIONAL HEADER WITH UPLOAD BUTTON */}
                     <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-800">
                         <h2 className="text-base sm:text-lg font-bold text-gray-900 whitespace-nowrap dark:text-white">
-                                {activeTab === 'notes' ? 'Lecture Notes' : activeTab === 'pyqs' ? 'Previous Papers' : 'Formula Sheets'}
-                            </h2>
-                        
+                            {activeTab === 'notes' ? 'Lecture Notes' : activeTab === 'pyqs' ? 'Previous Papers' : 'Formula Sheets'}
+                        </h2>
+
                         <div className="flex items-center gap-2">
                                                         {activeTab === 'pyqs' && (
                                 <button
@@ -487,6 +470,7 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                                     <span className="hidden sm:inline">{generating ? 'Generating...' : 'Generate Sample Paper'}</span>
                                 </button>
                             )}
+
                             {onUploadRequest && (
                                 <button
                                     onClick={() => onUploadRequest({ filters, activeTab })}
@@ -496,11 +480,11 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                                     <span className="hidden sm:inline">Upload</span>
                                 </button>
                             )}
-                        
+
 
                             {/* Result Counter */}
-                        <span className="text-[10px] sm:text-xs font-medium px-2 py-1 bg-gray-100 whitespace-nowrap dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-full">
-                            {resources.length} Result{resources.length !== 1 && 's'}
+                            <span className="text-[10px] sm:text-xs font-medium px-2 py-1 bg-gray-100 whitespace-nowrap dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-full">
+                                {resources.length} Result{resources.length !== 1 && 's'}
                             </span>
                         </div>
                     </div>
@@ -964,6 +948,20 @@ const EmptyState = ({ icon: Icon, title, description, onUploadRequest, filters, 
         </div>
         <p className="text-sm font-medium text-gray-900 dark:text-white">{title}</p>
         <p className="text-xs text-gray-500 mb-4">{description}</p>
+        {activeTab === 'pyqs' && (
+            <button
+                onClick={handleGeneratePaper}
+                disabled={generating}
+                className="flex items-center gap-1 px-2 py-1 bg-violet-600 text-white text-[10px] sm:text-xs font-bold rounded-lg hover:bg-violet-700 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                {generating ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                    <Sparkles className="w-3 h-3" />
+                )}
+                <span className="hidden sm:inline">{generating ? 'Generating...' : 'Generate Sample Paper'}</span>
+            </button>
+        )}
         {onUploadRequest && (
             <button
                 onClick={() => onUploadRequest({ filters, activeTab })}
