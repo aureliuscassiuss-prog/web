@@ -12,7 +12,8 @@ import {
     Sparkles,
     GraduationCap,
     FileText,
-    Calculator
+    Calculator,
+    Bookmark
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -57,6 +58,7 @@ export default function Sidebar({ onMobileMenuClose, isDark, toggleTheme, spotli
             label: "Account",
             items: [
                 { path: '/uploads', label: 'My Uploads', icon: Upload },
+                { path: '/saved-resources', label: 'Saved Resources', icon: Bookmark },
                 { path: '/profile', label: 'Profile Settings', icon: User },
                 ...(hasAdminRole ? [{ path: '/admin', label: getAdminLabel(), icon: ShieldCheck }] : [])
             ]

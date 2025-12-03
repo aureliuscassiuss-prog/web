@@ -28,6 +28,7 @@ import ContactPage from './components/ContactPage'
 import DocsPage from './components/DocsPage'
 import PrivacyPage from './components/PrivacyPage'
 import TermsPage from './components/TermsPage'
+import SavedResources from './components/SavedResources'
 
 
 function Layout({
@@ -346,6 +347,16 @@ function AppContent() {
             </ProtectedRoute>
           } />
 
+
+          {/* Saved Resources Route (Protected) */}
+          <Route path="/saved-resources" element={
+            <ProtectedRoute onAuthRequired={() => {
+              setAuthModalInitialView('login')
+              setIsAuthModalOpen(true)
+            }}>
+              <SavedResources />
+            </ProtectedRoute>
+          } />
 
           {/* Profile Route (Protected) */}
           <Route path="/profile" element={
