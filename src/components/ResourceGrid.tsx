@@ -445,16 +445,18 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                             </h2>
                         
                         <div className="flex items-center gap-2">
-                            {activeTab === 'pyqs' && (
+                                                        {activeTab === 'pyqs' && (
                                 <button
                                     onClick={handleGeneratePaper}
                                     disabled={generating}
-                                    className="flex items-center gap-1 px-2 py-1 bg-violet-600 text-white text-[10px] sm:text-xs font-bold rounded-lg hover:bg-violet-700 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="group flex items-center gap-2 px-3 py-1.5 bg-zinc-900 dark:bg-white text-white dark:text-black text-xs font-medium rounded-lg hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed border border-zinc-800 dark:border-zinc-200 shadow-sm"
                                 >
                                     {generating ? (
-                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin text-green-500" />
                                     ) : (
-                                        <Sparkles className="w-3 h-3" />
+                                        <div className="flex items-center justify-center w-4 h-4 rounded-full bg-green-500/10 text-green-500 text-[9px] font-bold ring-1 ring-green-500/50 group-hover:bg-green-500 group-hover:text-white transition-colors">
+                                            {user?.role === 'admin' ? '∞' : attemptsLeft}
+                                        </div>
                                     )}
                                     <span className="hidden sm:inline">{generating ? 'Generating...' : 'Generate Sample Paper'}</span>
                                 </button>
