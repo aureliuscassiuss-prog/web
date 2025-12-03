@@ -261,11 +261,11 @@ const GridCard = ({ resource, onUnsave }: { resource: any, onUnsave?: () => void
                     onClick={handleDownload}
                     className="block min-w-0"
                 >
-                    <h3 className="text-sm font-bold text-gray-900 dark:text-white leading-tight truncate pr-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-white leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
                         {resource.title}
                     </h3>
                     <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
-                        {resource.description || 'View file details and preview.'}
+                        View file details &rarr;
                     </p>
                 </a>
             </div>
@@ -312,7 +312,7 @@ const GridCard = ({ resource, onUnsave }: { resource: any, onUnsave?: () => void
                                 </span>
                             </div>
                         )}
-                        <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 max-w-[60px] truncate hidden sm:block">
+                        <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 max-w-[60px] truncate block">
                             {resource.uploader || 'Anon'}
                         </span>
                     </div>
