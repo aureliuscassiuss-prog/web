@@ -122,7 +122,11 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
             try {
                 if (view === 'resources' && activeTab !== 'ai') {
                     let typeParam = activeTab === 'notes' ? 'notes' : activeTab === 'pyqs' ? 'pyq' : 'formula-sheet'
-                    const res = await fetch(`/api/resources?${buildQueryParams(typeParam)}`)
+                    const headers: any = {}
+                    if (token) {
+                        headers['Authorization'] = `Bearer ${token}`
+                    }
+                    const res = await fetch(`/api/resources?${buildQueryParams(typeParam)}`, { headers })
                     const data = await res.json()
                     if (isMounted) setResources(data.resources || [])
                 }
