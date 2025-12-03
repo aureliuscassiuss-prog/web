@@ -340,14 +340,30 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
 
             const data = await res.json()
 
-            let paperData
+                        let paperData
+            const answer = data.answer
+            
             try {
-                paperData = typeof data.answer === 'string' ? JSON.parse(data.answer) : data.answer
+                // 1. Try direct parse
+                paperData = typeof answer === 'string' ? JSON.parse(answer) : answer
             } catch (e) {
-                const match = data.answer.match(/```json\n([\s\S]*)\n```/)
-                if (match) {
-                    paperData = JSON.parse(match[1])
-                } else {
+                try {
+                    // 2. Try extracting from markdown code block
+                    const codeBlockMatch = answer.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
+                    if (codeBlockMatch) {
+                        paperData = JSON.parse(codeBlockMatch[1])
+                    } else {
+                        // 3. Try finding first { and last }
+                        const start = answer.indexOf('{')
+                        const end = answer.lastIndexOf('}')
+                        if (start !== -1 && end !== -1) {
+                            paperData = JSON.parse(answer.substring(start, end + 1))
+                        } else {
+                            throw new Error('No JSON found')
+                        }
+                    }
+                } catch (e2) {
+                    console.error('Parsing error:', e2)
                     throw new Error('Failed to parse AI response')
                 }
             }
