@@ -215,10 +215,10 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                             {onUploadRequest && (
                                 <button
                                     onClick={() => onUploadRequest({ filters, activeTab })}
-                                    className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg dark:bg-blue-900/20 dark:text-blue-400 transition-colors"
-                                    title="Upload Resource"
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-black dark:bg-white text-white dark:text-black text-xs font-bold rounded-lg hover:opacity-80 transition-opacity"
                                 >
-                                    <UploadIcon className="w-4 h-4" />
+                                    <UploadIcon className="w-3.5 h-3.5" />
+                                    Upload Resource
                                 </button>
                             )}
                         </div>

@@ -7,10 +7,14 @@ interface UploadModalProps {
     onClose: () => void
     onSuccess: (title: string) => void
     initialData?: {
-        year?: number
-        branch?: string
-        subject?: string
-        resourceType?: string
+        filters?: {
+            year?: number
+            branch?: string
+            subject?: string
+            course?: string
+            unit?: string
+        }
+        activeTab?: string
     }
 }
 
@@ -37,6 +41,45 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
             fetchStructure()
         }
     }, [isOpen])
+
+    // Pre-fill form data when structure is loaded and initialData is available
+    useEffect(() => {
+        if (isOpen && structure && initialData?.filters) {
+            const { filters, activeTab } = initialData
+
+            // Map Resource Type
+            let type = ''
+            if (activeTab === 'notes') type = 'notes'
+            else if (activeTab === 'pyqs') type = 'pyq'
+            else if (activeTab === 'formula') type = 'formula-sheet'
+
+            // Find Year ID
+            // The filter has year as number (e.g. 1), but we need the ID (e.g. "y1")
+            // We need to find the program first
+            let yearId = ''
+            if (filters.course) { // filters.course is the Program ID
+                const program = structure.programs?.find((p: any) => p.id === filters.course)
+                if (program && filters.year) {
+                    // Try to find year by checking if name contains the number or if id matches
+                    const year = program.years?.find((y: any) =>
+                        y.id === filters.year?.toString() ||
+                        y.name.includes(filters.year?.toString())
+                    )
+                    if (year) yearId = year.id
+                }
+            }
+
+            setFormData(prev => ({
+                ...prev,
+                program: filters.course || '',
+                course: filters.branch || '',
+                subject: filters.subject || '',
+                unit: filters.unit || '',
+                year: yearId,
+                resourceType: type
+            }))
+        }
+    }, [isOpen, structure, initialData])
 
     const fetchStructure = async () => {
         setIsLoadingStructure(true)
