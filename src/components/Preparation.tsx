@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
     BookOpen,
@@ -11,6 +11,7 @@ import {
     Check,
     Library
 } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
 
 // --- Types ---
 interface Program {
@@ -54,6 +55,28 @@ export default function Preparation() {
     // UI State
     const [openDropdown, setOpenDropdown] = useState<'program' | 'year' | 'course' | null>(null)
     const [expandedSubject, setExpandedSubject] = useState<string | null>(null)
+
+    // --- Auto-select based on User Profile ---
+    const { user } = useAuth()
+    const autoSelectedRef = useRef(false)
+
+    useEffect(() => {
+        if (!autoSelectedRef.current && user && structure.programs.length > 0 && !selProgramId) {
+            const program = structure.programs.find(p => p.name === user.course)
+            if (program) {
+                const year = program.years.find(y => y.name.includes(user.year?.toString() || ''))
+                if (year) {
+                    const course = year.courses.find(c => c.name === user.branch)
+                    if (course) {
+                        setSelProgramId(program.id)
+                        setSelYearId(year.id)
+                        setSelCourseId(course.id)
+                        autoSelectedRef.current = true
+                    }
+                }
+            }
+        }
+    }, [user, structure, selProgramId])
 
     // Click outside handler for dropdowns
     useEffect(() => {

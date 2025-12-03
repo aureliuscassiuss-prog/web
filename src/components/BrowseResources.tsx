@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
     ChevronLeft, BookOpen, CheckCircle2, GraduationCap,
     Search, ArrowRight, Loader2, Layers, Library,
     FilterX, ChevronRight, Hash
 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import ResourceGrid from './ResourceGrid';
 
 interface BrowseResourcesProps {
@@ -11,12 +12,54 @@ interface BrowseResourcesProps {
 }
 
 export default function BrowseResources({ onUploadRequest }: BrowseResourcesProps) {
-    // --- State ---
-    const [step, setStep] = useState(1);
-    const [selections, setSelections] = useState<{ program?: string; year?: string; course?: string; subject?: string; unit?: string }>({});
+    // --- State with localStorage persistence ---
+    const [step, setStep] = useState(() => {
+        const saved = localStorage.getItem('browseResourcesStep');
+        return saved ? parseInt(saved, 10) : 1;
+    });
+
+    const [selections, setSelections] = useState<{ program?: string; year?: string; course?: string; subject?: string; unit?: string }>(() => {
+        const saved = localStorage.getItem('browseResourcesSelections');
+        return saved ? JSON.parse(saved) : {};
+    });
+
     const [loadingText, setLoadingText] = useState('Initializing...');
     const [structure, setStructure] = useState<any>(null);
     const [isLoadingStructure, setIsLoadingStructure] = useState(true);
+
+    // --- Auto-select based on User Profile ---
+    const { user } = useAuth();
+    const autoSelectedRef = useRef(false);
+
+    useEffect(() => {
+        if (!autoSelectedRef.current && user && structure && !selections.program) {
+            const program = structure.programs.find((p: any) => p.name === user.course);
+            if (program) {
+                const year = program.years.find((y: any) => y.name.includes(user.year?.toString() || ''));
+                if (year) {
+                    const course = year.courses.find((c: any) => c.name === user.branch);
+                    if (course) {
+                        setSelections({
+                            program: program.id,
+                            year: year.id,
+                            course: course.id
+                        });
+                        setStep(4); // Jump to Subjects
+                        autoSelectedRef.current = true;
+                    }
+                }
+            }
+        }
+    }, [user, structure]);
+
+    // --- Persist state to localStorage ---
+    useEffect(() => {
+        localStorage.setItem('browseResourcesStep', step.toString());
+    }, [step]);
+
+    useEffect(() => {
+        localStorage.setItem('browseResourcesSelections', JSON.stringify(selections));
+    }, [selections]);
 
     // --- Data Fetching ---
     useEffect(() => {
@@ -97,6 +140,8 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
     const handleReset = () => {
         setSelections({});
         setStep(1);
+        localStorage.removeItem('browseResourcesStep');
+        localStorage.removeItem('browseResourcesSelections');
     };
 
     // --- Render Helpers ---
