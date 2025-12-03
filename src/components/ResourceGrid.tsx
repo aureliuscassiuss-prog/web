@@ -365,20 +365,6 @@ const EmptyState = ({ icon: Icon, title, description, onUploadRequest, filters, 
         </div>
         <p className="text-sm font-medium text-gray-900 dark:text-white">{title}</p>
         <p className="text-xs text-gray-500 mb-4">{description}</p>
-        {activeTab === 'pyqs' && onGeneratePaper && (
-        <button
-            onClick={onGeneratePaper}
-            disabled={isGenerating}
-            className="mt-3 group flex items-center gap-2 px-3 py-1.5 bg-zinc-900 dark:bg-white text-white dark:text-black text-xs font-medium rounded-lg hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed border border-zinc-800 dark:border-zinc-200 shadow-sm"
-        >
-            {isGenerating ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-green-500" />
-            ) : (
-                <Sparkles className="w-3.5 h-3.5 text-green-500" />
-            )}
-            <span>{isGenerating ? 'Generating...' : 'Generate Sample Paper'}</span>
-        </button>
-    )}
         {onUploadRequest && (
             <button
                 onClick={() => onUploadRequest({ filters, activeTab })}
