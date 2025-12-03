@@ -2,13 +2,12 @@ import {
     Upload as UploadIcon, FileText, User,
     Trophy, Sparkles, FileQuestion, ArrowUp,
     Copy, ThumbsUp, ThumbsDown, Trash2, Bot, Download,
-    Check, ChevronRight
+    Check, ChevronRight, Bookmark, Flag, AlertTriangle
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import ReactMarkdown from 'react-markdown'
 import LeaderboardView from './LeaderboardView'
-import { SkeletonList } from './Skeleton'
 
 interface ResourceGridProps {
     view: 'resources' | 'leaderboard' | 'papers' | 'uploads'
@@ -190,7 +189,7 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
     return (
         <div className="animate-fade-in w-full max-w-4xl mx-auto">
 
-            {/* FIXED LAYOUT TABS (No Scrolling) */}
+            {/* FIXED LAYOUT TABS */}
             <div className="mb-6 bg-gray-100/50 dark:bg-gray-800/50 p-1.5 rounded-xl border border-gray-200 dark:border-gray-800">
                 <div className="grid grid-cols-4 gap-1">
                     <TabButton active={activeTab === 'notes'} onClick={() => setActiveTab('notes')} label="Notes" icon={<FileText className="w-4 h-4" />} />
@@ -209,7 +208,6 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                             <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                                 {activeTab === 'notes' ? 'Lecture Notes' : activeTab === 'pyqs' ? 'Previous Papers' : 'Formula Sheets'}
                             </h2>
-                            {/* Upload Button Next to Heading */}
                             {onUploadRequest && (
                                 <button
                                     onClick={() => onUploadRequest({ filters, activeTab })}
@@ -237,15 +235,16 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                             activeTab={activeTab}
                         />
                     ) : (
-                        <div className="grid grid-cols-1 gap-3">
+                        // Grid Layout: 1 column mobile, 2 columns desktop
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {resources.map((resource) => (
-                                <FileListCard key={resource._id} resource={resource} />
+                                <GridCard key={resource._id} resource={resource} />
                             ))}
                         </div>
                     )}
                 </div>
             ) : (
-                /* IMPROVED AI TUTOR INTERFACE */
+                /* AI TUTOR INTERFACE */
                 <div className="flex flex-col h-[600px] border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden bg-gray-50 dark:bg-gray-900/50 relative shadow-sm">
                     {/* Chat Header */}
                     <div className="absolute top-0 inset-x-0 p-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 flex justify-between items-center z-10">
@@ -292,7 +291,7 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                                     </div>
                                 </div>
 
-                                {/* AI Action Buttons (Copy, Like, Dislike) */}
+                                {/* AI Action Buttons */}
                                 {message.role === 'assistant' && (
                                     <div className="flex items-center gap-1 mt-1 ml-9">
                                         <button
@@ -351,9 +350,8 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
     )
 }
 
-// --- REFACTORED SUB-COMPONENTS ---
+// --- SUB-COMPONENTS ---
 
-// 1. Fixed Layout Tab Button
 const TabButton = ({ active, onClick, label, icon, isSpecial }: any) => (
     <button
         onClick={onClick}
@@ -373,78 +371,218 @@ const TabButton = ({ active, onClick, label, icon, isSpecial }: any) => (
     </button>
 )
 
-// 2. Mobile-Friendly Resource Card
-const FileListCard = ({ resource, onDelete }: { resource: any, onDelete?: (id: string) => void }) => (
-    <div className="group block bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-3 hover:border-blue-300 dark:hover:border-blue-700 transition-all hover:shadow-md active:scale-[0.99]">
-        <div className="flex items-center gap-3">
-            {/* File Icon Box */}
-            <a href={resource.driveLink} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 w-10 h-10 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center justify-center border border-gray-100 dark:border-gray-700 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 transition-colors">
-                <FileText className="w-5 h-5 text-gray-400 group-hover:text-blue-500" />
-            </a>
+// --- UPDATED DESIGN: Grid Card ---
+const GridCard = ({ resource, onDelete }: { resource: any, onDelete?: (id: string) => void }) => {
+    const { token } = useAuth();
+    // Initialize from resource data
+    const [isSaved, setIsSaved] = useState(resource.userSaved || false);
+    const [isReported, setIsReported] = useState(resource.userFlagged || false);
+    const [userVote, setUserVote] = useState<'like' | 'dislike' | null>(
+        resource.userLiked ? 'like' : resource.userDisliked ? 'dislike' : null
+    );
+    const [counts, setCounts] = useState({
+        likes: resource.likes || 0,
+        dislikes: resource.dislikes || 0,
+        downloads: resource.downloads || 0,
+        flags: resource.flags || 0
+    });
 
-            {/* Info */}
-            <a href={resource.driveLink} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                    {resource.title}
-                </h3>
-                <div className="flex items-center gap-2 mt-1">
-                    {/* Uploader Info */}
-                    <div className="flex items-center gap-1.5 pr-2 border-r border-gray-200 dark:border-gray-700">
+    const handleInteraction = async (action: string, value: boolean) => {
+        if (!token) {
+            alert('Please sign in to interact with resources');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/resource-interactions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    resourceId: resource._id,
+                    action,
+                    value
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setCounts({
+                    likes: data.resource.likes,
+                    dislikes: data.resource.dislikes,
+                    downloads: data.resource.downloads,
+                    flags: data.resource.flags
+                });
+
+                if (action === 'like') {
+                    setUserVote(data.resource.userLiked ? 'like' : null);
+                } else if (action === 'dislike') {
+                    setUserVote(data.resource.userDisliked ? 'dislike' : null);
+                } else if (action === 'save') {
+                    setIsSaved(data.resource.userSaved);
+                } else if (action === 'flag') {
+                    setIsReported(data.resource.userFlagged);
+                }
+            }
+        } catch (error) {
+            console.error('Interaction failed:', error);
+        }
+    };
+
+    const handleLike = () => {
+        const newValue = userVote !== 'like';
+        handleInteraction('like', newValue);
+    };
+
+    const handleDislike = () => {
+        const newValue = userVote !== 'dislike';
+        handleInteraction('dislike', newValue);
+    };
+
+    const handleSave = () => {
+        handleInteraction('save', !isSaved);
+    };
+
+    const handleFlag = () => {
+        if (!isReported) {
+            if (confirm('Are you sure you want to flag this resource as risky? This action cannot be undone.')) {
+                handleInteraction('flag', true);
+            }
+        }
+    };
+
+    const handleDownload = () => {
+        handleInteraction('download', true);
+    };
+
+    return (
+        <div className="group flex flex-col h-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-200">
+
+            {/* HEADER: Subject Name & Top Actions */}
+            <div className="flex items-start justify-between mb-3">
+                <div className="flex-1 mr-2">
+                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-300">
+                        {resource.subject || 'General Resource'}
+                    </span>
+                </div>
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={(e) => { e.preventDefault(); handleSave(); }}
+                        className={`p-1.5 rounded-lg transition-colors ${isSaved ? 'text-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-400 hover:text-blue-500 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                        title={isSaved ? "Saved" : "Save Resource"}
+                    >
+                        <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
+                    </button>
+                    <button
+                        onClick={(e) => { e.preventDefault(); handleFlag(); }}
+                        className={`p-1.5 rounded-lg transition-colors ${isReported ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'text-gray-400 hover:text-red-500 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                        title="Flag as Risky"
+                    >
+                        <Flag className={`w-4 h-4 ${isReported ? 'fill-current' : ''}`} />
+                    </button>
+                    {onDelete && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onDelete(resource._id); }}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* BODY: Title & Icon */}
+            <div className="flex items-start gap-3 mb-4 flex-1">
+                <a
+                    href={resource.driveLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={handleDownload}
+                    className="flex-shrink-0 mt-1 w-10 h-10 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center justify-center border border-gray-100 dark:border-gray-700 text-blue-500 group-hover:scale-105 transition-transform"
+                >
+                    <FileText className="w-5 h-5" />
+                </a>
+                <a
+                    href={resource.driveLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={handleDownload}
+                    className="block"
+                >
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-white leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        {resource.title}
+                    </h3>
+                    <p className="text-[10px] text-gray-400 mt-1">
+                        View file details &rarr;
+                    </p>
+                </a>
+            </div>
+
+            {/* ACTION BAR: Likes/Dislikes & Download */}
+            <div className="pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between mt-auto">
+
+                {/* Left: Voting */}
+                <div className="flex items-center gap-1 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-1">
+                    <button
+                        onClick={handleLike}
+                        className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors ${userVote === 'like' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+                    >
+                        <ThumbsUp className="w-3 h-3" />
+                        <span>{counts.likes}</span>
+                    </button>
+                    <div className="w-px h-3 bg-gray-200 dark:bg-gray-700"></div>
+                    <button
+                        onClick={handleDislike}
+                        className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors ${userVote === 'dislike' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+                    >
+                        <ThumbsDown className="w-3 h-3" />
+                        <span>{counts.dislikes}</span>
+                    </button>
+                    {counts.flags > 0 && (
+                        <>
+                            <div className="w-px h-3 bg-gray-200 dark:bg-gray-700"></div>
+                            <span className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-orange-600">
+                                <Flag className="w-3 h-3" />
+                                {counts.flags}
+                            </span>
+                        </>
+                    )}
+                </div>
+
+                {/* Right: Uploader & Download */}
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5">
                         {resource.uploaderAvatar ? (
-                            <img src={resource.uploaderAvatar} alt={resource.uploader} className="w-4 h-4 rounded-full object-cover" />
+                            <img src={resource.uploaderAvatar} alt="User" className="w-4 h-4 rounded-full object-cover" />
                         ) : (
                             <div className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                                <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400">
+                                <span className="text-[8px] font-bold text-gray-500">
                                     {(resource.uploader || 'A').charAt(0).toUpperCase()}
                                 </span>
                             </div>
                         )}
-                        <span className="text-[10px] text-gray-500 font-medium truncate max-w-[80px]">
-                            {resource.uploader || 'Anonymous'}
+                        <span className="text-[10px] text-gray-500 dark:text-gray-400 max-w-[60px] truncate">
+                            {resource.uploader || 'Anon'}
                         </span>
                     </div>
 
-                    <span className="text-[10px] text-gray-500 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">
-                        {resource.subject || 'General'}
-                    </span>
-                    {resource.unit && (
-                        <span className="text-[10px] text-gray-500 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">
-                            {resource.unit}
-                        </span>
-                    )}
-                    <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
-                        <Download className="w-3 h-3" /> {resource.downloads || 0}
-                    </span>
-                    {resource.status === 'pending' && (
-                        <span className="text-[10px] text-yellow-600 bg-yellow-100 dark:bg-yellow-900/30 px-1.5 py-0.5 rounded">
-                            Pending
-                        </span>
-                    )}
-                </div>
-            </a>
-
-            {/* Action Buttons */}
-            <div className="flex items-center gap-2">
-                {onDelete && (
-                    <button
-                        onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            onDelete(resource._id)
-                        }}
-                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                        title="Delete"
+                    <a
+                        href={resource.driveLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={handleDownload}
+                        className="flex items-center gap-1 text-[10px] font-medium text-gray-500 bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded-md hover:text-blue-600 transition-colors"
                     >
-                        <Trash2 className="w-4 h-4" />
-                    </button>
-                )}
-                <a href={resource.driveLink} target="_blank" rel="noopener noreferrer" className="text-gray-300 group-hover:text-blue-500 transition-colors">
-                    <ChevronRight className="w-5 h-5" />
-                </a>
+                        <Download className="w-3 h-3" />
+                        {counts.downloads}
+                    </a>
+                </div>
             </div>
         </div>
-    </div>
-)
+    );
+}
 
 const UploadsView = ({ uploads, onUploadRequest, onDelete }: any) => (
     <div className="animate-fade-in">
@@ -462,17 +600,19 @@ const UploadsView = ({ uploads, onUploadRequest, onDelete }: any) => (
             </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {uploads.length === 0 ? (
-                <EmptyState
-                    icon={UploadIcon}
-                    title="No uploads found"
-                    description="You haven't uploaded any resources yet."
-                    onUploadRequest={onUploadRequest}
-                />
+                <div className="col-span-full">
+                    <EmptyState
+                        icon={UploadIcon}
+                        title="No uploads found"
+                        description="You haven't uploaded any resources yet."
+                        onUploadRequest={onUploadRequest}
+                    />
+                </div>
             ) : (
                 uploads.map((upload: any) => (
-                    <FileListCard key={upload._id} resource={upload} onDelete={onDelete} />
+                    <GridCard key={upload._id} resource={upload} onDelete={onDelete} />
                 ))
             )}
         </div>
