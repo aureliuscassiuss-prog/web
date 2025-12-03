@@ -340,53 +340,57 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
 
             const data = await res.json()
 
-                                    let paperData
+                                                let paperData
             const answer = data.answer
             
             const cleanAndParse = (str: string) => {
-                // Remove trailing commas which are valid in JS but not JSON
-                const cleaned = str.replace(/,(\s*[}\]])/g, '$1')
-                return JSON.parse(cleaned)
+                if (typeof str !== 'string') return str;
+                
+                let cleaned = str;
+                
+                // 1. Extract from Markdown or find braces
+                const codeBlockMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+                if (codeBlockMatch) {
+                    cleaned = codeBlockMatch[1];
+                } else {
+                    const start = cleaned.indexOf('{');
+                    const end = cleaned.lastIndexOf('}');
+                    if (start !== -1 && end !== -1) {
+                        cleaned = cleaned.substring(start, end + 1);
+                    }
+                }
+
+                // 2. Fix trailing commas (valid in JS, invalid in JSON)
+                cleaned = cleaned.replace(/,(\s*[}\]])/g, '$1');
+
+                // 3. Fix missing commas between array items (common AI error)
+                // Matches: "string" "string" OR } { OR ] [ etc.
+                // We insert a comma if we see a closing token followed by whitespace/newline and then an opening token
+                cleaned = cleaned.replace(/(["\]}])\s*(\r?\n|\r)\s*(["{\[])/g, '$1,$2$3');
+                cleaned = cleaned.replace(/(["\]}])\s+(["{\[])/g, '$1, $2');
+
+                return JSON.parse(cleaned);
             }
 
             try {
-                // 1. Try direct parse
-                paperData = typeof answer === 'string' ? cleanAndParse(answer) : answer
+                paperData = typeof answer === 'string' ? cleanAndParse(answer) : answer;
             } catch (e) {
+                console.error('Strict parsing failed, trying loose parsing:', e);
                 try {
-                    // 2. Try extracting from markdown code block
-                    const codeBlockMatch = answer.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
-                    if (codeBlockMatch) {
-                        paperData = cleanAndParse(codeBlockMatch[1])
+                    // Fallback: Use Function constructor for loose JSON (handles missing quotes on keys, single quotes, etc.)
+                    // We re-extract to be safe
+                    let loose = answer;
+                    const start = loose.indexOf('{');
+                    const end = loose.lastIndexOf('}');
+                    if (start !== -1 && end !== -1) {
+                        loose = loose.substring(start, end + 1);
+                        paperData = new Function('return ' + loose)();
                     } else {
-                        // 3. Try finding first { and last }
-                        const start = answer.indexOf('{')
-                        const end = answer.lastIndexOf('}')
-                        if (start !== -1 && end !== -1) {
-                            paperData = cleanAndParse(answer.substring(start, end + 1))
-                        } else {
-                            throw new Error('No JSON found')
-                        }
+                        throw new Error('No JSON object found');
                     }
                 } catch (e2) {
-                    console.error('Parsing error:', e2)
-                    // Fallback: Try to use Function constructor for loose JSON (last resort)
-                    try {
-                         // Security note: This is risky but handles loose JSON like {a:1} (no quotes)
-                         // We only do this if standard parsing fails and we really need the data
-                         // We'll try to extract the object part first
-                         const start = answer.indexOf('{')
-                         const end = answer.lastIndexOf('}')
-                         if (start !== -1 && end !== -1) {
-                             const jsonStr = answer.substring(start, end + 1)
-                             paperData = new Function('return ' + jsonStr)()
-                         } else {
-                             throw e2
-                         }
-                    } catch (e3) {
-                        console.error('Final parsing failure:', e3)
-                        throw new Error('Failed to parse AI response')
-                    }
+                    console.error('Final parsing failure:', e2);
+                    throw new Error('Failed to parse AI response. Please try again.');
                 }
             }
 
