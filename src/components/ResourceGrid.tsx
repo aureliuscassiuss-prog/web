@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import ReactMarkdown from 'react-markdown'
 import LeaderboardView from './LeaderboardView'
 import { SkeletonList } from './Skeleton'
 
@@ -287,7 +288,7 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                                             ? 'bg-blue-600 text-white rounded-tr-none'
                                             : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-700 rounded-tl-none'
                                         }`}>
-                                        <p className="whitespace-pre-wrap">{message.content}</p>
+                                        {message.role === 'assistant' ? (<ReactMarkdown className="prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-pre:my-1 prose-pre:bg-gray-800 prose-pre:text-gray-100 prose-code:text-xs prose-strong:text-inherit">{message.content}</ReactMarkdown>) : (<p className="whitespace-pre-wrap">{message.content}</p>)}
                                     </div>
                                 </div>
 

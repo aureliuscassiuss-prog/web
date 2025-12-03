@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { MessageCircle, X, Send, Sparkles, RotateCcw, Bot } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import ReactMarkdown from 'react-markdown'
 
 interface Message {
     text: string
@@ -147,9 +148,7 @@ export default function AIAssistant() {
                                             : 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100 rounded-tl-none border border-gray-200 dark:border-gray-700'
                                         }
                                     `}
-                                >
-                                    {msg.text}
-                                </div>
+                                >                                    {msg.sender === 'bot' ? (                                        <ReactMarkdown className="prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-pre:my-1 prose-pre:bg-gray-800 prose-pre:text-gray-100 prose-code:text-xs prose-strong:text-inherit">                                            {msg.text}                                        </ReactMarkdown>                                    ) : (                                        msg.text                                    )}                                </div>
                             </div>
                         ))}
 

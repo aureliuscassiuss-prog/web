@@ -4,6 +4,7 @@ import {
     User, ThumbsUp, ThumbsDown, ArrowDown
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import ReactMarkdown from 'react-markdown'
 
 // --- Types ---
 interface Message {
