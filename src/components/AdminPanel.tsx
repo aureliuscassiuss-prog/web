@@ -301,9 +301,9 @@ export default function AdminPanel() {
                             />
                         )}
                         <div className="relative z-10 flex w-full sm:w-auto justify-around sm:justify-start gap-1">
-                        <TabButton active={activeTab === 'pending'} onClick={() => setActiveTab('pending')} icon={<Clock size={16} />} label="Approvals" count={pendingResources.length} />
-                        <TabButton active={activeTab === 'users'} onClick={() => setActiveTab('users')} icon={<User size={16} />} label="Users" />
-                        <TabButton active={activeTab === 'structure'} onClick={() => setActiveTab('structure')} icon={<Settings size={16} />} label="Structure" />
+                            <TabButton active={activeTab === 'pending'} onClick={() => setActiveTab('pending')} icon={<Clock size={16} />} label="Approvals" count={pendingResources.length} />
+                            <TabButton active={activeTab === 'users'} onClick={() => setActiveTab('users')} icon={<User size={16} />} label="Users" />
+                            <TabButton active={activeTab === 'structure'} onClick={() => setActiveTab('structure')} icon={<Settings size={16} />} label="Structure" />
                         </div>
                     </div>
                 </div>
@@ -326,7 +326,7 @@ export default function AdminPanel() {
                                     <StructureCard title="Units" step="05" items={units.map((u: any) => ({ id: u.name, name: u.name }))} value={newUnit} setValue={setNewUnit} onAdd={() => handleStructureAdd('unit', newUnit)} onRemove={(id: string) => handleStructureRemove('unit', id)} activeId={selectedUnitName} onSelect={setSelectedUnitName} disabled={!selectedSubjectName} parentName={selectedSubjectName} />
                                     <StructureCard title="Videos" step="06" items={videos.map((v: any) => ({ id: v.id, name: v.title }))} value={newVideoTitle} setValue={setNewVideoTitle} extraInput={{ value: newVideoUrl, setValue: setNewVideoUrl, placeholder: "YouTube URL..." }} onAdd={() => handleStructureAdd('video', newVideoTitle)} onRemove={(id: string) => handleStructureRemove('video', id)} disabled={!selectedUnitName} parentName={selectedUnitName} isLast />
                                 </div>
-                            )</motion.div>}
+                            </motion.div>}
                         </>
                     )}
                 </div>
