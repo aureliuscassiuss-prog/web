@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useMemo, useRef } from 'react';
 import {
-    ChevronLeft, BookOpen, CheckCircle2, GraduationCap,
-    Search, ArrowRight, Loader2, Layers, Library,
+    ChevronLeft, BookOpen, GraduationCap,
+    ArrowRight, Loader2, Layers, Library,
     FilterX, ChevronRight, Hash
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -50,7 +51,7 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
                 }
             }
         }
-    }, [user, structure]);
+    }, [user, structure, selections.program]);
 
     // --- Persist state to localStorage ---
     useEffect(() => {
@@ -100,7 +101,7 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
     }, [step]);
 
     // --- Memoized Data Helpers ---
-    const programs = structure?.programs || [];
+    const programs = useMemo(() => structure?.programs || [], [structure]);
 
     const currentProgram = useMemo(() => programs.find((p: any) => p.id === selections.program), [selections.program, programs]);
     const years = useMemo(() => currentProgram?.years || [], [currentProgram]);
@@ -305,10 +306,10 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
                                         {selections.subject}
                                     </h2>
                                     <div className="flex flex-wrap gap-2">
-                                        <BreadcrumbBadge label={currentProgram?.name} />
-                                        <BreadcrumbBadge label={currentYear?.name} />
-                                        <BreadcrumbBadge label={currentCourse?.name} />
-                                        {selections.unit && <BreadcrumbBadge label={selections.unit} active />}
+                                        <BreadcrumbBadge label={currentProgram?.name} onClick={() => setStep(1)} />
+                                        <BreadcrumbBadge label={currentYear?.name} onClick={() => setStep(2)} />
+                                        <BreadcrumbBadge label={currentCourse?.name} onClick={() => setStep(3)} />
+                                        {selections.unit && <BreadcrumbBadge label={selections.unit} active onClick={() => setStep(5)} />}
                                     </div>
                                 </div>
                                 <button
@@ -413,16 +414,22 @@ function ListItem({ onClick, title, icon }: any) {
     )
 }
 
-function BreadcrumbBadge({ label, active }: { label?: string, active?: boolean }) {
+function BreadcrumbBadge({ label, active, onClick }: { label?: string, active?: boolean, onClick?: () => void }) {
     if (!label) return null;
+
+    const Component = onClick ? 'button' : 'span';
+
     return (
-        <span className={`
-            px-2.5 py-1 rounded-md text-xs font-medium border
+        <Component
+            onClick={onClick}
+            className={`
+            px-2.5 py-1 rounded-md text-xs font-medium border transition-all
             ${active
-                ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white'
-                : 'bg-white text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700'}
+                    ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white'
+                    : 'bg-white text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700'}
+            ${onClick ? 'hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white cursor-pointer' : ''}
         `}>
             {label}
-        </span>
+        </Component>
     )
 }
