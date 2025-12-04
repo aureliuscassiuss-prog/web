@@ -473,7 +473,7 @@ function PendingView({ resources, processingId, onAction }: any) {
                                             <NeutralAvatar className="h-full w-full" />
                                         </div>
                                         <div>
-                                            <div className="text-xs font-semibold text-gray-900 dark:text-white">{resource.uploaderName}</div>
+                                            <div className="text-sm font-bold text-gray-900 dark:text-white">{resource.uploaderName || 'Unknown User'}</div>
                                             <div className="text-[10px] text-gray-500 dark:text-gray-400">
                                                 {new Date(resource.createdAt).toLocaleDateString()} • {new Date(resource.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </div>
@@ -499,7 +499,7 @@ function PendingView({ resources, processingId, onAction }: any) {
                                             </div>
                                         )}
                                         <div className="text-xs text-gray-700 dark:text-gray-300">
-                                            <span className="font-semibold">Type:</span> {resource.type}
+                                            <span className="font-semibold">Type:</span> {resource.type || 'Not specified'}
                                         </div>
                                         {resource.description && (
                                             <div className="text-xs text-gray-700 dark:text-gray-300">

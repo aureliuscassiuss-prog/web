@@ -116,11 +116,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 async function handleGetPending(res: VercelResponse) {
     const db = await getDb();
 
-    // Fetch pending resources
-    const pendingResources = await db.collection('resources')
-        .find({ status: 'pending' })
-        .sort({ createdAt: -1 })
-        .toArray();
+    // Fetch pending resources and populate uploader information
+    const pendingResources = await db.collection('resources').aggregate([
+        {
+            $match: { status: 'pending' }
+        },
+        {
+            $lookup: {
+                from: 'users',
+                localField: 'uploaderId',
+                foreignField: '_id',
+                as: 'uploaderInfo'
+            }
+        },
+        {
+            $unwind: {
+                path: '$uploaderInfo',
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        {
+            $addFields: {
+                uploaderName: { $ifNull: ['$uploaderInfo.name', 'Unknown User'] },
+                uploaderAvatar: { $ifNull: ['$uploaderInfo.avatar', null] }
+            }
+        },
+        {
+            $project: {
+                uploaderInfo: 0
+            }
+        },
+        {
+            $sort: { createdAt: -1 }
+        }
+    ]).toArray();
 
     return res.status(200).json({ resources: pendingResources });
 }
