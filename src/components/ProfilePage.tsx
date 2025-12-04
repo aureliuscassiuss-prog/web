@@ -39,7 +39,7 @@ const UnifiedField = ({
             <div className={`
                 relative w-full min-h-[44px] rounded-lg transition-all duration-200 overflow-hidden
                 ${isEditing
-                    ? "bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 shadow-sm"
+                    ? "bg-white dark:bg-zinc-900 border border-gray-300 dark:border-zinc-700 shadow-sm focus-within:ring-4 focus-within:ring-blue-500/10 focus-within:border-blue-500"
                     : "bg-transparent border border-transparent"}
             `}>
                 {children}
@@ -205,6 +205,13 @@ export default function ProfilePage() {
         setIsSaving(true);
         setError(null);
         try {
+            // Validate phone number
+            if (formData.phone && formData.phone.length !== 10) {
+                setError('Phone number must be exactly 10 digits');
+                setIsSaving(false);
+                return;
+            }
+
             // Create FormData for file upload
             const formDataToSend = new FormData();
 
