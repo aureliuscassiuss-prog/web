@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import {
     Check, X, Clock, FileText, AlertCircle, Shield, Calendar,
     User, Loader2, Plus, Trash2, Settings, Layers, BookOpen,
@@ -26,6 +27,7 @@ interface UserData {
     name: string
     email: string
     role: string
+    avatar?: string
     isBanned?: boolean
     isRestricted?: boolean
     isTrusted?: boolean
@@ -435,70 +437,204 @@ function PendingView({ resources, processingId, onAction }: any) {
 
 function UsersView({ users, processingId, onAction }: any) {
     const [selectedRole, setSelectedRole] = useState<{ [key: string]: string }>({})
+    const [expandedUserId, setExpandedUserId] = useState<string | null>(null)
+
+    const NeutralAvatar = ({ className }: { className?: string }) => (
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+            <rect width="24" height="24" className="fill-gray-100 dark:fill-gray-800" />
+            <circle cx="12" cy="8" r="4" className="fill-gray-300 dark:fill-gray-600" />
+            <path d="M4 20C4 16 8 15 12 15C16 15 20 16 20 20" strokeWidth="0" className="fill-gray-300 dark:fill-gray-600" />
+        </svg>
+    )
 
     return (
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-            <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                    <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-500 font-medium border-b border-gray-200 dark:border-gray-800">
-                        <tr>
-                            <th className="px-6 py-4">User</th>
-                            <th className="px-6 py-4">Role</th>
-                            <th className="px-6 py-4">Status</th>
-                            <th className="px-6 py-4 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                        {users.map((user: UserData) => (
-                            <tr key={user._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                                <td className="px-6 py-4">
-                                    <div className="font-medium">{user.name}</div>
-                                    <div className="text-xs text-gray-500">{user.email}</div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <div className="flex flex-col gap-2">
-                                        <StatusBadge type={user.role === 'admin' ? 'admin' : 'success'} label={user.role} />
-                                        {user.role !== 'admin' && (
-                                            <div className="flex items-center gap-1">
-                                                <select className="text-xs bg-gray-50 dark:bg-gray-800 border-0 rounded px-2 py-1" value={selectedRole[user._id] || ''} onChange={(e) => setSelectedRole({ ...selectedRole, [user._id]: e.target.value })}>
-                                                    <option value="">Assign Role...</option>
+        <div className="space-y-2">
+            {users.map((user: UserData) => {
+                const isExpanded = expandedUserId === user._id
+                const isProcessing = processingId === user._id
+
+                return (
+                    <motion.div
+                        key={user._id}
+                        initial={false}
+                        className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden"
+                    >
+                        {/* Collapsed Card Header */}
+                        <button
+                            onClick={() => setExpandedUserId(isExpanded ? null : user._id)}
+                            className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left"
+                        >
+                            {/* Avatar */}
+                            <div className="h-9 w-9 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                                {user.avatar && user.avatar !== 'avatar1' ? (
+                                    <img src={user.avatar} className="h-full w-full object-cover" alt="" />
+                                ) : (
+                                    <NeutralAvatar className="h-full w-full" />
+                                )}
+                            </div>
+
+                            {/* User Info */}
+                            <div className="flex-1 min-w-0">
+                                <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">{user.name}</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</div>
+                            </div>
+
+                            {/* Role Badge */}
+                            <div className="flex-shrink-0">
+                                <StatusBadge type={user.role === 'admin' ? 'admin' : 'success'} label={user.role} />
+                            </div>
+
+                            {/* Expand Icon */}
+                            <motion.div
+                                animate={{ rotate: isExpanded ? 90 : 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="flex-shrink-0"
+                            >
+                                <ChevronRight className="text-gray-400" size={18} />
+                            </motion.div>
+                        </button>
+
+                        {/* Expanded Content */}
+                        <motion.div
+                            initial={false}
+                            animate={{
+                                height: isExpanded ? 'auto' : 0,
+                                opacity: isExpanded ? 1 : 0
+                            }}
+                            transition={{
+                                height: { duration: 0.3, ease: [0.4, 0.0, 0.2, 1] },
+                                opacity: { duration: 0.2, delay: isExpanded ? 0.1 : 0 }
+                            }}
+                            className="overflow-hidden"
+                        >
+                            <div className="px-3 pb-3 pt-1 border-t border-gray-100 dark:border-gray-800 space-y-3">
+                                {/* Status Section */}
+                                <div>
+                                    <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                                        Current Status
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {user.isBanned && <StatusBadge type="danger" label="Banned" />}
+                                        {(user.isRestricted || !user.canUpload) && <StatusBadge type="warning" label="Restricted" />}
+                                        {user.isTrusted && (
+                                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold border bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
+                                                Trusted User
+                                            </span>
+                                        )}
+                                        {!user.isBanned && !user.isRestricted && user.canUpload && !user.isTrusted && (
+                                            <span className="px-3 py-1 rounded-lg text-xs font-bold border bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800">
+                                                Active
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Actions Section - Only for non-admins */}
+                                {user.role !== 'admin' && (
+                                    <>
+                                        {/* Assign Role */}
+                                        <div>
+                                            <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                                                Assign Role
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <select
+                                                    className="flex-1 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md px-2 py-1.5 outline-none focus:border-blue-500 transition-colors"
+                                                    value={selectedRole[user._id] || ''}
+                                                    onChange={(e) => setSelectedRole({ ...selectedRole, [user._id]: e.target.value })}
+                                                    disabled={isProcessing}
+                                                >
+                                                    <option value="">Select a role...</option>
                                                     <option value="semi-admin">Semi Admin</option>
                                                     <option value="content-reviewer">Content Reviewer</option>
                                                     <option value="structure-manager">Structure Manager</option>
                                                     <option value="user">User</option>
                                                 </select>
-                                                <button onClick={() => { if (selectedRole[user._id]) { onAction(user._id, 'assign-role', selectedRole[user._id]); setSelectedRole({ ...selectedRole, [user._id]: '' }) } }} disabled={!selectedRole[user._id] || processingId === user._id} className="p-1 bg-black text-white rounded hover:bg-gray-800 disabled:opacity-50">
-                                                    <Check size={12} />
+                                                <button
+                                                    onClick={() => {
+                                                        if (selectedRole[user._id]) {
+                                                            onAction(user._id, 'assign-role', selectedRole[user._id])
+                                                            setSelectedRole({ ...selectedRole, [user._id]: '' })
+                                                        }
+                                                    }}
+                                                    disabled={!selectedRole[user._id] || isProcessing}
+                                                    className="px-2.5 py-1.5 bg-blue-600 text-white rounded-md text-xs font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1">
+                                                    <Check size={14} />
+                                                    <span className="hidden sm:inline">Apply</span>
                                                 </button>
                                             </div>
-                                        )}
+                                        </div>
+
+                                        {/* User Management Actions */}
+                                        <div>
+                                            <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                                                User Management
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-1.5">
+                                                {/* Ban/Unban */}
+                                                <button
+                                                    onClick={() => onAction(user._id, user.isBanned ? 'unban' : 'ban')}
+                                                    disabled={isProcessing}
+                                                    className={`px-2 py-1.5 rounded-md text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 ${user.isBanned
+                                                        ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'
+                                                        : 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'
+                                                        }`}>
+                                                    <Ban size={14} />
+                                                    <span className="hidden sm:inline">{user.isBanned ? 'Unban' : 'Ban'}</span>
+                                                </button>
+
+                                                {/* Restrict/Unrestrict */}
+                                                <button
+                                                    onClick={() => onAction(user._id, (user.isRestricted || !user.canUpload) ? 'unrestrict' : 'restrict')}
+                                                    disabled={isProcessing}
+                                                    className={`px-2 py-1.5 rounded-md text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 ${user.isRestricted || !user.canUpload
+                                                        ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'
+                                                        : 'bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800'
+                                                        }`}
+                                                >
+                                                    <AlertCircle size={14} />
+                                                    <span className="hidden sm:inline">{user.isRestricted || !user.canUpload ? 'Unrestrict' : 'Restrict'}</span>
+                                                </button>
+
+                                                {/* Trust/Untrust */}
+                                                <button
+                                                    onClick={() => onAction(user._id, user.isTrusted ? 'untrust' : 'trust')}
+                                                    disabled={isProcessing}
+                                                    className={`px-2 py-1.5 rounded-md text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 ${user.isTrusted
+                                                        ? 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700'
+                                                        : 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800'
+                                                        }`}
+                                                >
+                                                    <Shield size={14} />
+                                                    <span className="hidden sm:inline">{user.isTrusted ? 'Untrust' : 'Trust'}</span>
+                                                </button>
+
+                                                {/* Delete */}
+                                                <button
+                                                    onClick={() => onAction(user._id, 'delete')}
+                                                    disabled={isProcessing}
+                                                    className="px-2 py-1.5 rounded-md text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800"
+                                                >
+                                                    <Trash2 size={14} />
+                                                    <span className="hidden sm:inline">Delete</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* Processing Indicator */}
+                                {isProcessing && (
+                                    <div className="flex items-center justify-center gap-2 text-xs text-blue-600 dark:text-blue-400 py-1">
+                                        <Loader2 size={14} className="animate-spin" />
+                                        Processing...
                                     </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <div className="flex flex-col gap-1">
-                                        {user.isBanned && <StatusBadge type="danger" label="Banned" />}
-                                        {(user.isRestricted || !user.canUpload) && <StatusBadge type="warning" label="Restricted" />}
-                                        {user.isTrusted && <span className="px-2 py-0.5 rounded-md text-[10px] font-bold border bg-green-100 text-green-800 border-green-200">Trusted</span>}
-                                        {!user.isBanned && !user.isRestricted && user.canUpload && !user.isTrusted && <span className="text-gray-500">Active</span>}
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <div className="flex justify-end gap-2 flex-wrap max-w-[300px]">
-                                        {user.role !== 'admin' && (
-                                            <>
-                                                <ActionButton onClick={() => onAction(user._id, user.isBanned ? 'unban' : 'ban')} disabled={processingId === user._id} icon={<Ban size={16} />} variant={user.isBanned ? 'success' : 'ghost-danger'} title={user.isBanned ? 'Unban User' : 'Ban User'} />
-                                                <ActionButton onClick={() => onAction(user._id, (user.isRestricted || !user.canUpload) ? 'unrestrict' : 'restrict')} disabled={processingId === user._id} icon={<AlertCircle size={16} />} variant={(user.isRestricted || !user.canUpload) ? 'success' : 'ghost-danger'} title={(user.isRestricted || !user.canUpload) ? 'Unrestrict User' : 'Restrict User'} />
-                                                <ActionButton onClick={() => onAction(user._id, user.isTrusted ? 'untrust' : 'trust')} disabled={processingId === user._id} icon={<Shield size={16} />} variant={user.isTrusted ? 'ghost-danger' : 'success'} title={user.isTrusted ? 'Revoke Trust' : 'Trust User (Green Signal)'} className={user.isTrusted ? "" : "text-green-600 hover:bg-green-50"} />
-                                                <ActionButton onClick={() => onAction(user._id, 'delete')} disabled={processingId === user._id} icon={<Trash2 size={16} />} variant="ghost-danger" title="Delete User" />
-                                            </>
-                                        )}
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )
+            })}
         </div>
     )
 }
