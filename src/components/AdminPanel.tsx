@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
-    Check, X, Clock, FileText, AlertCircle, Shield, Calendar,
-    User, Loader2, Plus, Trash2, Settings, Layers, BookOpen,
-    Ban, Upload as UploadIcon, ExternalLink, ChevronRight, Search, Video
+    Check, X, Clock, AlertCircle, Shield,
+    User, Loader2, Plus, Trash2, Settings, Layers,
+    Ban, ExternalLink, ChevronRight, Search
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -13,6 +13,7 @@ interface PendingResource {
     title: string
     description: string
     uploaderName: string
+    uploaderAvatar?: string
     driveLink: string
     type: string
     branch: string
@@ -324,7 +325,7 @@ export default function AdminPanel() {
                                     <StructureCard title="Branches" step="03" items={courses.map(c => ({ id: c.id, name: c.name }))} value={newBranch} setValue={setNewBranch} onAdd={() => handleStructureAdd('course', newBranch)} onRemove={(id: string) => handleStructureRemove('course', id)} activeId={selectedCourseId} onSelect={setSelectedCourseId} disabled={!selectedYearId} parentName={selectedYear?.name} />
                                     <StructureCard title="Subjects" step="04" items={subjects.map(s => ({ id: typeof s === 'string' ? s : s.name, name: typeof s === 'string' ? s : s.name }))} value={newSubject} setValue={setNewSubject} onAdd={() => handleStructureAdd('subject', newSubject)} onRemove={(id: string) => handleStructureRemove('subject', id)} activeId={selectedSubjectName} onSelect={setSelectedSubjectName} disabled={!selectedCourseId} parentName={selectedCourse?.name} />
                                     <StructureCard title="Units" step="05" items={units.map((u: any) => ({ id: u.name, name: u.name }))} value={newUnit} setValue={setNewUnit} onAdd={() => handleStructureAdd('unit', newUnit)} onRemove={(id: string) => handleStructureRemove('unit', id)} activeId={selectedUnitName} onSelect={setSelectedUnitName} disabled={!selectedSubjectName} parentName={selectedSubjectName} />
-                                    <StructureCard title="Videos" step="06" items={videos.map((v: any) => ({ id: v.id, name: v.title }))} value={newVideoTitle} setValue={setNewVideoTitle} extraInput={{ value: newVideoUrl, setValue: setNewVideoUrl, placeholder: "YouTube URL..." }} onAdd={() => handleStructureAdd('video', newVideoTitle)} onRemove={(id: string) => handleStructureRemove('video', id)} disabled={!selectedUnitName} parentName={selectedUnitName} isLast />
+                                    <StructureCard title="Videos" step="06" items={videos.map((v: any) => ({ id: v.id, name: v.title }))} value={newVideoTitle} setValue={setNewVideoTitle} extraInput={{ value: newVideoUrl, setValue: setNewVideoUrl, placeholder: "YouTube URL..." }} onAdd={() => handleStructureAdd('video', newVideoTitle)} onRemove={(id: string) => handleStructureRemove('video', id)} disabled={!selectedUnitName} parentName={selectedUnitName} />
                                 </div>
                             </motion.div>}
                         </>
@@ -344,22 +345,6 @@ function StatusBadge({ type, label }: { type: 'success' | 'warning' | 'danger' |
         admin: 'bg-purple-50 text-purple-700 border-purple-100 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-900/30'
     }
     return <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${styles[type]}`}>{label}</span>
-}
-
-function ActionButton({ onClick, disabled, icon, label, variant = 'ghost', title, className }: any) {
-    const variants: any = {
-        success: 'bg-green-600 text-white hover:bg-green-700',
-        danger: 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 dark:bg-red-900/10 dark:text-red-400 dark:border-red-900/30',
-        ghost: 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/10',
-        'ghost-danger': 'text-gray-500 hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400'
-    }
-
-    return (
-        <button onClick={onClick} disabled={disabled} title={title} className={`flex items-center justify-center gap-1.5 p-1.5 rounded-lg transition-colors disabled:opacity-50 ${label ? 'px-3 py-1.5 text-xs font-medium' : ''} ${variants[variant]} ${className || ''}`}>
-            {icon}
-            {label}
-        </button>
-    )
 }
 
 function TabButton({ active, onClick, icon, label, count }: any) {
@@ -382,7 +367,7 @@ function TabButton({ active, onClick, icon, label, count }: any) {
     )
 }
 
-function StructureCard({ title, step, items, value, setValue, extraInput, onAdd, onRemove, activeId, onSelect, disabled, parentName, isLast }: any) {
+function StructureCard({ title, step, items, value, setValue, extraInput, onAdd, onRemove, activeId, onSelect, disabled, parentName }: any) {
     return (
         <div className={`flex flex-col h-[400px] w-full min-w-[280px] rounded-xl border bg-white dark:bg-gray-900 shadow-sm transition-all duration-300 ${disabled ? 'border-gray-100 opacity-50 dark:border-gray-800' : 'border-gray-200 dark:border-gray-800 ring-1 ring-transparent hover:ring-gray-200 dark:hover:ring-gray-700'}`}>
             <div className="flex-none p-4 border-b border-gray-100 dark:border-gray-800">
@@ -604,6 +589,7 @@ function PendingView({ resources, processingId, onAction }: any) {
 function UsersView({ users, processingId, onAction }: any) {
     const [selectedRole, setSelectedRole] = useState<{ [key: string]: string }>({})
     const [expandedUserId, setExpandedUserId] = useState<string | null>(null)
+    const [searchQuery, setSearchQuery] = useState('')
 
     const NeutralAvatar = ({ className }: { className?: string }) => (
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
@@ -613,194 +599,219 @@ function UsersView({ users, processingId, onAction }: any) {
         </svg>
     )
 
+    const filteredUsers = users.filter((user: UserData) =>
+        user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+
     return (
-        <div className="space-y-2">
-            {users.map((user: UserData) => {
-                const isExpanded = expandedUserId === user._id
-                const isProcessing = processingId === user._id
+        <div className="space-y-4">
+            {/* Search Bar */}
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <input
+                    type="text"
+                    placeholder="Search users by name or email..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                />
+            </div>
 
-                return (
-                    <motion.div
-                        key={user._id}
-                        initial={false}
-                        className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden"
-                    >
-                        {/* Collapsed Card Header */}
-                        <button
-                            onClick={() => setExpandedUserId(isExpanded ? null : user._id)}
-                            className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left"
-                        >
-                            {/* Avatar */}
-                            <div className="h-9 w-9 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                                {user.avatar && user.avatar !== 'avatar1' ? (
-                                    <img src={user.avatar} className="h-full w-full object-cover" alt="" />
-                                ) : (
-                                    <NeutralAvatar className="h-full w-full" />
-                                )}
-                            </div>
+            <div className="space-y-2">
+                {filteredUsers.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">
+                        No users found matching "{searchQuery}"
+                    </div>
+                ) : (
+                    filteredUsers.map((user: UserData) => {
+                        const isExpanded = expandedUserId === user._id
+                        const isProcessing = processingId === user._id
 
-                            {/* User Info */}
-                            <div className="flex-1 min-w-0">
-                                <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">{user.name}</div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</div>
-                            </div>
-
-                            {/* Role Badge */}
-                            <div className="flex-shrink-0">
-                                <StatusBadge type={user.role === 'admin' ? 'admin' : 'success'} label={user.role} />
-                            </div>
-
-                            {/* Expand Icon */}
+                        return (
                             <motion.div
-                                animate={{ rotate: isExpanded ? 90 : 0 }}
-                                transition={{ duration: 0.2 }}
-                                className="flex-shrink-0"
+                                key={user._id}
+                                initial={false}
+                                className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden"
                             >
-                                <ChevronRight className="text-gray-400" size={18} />
+                                {/* Collapsed Card Header */}
+                                <button
+                                    onClick={() => setExpandedUserId(isExpanded ? null : user._id)}
+                                    className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left"
+                                >
+                                    {/* Avatar */}
+                                    <div className="h-9 w-9 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                                        {user.avatar && user.avatar !== 'avatar1' ? (
+                                            <img src={user.avatar} className="h-full w-full object-cover" alt="" />
+                                        ) : (
+                                            <NeutralAvatar className="h-full w-full" />
+                                        )}
+                                    </div>
+
+                                    {/* User Info */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">{user.name}</div>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</div>
+                                    </div>
+
+                                    {/* Role Badge */}
+                                    <div className="flex-shrink-0">
+                                        <StatusBadge type={user.role === 'admin' ? 'admin' : 'success'} label={user.role} />
+                                    </div>
+
+                                    {/* Expand Icon */}
+                                    <motion.div
+                                        animate={{ rotate: isExpanded ? 90 : 0 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="flex-shrink-0"
+                                    >
+                                        <ChevronRight className="text-gray-400" size={18} />
+                                    </motion.div>
+                                </button>
+
+                                {/* Expanded Content */}
+                                <motion.div
+                                    initial={false}
+                                    animate={{
+                                        height: isExpanded ? 'auto' : 0,
+                                        opacity: isExpanded ? 1 : 0
+                                    }}
+                                    transition={{
+                                        height: { duration: 0.3, ease: [0.4, 0.0, 0.2, 1] },
+                                        opacity: { duration: 0.2, delay: isExpanded ? 0.1 : 0 }
+                                    }}
+                                    className="overflow-hidden"
+                                >
+                                    <div className="px-3 pb-3 pt-1 border-t border-gray-100 dark:border-gray-800 space-y-3">
+                                        {/* Status Section */}
+                                        <div>
+                                            <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                                                Current Status
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                {user.isBanned && <StatusBadge type="danger" label="Banned" />}
+                                                {(user.isRestricted || !user.canUpload) && <StatusBadge type="warning" label="Restricted" />}
+                                                {user.isTrusted && (
+                                                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold border bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
+                                                        Trusted User
+                                                    </span>
+                                                )}
+                                                {!user.isBanned && !user.isRestricted && user.canUpload && !user.isTrusted && (
+                                                    <span className="px-3 py-1 rounded-lg text-xs font-bold border bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800">
+                                                        Active
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Actions Section - Only for non-admins */}
+                                        {user.role !== 'admin' && (
+                                            <>
+                                                {/* Assign Role */}
+                                                <div>
+                                                    <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                                                        Assign Role
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <select
+                                                            className="flex-1 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md px-2 py-1.5 outline-none focus:border-blue-500 transition-colors"
+                                                            value={selectedRole[user._id] || ''}
+                                                            onChange={(e) => setSelectedRole({ ...selectedRole, [user._id]: e.target.value })}
+                                                            disabled={isProcessing}
+                                                        >
+                                                            <option value="">Select a role...</option>
+                                                            <option value="semi-admin">Semi Admin</option>
+                                                            <option value="content-reviewer">Content Reviewer</option>
+                                                            <option value="structure-manager">Structure Manager</option>
+                                                            <option value="user">User</option>
+                                                        </select>
+                                                        <button
+                                                            onClick={() => {
+                                                                if (selectedRole[user._id]) {
+                                                                    onAction(user._id, 'assign-role', selectedRole[user._id])
+                                                                    setSelectedRole({ ...selectedRole, [user._id]: '' })
+                                                                }
+                                                            }}
+                                                            disabled={!selectedRole[user._id] || isProcessing}
+                                                            className="px-2.5 py-1.5 bg-blue-600 text-white rounded-md text-xs font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1">
+                                                            <Check size={14} />
+                                                            <span className="hidden sm:inline">Apply</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {/* User Management Actions */}
+                                                <div>
+                                                    <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                                                        User Management
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-1.5">
+                                                        {/* Ban/Unban */}
+                                                        <button
+                                                            onClick={() => onAction(user._id, user.isBanned ? 'unban' : 'ban')}
+                                                            disabled={isProcessing}
+                                                            className={`px-2 py-1.5 rounded-md text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 ${user.isBanned
+                                                                ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'
+                                                                : 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'
+                                                                }`}>
+                                                            <Ban size={14} />
+                                                            <span className="hidden sm:inline">{user.isBanned ? 'Unban' : 'Ban'}</span>
+                                                        </button>
+
+                                                        {/* Restrict/Unrestrict */}
+                                                        <button
+                                                            onClick={() => onAction(user._id, (user.isRestricted || !user.canUpload) ? 'unrestrict' : 'restrict')}
+                                                            disabled={isProcessing}
+                                                            className={`px-2 py-1.5 rounded-md text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 ${user.isRestricted || !user.canUpload
+                                                                ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'
+                                                                : 'bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800'
+                                                                }`}
+                                                        >
+                                                            <AlertCircle size={14} />
+                                                            <span className="hidden sm:inline">{user.isRestricted || !user.canUpload ? 'Unrestrict' : 'Restrict'}</span>
+                                                        </button>
+
+                                                        {/* Trust/Untrust */}
+                                                        <button
+                                                            onClick={() => onAction(user._id, user.isTrusted ? 'untrust' : 'trust')}
+                                                            disabled={isProcessing}
+                                                            className={`px-2 py-1.5 rounded-md text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 ${user.isTrusted
+                                                                ? 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700'
+                                                                : 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800'
+                                                                }`}
+                                                        >
+                                                            <Shield size={14} />
+                                                            <span className="hidden sm:inline">{user.isTrusted ? 'Untrust' : 'Trust'}</span>
+                                                        </button>
+
+                                                        {/* Delete */}
+                                                        <button
+                                                            onClick={() => onAction(user._id, 'delete')}
+                                                            disabled={isProcessing}
+                                                            className="px-2 py-1.5 rounded-md text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                            <span className="hidden sm:inline">Delete</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {/* Processing Indicator */}
+                                        {isProcessing && (
+                                            <div className="flex items-center justify-center gap-2 text-xs text-blue-600 dark:text-blue-400 py-1">
+                                                <Loader2 size={14} className="animate-spin" />
+                                                Processing...
+                                            </div>
+                                        )}
+                                    </div>
+                                </motion.div>
                             </motion.div>
-                        </button>
-
-                        {/* Expanded Content */}
-                        <motion.div
-                            initial={false}
-                            animate={{
-                                height: isExpanded ? 'auto' : 0,
-                                opacity: isExpanded ? 1 : 0
-                            }}
-                            transition={{
-                                height: { duration: 0.3, ease: [0.4, 0.0, 0.2, 1] },
-                                opacity: { duration: 0.2, delay: isExpanded ? 0.1 : 0 }
-                            }}
-                            className="overflow-hidden"
-                        >
-                            <div className="px-3 pb-3 pt-1 border-t border-gray-100 dark:border-gray-800 space-y-3">
-                                {/* Status Section */}
-                                <div>
-                                    <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                                        Current Status
-                                    </div>
-                                    <div className="flex flex-wrap gap-2">
-                                        {user.isBanned && <StatusBadge type="danger" label="Banned" />}
-                                        {(user.isRestricted || !user.canUpload) && <StatusBadge type="warning" label="Restricted" />}
-                                        {user.isTrusted && (
-                                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold border bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
-                                                Trusted User
-                                            </span>
-                                        )}
-                                        {!user.isBanned && !user.isRestricted && user.canUpload && !user.isTrusted && (
-                                            <span className="px-3 py-1 rounded-lg text-xs font-bold border bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800">
-                                                Active
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Actions Section - Only for non-admins */}
-                                {user.role !== 'admin' && (
-                                    <>
-                                        {/* Assign Role */}
-                                        <div>
-                                            <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                                                Assign Role
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <select
-                                                    className="flex-1 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md px-2 py-1.5 outline-none focus:border-blue-500 transition-colors"
-                                                    value={selectedRole[user._id] || ''}
-                                                    onChange={(e) => setSelectedRole({ ...selectedRole, [user._id]: e.target.value })}
-                                                    disabled={isProcessing}
-                                                >
-                                                    <option value="">Select a role...</option>
-                                                    <option value="semi-admin">Semi Admin</option>
-                                                    <option value="content-reviewer">Content Reviewer</option>
-                                                    <option value="structure-manager">Structure Manager</option>
-                                                    <option value="user">User</option>
-                                                </select>
-                                                <button
-                                                    onClick={() => {
-                                                        if (selectedRole[user._id]) {
-                                                            onAction(user._id, 'assign-role', selectedRole[user._id])
-                                                            setSelectedRole({ ...selectedRole, [user._id]: '' })
-                                                        }
-                                                    }}
-                                                    disabled={!selectedRole[user._id] || isProcessing}
-                                                    className="px-2.5 py-1.5 bg-blue-600 text-white rounded-md text-xs font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1">
-                                                    <Check size={14} />
-                                                    <span className="hidden sm:inline">Apply</span>
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* User Management Actions */}
-                                        <div>
-                                            <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                                                User Management
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-1.5">
-                                                {/* Ban/Unban */}
-                                                <button
-                                                    onClick={() => onAction(user._id, user.isBanned ? 'unban' : 'ban')}
-                                                    disabled={isProcessing}
-                                                    className={`px-2 py-1.5 rounded-md text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 ${user.isBanned
-                                                        ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'
-                                                        : 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'
-                                                        }`}>
-                                                    <Ban size={14} />
-                                                    <span className="hidden sm:inline">{user.isBanned ? 'Unban' : 'Ban'}</span>
-                                                </button>
-
-                                                {/* Restrict/Unrestrict */}
-                                                <button
-                                                    onClick={() => onAction(user._id, (user.isRestricted || !user.canUpload) ? 'unrestrict' : 'restrict')}
-                                                    disabled={isProcessing}
-                                                    className={`px-2 py-1.5 rounded-md text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 ${user.isRestricted || !user.canUpload
-                                                        ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'
-                                                        : 'bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800'
-                                                        }`}
-                                                >
-                                                    <AlertCircle size={14} />
-                                                    <span className="hidden sm:inline">{user.isRestricted || !user.canUpload ? 'Unrestrict' : 'Restrict'}</span>
-                                                </button>
-
-                                                {/* Trust/Untrust */}
-                                                <button
-                                                    onClick={() => onAction(user._id, user.isTrusted ? 'untrust' : 'trust')}
-                                                    disabled={isProcessing}
-                                                    className={`px-2 py-1.5 rounded-md text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 ${user.isTrusted
-                                                        ? 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700'
-                                                        : 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800'
-                                                        }`}
-                                                >
-                                                    <Shield size={14} />
-                                                    <span className="hidden sm:inline">{user.isTrusted ? 'Untrust' : 'Trust'}</span>
-                                                </button>
-
-                                                {/* Delete */}
-                                                <button
-                                                    onClick={() => onAction(user._id, 'delete')}
-                                                    disabled={isProcessing}
-                                                    className="px-2 py-1.5 rounded-md text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800"
-                                                >
-                                                    <Trash2 size={14} />
-                                                    <span className="hidden sm:inline">Delete</span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-
-                                {/* Processing Indicator */}
-                                {isProcessing && (
-                                    <div className="flex items-center justify-center gap-2 text-xs text-blue-600 dark:text-blue-400 py-1">
-                                        <Loader2 size={14} className="animate-spin" />
-                                        Processing...
-                                    </div>
-                                )}
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )
-            })}
+                        )
+                    })
+                )}
+            </div>
         </div>
     )
 }
