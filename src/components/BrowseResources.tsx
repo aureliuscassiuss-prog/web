@@ -145,6 +145,22 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
         localStorage.removeItem('browseResourcesSelections');
     };
 
+    // Breadcrumb click handlers - clear subsequent selections
+    const handleBreadcrumbClick = (targetStep: number) => {
+        setStep(targetStep);
+
+        // Clear selections that come after the target step
+        if (targetStep === 1) {
+            setSelections({}); // Clear all
+        } else if (targetStep === 2) {
+            setSelections(prev => ({ program: prev.program })); // Keep only program
+        } else if (targetStep === 3) {
+            setSelections(prev => ({ program: prev.program, year: prev.year })); // Keep program and year
+        } else if (targetStep === 5) {
+            setSelections(prev => ({ program: prev.program, year: prev.year, course: prev.course, subject: prev.subject })); // Keep all except unit
+        }
+    };
+
     // --- Render Helpers ---
     const totalSteps = 5;
     const progress = Math.min(((step - 1) / totalSteps) * 100, 100);
@@ -306,10 +322,10 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
                                         {selections.subject}
                                     </h2>
                                     <div className="flex flex-wrap gap-2">
-                                        <BreadcrumbBadge label={currentProgram?.name} onClick={() => setStep(1)} />
-                                        <BreadcrumbBadge label={currentYear?.name} onClick={() => setStep(2)} />
-                                        <BreadcrumbBadge label={currentCourse?.name} onClick={() => setStep(3)} />
-                                        {selections.unit && <BreadcrumbBadge label={selections.unit} active onClick={() => setStep(5)} />}
+                                        <BreadcrumbBadge label={currentProgram?.name} onClick={() => handleBreadcrumbClick(1)} />
+                                        <BreadcrumbBadge label={currentYear?.name} onClick={() => handleBreadcrumbClick(2)} />
+                                        <BreadcrumbBadge label={currentCourse?.name} onClick={() => handleBreadcrumbClick(3)} />
+                                        {selections.unit && <BreadcrumbBadge label={selections.unit} active onClick={() => handleBreadcrumbClick(5)} />}
                                     </div>
                                 </div>
                                 <button

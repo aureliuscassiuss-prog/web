@@ -1,0 +1,26 @@
+
+C:\Users\abhig\.gemini\antigravity\scratch\uninotes-react\src\components\BrowseResources.tsx
+    3:28  error    'CheckCircle2' is defined but never used                                                                                                                                                          @typescript-eslint/no-unused-vars
+    4:5   error    'Search' is defined but never used                                                                                                                                                                @typescript-eslint/no-unused-vars
+   11:30  error    Unexpected any. Specify a different type                                                                                                                                                          @typescript-eslint/no-explicit-any
+   27:48  error    Unexpected any. Specify a different type                                                                                                                                                          @typescript-eslint/no-explicit-any
+   36:57  error    Unexpected any. Specify a different type                                                                                                                                                          @typescript-eslint/no-explicit-any
+   38:53  error    Unexpected any. Specify a different type                                                                                                                                                          @typescript-eslint/no-explicit-any
+   40:58  error    Unexpected any. Specify a different type                                                                                                                                                          @typescript-eslint/no-explicit-any
+   53:8   warning  React Hook useEffect has a missing dependency: 'selections.program'. Either include it or remove the dependency array                                                                             react-hooks/exhaustive-deps
+  103:11  warning  The 'programs' logical expression could make the dependencies of useMemo Hook (at line 105) change on every render. To fix this, wrap the initialization of 'programs' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  105:60  error    Unexpected any. Specify a different type                                                                                                                                                          @typescript-eslint/no-explicit-any
+  108:54  error    Unexpected any. Specify a different type                                                                                                                                                          @typescript-eslint/no-explicit-any
+  111:58  error    Unexpected any. Specify a different type                                                                                                                                                          @typescript-eslint/no-explicit-any
+  116:60  error    Unexpected any. Specify a different type                                                                                                                                                          @typescript-eslint/no-explicit-any
+  128:43  error    Unexpected any. Specify a different type                                                                                                                                                          @typescript-eslint/no-explicit-any
+  199:46  error    Unexpected any. Specify a different type                                                                                                                                                          @typescript-eslint/no-explicit-any
+  214:43  error    Unexpected any. Specify a different type                                                                                                                                                          @typescript-eslint/no-explicit-any
+  230:42  error    Unexpected any. Specify a different type                                                                                                                                                          @typescript-eslint/no-explicit-any
+  245:45  error    Unexpected any. Specify a different type                                                                                                                                                          @typescript-eslint/no-explicit-any
+  266:47  error    Unexpected any. Specify a different type                                                                                                                                                          @typescript-eslint/no-explicit-any
+  369:70  error    Unexpected any. Specify a different type                                                                                                                                                          @typescript-eslint/no-explicit-any
+  399:45  error    Unexpected any. Specify a different type                                                                                                                                                          @typescript-eslint/no-explicit-any
+
+✖ 21 problems (19 errors, 2 warnings)
+
