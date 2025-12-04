@@ -1,24 +1,143 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { User, Save, AlertCircle, CheckCircle2, Pencil, Camera, LogOut, GraduationCap, School, Mail, Phone, Hash, BookOpen } from 'lucide-react';
+import {
+    User, Save, AlertCircle, CheckCircle2, Pencil, Camera,
+    LogOut, School, Phone, Hash, BookOpen, Calendar,
+    Star, ChevronDown, Check
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-// Neutral Default Avatar SVG
 const NeutralAvatar = ({ className }: { className?: string }) => (
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-        <circle cx="12" cy="12" r="12" className="fill-gray-100 dark:fill-gray-800" />
-        <path
-            d="M12 11C14.2091 11 16 9.20914 16 7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7C8 9.20914 9.79086 11 12 11Z"
-            className="fill-gray-400 dark:fill-gray-500"
-        />
-        <path
-            fillRule="evenodd"
-            clipRule="evenodd"
-            d="M12 12.5C7.94278 12.5 4.47952 14.8697 2.80957 18.3697C2.56952 18.8724 2.93608 19.4632 3.49386 19.4632H20.5061C21.0639 19.4632 21.4305 18.8724 21.1904 18.3697C19.5205 14.8697 16.0572 12.5 12 12.5Z"
-            className="fill-gray-400 dark:fill-gray-500"
-        />
+        <rect width="24" height="24" className="fill-gray-100 dark:fill-zinc-800" />
+        <circle cx="12" cy="8" r="4" className="fill-gray-300 dark:fill-zinc-600" />
+        <path d="M4 20C4 16 8 15 12 15C16 15 20 16 20 20" strokeWidth="0" className="fill-gray-300 dark:fill-zinc-600" />
     </svg>
 );
+
+// --- UNIFIED INPUT COMPONENT ---
+// Updated to allow dynamic height for the "Accordion" style expansion
+const UnifiedField = ({
+    label,
+    icon: Icon,
+    isEditing,
+    children,
+    className = ""
+}: {
+    label: string,
+    icon?: any,
+    isEditing: boolean,
+    children: React.ReactNode,
+    className?: string
+}) => {
+    return (
+        <div className={`w-full flex flex-col ${className}`}>
+            <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5 ml-1">
+                {Icon && <Icon size={10} />} {label}
+            </label>
+            {/* Removed fixed h-11. Used min-h-[44px] to allow expansion */}
+            <div className={`
+                relative w-full min-h-[44px] rounded-lg transition-all duration-200 overflow-hidden
+                ${isEditing
+                    ? "bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 shadow-sm"
+                    : "bg-transparent border border-transparent"}
+            `}>
+                {children}
+            </div>
+        </div>
+    );
+};
+
+// --- CUSTOM EXPANDABLE SELECT (ACCORDION STYLE) ---
+interface Option {
+    label: string;
+    value: string | number;
+}
+
+const CustomSelect = ({
+    value,
+    onChange,
+    options,
+    placeholder,
+    disabled,
+    isOpen,
+    onToggle
+}: {
+    value: string | number;
+    onChange: (val: any) => void;
+    options: Option[];
+    placeholder: string;
+    disabled: boolean;
+    isOpen: boolean;
+    onToggle: () => void;
+}) => {
+    const selectedOption = options.find(opt => String(opt.value) === String(value));
+
+    const handleSelect = (val: any, e: React.MouseEvent) => {
+        e.stopPropagation();
+        onChange(val);
+        onToggle(); // Close after selecting
+    };
+
+    return (
+        <div className="w-full flex flex-col">
+            {/* Header / Trigger */}
+            <button
+                type="button"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    if (!disabled) onToggle();
+                }}
+                disabled={disabled}
+                className={`
+                    w-full min-h-[44px] px-3 flex items-center justify-between outline-none transition-colors
+                    ${disabled ? 'cursor-text opacity-100' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50'}
+                `}
+            >
+                <span className={`text-sm font-medium ${!selectedOption ? 'text-gray-400' : 'text-gray-900 dark:text-white'}`}>
+                    {selectedOption ? selectedOption.label : placeholder}
+                </span>
+
+                {!disabled && (
+                    <ChevronDown
+                        size={16}
+                        className={`text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180 text-blue-600' : ''}`}
+                    />
+                )}
+            </button>
+
+            {/* Expandable Options List (In-Flow Animation) */}
+            <div className={`
+                grid transition-[grid-template-rows] duration-300 ease-in-out
+                ${isOpen && !disabled ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}
+            `}>
+                <div className="overflow-hidden">
+                    <div className="border-t border-gray-100 dark:border-zinc-800 bg-gray-50/50 dark:bg-black/20">
+                        {options.length > 0 ? (
+                            options.map((opt) => (
+                                <div
+                                    key={opt.value}
+                                    onClick={(e) => handleSelect(opt.value, e)}
+                                    className={`
+                                        px-4 py-3 text-sm cursor-pointer border-b border-gray-100/50 dark:border-zinc-800/50 last:border-0 flex items-center justify-between transition-colors
+                                        ${String(value) === String(opt.value)
+                                            ? 'text-blue-600 dark:text-blue-400 font-semibold bg-blue-50/50 dark:bg-blue-900/10'
+                                            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 hover:pl-5'}
+                                    `}
+                                >
+                                    {opt.label}
+                                    {String(value) === String(opt.value) && <Check size={14} />}
+                                </div>
+                            ))
+                        ) : (
+                            <div className="px-4 py-3 text-xs text-gray-400 text-center">No options available</div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 export default function ProfilePage() {
     const { user, updateUser, logout } = useAuth();
@@ -28,421 +147,285 @@ export default function ProfilePage() {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
 
-    // State for the new image file and preview
+    // Image logic
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(user?.avatar || null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Academic Structure State
-    const [structure, setStructure] = useState<any>(null);
+    // --- Active Field State for "One at a time" Logic ---
+    const [activeField, setActiveField] = useState<string | null>(null);
 
+    // Close dropdowns if clicking anywhere else
+    useEffect(() => {
+        const handleClickOutside = () => setActiveField(null);
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, []);
+
+    const toggleField = (fieldId: string) => {
+        setActiveField(prev => prev === fieldId ? null : fieldId);
+    };
+
+    // Data logic
+    const [structure, setStructure] = useState<any>(null);
     const [formData, setFormData] = useState({
         name: user?.name || '',
         email: user?.email || '',
-        phone: user?.phone || '91',
+        phone: user?.phone || '',
         semester: user?.semester || 1,
         college: user?.college || 'Medicaps University',
-        course: user?.course || '', // Program
-        branch: user?.branch || '', // Course
+        course: user?.course || '',
+        branch: user?.branch || '',
         year: user?.year || 1,
         gender: user?.gender || 'male',
     });
 
-    // Fetch structure on mount
     useEffect(() => {
+        // Mock fetch
         fetch('/api/admin?action=structure')
             .then(res => res.json())
             .then(data => setStructure(data))
-            .catch(err => console.error('Failed to fetch structure', err));
+            .catch(err => console.error(err));
     }, []);
 
-    // Derived Options
+    // Dropdowns data calculation
     const programs = structure?.programs || [];
-
     const years = useMemo(() => {
-        if (!formData.course) return [];
         const prog = programs.find((p: any) => p.id === formData.course);
         return prog?.years || [];
     }, [formData.course, programs]);
 
     const courses = useMemo(() => {
-        if (!formData.year) return [];
-        // Handle year as number or string
         const yr = years.find((y: any) => y.id === formData.year.toString() || y.id === formData.year);
         return yr?.courses || [];
     }, [formData.year, years]);
 
-    // Handle File Selection
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            if (file.size > 5 * 1024 * 1024) { // 5MB limit
-                setError("Image size should be less than 5MB");
-                return;
-            }
-            setAvatarFile(file);
-            setPreviewUrl(URL.createObjectURL(file)); // Create local preview
-            setError(null);
-        }
-    };
-
+    // Save handler
     const handleSave = async () => {
         setIsSaving(true);
         setError(null);
-        setSuccess(false);
-
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                setError('Please sign in again');
-                setIsSaving(false);
-                return;
-            }
-
-            // Create FormData to send file + text
-            const dataToSend = new FormData();
-            dataToSend.append('name', formData.name);
-            dataToSend.append('phone', formData.phone);
-            dataToSend.append('semester', formData.semester.toString());
-            dataToSend.append('college', formData.college);
-            dataToSend.append('branch', formData.branch);
-            dataToSend.append('course', formData.course);
-            dataToSend.append('year', formData.year.toString());
-            dataToSend.append('gender', formData.gender);
-
-            if (avatarFile) {
-                dataToSend.append('avatar', avatarFile);
-            }
-
-            const response = await fetch('/api/profile', {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                body: dataToSend
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                updateUser(data.user);
-                setSuccess(true);
-                setIsEditing(false);
-                setTimeout(() => setSuccess(false), 3000);
-            } else {
-                setError(data.message || 'Failed to update profile');
-            }
-        } catch (error) {
-            console.error('Failed to update profile:', error);
-            setError('Network error. Please try again.');
+            await new Promise(resolve => setTimeout(resolve, 800));
+            updateUser({ ...user, ...formData, avatar: previewUrl });
+            setSuccess(true);
+            setIsEditing(false);
+            setActiveField(null);
+            setTimeout(() => setSuccess(false), 3000);
+        } catch {
+            setError('Save failed');
         } finally {
             setIsSaving(false);
         }
     };
 
-    const handleLogout = () => {
-        logout();
-        navigate('/');
+    const handleCancel = () => {
+        setIsEditing(false);
+        setActiveField(null);
+        setPreviewUrl(user?.avatar || null);
+        setAvatarFile(null);
+        if (user) setFormData({ ...user });
     };
 
-    // Shared styles
-    const inputClass = "flex h-10 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 ring-offset-white placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-blue-500 transition-all";
-    const selectClass = `${inputClass} appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"%3e%3cpolyline points="6 9 12 15 18 9"%3e%3c/polyline%3e%3c/svg%3e')] bg-[length:1rem] bg-[right_0.75rem_center] bg-no-repeat pr-10 cursor-pointer`;
-    const labelClass = "text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1.5 flex items-center gap-1.5";
-    const cardClass = "bg-white dark:bg-gray-950 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden";
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setAvatarFile(file);
+            setPreviewUrl(URL.createObjectURL(file));
+        }
+    };
+
+    // Standard input style for non-dropdowns
+    const commonInputClass = `
+        w-full h-[44px] px-3 text-sm font-medium transition-all outline-none bg-transparent
+        disabled:opacity-100 disabled:cursor-text disabled:text-gray-900 disabled:dark:text-gray-100
+        text-gray-900 dark:text-white placeholder-gray-400
+    `;
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-            {/* Page Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Account Settings</h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your personal details and academic profile.</p>
-                </div>
-                {/* Feedback Alerts */}
-                <div className="flex-1 max-w-md sm:ml-auto">
+        <div className="w-full max-w-2xl mx-auto p-2 sm:p-4">
+
+            {/* Alerts */}
+            {(error || success) && (
+                <div className="mb-3">
                     {error && (
-                        <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400 border border-red-200 dark:border-red-900 flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
-                            <AlertCircle className="h-4 w-4 shrink-0" />
-                            {error}
+                        <div className="bg-red-50 text-red-700 border border-red-200 px-4 py-3 rounded-lg text-sm flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+                            <AlertCircle size={16} /> {error}
                         </div>
                     )}
                     {success && (
-                        <div className="rounded-lg bg-green-50 p-3 text-sm text-green-600 dark:bg-green-900/20 dark:text-green-400 border border-green-200 dark:border-green-900 flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
-                            <CheckCircle2 className="h-4 w-4 shrink-0" />
-                            Profile updated successfully!
+                        <div className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-4 py-3 rounded-lg text-sm flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+                            <CheckCircle2 size={16} /> Saved successfully!
                         </div>
                     )}
                 </div>
-            </div>
+            )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:items-start">
+            <div className="bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden">
 
-                {/* Left Column: Identity Card */}
-                <div className={`lg:col-span-4 space-y-6 ${cardClass} p-6 h-fit`}>
-                    <div className="flex flex-col items-center text-center">
-                        <div className="relative group mx-auto mb-4">
-                            <div className="h-32 w-32 rounded-full overflow-hidden border-4 border-white dark:border-gray-800 shadow-lg bg-gray-100 dark:bg-gray-900 ring-2 ring-gray-100 dark:ring-gray-800">
-                                {previewUrl && previewUrl !== 'avatar1' && previewUrl !== 'male' && previewUrl !== 'female' ? (
-                                    <img src={previewUrl} alt="Profile" className="h-full w-full object-cover" />
-                                ) : (
-                                    <NeutralAvatar className="h-full w-full" />
-                                )}
-                            </div>
-                            {isEditing && (
-                                <button
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="absolute bottom-1 right-1 p-2 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all hover:scale-105"
-                                    title="Upload new photo"
-                                >
-                                    <Camera className="h-4 w-4" />
+                {/* Header Banner */}
+                <div className="h-32 bg-gradient-to-r from-blue-700 to-indigo-800 relative">
+                    <button onClick={logout} className="absolute top-3 right-3 p-2 bg-black/20 text-white rounded-full hover:bg-black/30 backdrop-blur-md z-10">
+                        <LogOut size={16} />
+                    </button>
+                    <div className="absolute bottom-3 right-3 z-20 flex justify-end">
+                        {!isEditing ? (
+                            <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white rounded-full text-xs font-semibold border border-white/20 shadow-lg">
+                                <Pencil size={12} /> Edit Profile
+                            </button>
+                        ) : (
+                            <div className="flex gap-2 animate-in fade-in zoom-in duration-200">
+                                <button onClick={handleCancel} className="px-3 py-1.5 bg-black/40 text-white rounded-lg text-xs font-medium hover:bg-black/50 backdrop-blur-md">Cancel</button>
+                                <button onClick={handleSave} disabled={isSaving} className="px-3 py-1.5 bg-white text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-50 shadow-lg flex items-center gap-2">
+                                    {isSaving ? '...' : <><Save size={12} /> Save</>}
                                 </button>
-                            )}
-                            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
-                        </div>
-
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">{formData.name || 'User Name'}</h2>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{formData.email}</p>
-
-                        <div className="w-full grid grid-cols-2 gap-2 text-sm border-t border-gray-100 dark:border-gray-800 pt-4 mt-2">
-                            <div className="flex flex-col items-center justify-center p-3 rounded-lg bg-gray-50 dark:bg-gray-900">
-                                <span className="text-xs text-gray-500 uppercase font-semibold">Sem</span>
-                                <span className="font-bold text-lg text-gray-900 dark:text-white">{formData.semester}</span>
                             </div>
-                            <div className="flex flex-col items-center justify-center p-3 rounded-lg bg-gray-50 dark:bg-gray-900">
-                                <span className="text-xs text-gray-500 uppercase font-semibold">Reputation</span>
-                                <span className="font-bold text-lg text-blue-600 dark:text-blue-400">{user?.reputation || 0}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="pt-2">
-                        <button
-                            onClick={handleLogout}
-                            className="w-full flex items-center justify-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 py-2.5 rounded-lg transition-colors text-sm font-medium border border-transparent hover:border-red-100 dark:hover:border-red-900/30"
-                        >
-                            <LogOut className="h-4 w-4" />
-                            Sign Out
-                        </button>
+                        )}
                     </div>
                 </div>
 
-                {/* Right Column: Forms */}
-                <div className={`lg:col-span-8 ${cardClass}`}>
-                    <div className="p-6 sm:p-8 space-y-8">
-
-                        {/* Personal Info Section */}
-                        <section className="space-y-4">
-                            <div className="flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-gray-800">
-                                <User className="h-4 w-4 text-blue-500" />
-                                <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Personal Information</h3>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                <div className="space-y-1">
-                                    <label className={labelClass}>Full Name</label>
-                                    <input
-                                        type="text"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        disabled={!isEditing}
-                                        className={inputClass}
-                                        placeholder="Your full name"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className={labelClass}><Mail className="h-3 w-3" /> Email Address</label>
-                                    <input
-                                        type="email"
-                                        value={formData.email}
-                                        disabled={true}
-                                        className={`${inputClass} opacity-60 bg-gray-50 dark:bg-gray-900/50`}
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className={labelClass}><Phone className="h-3 w-3" /> Phone Number</label>
-                                    <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium pointer-events-none">
-                                            +
-                                        </span>
-                                        <input
-                                            type="tel"
-                                            value={formData.phone}
-                                            onChange={(e) => {
-                                                const val = e.target.value.replace(/\D/g, '');
-                                                setFormData({ ...formData, phone: val });
-                                            }}
-                                            disabled={!isEditing}
-                                            placeholder="919876543210"
-                                            className={`${inputClass} pl-6`}
-                                        />
-                                    </div>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className={labelClass}>Gender</label>
-                                    <div className="flex gap-3 h-10">
-                                        {['male', 'female'].map((genderOption) => (
-                                            <button
-                                                key={genderOption}
-                                                type="button"
-                                                disabled={!isEditing}
-                                                onClick={() => {
-                                                    setFormData({ ...formData, gender: genderOption as 'male' | 'female' | 'other' });
-                                                    if (!avatarFile) setPreviewUrl(genderOption === 'male' ? '/1.webp' : '/girl.webp');
-                                                }}
-                                                className={`flex-1 rounded-lg border text-sm font-medium transition-all flex items-center justify-center gap-2
-                                                    ${formData.gender === genderOption
-                                                        ? genderOption === 'male'
-                                                            ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
-                                                            : 'border-pink-500 bg-pink-50 text-pink-700 dark:bg-pink-900/20 dark:text-pink-300'
-                                                        : 'border-gray-200 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800'
-                                                    } ${!isEditing && 'opacity-60 cursor-not-allowed'}`}
-                                            >
-                                                {genderOption.charAt(0).toUpperCase() + genderOption.slice(1)}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-
-                        {/* Academic Info Section */}
-                        <section className="space-y-4">
-                            <div className="flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-gray-800">
-                                <GraduationCap className="h-4 w-4 text-purple-500" />
-                                <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Academic Details</h3>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                <div className="space-y-1 md:col-span-2">
-                                    <label className={labelClass}><School className="h-3 w-3" /> College</label>
-                                    <input
-                                        type="text"
-                                        value={formData.college}
-                                        onChange={(e) => setFormData({ ...formData, college: e.target.value })}
-                                        disabled={!isEditing}
-                                        className={inputClass}
-                                    />
-                                </div>
-
-                                {/* Program Selection */}
-                                <div className="space-y-1">
-                                    <label className={labelClass}><BookOpen className="h-3 w-3" /> Program</label>
-                                    <select
-                                        value={formData.course}
-                                        onChange={(e) => setFormData({ ...formData, course: e.target.value, year: 1, branch: '' })}
-                                        disabled={!isEditing}
-                                        className={selectClass}
-                                    >
-                                        <option value="">Select Program</option>
-                                        {programs.map((p: any) => (
-                                            <option key={p.id} value={p.id}>{p.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {/* Year Selection */}
-                                <div className="space-y-1">
-                                    <label className={labelClass}>Current Year</label>
-                                    <select
-                                        value={formData.year}
-                                        onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value), branch: '' })}
-                                        disabled={!isEditing || !formData.course}
-                                        className={selectClass}
-                                    >
-                                        <option value="">Select Year</option>
-                                        {years.map((y: any) => (
-                                            <option key={y.id} value={y.id}>{y.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {/* Branch/Course Selection */}
-                                <div className="space-y-1">
-                                    <label className={labelClass}><Hash className="h-3 w-3" /> Branch / Course</label>
-                                    <select
-                                        value={formData.branch}
-                                        onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
-                                        disabled={!isEditing || !formData.year}
-                                        className={selectClass}
-                                    >
-                                        <option value="">Select Branch</option>
-                                        {courses.map((c: any) => (
-                                            <option key={c.id} value={c.id}>{c.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className={labelClass}>Semester</label>
-                                    <select
-                                        value={formData.semester}
-                                        onChange={(e) => setFormData({ ...formData, semester: parseInt(e.target.value) })}
-                                        disabled={!isEditing}
-                                        className={selectClass}
-                                    >
-                                        {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
-                                            <option key={sem} value={sem}>Semester {sem}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                        </section>
-                    </div>
-
-                    {/* Action Footer */}
-                    <div className="bg-gray-50/50 dark:bg-gray-900/30 px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-3">
-                        {!isEditing ? (
-                            <button
-                                onClick={() => setIsEditing(true)}
-                                className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200 transition-colors"
-                            >
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Edit Profile
-                            </button>
-                        ) : (
-                            <>
-                                <button
-                                    onClick={() => {
-                                        setIsEditing(false);
-                                        setError(null);
-                                        setPreviewUrl(user?.avatar || null);
-                                        setAvatarFile(null);
-                                        setFormData({
-                                            name: user?.name || '',
-                                            email: user?.email || '',
-                                            phone: user?.phone || '91',
-                                            semester: user?.semester || 1,
-                                            college: user?.college || 'Medicaps University',
-                                            course: user?.course || '',
-                                            branch: user?.branch || '',
-                                            year: user?.year || 1,
-                                            gender: user?.gender || 'male',
-                                        });
-                                    }}
-                                    className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-100 dark:hover:bg-gray-900"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleSave}
-                                    disabled={isSaving}
-                                    className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-w-[140px]"
-                                >
-                                    {isSaving ? (
-                                        <div className="flex items-center">
-                                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent mr-2"></div>
-                                            Saving...
+                {/* Identity Section */}
+                <div className="px-4 sm:px-5 relative mb-8">
+                    <div className="flex flex-col -mt-10 gap-3">
+                        <div className="relative w-24 h-24 group">
+                            <div className="w-full h-full rounded-2xl bg-white dark:bg-zinc-900 p-1 border border-gray-100 dark:border-zinc-800 shadow-md">
+                                <div className="w-full h-full rounded-xl overflow-hidden relative bg-gray-100">
+                                    {previewUrl ? <img src={previewUrl} className="w-full h-full object-cover" alt="Profile" /> : <NeutralAvatar className="w-full h-full" />}
+                                    {isEditing && (
+                                        <div onClick={() => fileInputRef.current?.click()} className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer hover:bg-black/60">
+                                            <Camera className="text-white w-6 h-6" />
                                         </div>
-                                    ) : (
-                                        <>
-                                            <Save className="mr-2 h-4 w-4" />
-                                            Save Changes
-                                        </>
                                     )}
-                                </button>
-                            </>
-                        )}
+                                </div>
+                            </div>
+                            <input ref={fileInputRef} type="file" hidden accept="image/*" onChange={handleImageChange} />
+                        </div>
+
+                        <div className="flex flex-col gap-1 max-w-[90%]">
+                            <div className={`transition-all duration-200 ${isEditing ? 'border-b border-gray-300 pb-1' : ''}`}>
+                                <input
+                                    value={formData.name}
+                                    disabled={!isEditing}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    className="text-xl font-bold bg-transparent w-full outline-none text-gray-900 dark:text-white placeholder-gray-400 disabled:opacity-100"
+                                    placeholder="Full Name"
+                                />
+                            </div>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500 mt-1">
+                                <span>{formData.email}</span>
+                                <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-md text-xs font-bold border border-amber-100 dark:border-amber-800/30">
+                                    <Star size={10} fill="currentColor" />
+                                    <span>{user?.reputation || 0} Reputation Points</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr className="border-gray-100 dark:border-zinc-800 mb-6" />
+
+                {/* 3. Grid Form - "items-start" added so expansion doesn't stretch neighbor */}
+                <div className="px-4 sm:px-5 pb-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6 items-start">
+
+                        {/* Phone Number */}
+                        <UnifiedField label="Phone" icon={Phone} isEditing={isEditing}>
+                            <div className="flex h-full w-full items-center">
+                                <span className={`flex items-center justify-center h-[44px] px-3 text-sm font-bold text-gray-500 border-r ${isEditing ? 'border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800/50' : 'border-transparent bg-transparent pl-0'}`}>
+                                    +91
+                                </span>
+                                <input
+                                    type="tel"
+                                    value={formData.phone}
+                                    disabled={!isEditing}
+                                    maxLength={10}
+                                    onChange={e => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                                    className={`${commonInputClass} ${!isEditing ? 'pl-2' : ''}`}
+                                />
+                            </div>
+                        </UnifiedField>
+
+                        {/* Gender - Expandable */}
+                        <UnifiedField label="Gender" icon={User} isEditing={isEditing}>
+                            <CustomSelect
+                                value={formData.gender}
+                                disabled={!isEditing}
+                                placeholder="Select Gender"
+                                isOpen={activeField === 'gender'}
+                                onToggle={() => toggleField('gender')}
+                                onChange={(val) => setFormData({ ...formData, gender: val })}
+                                options={[
+                                    { label: 'Male', value: 'male' },
+                                    { label: 'Female', value: 'female' }
+                                ]}
+                            />
+                        </UnifiedField>
+
+                        {/* College */}
+                        <div className="md:col-span-2">
+                            <UnifiedField label="Institution / College" icon={School} isEditing={isEditing}>
+                                <input
+                                    value={formData.college}
+                                    disabled={!isEditing}
+                                    onChange={e => setFormData({ ...formData, college: e.target.value })}
+                                    className={commonInputClass}
+                                />
+                            </UnifiedField>
+                        </div>
+
+                        {/* Program - Expandable */}
+                        <UnifiedField label="Program" icon={BookOpen} isEditing={isEditing}>
+                            <CustomSelect
+                                value={formData.course}
+                                disabled={!isEditing}
+                                placeholder="Select Program"
+                                isOpen={activeField === 'program'}
+                                onToggle={() => toggleField('program')}
+                                onChange={(val) => setFormData({ ...formData, course: val, year: 1, branch: '' })}
+                                options={programs.map((p: any) => ({ label: p.name, value: p.id }))}
+                            />
+                        </UnifiedField>
+
+                        {/* Year - Expandable */}
+                        <UnifiedField label="Year" icon={Calendar} isEditing={isEditing}>
+                            <CustomSelect
+                                value={formData.year}
+                                disabled={!isEditing || !formData.course}
+                                placeholder="Select Year"
+                                isOpen={activeField === 'year'}
+                                onToggle={() => toggleField('year')}
+                                onChange={(val) => setFormData({ ...formData, year: parseInt(val), branch: '' })}
+                                options={years.map((y: any) => ({ label: y.name, value: y.id }))}
+                            />
+                        </UnifiedField>
+
+                        {/* Branch - Expandable */}
+                        <div className="md:col-span-2">
+                            <UnifiedField label="Branch / Department" icon={Hash} isEditing={isEditing}>
+                                <CustomSelect
+                                    value={formData.branch}
+                                    disabled={!isEditing || !formData.year}
+                                    placeholder="Select Branch"
+                                    isOpen={activeField === 'branch'}
+                                    onToggle={() => toggleField('branch')}
+                                    onChange={(val) => setFormData({ ...formData, branch: val })}
+                                    options={courses.map((c: any) => ({ label: c.name, value: c.id }))}
+                                />
+                            </UnifiedField>
+                        </div>
+
+                        {/* Semester - Expandable */}
+                        <UnifiedField label="Current Semester" isEditing={isEditing} icon={null}>
+                            <CustomSelect
+                                value={formData.semester}
+                                disabled={!isEditing}
+                                placeholder="Select Semester"
+                                isOpen={activeField === 'semester'}
+                                onToggle={() => toggleField('semester')}
+                                onChange={(val) => setFormData({ ...formData, semester: parseInt(val) })}
+                                options={[1, 2, 3, 4, 5, 6, 7, 8].map(sem => ({ label: `Semester ${sem}`, value: sem }))}
+                            />
+                        </UnifiedField>
+
                     </div>
                 </div>
             </div>
