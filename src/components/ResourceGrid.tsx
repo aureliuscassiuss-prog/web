@@ -68,6 +68,8 @@ const GridCard = ({ resource, onDelete, showStatus = false }: { resource: any, o
         flags: resource.flags || 0
     });
 
+    const [isInteracting, setIsInteracting] = useState(false);
+
     // Sync state ONLY when the resource itself changes (different resource)
     // This ensures state updates after page refresh but doesn't interfere with optimistic updates
     useEffect(() => {
@@ -80,13 +82,13 @@ const GridCard = ({ resource, onDelete, showStatus = false }: { resource: any, o
             downloads: resource.downloads || 0,
             flags: resource.flags || 0
         });
-    }, [resource._id]); // Only re-run when resource ID changes
+    }, [resource]); // Re-run when resource object changes (including deep updates if ref fetched)
 
 
     const handleInteraction = async (action: string, value: boolean) => {
         if (!token) {
             alert('Please sign in to interact with resources');
-            return;
+            return false;
         }
 
         try {
@@ -105,93 +107,118 @@ const GridCard = ({ resource, onDelete, showStatus = false }: { resource: any, o
 
             if (response.ok) {
                 const data = await response.json();
+                // Update with server truth
                 setCounts({
                     likes: data.resource.likes,
                     dislikes: data.resource.dislikes,
                     downloads: data.resource.downloads,
                     flags: data.resource.flags
                 });
-
-                if (action === 'like') {
-                    setUserVote(data.resource.userLiked ? 'like' : null);
-                } else if (action === 'dislike') {
-                    setUserVote(data.resource.userDisliked ? 'dislike' : null);
-                } else if (action === 'save') {
-                    setIsSaved(data.resource.userSaved);
-                } else if (action === 'flag') {
-                    setIsReported(data.resource.userFlagged);
-                }
+                return true;
             }
+            return false;
         } catch (error) {
             console.error('Interaction failed:', error);
+            return false;
         }
     };
 
-    const handleLike = () => {
+    const handleLike = async () => {
+        if (isInteracting) return;
+        setIsInteracting(true);
+
+        const previousVote = userVote;
+        const previousCounts = { ...counts };
         const newValue = userVote !== 'like';
 
-        // Optimistic update - instant UI feedback
+        // Optimistic update
         if (newValue) {
-            // Adding like
             if (userVote === 'dislike') {
-                // Remove dislike, add like
                 setCounts(prev => ({ ...prev, likes: prev.likes + 1, dislikes: prev.dislikes - 1 }));
             } else {
-                // Just add like
                 setCounts(prev => ({ ...prev, likes: prev.likes + 1 }));
             }
             setUserVote('like');
         } else {
-            // Removing like
             setCounts(prev => ({ ...prev, likes: prev.likes - 1 }));
             setUserVote(null);
         }
 
-        handleInteraction('like', newValue);
+        const success = await handleInteraction('like', newValue);
+        if (!success) {
+            // Revert
+            setUserVote(previousVote);
+            setCounts(previousCounts);
+        }
+        setIsInteracting(false);
     };
 
-    const handleDislike = () => {
+    const handleDislike = async () => {
+        if (isInteracting) return;
+        setIsInteracting(true);
+
+        const previousVote = userVote;
+        const previousCounts = { ...counts };
         const newValue = userVote !== 'dislike';
 
-        // Optimistic update - instant UI feedback
+        // Optimistic update
         if (newValue) {
-            // Adding dislike
             if (userVote === 'like') {
-                // Remove like, add dislike
                 setCounts(prev => ({ ...prev, dislikes: prev.dislikes + 1, likes: prev.likes - 1 }));
             } else {
-                // Just add dislike
                 setCounts(prev => ({ ...prev, dislikes: prev.dislikes + 1 }));
             }
             setUserVote('dislike');
         } else {
-            // Removing dislike
             setCounts(prev => ({ ...prev, dislikes: prev.dislikes - 1 }));
             setUserVote(null);
         }
 
-        handleInteraction('dislike', newValue);
+        const success = await handleInteraction('dislike', newValue);
+        if (!success) {
+            // Revert
+            setUserVote(previousVote);
+            setCounts(previousCounts);
+        }
+        setIsInteracting(false);
     };
 
-    const handleSave = () => {
-        // Optimistic update - instant UI feedback
-        setIsSaved(!isSaved);
-        handleInteraction('save', !isSaved);
+    const handleSave = async () => {
+        if (isInteracting) return;
+        setIsInteracting(true);
+
+        const previousSaved = isSaved;
+        setIsSaved(!isSaved); // Optimistic
+
+        const success = await handleInteraction('save', !isSaved);
+        if (!success) {
+            setIsSaved(previousSaved);
+        }
+        setIsInteracting(false);
     };
 
-    const handleFlag = () => {
-        if (!isReported) {
-            if (confirm('Are you sure you want to flag this resource as risky? This action cannot be undone.')) {
-                // Optimistic update - instant UI feedback
-                setIsReported(true);
-                setCounts(prev => ({ ...prev, flags: prev.flags + 1 }));
-                handleInteraction('flag', true);
+    const handleFlag = async () => {
+        if (isInteracting || isReported) return;
+
+        if (confirm('Are you sure you want to flag this resource as risky? This action cannot be undone.')) {
+            setIsInteracting(true);
+            const previousReported = isReported;
+            const previousCounts = { ...counts };
+
+            setIsReported(true);
+            setCounts(prev => ({ ...prev, flags: prev.flags + 1 }));
+
+            const success = await handleInteraction('flag', true);
+            if (!success) {
+                setIsReported(previousReported);
+                setCounts(previousCounts);
             }
+            setIsInteracting(false);
         }
     };
 
-    const handleDownload = () => {
-        // Optimistic update - instant UI feedback
+    const handleDownload = async () => {
+        // Don't block download on interaction, just fire and forget mostly, but track count
         setCounts(prev => ({ ...prev, downloads: prev.downloads + 1 }));
         handleInteraction('download', true);
     };
@@ -217,14 +244,16 @@ const GridCard = ({ resource, onDelete, showStatus = false }: { resource: any, o
                 <div className="flex items-center gap-1">
                     <button
                         onClick={(e) => { e.preventDefault(); handleSave(); }}
-                        className={`p-1.5 rounded-lg transition-colors ${isSaved ? 'text-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-400 hover:text-blue-500 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                        disabled={isInteracting}
+                        className={`p-1.5 rounded-lg transition-colors ${isSaved ? 'text-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-400 hover:text-blue-500 hover:bg-gray-50 dark:hover:bg-gray-800'} ${isInteracting ? 'opacity-50 cursor-not-allowed' : ''}`}
                         title={isSaved ? "Saved" : "Save Resource"}
                     >
                         <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
                     </button>
                     <button
                         onClick={(e) => { e.preventDefault(); handleFlag(); }}
-                        className={`p-1.5 rounded-lg transition-colors ${isReported ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'text-gray-400 hover:text-red-500 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                        disabled={isInteracting || isReported}
+                        className={`p-1.5 rounded-lg transition-colors ${isReported ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'text-gray-400 hover:text-red-500 hover:bg-gray-50 dark:hover:bg-gray-800'} ${isInteracting || isReported ? 'opacity-50 cursor-not-allowed' : ''}`}
                         title="Flag as Risky"
                     >
                         <Flag className={`w-4 h-4 ${isReported ? 'fill-current' : ''}`} />
@@ -274,7 +303,8 @@ const GridCard = ({ resource, onDelete, showStatus = false }: { resource: any, o
                 <div className="flex items-center gap-1 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-1">
                     <button
                         onClick={handleLike}
-                        className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors ${userVote === 'like' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+                        disabled={isInteracting}
+                        className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors ${userVote === 'like' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'} ${isInteracting ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         <ThumbsUp className="w-3 h-3" />
                         <span>{counts.likes}</span>
@@ -282,7 +312,8 @@ const GridCard = ({ resource, onDelete, showStatus = false }: { resource: any, o
                     <div className="w-px h-3 bg-gray-200 dark:bg-gray-700"></div>
                     <button
                         onClick={handleDislike}
-                        className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors ${userVote === 'dislike' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+                        disabled={isInteracting}
+                        className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors ${userVote === 'dislike' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'} ${isInteracting ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         <ThumbsDown className="w-3 h-3" />
                         <span>{counts.dislikes}</span>
