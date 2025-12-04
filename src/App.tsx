@@ -29,6 +29,7 @@ import DocsPage from './components/DocsPage'
 import PrivacyPage from './components/PrivacyPage'
 import TermsPage from './components/TermsPage'
 import SavedResources from './components/SavedResources'
+import SEO from './components/SEO'
 
 
 function Layout({
@@ -276,12 +277,25 @@ function AppContent() {
           {/* Home Route */}
           <Route path="/" element={
             <div className="space-y-8">
+              <SEO
+                title="Extrovert - #1 Resource Hub for Medicaps University | Notes & PYQs"
+                description="Access the best collection of Medicaps University notes, previous year question papers (PYQs), and syllabus for B.Tech, MBA, and BBA students."
+              />
               {user ? <Dashboard /> : <Hero onGetStarted={handleGetStarted} user={user} />}
             </div>
           } />
 
           {/* Browse Resources Route */}
-          <Route path="/resources" element={<BrowseResources onUploadRequest={handleUploadWithData} />} />
+          <Route path="/resources" element={
+            <>
+              <SEO
+                title="Medicaps University Notes, PYQs & Syllabus - B.Tech, MBA, BBA"
+                description="Find and download Medicaps University study materials. Filter by course, branch, and year. Comprehensive notes for CSE, IT, ME, CE, and more."
+                url="https://extrovert.site/resources"
+              />
+              <BrowseResources onUploadRequest={handleUploadWithData} />
+            </>
+          } />
 
           {/* CGPA Calculator Route (Public) */}
           <Route path="/cgpa-calculator" element={<CGPACalculator />} />
@@ -298,7 +312,14 @@ function AppContent() {
 
           {/* Leaderboard Route */}
           <Route path="/leaderboard" element={
-            <ResourceGrid view="leaderboard" searchQuery={searchQuery} />
+            <>
+              <SEO
+                title="Top Contributors - Medicaps University Community"
+                description="See who's leading the academic community at Medicaps University. Join the leaderboard by sharing your notes and helping fellow students."
+                url="https://extrovert.site/leaderboard"
+              />
+              <ResourceGrid view="leaderboard" searchQuery={searchQuery} />
+            </>
           } />
           {/* Preparation Routes (Protected) */}
           <Route path="/preparation" element={
@@ -375,7 +396,16 @@ function AppContent() {
           <Route path="/contact" element={<ContactPage />} />
 
           {/* Docs Route */}
-          <Route path="/docs" element={<DocsPage />} />
+          <Route path="/docs" element={
+            <>
+              <SEO
+                title="Documentation"
+                description="Learn how to use Extrovert, upload resources, and get the most out of the platform."
+                url="https://extrovert.site/docs"
+              />
+              <DocsPage />
+            </>
+          } />
 
           {/* Privacy Route */}
           <Route path="/privacy" element={<PrivacyPage />} />

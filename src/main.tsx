@@ -5,9 +5,13 @@ import App from './App.tsx'
 
 const rootElement = document.getElementById('root')!;
 
+import { HelmetProvider } from 'react-helmet-async';
+
 createRoot(rootElement).render(
   <StrictMode>
-    <App />
+    <HelmetProvider>
+      <App />
+    </HelmetProvider>
   </StrictMode>,
 )
 
