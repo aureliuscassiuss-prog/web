@@ -22,10 +22,11 @@ function TabButton({ active, onClick, icon, label }: any) {
     return (
         <button
             onClick={onClick}
-            className={`relative flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all z-10 ${active ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+            className={`relative flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all z-10 ${active ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
         >
             {icon}
-            <span>{label}</span>
+            <span className="hidden sm:inline">{label}</span>
+            <span className="sm:hidden">{label.split(' ')[0]}</span>
         </button>
     )
 }
@@ -324,7 +325,7 @@ function DailyTab({ subjects, logs, onMark }: { subjects: Subject[], logs: Atten
     if (todaysClasses.length === 0) return <EmptyState message={`No classes scheduled for ${today}. Enjoy your day off!`} />
 
     return (
-        <div className="space-y-4 max-w-3xl mx-auto">
+        <div className="space-y-3 max-w-2xl mx-auto">
             <div className="flex items-center justify-between mb-2">
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">Schedule for {today}</h2>
                 <span className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 px-2 py-1 rounded-md font-medium">
@@ -333,7 +334,6 @@ function DailyTab({ subjects, logs, onMark }: { subjects: Subject[], logs: Atten
             </div>
 
             {todaysClasses.map(subject => {
-                const schedule = subject.schedule.find(s => s.day === today)
                 const todayLog = logs.find(l =>
                     l.subjectId === subject.id &&
                     new Date(l.date).toDateString() === new Date().toDateString()
@@ -342,11 +342,10 @@ function DailyTab({ subjects, logs, onMark }: { subjects: Subject[], logs: Atten
                 return (
                     <div key={subject.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
                         <div className="flex items-center gap-4">
-                            <div className="h-12 w-1 bg-gray-200 dark:bg-gray-700 rounded-full" style={{ backgroundColor: subject.color }}></div>
+                            <div className="h-10 w-1 bg-gray-200 dark:bg-gray-700 rounded-full" style={{ backgroundColor: subject.color }}></div>
                             <div>
                                 <h3 className="font-bold text-gray-900 dark:text-white">{subject.name}</h3>
                                 <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    <span className="flex items-center gap-1"><Clock size={12} /> {schedule?.startTime} - {schedule?.endTime}</span>
                                     <span className="flex items-center gap-1"><Target size={12} /> Target: {subject.minimumAttendance}%</span>
                                 </div>
                             </div>
@@ -438,7 +437,7 @@ function ManageTab({ subjects, onAdd, onUpdate, onDelete }: any) {
     const addScheduleItem = () => {
         setNewSubject({
             ...newSubject,
-            schedule: [...(newSubject.schedule || []), { day: 'Monday', startTime: '09:00', endTime: '10:00' }]
+            schedule: [...(newSubject.schedule || []), { day: 'Monday', startTime: '', endTime: '' }]
         })
     }
 
@@ -456,7 +455,7 @@ function ManageTab({ subjects, onAdd, onUpdate, onDelete }: any) {
 
     if (isEditing) {
         return (
-            <div className="max-w-2xl mx-auto bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 shadow-lg animate-in fade-in zoom-in-95 duration-200">
+            <div className="max-w-xl mx-auto bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 shadow-lg animate-in fade-in zoom-in-95 duration-200">
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">{editingId ? 'Edit Subject' : 'Add New Subject'}</h2>
                     <button onClick={resetForm} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
@@ -464,21 +463,23 @@ function ManageTab({ subjects, onAdd, onUpdate, onDelete }: any) {
                     </button>
                 </div>
 
-                <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-5">
+                    {/* Name & Code */}
+                    <div className="space-y-4">
                         <div className="space-y-1.5">
                             <label className="text-xs font-bold text-gray-500 uppercase">Subject Name</label>
-                            <input type="text" value={newSubject.name} onChange={e => setNewSubject({ ...newSubject, name: e.target.value })} className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. Mathematics" />
+                            <input type="text" value={newSubject.name} onChange={e => setNewSubject({ ...newSubject, name: e.target.value })} className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. Mathematics" />
                         </div>
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-gray-500 uppercase">Subject Code</label>
-                            <input type="text" value={newSubject.code} onChange={e => setNewSubject({ ...newSubject, code: e.target.value })} className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. CS101" />
+                            <label className="text-xs font-bold text-gray-500 uppercase">Subject Code (Optional)</label>
+                            <input type="text" value={newSubject.code} onChange={e => setNewSubject({ ...newSubject, code: e.target.value })} className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. CS101" />
                         </div>
                     </div>
 
+                    {/* Stats Grid */}
                     <div className="grid grid-cols-3 gap-4">
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-gray-500 uppercase">Total Classes</label>
+                            <label className="text-xs font-bold text-gray-500 uppercase">Total</label>
                             <input type="number" value={newSubject.totalClasses} onChange={e => setNewSubject({ ...newSubject, totalClasses: Number(e.target.value) })} className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
                         </div>
                         <div className="space-y-1.5">
@@ -491,9 +492,10 @@ function ManageTab({ subjects, onAdd, onUpdate, onDelete }: any) {
                         </div>
                     </div>
 
+                    {/* Color Picker */}
                     <div className="space-y-1.5">
                         <label className="text-xs font-bold text-gray-500 uppercase">Color Tag</label>
-                        <div className="flex gap-2">
+                        <div className="flex gap-3">
                             {['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'].map(color => (
                                 <button
                                     key={color}
@@ -505,34 +507,35 @@ function ManageTab({ subjects, onAdd, onUpdate, onDelete }: any) {
                         </div>
                     </div>
 
-                    <div className="space-y-2 pt-2">
+                    {/* Schedule */}
+                    <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-800">
                         <div className="flex justify-between items-center">
-                            <label className="text-xs font-bold text-gray-500 uppercase">Weekly Schedule</label>
+                            <label className="text-xs font-bold text-gray-500 uppercase">Class Schedule</label>
                             <button onClick={addScheduleItem} className="text-xs flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium">
-                                <Plus size={12} /> Add Class
+                                <Plus size={12} /> Add Day
                             </button>
                         </div>
-                        {newSubject.schedule?.map((item, index) => (
-                            <div key={index} className="flex gap-2 items-center animate-in slide-in-from-left-2 duration-200">
-                                <select value={item.day} onChange={e => updateScheduleItem(index, 'day', e.target.value)} className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
-                                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => <option key={d} value={d}>{d}</option>)}
-                                </select>
-                                <input type="time" value={item.startTime} onChange={e => updateScheduleItem(index, 'startTime', e.target.value)} className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none" />
-                                <span className="text-gray-400">-</span>
-                                <input type="time" value={item.endTime} onChange={e => updateScheduleItem(index, 'endTime', e.target.value)} className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none" />
-                                <button onClick={() => removeScheduleItem(index)} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={14} /></button>
-                            </div>
-                        ))}
-                        {newSubject.schedule?.length === 0 && (
-                            <p className="text-xs text-gray-400 italic">No classes scheduled.</p>
-                        )}
+                        <div className="space-y-2">
+                            {newSubject.schedule?.map((item, index) => (
+                                <div key={index} className="flex gap-2 items-center animate-in slide-in-from-left-2 duration-200">
+                                    <select value={item.day} onChange={e => updateScheduleItem(index, 'day', e.target.value)} className="flex-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                        {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => <option key={d} value={d}>{d}</option>)}
+                                    </select>
+                                    <button onClick={() => removeScheduleItem(index)} className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                                </div>
+                            ))}
+                            {newSubject.schedule?.length === 0 && (
+                                <p className="text-xs text-gray-400 italic py-2">No classes scheduled yet.</p>
+                            )}
+                        </div>
                     </div>
 
+                    {/* Actions */}
                     <div className="pt-4 flex gap-3">
-                        <button onClick={handleSave} className="flex-1 bg-black text-white dark:bg-white dark:text-black py-2.5 rounded-lg font-bold text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+                        <button onClick={handleSave} className="flex-1 bg-black text-white dark:bg-white dark:text-black py-3 rounded-xl font-bold text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-sm">
                             <Save size={16} /> Save Subject
                         </button>
-                        <button onClick={resetForm} className="px-6 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg font-bold text-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                        <button onClick={resetForm} className="px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
                             Cancel
                         </button>
                     </div>
@@ -542,7 +545,7 @@ function ManageTab({ subjects, onAdd, onUpdate, onDelete }: any) {
     }
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 max-w-2xl mx-auto">
             <div className="flex justify-end">
                 <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 px-4 py-2 bg-black text-white dark:bg-white dark:text-black rounded-lg text-sm font-bold hover:opacity-90 transition-opacity shadow-sm">
                     <Plus size={16} /> Add Subject
@@ -552,7 +555,7 @@ function ManageTab({ subjects, onAdd, onUpdate, onDelete }: any) {
             {subjects.length === 0 ? (
                 <EmptyState message="No subjects found. Add one to get started!" />
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3">
                     {subjects.map((subject: Subject) => (
                         <div key={subject.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 flex items-center justify-between group hover:border-gray-300 dark:hover:border-gray-700 transition-all">
                             <div className="flex items-center gap-4">
@@ -561,10 +564,10 @@ function ManageTab({ subjects, onAdd, onUpdate, onDelete }: any) {
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-gray-900 dark:text-white">{subject.name}</h3>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">{subject.code} • {subject.schedule.length} Classes/Week</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{subject.code} • {subject.schedule.length} Days/Week</p>
                                 </div>
                             </div>
-                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex gap-2">
                                 <button onClick={() => startEdit(subject)} className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">
                                     <Edit2 size={16} />
                                 </button>
