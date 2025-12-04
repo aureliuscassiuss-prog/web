@@ -205,14 +205,61 @@ export default function ProfilePage() {
         setIsSaving(true);
         setError(null);
         try {
-            await new Promise(resolve => setTimeout(resolve, 800));
-            updateUser({ ...user, ...formData, avatar: previewUrl });
+            // Create FormData for file upload
+            const formDataToSend = new FormData();
+
+            // Add all form fields
+            formDataToSend.append('name', formData.name);
+            formDataToSend.append('email', formData.email);
+            formDataToSend.append('phone', formData.phone);
+            formDataToSend.append('semester', formData.semester.toString());
+            formDataToSend.append('college', formData.college);
+            formDataToSend.append('course', formData.course);
+            formDataToSend.append('branch', formData.branch);
+            formDataToSend.append('year', formData.year.toString());
+            formDataToSend.append('gender', formData.gender);
+
+            // Add avatar file if it exists
+            if (avatarFile) {
+                formDataToSend.append('avatar', avatarFile);
+            }
+
+            // Get token from localStorage
+            const token = localStorage.getItem('token');
+            if (!token) {
+                throw new Error('Not authenticated');
+            }
+
+            // Send to backend
+            const response = await fetch('/api/profile', {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formDataToSend
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to update profile');
+            }
+
+            const data = await response.json();
+
+            // Update local state with server response
+            updateUser(data.user);
+
+            // Clear the avatar file and update preview
+            setAvatarFile(null);
+            setPreviewUrl(data.user.avatar || null);
+
             setSuccess(true);
             setIsEditing(false);
             setActiveField(null);
             setTimeout(() => setSuccess(false), 3000);
-        } catch {
-            setError('Save failed');
+        } catch (err) {
+            console.error('Save error:', err);
+            setError(err instanceof Error ? err.message : 'Save failed');
         } finally {
             setIsSaving(false);
         }
