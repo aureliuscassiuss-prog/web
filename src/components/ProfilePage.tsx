@@ -2,10 +2,9 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
     User, Save, AlertCircle, CheckCircle2, Pencil, Camera,
-    LogOut, School, Phone, Hash, BookOpen, Calendar,
+    School, Phone, Hash, BookOpen, Calendar,
     Star, ChevronDown, Check, Loader2
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
 const NeutralAvatar = ({ className }: { className?: string }) => (
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
@@ -141,7 +140,7 @@ const CustomSelect = ({
 
 export default function ProfilePage() {
     const { user, updateUser, logout } = useAuth();
-    const navigate = useNavigate();
+    // const navigate = useNavigate(); // Removed unused
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -270,7 +269,19 @@ export default function ProfilePage() {
         setActiveField(null);
         setPreviewUrl(user?.avatar || null);
         setAvatarFile(null);
-        if (user) setFormData({ ...user });
+        if (user) {
+            setFormData({
+                name: user.name || '',
+                email: user.email || '',
+                phone: user.phone || '',
+                semester: user.semester || 1,
+                college: user.college || 'Medicaps University',
+                course: user.course || '',
+                branch: user.branch || '',
+                year: user.year || 1,
+                gender: user.gender || 'male',
+            });
+        }
     };
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -311,7 +322,9 @@ export default function ProfilePage() {
 
                 {/* Header Banner */}
                 <div className="h-32 bg-gradient-to-r from-blue-700 to-indigo-800 relative">
-                    <button onClick={logout} className="absolute top-3 right-3 px-3 py-1.5 bg-black/20 text-white rounded-full hover:bg-black/30 backdrop-blur-md z-10 text-xs font-medium">`r`n                        Logout`r`n                    </button>
+                    <button onClick={logout} className="absolute top-3 right-3 px-3 py-1.5 bg-black/20 text-white rounded-full hover:bg-black/30 backdrop-blur-md z-10 text-xs font-medium">
+                        Logout
+                    </button>
                     <div className="absolute bottom-3 right-3 z-20 flex justify-end">
                         {!isEditing ? (
                             <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white rounded-full text-xs font-semibold border border-white/20 shadow-lg">
@@ -321,7 +334,17 @@ export default function ProfilePage() {
                             <div className="flex gap-2 animate-in fade-in zoom-in duration-200">
                                 <button onClick={handleCancel} className="px-3 py-1.5 bg-black/40 text-white rounded-lg text-xs font-medium hover:bg-black/50 backdrop-blur-md">Cancel</button>
                                 <button onClick={handleSave} disabled={isSaving} className="px-3 py-1.5 bg-white text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-50 shadow-lg flex items-center gap-2 disabled:opacity-70">
-                                    {isSaving ? (`r`n                                        <>`r`n                                            <Loader2 size={12} className="animate-spin" />`r`n                                            Saving...`r`n                                        </>`r`n                                    ) : (`r`n                                        <>`r`n                                            <Save size={12} />`r`n                                            Save`r`n                                        </>`r`n                                    )}
+                                    {isSaving ? (
+                                        <>
+                                            <Loader2 size={12} className="animate-spin" />
+                                            Saving...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save size={12} />
+                                            Save
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         )}

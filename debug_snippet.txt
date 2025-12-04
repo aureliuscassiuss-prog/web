@@ -1,0 +1,7 @@
+// Quick test: Add this temporarily at line 391 to see what data we have
+useEffect(() => {
+    if (resources && resources.length > 0) {
+        console.log('First resource:', resources[0]);
+        console.log('Resource fields:', Object.keys(resources[0]));
+    }
+}, [resources]);
