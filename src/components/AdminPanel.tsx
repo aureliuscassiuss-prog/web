@@ -425,7 +425,11 @@ function PendingView({ resources, processingId, onAction }: any) {
                         >
                             {/* Avatar */}
                             <div className="h-9 w-9 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                                <NeutralAvatar className="h-full w-full" />
+                                {resource.uploaderAvatar ? (
+                                    <img src={resource.uploaderAvatar} alt={resource.uploaderName} className="h-full w-full object-cover" />
+                                ) : (
+                                    <NeutralAvatar className="h-full w-full" />
+                                )}
                             </div>
 
                             {/* Request Info */}
@@ -470,7 +474,11 @@ function PendingView({ resources, processingId, onAction }: any) {
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <div className="h-8 w-8 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                                            <NeutralAvatar className="h-full w-full" />
+                                            {resource.uploaderAvatar ? (
+                                                <img src={resource.uploaderAvatar} alt={resource.uploaderName} className="h-full w-full object-cover" />
+                                            ) : (
+                                                <NeutralAvatar className="h-full w-full" />
+                                            )}
                                         </div>
                                         <div>
                                             <div className="text-sm font-bold text-gray-900 dark:text-white">{resource.uploaderName || 'Unknown User'}</div>
