@@ -40,7 +40,7 @@ const UnifiedField = ({
                 relative w-full min-h-[44px] rounded-lg transition-all duration-200 overflow-hidden
                 ${isEditing
                     ? "bg-white dark:bg-zinc-900 border border-gray-300 dark:border-zinc-700 shadow-sm focus-within:ring-4 focus-within:ring-blue-500/10 focus-within:border-blue-500"
-                    : "bg-transparent border border-transparent"}
+                    : "bg-gray-50/50 dark:bg-zinc-900/30 border border-gray-200 dark:border-zinc-800"}
             `}>
                 {children}
             </div>
