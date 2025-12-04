@@ -5,6 +5,7 @@ import {
     School, Phone, Hash, BookOpen, Calendar,
     Star, ChevronDown, Check, Loader2
 } from 'lucide-react';
+import ProfileBanner from './ProfileBanner';
 
 const NeutralAvatar = ({ className }: { className?: string }) => (
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
@@ -321,19 +322,19 @@ export default function ProfilePage() {
             <div className="bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden">
 
                 {/* Header Banner */}
-                <div className="h-32 bg-gradient-to-r from-blue-700 to-indigo-800 relative">
-                    <button onClick={logout} className="absolute top-3 right-3 px-3 py-1.5 bg-black/20 text-white rounded-full hover:bg-black/30 backdrop-blur-md z-10 text-xs font-medium">
-                        Logout
-                    </button>
-                    <div className="absolute bottom-3 right-3 z-20 flex justify-end">
+                <ProfileBanner user={user}>
+                    <div className="flex items-center gap-3">
+                        <button onClick={logout} className="px-3 py-1.5 bg-black/20 text-white rounded-full hover:bg-black/30 backdrop-blur-md z-10 text-xs font-medium border border-white/10 transition-colors">
+                            Logout
+                        </button>
                         {!isEditing ? (
-                            <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white rounded-full text-xs font-semibold border border-white/20 shadow-lg">
+                            <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white rounded-full text-xs font-semibold border border-white/20 shadow-lg transition-all hover:scale-105 active:scale-95">
                                 <Pencil size={12} /> Edit Profile
                             </button>
                         ) : (
                             <div className="flex gap-2 animate-in fade-in zoom-in duration-200">
-                                <button onClick={handleCancel} className="px-3 py-1.5 bg-black/40 text-white rounded-lg text-xs font-medium hover:bg-black/50 backdrop-blur-md">Cancel</button>
-                                <button onClick={handleSave} disabled={isSaving} className="px-3 py-1.5 bg-white text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-50 shadow-lg flex items-center gap-2 disabled:opacity-70">
+                                <button onClick={handleCancel} className="px-3 py-1.5 bg-black/40 text-white rounded-lg text-xs font-medium hover:bg-black/50 backdrop-blur-md transition-colors">Cancel</button>
+                                <button onClick={handleSave} disabled={isSaving} className="px-3 py-1.5 bg-white text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-50 shadow-lg flex items-center gap-2 disabled:opacity-70 transition-all hover:scale-105 active:scale-95">
                                     {isSaving ? (
                                         <>
                                             <Loader2 size={12} className="animate-spin" />
@@ -349,7 +350,7 @@ export default function ProfilePage() {
                             </div>
                         )}
                     </div>
-                </div>
+                </ProfileBanner>
 
                 {/* Identity Section */}
                 <div className="px-4 sm:px-5 relative mb-8">
