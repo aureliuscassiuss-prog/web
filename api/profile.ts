@@ -60,21 +60,13 @@ async function handleGetUploads(userId: string, res: VercelResponse) {
         .toArray();
 
     // Fetch interaction status for each resource
-    const uploadsWithStatus = await Promise.all(uploads.map(async (resource) => {
-        const [like, dislike, save, flag] = await Promise.all([
-            db.collection('likes').findOne({ resourceId: resource._id.toString(), userId }),
-            db.collection('dislikes').findOne({ resourceId: resource._id.toString(), userId }),
-            db.collection('saved_resources').findOne({ resourceId: resource._id.toString(), userId }),
-            db.collection('flags').findOne({ resourceId: resource._id.toString(), userId })
-        ]);
-
-        return {
-            ...resource,
-            userLiked: !!like,
-            userDisliked: !!dislike,
-            userSaved: !!save,
-            userFlagged: !!flag
-        };
+    // Since we already have the resource documents, we can just check the arrays
+    const uploadsWithStatus = uploads.map(resource => ({
+        ...resource,
+        userLiked: resource.likedBy?.includes(userId) || false,
+        userDisliked: resource.dislikedBy?.includes(userId) || false,
+        userSaved: resource.savedBy?.includes(userId) || false,
+        userFlagged: resource.flaggedBy?.includes(userId) || false
     }));
 
     return res.status(200).json({ uploads: uploadsWithStatus });
