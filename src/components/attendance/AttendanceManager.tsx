@@ -133,27 +133,49 @@ export default function AttendanceManager() {
     }
 
     const markAttendance = (subjectId: string, status: 'present' | 'absent' | 'cancelled', date: Date = new Date()) => {
-        const log: AttendanceLog = {
-            id: crypto.randomUUID(),
-            subjectId,
-            date: date.toISOString(),
-            status
-        }
-        setLogs([...logs, log])
+        const dateStr = date.toDateString()
+        const existingLogIndex = logs.findIndex(l => l.subjectId === subjectId && new Date(l.date).toDateString() === dateStr)
 
-        // Update subject stats
-        const subject = subjects.find(s => s.id === subjectId)
-        if (subject) {
-            const updatedSubject = { ...subject }
-            if (status === 'present') {
-                updatedSubject.attendedClasses++
-                updatedSubject.totalClasses++
-            } else if (status === 'absent') {
-                updatedSubject.totalClasses++
+        let newLogs = [...logs]
+        let subject = subjects.find(s => s.id === subjectId)
+        if (!subject) return
+        let updatedSubject = { ...subject }
+
+        if (existingLogIndex >= 0) {
+            const oldStatus = logs[existingLogIndex].status
+            if (oldStatus === status) return // No change
+
+            // Revert old stats
+            if (oldStatus === 'present') {
+                updatedSubject.attendedClasses--
+                updatedSubject.totalClasses--
+            } else if (oldStatus === 'absent') {
+                updatedSubject.totalClasses--
             }
-            // Cancelled doesn't affect totals
-            updateSubject(updatedSubject)
+
+            // Update log
+            newLogs[existingLogIndex] = { ...newLogs[existingLogIndex], status }
+        } else {
+            // New log
+            const log: AttendanceLog = {
+                id: crypto.randomUUID(),
+                subjectId,
+                date: date.toISOString(),
+                status
+            }
+            newLogs.push(log)
         }
+
+        // Apply new stats
+        if (status === 'present') {
+            updatedSubject.attendedClasses++
+            updatedSubject.totalClasses++
+        } else if (status === 'absent') {
+            updatedSubject.totalClasses++
+        }
+
+        setLogs(newLogs)
+        updateSubject(updatedSubject)
     }
 
     const NeutralAvatar = ({ className }: { className?: string }) => (
@@ -203,7 +225,7 @@ export default function AttendanceManager() {
 
                 {/* --- Tabs Navigation --- */}
                 <div className="mb-8 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
-                    <div className="relative flex gap-1 p-1 bg-gray-100 dark:bg-white/5 rounded-xl w-max sm:w-auto">
+                    <div className="relative flex gap-1 p-1 bg-gray-100 dark:bg-white/5 rounded-xl w-full">
                         {/* Animated Indicator */}
                         <motion.div
                             layoutId="active-tab-indicator"
@@ -352,26 +374,33 @@ function DailyTab({ subjects, logs, onMark }: { subjects: Subject[], logs: Atten
                         </div>
 
                         <div className="flex items-center gap-2 self-end sm:self-center">
-                            {todayLog ? (
-                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
-                                    {todayLog.status === 'present' && <CheckCircle2 size={16} className="text-green-500" />}
-                                    {todayLog.status === 'absent' && <XCircle size={16} className="text-red-500" />}
-                                    {todayLog.status === 'cancelled' && <AlertTriangle size={16} className="text-orange-500" />}
-                                    <span className="text-sm font-medium capitalize text-gray-700 dark:text-gray-300">{todayLog.status}</span>
-                                </div>
-                            ) : (
-                                <>
-                                    <button onClick={() => onMark(subject.id, 'present')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800 transition-colors text-xs font-bold">
-                                        <CheckCircle2 size={14} /> Present
-                                    </button>
-                                    <button onClick={() => onMark(subject.id, 'absent')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 transition-colors text-xs font-bold">
-                                        <XCircle size={14} /> Absent
-                                    </button>
-                                    <button onClick={() => onMark(subject.id, 'cancelled')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800 transition-colors text-xs font-bold">
-                                        <AlertTriangle size={14} /> Cancelled
-                                    </button>
-                                </>
-                            )}
+                            <button
+                                onClick={() => onMark(subject.id, 'present')}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold ${todayLog?.status === 'present'
+                                        ? 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-800 ring-2 ring-green-500/20'
+                                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-700'
+                                    }`}
+                            >
+                                <CheckCircle2 size={14} className={todayLog?.status === 'present' ? 'fill-current' : ''} /> Present
+                            </button>
+                            <button
+                                onClick={() => onMark(subject.id, 'absent')}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold ${todayLog?.status === 'absent'
+                                        ? 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800 ring-2 ring-red-500/20'
+                                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-700'
+                                    }`}
+                            >
+                                <XCircle size={14} className={todayLog?.status === 'absent' ? 'fill-current' : ''} /> Absent
+                            </button>
+                            <button
+                                onClick={() => onMark(subject.id, 'cancelled')}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold ${todayLog?.status === 'cancelled'
+                                        ? 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/40 dark:text-orange-300 dark:border-orange-800 ring-2 ring-orange-500/20'
+                                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-700'
+                                    }`}
+                            >
+                                <AlertTriangle size={14} className={todayLog?.status === 'cancelled' ? 'fill-current' : ''} /> Cancelled
+                            </button>
                         </div>
                     </div>
                 )
@@ -382,6 +411,7 @@ function DailyTab({ subjects, logs, onMark }: { subjects: Subject[], logs: Atten
 
 function ManageTab({ subjects, onAdd, onUpdate, onDelete }: any) {
     const [isEditing, setIsEditing] = useState(false)
+    const [isSaving, setIsSaving] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [newSubject, setNewSubject] = useState<Partial<Subject>>({
         name: '',
@@ -393,8 +423,12 @@ function ManageTab({ subjects, onAdd, onUpdate, onDelete }: any) {
         schedule: []
     })
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!newSubject.name) return
+
+        setIsSaving(true)
+        // Simulate network delay for better UX
+        await new Promise(resolve => setTimeout(resolve, 600))
 
         if (editingId) {
             onUpdate({ ...newSubject, id: editingId } as Subject)
@@ -411,6 +445,7 @@ function ManageTab({ subjects, onAdd, onUpdate, onDelete }: any) {
             }
             onAdd(subject)
         }
+        setIsSaving(false)
         resetForm()
     }
 
@@ -532,10 +567,11 @@ function ManageTab({ subjects, onAdd, onUpdate, onDelete }: any) {
 
                     {/* Actions */}
                     <div className="pt-4 flex gap-3">
-                        <button onClick={handleSave} className="flex-1 bg-black text-white dark:bg-white dark:text-black py-3 rounded-xl font-bold text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-sm">
-                            <Save size={16} /> Save Subject
+                        <button onClick={handleSave} disabled={isSaving} className="flex-1 bg-black text-white dark:bg-white dark:text-black py-3 rounded-xl font-bold text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                            {isSaving ? <RefreshCw className="animate-spin" size={16} /> : <Save size={16} />}
+                            {isSaving ? 'Saving...' : 'Save Subject'}
                         </button>
-                        <button onClick={resetForm} className="px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                        <button onClick={resetForm} disabled={isSaving} className="px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50">
                             Cancel
                         </button>
                     </div>
