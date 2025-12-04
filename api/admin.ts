@@ -116,7 +116,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 async function handleGetPending(res: VercelResponse) {
     const db = await getDb();
 
-    // Fetch pending resources and populate uploader information
+    // Fetch pending resources - the 'uploader' field already contains the name
     const pendingResources = await db.collection('resources').aggregate([
         {
             $match: { status: 'pending' }
@@ -124,21 +124,28 @@ async function handleGetPending(res: VercelResponse) {
         {
             $lookup: {
                 from: 'users',
-                localField: 'uploaderId',
-                foreignField: '_id',
+                let: {
+                    uploaderIdObj: {
+                        $convert: {
+                            input: '$uploaderId',
+                            to: 'objectId',
+                            onError: null,
+                            onNull: null
+                        }
+                    }
+                },
+                pipeline: [
+                    { $match: { $expr: { $eq: ['$_id', '$$uploaderIdObj'] } } },
+                    { $project: { avatar: 1 } }
+                ],
                 as: 'uploaderInfo'
             }
         },
         {
-            $unwind: {
-                path: '$uploaderInfo',
-                preserveNullAndEmptyArrays: true
-            }
-        },
-        {
             $addFields: {
-                uploaderName: { $ifNull: ['$uploaderInfo.name', 'Unknown User'] },
-                uploaderAvatar: { $ifNull: ['$uploaderInfo.avatar', null] }
+                uploaderName: { $ifNull: ['$uploader', 'Unknown User'] },
+                uploaderAvatar: { $arrayElemAt: ['$uploaderInfo.avatar', 0] },
+                type: { $ifNull: ['$resourceType', 'Not specified'] }
             }
         },
         {
