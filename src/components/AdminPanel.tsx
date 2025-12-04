@@ -274,7 +274,7 @@ export default function AdminPanel() {
                 </div>
 
                 <div className="mb-8 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
-                    <div className="flex gap-1 p-1 bg-gray-200/50 dark:bg-white/5 rounded-xl w-max sm:w-auto">
+                    <div className="flex gap-1 p-1 bg-gray-200/50 dark:bg-white/5 rounded-xl justify-around sm:justify-start sm:w-auto">
                         <TabButton active={activeTab === 'pending'} onClick={() => setActiveTab('pending')} icon={<Clock size={16} />} label="Approvals" count={pendingResources.length} />
                         <TabButton active={activeTab === 'users'} onClick={() => setActiveTab('users')} icon={<User size={16} />} label="Users" />
                         <TabButton active={activeTab === 'structure'} onClick={() => setActiveTab('structure')} icon={<Settings size={16} />} label="Structure" />
@@ -337,11 +337,17 @@ function ActionButton({ onClick, disabled, icon, label, variant = 'ghost', title
 
 function TabButton({ active, onClick, icon, label, count }: any) {
     return (
-        <button onClick={onClick} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${active ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-white/5'}`}>
+        <motion.button
+            onClick={onClick}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ duration: 0.2 }}
+            className={`flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all ${active ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-white/5'}`}
+        >
             {icon}
-            {label}
+            <span className="hidden sm:inline">{label}</span>
             {count > 0 && <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{count}</span>}
-        </button>
+        </motion.button>
     )
 }
 
