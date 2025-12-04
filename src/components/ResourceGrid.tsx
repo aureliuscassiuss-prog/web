@@ -188,9 +188,10 @@ const GridCard = ({ resource, onDelete, showStatus = false }: { resource: any, o
         setIsInteracting(true);
 
         const previousSaved = isSaved;
-        setIsSaved(!isSaved); // Optimistic
+        const newSavedState = !isSaved;
+        setIsSaved(newSavedState); // Optimistic
 
-        const success = await handleInteraction('save', !isSaved);
+        const success = await handleInteraction('save', newSavedState);
         if (!success) {
             setIsSaved(previousSaved);
         }
