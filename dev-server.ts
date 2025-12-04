@@ -11,6 +11,7 @@ import adminHandler from './api/admin.ts';
 import aiHandler from './api/ai.ts';
 import leaderboardHandler from './api/leaderboard.ts';
 import statsHandler from './api/stats.ts';
+import attendanceHandler from './api/attendance.ts';
 
 // Handler adapter for Vercel-style handlers
 const adaptHandler = (handler: any) => async (req: Request, res: Response) => {
@@ -83,7 +84,11 @@ app.all('/api/ai', jsonParser, adaptHandler(aiHandler));
 app.all('/api/leaderboard', jsonParser, adaptHandler(leaderboardHandler));
 
 // 7. Stats
+// 7. Stats
 app.all('/api/stats', jsonParser, adaptHandler(statsHandler));
+
+// 8. Attendance
+app.all('/api/attendance', jsonParser, adaptHandler(attendanceHandler));
 
 
 // Listen on 0.0.0.0 to be accessible from network
