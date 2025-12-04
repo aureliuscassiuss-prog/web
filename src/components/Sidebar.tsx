@@ -13,7 +13,8 @@ import {
     GraduationCap,
     FileText,
     Calculator,
-    Bookmark
+    Bookmark,
+    CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -47,6 +48,7 @@ export default function Sidebar({ onMobileMenuClose, isDark, toggleTheme, spotli
             items: [
                 { path: '/', label: 'Home', icon: Home },
                 { path: '/resources', label: 'Resources', icon: Library, id: 'browse-resources' },
+                { path: '/attendance', label: 'Attendance', icon: CheckCircle2 },
                 { path: '/cgpa-calculator', label: 'CGPA Calculator', icon: Calculator },
                 { path: '/preparation', label: 'Preparation', icon: GraduationCap },
                 { path: '/ai-assistant', label: 'AI Assistant', icon: Bot, badge: 'New' },

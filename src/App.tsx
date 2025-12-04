@@ -30,6 +30,7 @@ import PrivacyPage from './components/PrivacyPage'
 import TermsPage from './components/TermsPage'
 import SavedResources from './components/SavedResources'
 import SEO from './components/SEO'
+import AttendanceManager from './components/attendance/AttendanceManager'
 
 
 function Layout({
@@ -294,6 +295,16 @@ function AppContent() {
 
           {/* CGPA Calculator Route (Public) */}
           <Route path="/cgpa-calculator" element={<CGPACalculator />} />
+
+          {/* Attendance Manager Route (Protected) */}
+          <Route path="/attendance" element={
+            <ProtectedRoute onAuthRequired={() => {
+              setAuthModalInitialView('login')
+              setIsAuthModalOpen(true)
+            }}>
+              <AttendanceManager />
+            </ProtectedRoute>
+          } />
 
           {/* AI Assistant Route (Protected) */}
           <Route path="/ai-assistant" element={
