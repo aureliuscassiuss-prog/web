@@ -406,7 +406,7 @@ export default function ProfilePage() {
                         {/* Phone Number */}
                         <UnifiedField label="Phone" icon={Phone} isEditing={isEditing}>
                             <div className="flex h-full w-full items-center">
-                                <span className={`flex items-center justify-center h-[44px] px-3 text-sm font-bold text-gray-500 border-r ${isEditing ? 'border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800/50' : 'border-transparent bg-transparent pl-0'}`}>
+                                <span className="flex items-center justify-center h-[44px] px-3 text-sm font-bold text-gray-500 border-r border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800/50">
                                     +91
                                 </span>
                                 <input
