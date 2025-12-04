@@ -1,49 +1,9 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect } from 'react';
 import {
-    Calendar,
     Sun,
     Moon,
     CloudSun
 } from 'lucide-react';
-
-// --- Sub-components (Optimized) ---
-
-const TimeDisplay = memo(() => {
-    const [currentTime, setCurrentTime] = useState(new Date());
-
-    useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        return () => clearInterval(timer);
-    }, []);
-
-    const formatTime = (date: Date) => {
-        return date.toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
-    };
-
-    const formatDate = (date: Date) => {
-        return date.toLocaleDateString('en-US', {
-            weekday: 'short',
-            day: 'numeric',
-            month: 'short'
-        });
-    };
-
-    return (
-        <div className="flex flex-col items-start sm:items-end mt-4 sm:mt-0">
-            <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-200 mb-0.5 bg-white/40 dark:bg-black/40 px-3 py-1 rounded-full backdrop-blur-md border border-white/20 dark:border-white/10 shadow-sm">
-                <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="text-xs font-bold uppercase tracking-wide">{formatDate(currentTime)}</span>
-            </div>
-            <div className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 font-mono tracking-tighter leading-none">
-                {formatTime(currentTime)}
-            </div>
-        </div>
-    );
-});
 
 interface ProfileBannerProps {
     user: any;
@@ -82,30 +42,30 @@ export default function ProfileBanner({ user, children }: ProfileBannerProps) {
     };
 
     return (
-        <div className={`relative overflow-hidden rounded-t-xl bg-gradient-to-br ${getHeroBackground()} backdrop-blur-xl border-b border-white/40 dark:border-gray-700/30 shadow-sm transition-colors duration-1000 min-h-[200px] p-6`}>
+        <div className={`relative overflow-hidden rounded-t-xl bg-gradient-to-br ${getHeroBackground()} backdrop-blur-xl border-b border-white/40 dark:border-gray-700/30 shadow-sm transition-colors duration-1000 min-h-[280px] p-6 sm:p-8`}>
 
             {/* Dynamic Celestial Bodies */}
             <div className="absolute top-0 right-0 w-full h-full pointer-events-none overflow-hidden">
                 {timeOfDay === 'morning' && (
                     <>
-                        <div className="absolute -top-10 -right-10 w-48 h-48 bg-yellow-300/40 rounded-full blur-3xl animate-pulse" />
-                        <Sun className="absolute top-6 right-6 w-24 h-24 text-orange-400/20 rotate-12" />
-                        <CloudSun className="absolute top-12 right-20 w-16 h-16 text-white/40 dark:text-white/10" />
+                        <div className="absolute -top-10 -right-10 w-64 h-64 bg-yellow-300/40 rounded-full blur-3xl animate-pulse" />
+                        <Sun className="absolute top-8 right-8 w-32 h-32 text-orange-400/20 rotate-12" />
+                        <CloudSun className="absolute top-16 right-24 w-20 h-20 text-white/40 dark:text-white/10" />
                     </>
                 )}
                 {timeOfDay === 'afternoon' && (
                     <>
-                        <div className="absolute -top-20 -right-20 w-64 h-64 bg-yellow-200/50 rounded-full blur-[60px]" />
-                        <Sun className="absolute -top-4 -right-4 w-32 h-32 text-yellow-500/20 animate-spin-slow" style={{ animationDuration: '20s' }} />
+                        <div className="absolute -top-20 -right-20 w-80 h-80 bg-yellow-200/50 rounded-full blur-[80px]" />
+                        <Sun className="absolute -top-6 -right-6 w-40 h-40 text-yellow-500/20 animate-spin-slow" style={{ animationDuration: '20s' }} />
                     </>
                 )}
                 {timeOfDay === 'evening' && (
                     <>
                         <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-900/20 via-transparent to-transparent" />
-                        <div className="absolute top-8 right-32 w-1 h-1 bg-white rounded-full animate-ping" />
-                        <div className="absolute top-20 right-10 w-1 h-1 bg-white rounded-full animate-pulse" />
-                        <div className="absolute top-4 right-52 w-0.5 h-0.5 bg-white rounded-full" />
-                        <Moon className="absolute top-6 right-6 w-20 h-20 text-indigo-300/30 -rotate-12 drop-shadow-lg" />
+                        <div className="absolute top-12 right-40 w-1.5 h-1.5 bg-white rounded-full animate-ping" />
+                        <div className="absolute top-24 right-16 w-1 h-1 bg-white rounded-full animate-pulse" />
+                        <div className="absolute top-6 right-64 w-1 h-1 bg-white rounded-full" />
+                        <Moon className="absolute top-8 right-8 w-28 h-28 text-indigo-300/30 -rotate-12 drop-shadow-lg" />
                     </>
                 )}
             </div>
@@ -113,24 +73,25 @@ export default function ProfileBanner({ user, children }: ProfileBannerProps) {
             {/* Content */}
             <div className="relative z-10 flex flex-col h-full justify-between">
                 {/* Top Bar (Children like Logout/Edit buttons) */}
-                <div className="flex justify-end w-full">
+                <div className="flex justify-end w-full mb-4">
                     {children}
                 </div>
 
-                {/* Greeting & Time */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6 mt-auto">
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-0.5">
-                            {greeting}
-                        </p>
-                        <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white truncate leading-tight">
-                            {user?.name || 'Scholar'}
-                        </h1>
-                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1 font-medium">
-                            Manage your profile settings
-                        </p>
-                    </div>
-                    <TimeDisplay />
+                {/* Greeting & Time - Moved up/adjusted to avoid bottom-left overlap */}
+                <div className="flex flex-col gap-1 mb-12 sm:mb-0 sm:ml-auto sm:text-right max-w-md">
+                    {/* 
+                      Strategy: On mobile, add bottom margin (mb-12) to clear the avatar.
+                      On desktop (sm), move text to the right (sm:ml-auto sm:text-right) so the left is free for the avatar.
+                   */}
+                    <p className="text-base sm:text-lg font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1">
+                        {greeting}
+                    </p>
+                    <h1 className="text-3xl sm:text-5xl font-black text-gray-900 dark:text-white tracking-tight leading-none">
+                        {user?.name || 'Scholar'}
+                    </h1>
+                    <p className="text-sm sm:text-base text-gray-700 dark:text-gray-200 mt-2 font-medium opacity-90">
+                        Manage your profile settings
+                    </p>
                 </div>
             </div>
         </div>
