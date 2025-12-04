@@ -247,8 +247,16 @@ export default function ProfilePage() {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to update profile');
+                let errorMessage = 'Failed to update profile';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorMessage;
+                } catch (e) {
+                    // If JSON parse fails, try to get text
+                    const textError = await response.text();
+                    if (textError) errorMessage = textError.slice(0, 100); // Limit length
+                }
+                throw new Error(errorMessage);
             }
 
             const data = await response.json();
@@ -277,6 +285,7 @@ export default function ProfilePage() {
         setActiveField(null);
         setPreviewUrl(user?.avatar || null);
         setAvatarFile(null);
+        setError(null); // Clear errors on cancel
         if (user) {
             setFormData({
                 name: user.name || '',
@@ -295,6 +304,12 @@ export default function ProfilePage() {
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            // Check file size (4MB limit)
+            if (file.size > 4 * 1024 * 1024) {
+                setError('Image size must be less than 4MB');
+                return;
+            }
+            setError(null); // Clear previous errors
             setAvatarFile(file);
             setPreviewUrl(URL.createObjectURL(file));
         }
