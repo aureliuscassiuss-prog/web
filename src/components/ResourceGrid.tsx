@@ -53,7 +53,7 @@ const TabButton = ({ active, onClick, label, icon, isSpecial }: any) => (
 )
 
 // --- UPDATED DESIGN: Grid Card ---
-const GridCard = ({ resource, onDelete }: { resource: any, onDelete?: (id: string) => void }) => {
+const GridCard = ({ resource, onDelete, showStatus = false }: { resource: any, onDelete?: (id: string) => void, showStatus?: boolean }) => {
     const { token } = useAuth();
     // Initialize from resource data
     const [isSaved, setIsSaved] = useState(resource.userSaved || false);
@@ -205,10 +205,10 @@ const GridCard = ({ resource, onDelete }: { resource: any, onDelete?: (id: strin
                     <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-300">
                         {resource.subject || 'General Resource'}
                     </span>
-                    {resource.status && (
+                    {showStatus && resource.status && (
                         <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border ${resource.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' :
-                                resource.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800' :
-                                    'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800'
+                            resource.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800' :
+                                'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800'
                             }`}>
                             {resource.status}
                         </span>
@@ -359,7 +359,7 @@ const UploadsView = ({ uploads, onUploadRequest, onDelete }: any) => (
                 </div>
             ) : (
                 uploads.map((upload: any) => (
-                    <GridCard key={upload._id} resource={upload} onDelete={onDelete} />
+                    <GridCard key={upload._id} resource={upload} onDelete={onDelete} showStatus={true} />
                 ))
             )}
         </div>
@@ -1149,4 +1149,3 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
     )
 }
 
-        
