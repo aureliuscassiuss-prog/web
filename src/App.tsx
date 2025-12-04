@@ -38,8 +38,6 @@ function Layout({
   setIsMobileMenuOpen,
   onUploadClick,
   onAuthClick,
-  searchQuery,
-  setSearchQuery,
   user,
   isDark,
   toggleTheme,
@@ -178,13 +176,12 @@ function AppContent() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   // Data States
-  const [searchQuery, setSearchQuery] = useState('')
-  const [filters, setFilters] = useState<{ branch?: string; year?: number; subject?: string }>({})
+  const [searchQuery] = useState('')
   const [toast, setToast] = useState<{ message: string; show: boolean }>({ message: '', show: false })
   const [uploadInitialData, setUploadInitialData] = useState<any>(null)
 
   // Spotlight State
-  const [spotlight, setSpotlight] = useState<string | null>(null)
+  const [spotlight] = useState<string | null>(null)
 
   // Helper function to determine theme based on time of day
   const getThemeByTime = () => {
@@ -266,8 +263,6 @@ function AppContent() {
           setAuthModalInitialView('login')
           setIsAuthModalOpen(true)
         }}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
         user={user}
         isDark={isDark}
         toggleTheme={toggleTheme}
