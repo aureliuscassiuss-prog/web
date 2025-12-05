@@ -43,8 +43,8 @@ export default function SharedResourcesPage() {
                     <div className="absolute inset-0 rounded-full border-4 border-t-blue-500 border-r-transparent border-b-blue-500 border-l-transparent animate-spin w-24 h-24 -m-2"></div>
 
                     {/* Avatar Center */}
-                    <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden flex items-center justify-center shadow-lg relative z-10">
-                        <User className="w-8 h-8 text-gray-400" />
+                    <div className="w-20 h-20 rounded-full bg-white dark:bg-gray-900 overflow-hidden flex items-center justify-center shadow-lg relative z-10 p-2">
+                        <img src="/LOGO.png" alt="UniNotes" className="w-full h-full object-contain" />
                     </div>
                 </div>
                 <div className="mt-8 text-center space-y-1 animate-pulse">
