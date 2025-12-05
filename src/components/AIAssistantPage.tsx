@@ -226,7 +226,7 @@ export default function AIAssistantPage() {
 
     return (
         /* Outer container: Fixed height to viewport minus layout offset, column flex */
-        <div className="flex flex-col h-[calc(100vh-8.5rem)] bg-white dark:bg-[#050505] font-sans text-gray-900 dark:text-gray-100 overflow-hidden relative rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
+        <div className="flex flex-col h-[calc(100dvh-6rem)] bg-white dark:bg-[#050505] font-sans text-gray-900 dark:text-gray-100 overflow-hidden relative rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
 
             {/* --- HEADER (Fixed) --- */}
             <header className="flex-none z-20 flex items-center justify-between px-4 py-2 border-b border-gray-100 dark:border-white/10 bg-white/80 dark:bg-[#050505]/80 backdrop-blur-md">

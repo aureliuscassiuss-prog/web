@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import { X } from 'lucide-react'
@@ -46,6 +46,8 @@ function Layout({
   spotlight
 }: any) {
   const navigate = useNavigate()
+  const location = useLocation()
+  const isChatPage = location.pathname === '/ai-assistant'
 
   return (
     <div className="flex min-h-screen flex-col bg-white dark:bg-black text-gray-950 dark:text-gray-50 transition-colors duration-200 font-sans selection:bg-gray-900 selection:text-white dark:selection:bg-gray-100 dark:selection:text-black">
@@ -62,24 +64,26 @@ function Layout({
       <div className="flex flex-1 items-start gap-10 px-4 sm:px-6 md:px-8 pt-6 max-w-[1600px] mx-auto w-full">
 
         {/* 2. Sticky Left Sidebar (Hidden on Mobile) */}
-        <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-[240px] flex-col overflow-y-auto md:flex shrink-0">
-          <Sidebar
-            isMobileMenuOpen={isMobileMenuOpen}
-            onMobileMenuClose={() => setIsMobileMenuOpen(false)}
-            isDark={isDark}
-            toggleTheme={toggleTheme}
-            spotlight={spotlight}
-          />
-        </aside>
+        {!isChatPage && (
+          <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-[240px] flex-col overflow-y-auto md:flex shrink-0">
+            <Sidebar
+              isMobileMenuOpen={isMobileMenuOpen}
+              onMobileMenuClose={() => setIsMobileMenuOpen(false)}
+              isDark={isDark}
+              toggleTheme={toggleTheme}
+              spotlight={spotlight}
+            />
+          </aside>
+        )}
 
         {/* 3. Main Content Area */}
-        <main className="flex-1 min-w-0 pb-10 animate-fade-in">
+        <main className={`flex-1 min-w-0 animate-fade-in ${isChatPage ? '' : 'pb-10'}`}>
           {children}
         </main>
       </div>
 
-      {/* Footer */}
-      <Footer />
+      {/* Footer - HIdden on Chat Page */}
+      {!isChatPage && <Footer />}
 
       {/* Mobile Sidebar Overlay */}
       {/* Mobile Sidebar Overlay */}
