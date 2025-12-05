@@ -313,10 +313,10 @@ export default function AdminPanel() {
 
                 <div className="mb-8 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
                     <div className="relative flex sm:grid sm:grid-cols-3 gap-1 p-1 bg-gray-200/50 dark:bg-white/5 rounded-xl justify-around sm:justify-start">
-                        {/* Animated Tab Indicator */}
+                        {/* Animated Tab Indicator - positioned differently for mobile vs desktop */}
                         <motion.div
                             layoutId="active-tab"
-                            className="absolute bottom-1 top-1 rounded-lg bg-white dark:bg-gray-800 shadow-sm z-0"
+                            className="absolute bottom-1 top-1 rounded-lg bg-white dark:bg-gray-800 shadow-sm z-0 hidden sm:block"
                             style={{
                                 left: activeTab === 'pending' ? '0.25rem' : activeTab === 'users' ? 'calc(33.333% + 0.125rem)' : 'calc(66.666% + 0.25rem)',
                                 width: 'calc(33.333% - 0.375rem)'

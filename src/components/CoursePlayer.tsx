@@ -439,7 +439,7 @@ export default function CoursePlayer() {
                             </div>
 
                             {/* Header Info */}
-                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 pb-8 border-b border-gray-100 dark:border-gray-800">
+                            <div className="flex flex-col gap-6 pb-8 border-b border-gray-100 dark:border-gray-800">
                                 <div className="space-y-3 flex-1">
                                     <div className="flex items-center gap-2">
                                         <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-white/10 text-[10px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
@@ -459,7 +459,7 @@ export default function CoursePlayer() {
                                 </div>
 
                                 {/* Action Buttons */}
-                                <div className="grid grid-cols-1 gap-3 w-full">
+                                <div className="grid grid-cols-1 gap-3 w-full max-w-2xl">
                                     <button
                                         onClick={() => toggleWatched(currentVideo.id)}
                                         className={`
