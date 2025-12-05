@@ -35,16 +35,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
             if (!user) return res.status(404).json({ message: 'User not found' });
 
+            // CHECK: Selective Sharing
+            const { resourceIds } = req.body;
+
+            if (Array.isArray(resourceIds) && resourceIds.length > 0) {
+                // Create a new shared list
+                const slug = crypto.randomBytes(4).toString('hex'); // 8 characters
+
+                await db.collection('shared_lists').insertOne({
+                    slug,
+                    ownerId: userId,
+                    resources: resourceIds, // Store just the IDs
+                    createdAt: new Date()
+                });
+
+                return res.status(200).json({ slug });
+            }
+
+            // Legacy: Full Profile Sharing
             if (user.shareSlug) {
                 return res.status(200).json({ slug: user.shareSlug });
             }
 
-            // Generate new slug
-            const slug = crypto.randomBytes(4).toString('hex'); // 8 characters
-
-            // Ensure uniqueness (extremely unlikely to collide with 8 chars hex for small userbase, but good practice)
-            // For now, we assume uniqueness for simplicity or do a quick check
-            // await db.collection('users').findOne({ shareSlug: slug }) ...
+            // Generate new slug for user
+            const slug = crypto.randomBytes(4).toString('hex');
 
             await db.collection('users').updateOne(
                 { _id: new ObjectId(userId) },
@@ -54,6 +68,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(200).json({ slug });
 
         } catch (error) {
+            console.error('Share generation error:', error);
             return res.status(500).json({ message: 'Failed to generate link' });
         }
     }
@@ -67,10 +82,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         try {
-            const user = await db.collection('users').findOne({ shareSlug: slug });
+            // 1. Check for Shared List (Selective)
+            const sharedList = await db.collection('shared_lists').findOne({ slug });
 
-            if (!user) {
-                return res.status(404).json({ message: 'Shared list not found' });
+            let queryMatch: any = {};
+            let ownerUser: any = null;
+
+            if (sharedList) {
+                // It's a selective list
+                // Fetch owner details
+                ownerUser = await db.collection('users').findOne({ _id: new ObjectId(sharedList.ownerId) });
+
+                // Convert string IDs to ObjectIds for the query if necessary, 
+                // but usually resources._id is ObjectId. 
+                // If the input IDs are strings, we need to convert them.
+                const resourceObjectIds = sharedList.resources.map((id: string) => {
+                    try { return new ObjectId(id); } catch (e) { return null; }
+                }).filter((id: any) => id !== null);
+
+                queryMatch = {
+                    _id: { $in: resourceObjectIds },
+                    status: 'approved'
+                };
+
+            } else {
+                // 2. Fallback: User Full Profile (Legacy)
+                ownerUser = await db.collection('users').findOne({ shareSlug: slug });
+
+                if (!ownerUser) {
+                    return res.status(404).json({ message: 'Shared list not found' });
+                }
+
+                queryMatch = {
+                    savedBy: ownerUser._id.toString(),
+                    status: 'approved'
+                };
             }
 
             // Optional: Check for current user to return interaction states
@@ -87,12 +133,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             const aggregationPipeline: any[] = [
-                {
-                    $match: {
-                        savedBy: user._id.toString(),
-                        status: 'approved'
-                    }
-                },
+                { $match: queryMatch },
                 { $sort: { createdAt: -1 } },
                 {
                     $lookup: {
@@ -113,7 +154,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 { $project: { uploaderDetails: 0 } }
             ];
 
-            // If user is logged in, check their interactions from the arrays
+            // If user is logged in, check their interactions
             if (currentUserId) {
                 aggregationPipeline.push({
                     $addFields: {
@@ -137,8 +178,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             return res.status(200).json({
                 user: {
-                    name: user.name,
-                    avatar: user.avatar
+                    name: ownerUser?.name || 'Anonymous',
+                    avatar: ownerUser?.avatar
                 },
                 resources
             });
