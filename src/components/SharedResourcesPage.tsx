@@ -34,22 +34,29 @@ export default function SharedResourcesPage() {
         if (slug) fetchData();
     }, [slug]);
 
+    // --- Skeleton Loader ---
     if (isLoading) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-white dark:bg-black">
-                {/* Personalized Loading Screen */}
-                <div className="relative">
-                    {/* Ring Spinner */}
-                    <div className="absolute inset-0 rounded-full border-4 border-t-blue-500 border-r-transparent border-b-blue-500 border-l-transparent animate-spin w-24 h-24 -m-2"></div>
-
-                    {/* Avatar Center */}
-                    <div className="w-20 h-20 rounded-full bg-white dark:bg-gray-900 overflow-hidden flex items-center justify-center shadow-lg relative z-10 p-2">
-                        <img src="/LOGO.png" alt="UniNotes" className="w-full h-full object-contain" />
+            <div className="min-h-screen bg-gray-50 dark:bg-black p-4 sm:p-8">
+                <div className="max-w-7xl mx-auto space-y-8 animate-pulse">
+                    {/* Header Skeleton */}
+                    <div className="bg-white/50 dark:bg-gray-900/50 rounded-3xl p-6 sm:p-10 border border-gray-200 dark:border-gray-800 h-64 flex flex-col justify-center relative overflow-hidden">
+                        <div className="flex items-center gap-6">
+                            <div className="w-24 h-24 rounded-full bg-gray-200 dark:bg-gray-800" />
+                            <div className="space-y-3 flex-1">
+                                <div className="h-4 w-32 bg-gray-200 dark:bg-gray-800 rounded" />
+                                <div className="h-8 w-64 bg-gray-200 dark:bg-gray-800 rounded" />
+                                <div className="h-4 w-48 bg-gray-200 dark:bg-gray-800 rounded" />
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div className="mt-8 text-center space-y-1 animate-pulse">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">Opening Shared Collection...</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Please wait a moment</p>
+
+                    {/* Grid Skeleton */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
+                            <div key={i} className="h-48 rounded-2xl bg-gray-200 dark:bg-gray-900" />
+                        ))}
+                    </div>
                 </div>
             </div>
         );
@@ -57,51 +64,61 @@ export default function SharedResourcesPage() {
 
     if (error || !data) {
         return (
-            <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center">
-                <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-full mb-4">
-                    <Flag className="w-8 h-8 text-red-500" />
+            <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center animate-fade-in">
+                <div className="p-6 bg-red-50 dark:bg-red-900/10 rounded-3xl mb-6 shadow-sm border border-red-100 dark:border-red-900/20">
+                    <Flag className="w-10 h-10 text-red-500" />
                 </div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Collection Not Found</h1>
-                <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">Collection Not Found</h1>
+                <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto text-lg">
                     The link you followed might be broken, or the user may have stopped sharing this collection.
                 </p>
-                <Link to="/" className="mt-6 px-6 py-2 bg-black dark:bg-white text-white dark:text-black rounded-xl font-bold hover:opacity-80 transition-all">
-                    Go Home
+                <Link to="/" className="mt-8 px-8 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl font-bold hover:opacity-90 transition-all shadow-lg hover:shadow-xl">
+                    Back to Home
                 </Link>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-black p-4 sm:p-8">
-            <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
+        <div className="min-h-screen bg-[#F3F4F6] dark:bg-black p-4 sm:p-8 font-sans selection:bg-blue-100 dark:selection:bg-blue-900">
+            <div className="max-w-7xl mx-auto space-y-8 animate-fade-in-up">
 
                 {/* Dashboard-style Header */}
-                <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-10 border border-gray-200 dark:border-gray-800 shadow-sm relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-32 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+                <div className="relative overflow-hidden bg-white/70 dark:bg-gray-900/60 backdrop-blur-xl rounded-[2.5rem] p-8 sm:p-12 border border-white/50 dark:border-gray-800/50 shadow-sm hover:shadow-md transition-shadow duration-500">
+                    {/* Background Gradients */}
+                    <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-blue-400/10 to-purple-400/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-gradient-to-tr from-emerald-400/10 to-teal-400/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3 pointer-events-none" />
 
-                    <div className="relative z-10 flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
-                        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full p-1 bg-gradient-to-br from-blue-500 to-purple-600 shadow-xl">
-                            <div className="w-full h-full rounded-full bg-white dark:bg-gray-900 flex items-center justify-center overflow-hidden">
-                                {data.user.avatar ? (
-                                    <img src={data.user.avatar} alt={data.user.name} className="w-full h-full object-cover" />
-                                ) : (
-                                    <User className="w-8 h-8 text-gray-400" />
-                                )}
+                    <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-8 text-center md:text-left">
+                        {/* Profile Picture */}
+                        <div className="group relative">
+                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full blur opacity-40 group-hover:opacity-60 transition-opacity duration-500" />
+                            <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full p-1.5 bg-gradient-to-br from-white to-gray-100 dark:from-gray-800 dark:to-gray-900 shadow-2xl">
+                                <div className="w-full h-full rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden flex items-center justify-center border-4 border-white dark:border-gray-800">
+                                    {data.user.avatar ? (
+                                        <img src={data.user.avatar} alt={data.user.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-out" />
+                                    ) : (
+                                        <User className="w-12 h-12 text-gray-400" />
+                                    )}
+                                </div>
+                            </div>
+                            <div className="absolute bottom-0 right-2 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-900">
+                                <User className="w-4 h-4" />
                             </div>
                         </div>
 
-                        <div>
-                            <div className="flex items-center justify-center sm:justify-start gap-2 mb-2">
-                                <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-bold uppercase tracking-wide">
-                                    Shared Collection
-                                </span>
+                        <div className="flex-1 pt-2">
+                            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-50/80 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-blue-100 dark:border-blue-800/50 shadow-sm">
+                                <Share2 className="w-3.5 h-3.5" />
+                                Shared Collection
                             </div>
-                            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-tight">
-                                Resources by <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">{data.user.name}</span>
+                            <h1 className="text-4xl sm:text-5xl font-black text-gray-900 dark:text-white leading-tight tracking-tight mb-4">
+                                <span className="text-transparent bg-clip-text bg-gradient-to-br from-gray-900 to-gray-600 dark:from-white dark:to-gray-400">
+                                    {data.user.name}'s
+                                </span> Library
                             </h1>
-                            <p className="text-gray-500 dark:text-gray-400 mt-2 max-w-lg">
-                                A curated list of <strong>{data.resources.length}</strong> helpful resources for UniNotes.
+                            <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl leading-relaxed">
+                                A curated collection of <span className="font-semibold text-gray-900 dark:text-white">{data.resources.length}</span> resources, shared from UniNotes.
                             </p>
                         </div>
                     </div>
@@ -109,12 +126,15 @@ export default function SharedResourcesPage() {
 
                 {/* Grid Content */}
                 {data.resources.length === 0 ? (
-                    <div className="text-center py-20 text-gray-500">
-                        <LayoutGrid className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                        <p>This collection is empty.</p>
+                    <div className="min-h-[400px] flex flex-col items-center justify-center bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl rounded-[2.5rem] border border-gray-200 dark:border-gray-800 border-dashed">
+                        <div className="p-6 bg-gray-50 dark:bg-gray-800/50 rounded-full mb-6">
+                            <LayoutGrid className="w-12 h-12 text-gray-400" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">Collection is Empty</h3>
+                        <p className="text-gray-500 dark:text-gray-400 mt-2">This user hasn't added any public resources yet.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {data.resources.map((resource: any) => (
                             <SharedGridCard key={resource._id} resource={resource} currentUserToken={token} />
                         ))}
@@ -125,12 +145,8 @@ export default function SharedResourcesPage() {
     );
 }
 
-// Reusing a simplified version of the GridCard for the shared view
-// Includes "Login Guard" for interactions
+// --- Premium Grid Card ---
 const SharedGridCard = ({ resource, currentUserToken }: { resource: any, currentUserToken: string | null }) => {
-
-    // Local state for counts (read-only mostly, unless we implement fully interactive shared view later)
-    // For now, interactions like Upvote require login
     const [counts] = useState({
         likes: resource.likes || 0,
         downloads: resource.downloads || 0
@@ -140,70 +156,85 @@ const SharedGridCard = ({ resource, currentUserToken }: { resource: any, current
         e.preventDefault();
         e.stopPropagation();
         if (!currentUserToken) {
-            alert("Please login to your account to interact with this resource.");
-            // Ideally we'd open the auth modal here, but `alert` meets the simple requirement for now.
-            // Or navigation to login page.
+            alert("🔒 Login Required\n\nPlease log in to UniNotes to save, like, or report this resource.");
         } else {
-            // If they ARE logged in, we could theoretically execute the action, 
-            // but since they are viewing SOMEONE ELSE'S collection, the context is different.
-            // Let's just say "Open in main app to interact" or allow basic like?
-            // User requested: "make sure people go to like and flagg and do something that it shoudl first ask them to login then do interaction"
-            alert("To like, flag, or save, please find this resource in the main library or login.");
+            alert("👁️ View Only Mode\n\nTo interact with this resource, please find it in the main library.");
         }
     };
 
     return (
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-300 group">
-            {/* Header */}
-            <div className="flex justify-between items-start mb-4">
-                <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-[10px] font-bold uppercase rounded tracking-wider">
+        <div className="group relative bg-white dark:bg-gray-900/60 backdrop-blur-md border border-gray-200/60 dark:border-gray-800/60 rounded-3xl p-6 hover:shadow-2xl hover:shadow-blue-500/10 hover:-translate-y-1 transition-all duration-300">
+            {/* Hover Gradient Border Effect */}
+            <div className="absolute inset-0 rounded-3xl border-2 border-transparent group-hover:border-blue-500/10 dark:group-hover:border-blue-400/10 pointer-events-none transition-colors duration-300" />
+
+            {/* Top Bar */}
+            <div className="flex justify-between items-start mb-6">
+                <span className="inline-flex items-center px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-[10px] font-bold uppercase rounded-lg tracking-wider border border-gray-200 dark:border-gray-700">
                     {resource.subject || 'Resource'}
                 </span>
-                <div className="flex gap-1">
-                    <button onClick={handleProtectedAction} className="p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors" title="Save">
+
+                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-y-2 group-hover:translate-y-0">
+                    <button
+                        onClick={handleProtectedAction}
+                        className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all"
+                        title="Save to Library"
+                    >
                         <Bookmark className="w-4 h-4" />
                     </button>
-                    <button onClick={handleProtectedAction} className="p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors" title="Flag">
+                    <button
+                        onClick={handleProtectedAction}
+                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
+                        title="Report Issue"
+                    >
                         <Flag className="w-4 h-4" />
                     </button>
                 </div>
             </div>
 
-            {/* Body */}
-            <a href={resource.driveLink} target="_blank" rel="noopener noreferrer" className="flex items-start gap-4 mb-4 group-hover:opacity-80 transition-opacity">
-                <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <FileText className="w-6 h-6" />
+            {/* Main Content */}
+            <a
+                href={resource.driveLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block mb-6 group-hover:opacity-90 transition-opacity"
+            >
+                <div className="flex items-start gap-4">
+                    <div className="w-14 h-14 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-inner ring-1 ring-blue-100 dark:ring-blue-800/30">
+                        <FileText className="w-7 h-7" />
+                    </div>
                 </div>
-                <div>
-                    <h3 className="font-bold text-gray-900 dark:text-white leading-snug mb-1 line-clamp-2">
-                        {resource.title}
-                    </h3>
-                    <p className="text-xs text-gray-500 flex items-center gap-1">
-                        View Document <Share2 className="w-3 h-3" />
-                    </p>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white leading-tight mt-4 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    {resource.title}
+                </h3>
+                <div className="flex items-center gap-2 mt-2 text-sm text-gray-500 dark:text-gray-400 font-medium">
+                    <span>Click to view</span>
+                    <ArrowRight className="w-4 h-4 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
                 </div>
             </a>
 
             {/* Footer */}
-            <div className="pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                <div className="flex items-center gap-3 text-xs font-medium text-gray-500">
-                    <button onClick={handleProtectedAction} className="flex items-center gap-1 hover:text-green-600 transition-colors">
-                        <ThumbsUp className="w-3.5 h-3.5" /> {counts.likes}
-                    </button>
-                    <span className="flex items-center gap-1">
-                        <Download className="w-3.5 h-3.5" /> {counts.downloads}
-                    </span>
+            <div className="pt-5 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                <div className="flex items-center gap-4 text-xs font-bold text-gray-500 uppercase tracking-wide">
+                    <div className="flex items-center gap-1.5" title="Likes">
+                        <ThumbsUp className="w-4 h-4" />
+                        {counts.likes}
+                    </div>
+                    <div className="flex items-center gap-1.5" title="Downloads">
+                        <Download className="w-4 h-4" />
+                        {counts.downloads}
+                    </div>
                 </div>
 
                 <a
                     href={resource.driveLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-xs font-bold text-white bg-black dark:bg-white dark:text-black px-3 py-1.5 rounded-lg hover:opacity-80 transition-opacity"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-black rounded-xl text-sm font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:scale-95 transition-all duration-200"
                 >
                     Open
+                    <Share2 className="w-3.5 h-3.5" />
                 </a>
             </div>
         </div>
     );
-}
+};
