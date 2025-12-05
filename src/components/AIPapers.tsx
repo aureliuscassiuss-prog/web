@@ -14,8 +14,7 @@ import {
     Sparkles,
     ChevronDown,
     Printer,
-    RotateCcw,
-    AlertCircle
+    RotateCcw
 } from 'lucide-react'
 import jsPDF from 'jspdf'
 // @ts-ignore

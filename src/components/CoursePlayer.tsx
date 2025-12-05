@@ -53,7 +53,7 @@ export default function CoursePlayer() {
     const [watchedVideos, setWatchedVideos] = useState<Set<string>>(new Set())
 
     // Get user and token
-    const { user } = useAuth()
+    const { } = useAuth()
     const token = localStorage.getItem('token')
 
     // Fetch user's video progress from API
@@ -421,7 +421,7 @@ export default function CoursePlayer() {
                         <div className="max-w-5xl mx-auto p-4 md:p-8 lg:p-12 space-y-6">
 
                             {/* Player Wrapper */}
-                            <div className="relative group rounded-xl overflow-hidden bg-gray-900 shadow-2xl shadow-blue-900/10 ring-1 ring-gray-900/5 dark:ring-white/10 aspect-video">
+                            <div className="relative group rounded-xl overflow-hidden bg-black/5 dark:bg-transparent shadow-2xl shadow-blue-900/10 ring-1 ring-gray-900/5 dark:ring-white/10 aspect-video">
                                 {getYouTubeId(currentVideo.url) ? (
                                     <iframe
                                         src={`https://www.youtube.com/embed/${getYouTubeId(currentVideo.url)}?autoplay=1&rel=0`}

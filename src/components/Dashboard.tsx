@@ -10,7 +10,6 @@ import {
     Calculator,
     Bot,
     ChevronRight,
-    Star,
     Zap,
     Calendar,
     Sun,
@@ -62,22 +61,32 @@ const TimeDisplay = memo(() => {
     );
 });
 
-const StatCard = ({ label, value, icon: Icon, color }: { label: string; value: string; icon: any; color: string }) => (
-    <div className="relative group bg-white/70 dark:bg-gray-800/30 backdrop-blur-sm rounded-2xl p-4 sm:p-5 border border-gray-100/40 dark:border-gray-700/40 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
-        <div className="absolute inset-0 bg-gradient-to-br from-white/30 to-transparent dark:from-black/10 rounded-2xl -z-10" />
-        <div className="flex items-center justify-between mb-2">
-            <div className={`p-2 rounded-lg bg-gradient-to-br ${color.replace('text-', 'from-')} to-gray-100 dark:to-gray-700/50 border border-white/30 dark:border-gray-600/30`}>
-                <Icon className={`w-5 h-5 ${color}`} />
+const StatCard = ({ label, value, icon: Icon, color }: { label: string; value: string; icon: any; color: string }) => {
+    const num = parseInt(value.replace(/,/g, ''));
+    const isNumber = !isNaN(num);
+
+    return (
+        <div className="relative group bg-white/70 dark:bg-gray-800/30 backdrop-blur-sm rounded-2xl p-4 sm:p-5 border border-gray-100/40 dark:border-gray-700/40 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/30 to-transparent dark:from-black/10 rounded-2xl -z-10" />
+            <div className="flex items-center justify-between mb-2">
+                <div className={`p-2 rounded-lg bg-gradient-to-br ${color.replace('text-', 'from-')} to-gray-100 dark:to-gray-700/50 border border-white/30 dark:border-gray-600/30`}>
+                    <Icon className={`w-5 h-5 ${color}`} />
+                </div>
+            </div>
+            <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
+                {isNumber ? (
+                    <>
+                        <CountUp end={num} duration={2000} />
+                        {value.replace(/[0-9,]/g, '')}
+                    </>
+                ) : value}
+            </div>
+            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-wide">
+                {label}
             </div>
         </div>
-        <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
-            {value}
-        </div>
-        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-wide">
-            {label}
-        </div>
-    </div>
-);
+    );
+};
 
 const ActionCard = ({ action }: { action: any }) => (
     <Link
@@ -107,6 +116,35 @@ const ActionCard = ({ action }: { action: any }) => (
         <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300 group-hover:text-blue-500 transition-colors shrink-0 ml-2" />
     </Link>
 );
+
+// Count Up Animation Component
+const CountUp = ({ end, duration = 2000 }: { end: number, duration?: number }) => {
+    const [count, setCount] = useState(0)
+
+    useEffect(() => {
+        let startTime: number | null = null
+        const animate = (currentTime: number) => {
+            if (!startTime) startTime = currentTime
+            const progress = Math.min((currentTime - startTime) / duration, 1)
+
+            // Easing function (easeOutExpo)
+            const easeOut = (x: number): number => {
+                return x === 1 ? 1 : 1 - Math.pow(2, -10 * x)
+            }
+
+            setCount(Math.floor(easeOut(progress) * end))
+
+            if (progress < 1) {
+                requestAnimationFrame(animate)
+            } else {
+                setCount(end)
+            }
+        }
+        requestAnimationFrame(animate)
+    }, [end, duration])
+
+    return <span>{count.toLocaleString()}</span>
+}
 
 export default function Dashboard() {
     const { user } = useAuth();
@@ -158,10 +196,10 @@ export default function Dashboard() {
                 if (response.ok) {
                     const data = await response.json();
                     const newStats = [
-                        { label: 'Resources', value: `${data.totalResources || 0}+`, icon: BookOpen, color: 'text-blue-500' },
-                        { label: 'Users', value: `${data.totalUsers || 0}+`, icon: TrendingUp, color: 'text-green-500' },
-                        { label: 'Queries', value: '10k+', icon: Sparkles, color: 'text-purple-500' },
-                        { label: 'Papers', value: '3k+', icon: FileText, color: 'text-orange-500' }
+                        { label: 'Resources', value: `${data.totalResources || 0}+`, icon: BookOpen, color: 'text-blue-500', defaultValue: '0' },
+                        { label: 'Users', value: `${data.totalUsers || 0}+`, icon: TrendingUp, color: 'text-green-500', defaultValue: '0' },
+                        { label: 'Queries', value: '10k+', icon: Sparkles, color: 'text-purple-500', defaultValue: '10k+' },
+                        { label: 'Papers', value: '3k+', icon: FileText, color: 'text-orange-500', defaultValue: '3k+' }
                     ];
                     setStats(newStats);
                     // Store only simple data in cache, we re-hydrate icons on load

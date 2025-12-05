@@ -2,7 +2,7 @@ import {
     Upload as UploadIcon, FileText, User,
     Trophy, Sparkles, FileQuestion, ArrowUp,
     Copy, ThumbsUp, ThumbsDown, Trash2, Bot, Download,
-    Check, ChevronRight, Bookmark, Flag, AlertTriangle, Loader2
+    Check, ChevronRight, Bookmark, Flag, AlertTriangle, Loader2, X
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
@@ -399,7 +399,7 @@ const UploadsView = ({ uploads, onUploadRequest, onDelete }: any) => (
     </div>
 )
 
-const EmptyState = ({ icon: Icon, title, description, onUploadRequest, filters, activeTab, onGeneratePaper, isGenerating }: any) => (
+const EmptyState = ({ icon: Icon, title, description, onUploadRequest, filters, activeTab }: any) => (
     <div className="flex flex-col items-center justify-center py-12 bg-white dark:bg-gray-900 rounded-xl border border-dashed border-gray-200 dark:border-gray-800 text-center">
         <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-full mb-3">
             <Icon className="w-6 h-6 text-gray-400" />
@@ -919,15 +919,35 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
 
             let paperData
             try {
-                paperData = typeof data.answer === 'string' ? JSON.parse(data.answer) : data.answer
-            } catch (e) {
-                const match = data.answer.match(/```json\n([\s\S]*)\n```/)
-                if (match) {
-                    paperData = JSON.parse(match[1])
+                if (typeof data.answer === 'object') {
+                    paperData = data.answer
                 } else {
-                    throw new Error('Failed to parse AI response')
+                    // Try to extract JSON from markdown code blocks if present
+                    const match = data.answer.match(/```json\n([\s\S]*)\n```/)
+                    if (match) {
+                        paperData = JSON.parse(match[1])
+                    } else {
+                        // Try direct parse
+                        paperData = JSON.parse(data.answer)
+                    }
+                }
+            } catch (e) {
+                console.error("JSON Parse Error", e);
+                // Try one last attempt to find a JSON-like structure
+                try {
+                    const paramsStart = data.answer.indexOf('{');
+                    const paramsEnd = data.answer.lastIndexOf('}');
+                    if (paramsStart !== -1 && paramsEnd !== -1) {
+                        paperData = JSON.parse(data.answer.substring(paramsStart, paramsEnd + 1));
+                    } else {
+                        throw new Error('Could not parse AI response');
+                    }
+                } catch (e2) {
+                    throw new Error('Failed to parse AI response');
                 }
             }
+
+            if (!paperData) throw new Error('No data received from AI');
 
             const flatData = transformDataForPdf(paperData, filters)
             generatePDF(flatData)
@@ -940,7 +960,7 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
 
         } catch (error) {
             console.error('Generation failed:', error)
-            setError('Servers are currently busy due to high traffic! Please try again in 10-15 seconds.')
+            setError('Failed to generate paper. Please try again or choose a different subject.')
         } finally {
             setGenerating(false)
         }
