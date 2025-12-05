@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import AuthModal from './AuthModal';
 import {
     Bookmark, FileText, Download,
-    ThumbsUp, Flag, Share2, User, LayoutGrid, ArrowRight
+    ThumbsUp, ThumbsDown, Flag, Share2, User, LayoutGrid, ArrowRight
 } from 'lucide-react';
 
 export default function SharedResourcesPage() {
@@ -69,7 +69,7 @@ export default function SharedResourcesPage() {
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-3">Collection Not Found</h1>
                 <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto text-lg mb-8">
-                    The link you followed might be broken, or the user may have stopped sharing this collection.
+                    {error ? `Error: ${error}` : "The link you followed might be broken, or the user may have stopped sharing this collection."}
                 </p>
                 <Link to="/" className="px-8 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl font-bold hover:opacity-90 transition-all shadow-lg hover:shadow-xl">
                     Back to Home
