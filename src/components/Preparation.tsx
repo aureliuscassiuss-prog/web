@@ -23,6 +23,12 @@ interface Program {
 interface Year {
     id: string
     name: string
+    semesters: Semester[]
+}
+
+interface Semester {
+    id: string
+    name: string
     courses: Course[]
 }
 
@@ -54,37 +60,36 @@ export default function Preparation() {
     const [selYearId, setSelYearId] = useState<string>(() => {
         return localStorage.getItem('preparationYearId') || ''
     })
+    const [selSemesterId, setSelSemesterId] = useState<string>(() => {
+        return localStorage.getItem('preparationSemesterId') || ''
+    })
     const [selCourseId, setSelCourseId] = useState<string>(() => {
         return localStorage.getItem('preparationCourseId') || ''
     })
 
     // UI State
-    const [openDropdown, setOpenDropdown] = useState<'program' | 'year' | 'course' | null>(null)
+    const [openDropdown, setOpenDropdown] = useState<'program' | 'year' | 'semester' | 'course' | null>(null)
     const [expandedSubject, setExpandedSubject] = useState<string | null>(null)
 
     // --- Persist selections to localStorage ---
     useEffect(() => {
-        if (selProgramId) {
-            localStorage.setItem('preparationProgramId', selProgramId)
-        } else {
-            localStorage.removeItem('preparationProgramId')
-        }
+        if (selProgramId) localStorage.setItem('preparationProgramId', selProgramId)
+        else localStorage.removeItem('preparationProgramId')
     }, [selProgramId])
 
     useEffect(() => {
-        if (selYearId) {
-            localStorage.setItem('preparationYearId', selYearId)
-        } else {
-            localStorage.removeItem('preparationYearId')
-        }
+        if (selYearId) localStorage.setItem('preparationYearId', selYearId)
+        else localStorage.removeItem('preparationYearId')
     }, [selYearId])
 
     useEffect(() => {
-        if (selCourseId) {
-            localStorage.setItem('preparationCourseId', selCourseId)
-        } else {
-            localStorage.removeItem('preparationCourseId')
-        }
+        if (selSemesterId) localStorage.setItem('preparationSemesterId', selSemesterId)
+        else localStorage.removeItem('preparationSemesterId')
+    }, [selSemesterId])
+
+    useEffect(() => {
+        if (selCourseId) localStorage.setItem('preparationCourseId', selCourseId)
+        else localStorage.removeItem('preparationCourseId')
     }, [selCourseId])
 
     // --- Auto-select based on User Profile ---
@@ -98,13 +103,14 @@ export default function Preparation() {
             if (program) {
                 const year = program.years.find(y => y.id === user.year?.toString())
                 if (year) {
-                    const course = year.courses.find(c => c.id === user.branch)
-                    if (course) {
-                        setSelProgramId(program.id)
-                        setSelYearId(year.id)
-                        setSelCourseId(course.id)
-                        autoSelectedRef.current = true
-                    }
+                    // Try to find semester if available, otherwise stop at year
+                    // Assuming we might not have semester in user profile yet, or we try to guess?
+                    // For now, let's just set program and year.
+                    // If user has branch, we can try to find it in the first semester? No, that's risky.
+                    // Let's just set Program and Year for now.
+                    setSelProgramId(program.id)
+                    setSelYearId(year.id)
+                    autoSelectedRef.current = true
                 }
             }
         }
@@ -133,16 +139,20 @@ export default function Preparation() {
                         {
                             id: 'p1', name: 'Bachelor of Technology', years: [
                                 {
-                                    id: 'y1', name: '1st Year', courses: [
+                                    id: 'y1', name: '1st Year', semesters: [
                                         {
-                                            id: 'c1', name: 'Computer Science & Engineering', subjects: [
-                                                { name: 'Engineering Physics', units: ['Quantum Mechanics', 'Optics', 'Lasers', 'Fiber Optics'] },
-                                                { name: 'Mathematics I', units: ['Calculus', 'Matrices', 'Vector Spaces'] }
+                                            id: 's1', name: 'Semester 1', courses: [
+                                                {
+                                                    id: 'c1', name: 'Computer Science & Engineering', subjects: [
+                                                        { name: 'Engineering Physics', units: ['Quantum Mechanics', 'Optics', 'Lasers', 'Fiber Optics'] },
+                                                        { name: 'Mathematics I', units: ['Calculus', 'Matrices', 'Vector Spaces'] }
+                                                    ]
+                                                }
                                             ]
                                         }
                                     ]
                                 },
-                                { id: 'y2', name: '2nd Year', courses: [] }
+                                { id: 'y2', name: '2nd Year', semesters: [] }
                             ]
                         },
                         { id: 'p2', name: 'Bachelor of Pharmacy', years: [] }
@@ -156,7 +166,9 @@ export default function Preparation() {
     const selectedProgram = programs.find(p => p.id === selProgramId)
     const years = selectedProgram?.years || []
     const selectedYear = years.find(y => y.id === selYearId)
-    const courses = selectedYear?.courses || []
+    const semesters = selectedYear?.semesters || []
+    const selectedSemester = semesters.find(s => s.id === selSemesterId)
+    const courses = selectedSemester?.courses || []
     const selectedCourse = courses.find(c => c.id === selCourseId)
     const subjects = selectedCourse?.subjects || []
 
@@ -164,6 +176,7 @@ export default function Preparation() {
         const params = new URLSearchParams({
             program: selProgramId,
             year: selYearId,
+            semester: selSemesterId,
             course: selCourseId,
             subject: subjectName
         })
@@ -206,8 +219,8 @@ export default function Preparation() {
                 </div>
 
                 {/* --- CUSTOM COMPACT FILTER BAR --- */}
-                {/* Changes: grid-cols-1 on mobile so buttons stack, sm:grid-cols-3 on tablet+ */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {/* Changes: grid-cols-1 on mobile so buttons stack, sm:grid-cols-4 on tablet+ */}
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
 
                     {/* Program Dropdown */}
                     <div className="relative min-w-0">
@@ -235,7 +248,7 @@ export default function Preparation() {
                                         key={p.id}
                                         label={p.name}
                                         selected={p.id === selProgramId}
-                                        onClick={() => { setSelProgramId(p.id); setSelYearId(''); setSelCourseId('') }}
+                                        onClick={() => { setSelProgramId(p.id); setSelYearId(''); setSelSemesterId(''); setSelCourseId('') }}
                                     />
                                 ))}
                             </div>
@@ -268,7 +281,40 @@ export default function Preparation() {
                                         key={y.id}
                                         label={y.name}
                                         selected={y.id === selYearId}
-                                        onClick={() => { setSelYearId(y.id); setSelCourseId('') }}
+                                        onClick={() => { setSelYearId(y.id); setSelSemesterId(''); setSelCourseId('') }}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Semester Dropdown */}
+                    <div className="relative min-w-0">
+                        <button
+                            onClick={(e) => { e.stopPropagation(); if (selYearId) setOpenDropdown(openDropdown === 'semester' ? null : 'semester') }}
+                            disabled={!selYearId}
+                            className={`w-full flex items-center justify-between px-2 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg text-xs font-medium transition-all
+                                ${!selYearId ? 'opacity-50 cursor-not-allowed' : ''}
+                                ${openDropdown === 'semester' ? 'ring-2 ring-black/5 dark:ring-white/10' : ''}
+                            `}
+                        >
+                            <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                                <Calendar size={14} className="text-gray-400 shrink-0 hidden md:block" />
+                                <span className={`truncate ${selSemesterId ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>
+                                    {selectedSemester?.name || "Semester"}
+                                </span>
+                            </div>
+                            <ChevronDown size={14} className="text-gray-400 shrink-0 ml-1" />
+                        </button>
+
+                        {openDropdown === 'semester' && (
+                            <div className="absolute top-full left-0 mt-1 w-full bg-white dark:bg-[#09090b] border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl p-1.5 z-30 animate-in fade-in slide-in-from-top-1 duration-200">
+                                {semesters.map(s => (
+                                    <DropdownItem
+                                        key={s.id}
+                                        label={s.name}
+                                        selected={s.id === selSemesterId}
+                                        onClick={() => { setSelSemesterId(s.id); setSelCourseId('') }}
                                     />
                                 ))}
                             </div>
@@ -278,10 +324,10 @@ export default function Preparation() {
                     {/* Branch Dropdown */}
                     <div className="relative min-w-0">
                         <button
-                            onClick={(e) => { e.stopPropagation(); if (selYearId) setOpenDropdown(openDropdown === 'course' ? null : 'course') }}
-                            disabled={!selYearId}
+                            onClick={(e) => { e.stopPropagation(); if (selSemesterId) setOpenDropdown(openDropdown === 'course' ? null : 'course') }}
+                            disabled={!selSemesterId}
                             className={`w-full flex items-center justify-between px-2 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg text-xs font-medium transition-all
-                                ${!selYearId ? 'opacity-50 cursor-not-allowed' : ''}
+                                ${!selSemesterId ? 'opacity-50 cursor-not-allowed' : ''}
                                 ${openDropdown === 'course' ? 'ring-2 ring-black/5 dark:ring-white/10' : ''}
                             `}
                         >
@@ -319,7 +365,7 @@ export default function Preparation() {
                         <div className="w-16 h-16 bg-gray-50 dark:bg-white/5 rounded-full flex items-center justify-center mb-4">
                             <Search className="text-gray-300 dark:text-gray-600" size={32} />
                         </div>
-                        <p className="text-sm font-medium text-gray-500">Select Program, Year, and Branch<br />to view subjects</p>
+                        <p className="text-sm font-medium text-gray-500">Select Program, Year, Semester, and Branch<br />to view subjects</p>
                     </div>
                 ) : subjects.length === 0 ? (
                     <div className="text-center py-20 text-gray-400 text-sm">No subjects found.</div>
