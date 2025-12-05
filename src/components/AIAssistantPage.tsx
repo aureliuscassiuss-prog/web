@@ -256,15 +256,11 @@ export default function AIAssistantPage() {
     }, [])
 
     return (
-        /* Outer container: Fixed on mobile (to fix keyboard scroll), Relative on desktop */
+
         <div
-            style={{
-                height: isMobile ? `${viewportHeight - 64}px` : `calc(100vh - 8.5rem)`,
-                top: isMobile ? '64px' : 'auto'
-            }}
             className={`
-                flex flex-col bg-white dark:bg-[#050505] font-sans text-gray-900 dark:text-gray-100 overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm transition-[height] duration-75 ease-out
-                ${isMobile ? 'fixed inset-x-0 z-40 rounded-none border-x-0 border-b-0' : 'relative'}
+                flex flex-col bg-white dark:bg-[#050505] font-sans text-gray-900 dark:text-gray-100 overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm transition-all duration-200 ease-out
+                ${isMobile ? 'fixed top-16 bottom-0 inset-x-0 z-40 rounded-none border-x-0 border-b-0' : 'relative h-[calc(100vh-8.5rem)]'}
             `}
         >
             {/* Header Adjustment for Mobile (Hide local header if fixed? No, keep it) */}
