@@ -17,6 +17,7 @@ interface ResourceGridProps {
     filters?: {
         branch?: string
         year?: number
+        semester?: string
         subject?: string
         course?: string
         unit?: string
@@ -447,6 +448,7 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
         if (searchQuery) params.append('search', searchQuery)
         if (filters?.branch) params.append('branch', filters.branch)
         if (filters?.year && filters.year > 0) params.append('year', filters.year.toString())
+        if (filters?.semester) params.append('semester', filters.semester)
         if (filters?.subject) params.append('subject', filters.subject)
         if (filters?.course) params.append('course', filters.course)
         if (filters?.unit) params.append('unit', filters.unit)

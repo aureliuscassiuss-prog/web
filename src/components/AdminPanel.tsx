@@ -44,6 +44,12 @@ interface Program {
 interface Year {
     id: string
     name: string
+    semesters: Semester[]
+}
+
+interface Semester {
+    id: string
+    name: string
     courses: Course[]
 }
 
@@ -86,6 +92,7 @@ export default function AdminPanel() {
     // Structure Selection State
     const [selectedProgramId, setSelectedProgramId] = useState<string>('')
     const [selectedYearId, setSelectedYearId] = useState<string>('')
+    const [selectedSemesterId, setSelectedSemesterId] = useState<string>('')
     const [selectedCourseId, setSelectedCourseId] = useState<string>('')
     const [selectedSubjectName, setSelectedSubjectName] = useState<string>('')
     const [selectedUnitName, setSelectedUnitName] = useState<string>('')
@@ -93,6 +100,7 @@ export default function AdminPanel() {
     // New Item Input State
     const [newProgram, setNewProgram] = useState('')
     const [newYear, setNewYear] = useState('')
+    const [newSemester, setNewSemester] = useState('')
     const [newBranch, setNewBranch] = useState('')
     const [newSubject, setNewSubject] = useState('')
     const [newUnit, setNewUnit] = useState('')
@@ -167,7 +175,7 @@ export default function AdminPanel() {
         } catch (err) { console.error(err) } finally { setProcessingId(null) }
     }
 
-    const handleStructureAdd = async (type: 'program' | 'year' | 'course' | 'subject' | 'unit' | 'video', value: string) => {
+    const handleStructureAdd = async (type: 'program' | 'year' | 'semester' | 'course' | 'subject' | 'unit' | 'video', value: string) => {
         if (!value.trim()) return
         if (type === 'unit' && !selectedSubjectName) return alert('Please select a subject first.')
         if (type === 'video' && !selectedUnitName) return alert('Please select a unit first.')
@@ -176,13 +184,15 @@ export default function AdminPanel() {
 
         if (type === 'program') payload.structureAction = 'add-program'
         else if (type === 'year') { payload.structureAction = 'add-year'; payload.programId = selectedProgramId }
-        else if (type === 'course') { payload.structureAction = 'add-course'; payload.programId = selectedProgramId; payload.yearId = selectedYearId }
-        else if (type === 'subject') { payload.structureAction = 'add-subject'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.courseId = selectedCourseId }
-        else if (type === 'unit') { payload.structureAction = 'add-unit'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.courseId = selectedCourseId; payload.subjectName = selectedSubjectName }
+        else if (type === 'semester') { payload.structureAction = 'add-semester'; payload.programId = selectedProgramId; payload.yearId = selectedYearId }
+        else if (type === 'course') { payload.structureAction = 'add-course'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.semesterId = selectedSemesterId }
+        else if (type === 'subject') { payload.structureAction = 'add-subject'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.semesterId = selectedSemesterId; payload.courseId = selectedCourseId }
+        else if (type === 'unit') { payload.structureAction = 'add-unit'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.semesterId = selectedSemesterId; payload.courseId = selectedCourseId; payload.subjectName = selectedSubjectName }
         else if (type === 'video') {
             payload.structureAction = 'add-video'
             payload.programId = selectedProgramId
             payload.yearId = selectedYearId
+            payload.semesterId = selectedSemesterId
             payload.courseId = selectedCourseId
             payload.subjectName = selectedSubjectName
             payload.unitName = selectedUnitName
@@ -201,6 +211,7 @@ export default function AdminPanel() {
                 setStructure(data)
                 if (type === 'program') setNewProgram('')
                 if (type === 'year') setNewYear('')
+                if (type === 'semester') setNewSemester('')
                 if (type === 'course') setNewBranch('')
                 if (type === 'subject') setNewSubject('')
                 if (type === 'unit') setNewUnit('')
@@ -212,19 +223,21 @@ export default function AdminPanel() {
         } catch (err) { console.error(err); alert('Failed to add item') }
     }
 
-    const handleStructureRemove = async (type: 'program' | 'year' | 'course' | 'subject' | 'unit' | 'video', value: string) => {
+    const handleStructureRemove = async (type: 'program' | 'year' | 'semester' | 'course' | 'subject' | 'unit' | 'video', value: string) => {
         if (!confirm(`Delete "${value}" ? This cannot be undone.`)) return
 
         const payload: any = { action: 'structure', value }
         if (type === 'program') { payload.structureAction = 'remove-program'; payload.programId = value }
         else if (type === 'year') { payload.structureAction = 'remove-year'; payload.programId = selectedProgramId; payload.yearId = value }
-        else if (type === 'course') { payload.structureAction = 'remove-course'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.courseId = value }
-        else if (type === 'subject') { payload.structureAction = 'remove-subject'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.courseId = selectedCourseId; payload.value = value }
-        else if (type === 'unit') { payload.structureAction = 'remove-unit'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.courseId = selectedCourseId; payload.subjectName = selectedSubjectName; payload.value = value }
+        else if (type === 'semester') { payload.structureAction = 'remove-semester'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.semesterId = value }
+        else if (type === 'course') { payload.structureAction = 'remove-course'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.semesterId = selectedSemesterId; payload.courseId = value }
+        else if (type === 'subject') { payload.structureAction = 'remove-subject'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.semesterId = selectedSemesterId; payload.courseId = selectedCourseId; payload.value = value }
+        else if (type === 'unit') { payload.structureAction = 'remove-unit'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.semesterId = selectedSemesterId; payload.courseId = selectedCourseId; payload.subjectName = selectedSubjectName; payload.value = value }
         else if (type === 'video') {
             payload.structureAction = 'remove-video'
             payload.programId = selectedProgramId
             payload.yearId = selectedYearId
+            payload.semesterId = selectedSemesterId
             payload.courseId = selectedCourseId
             payload.subjectName = selectedSubjectName
             payload.unitName = selectedUnitName
@@ -249,7 +262,9 @@ export default function AdminPanel() {
     const selectedProgram = programs.find(p => p.id === selectedProgramId)
     const years = selectedProgram?.years || []
     const selectedYear = years.find(y => y.id === selectedYearId)
-    const courses = selectedYear?.courses || []
+    const semesters = selectedYear?.semesters || []
+    const selectedSemester = semesters.find(s => s.id === selectedSemesterId)
+    const courses = selectedSemester?.courses || []
     const selectedCourse = courses.find(c => c.id === selectedCourseId)
     const subjects = selectedCourse?.subjects || []
     const getSubjectName = (s: any) => typeof s === 'string' ? s : s.name
@@ -322,10 +337,11 @@ export default function AdminPanel() {
                                 <div className="grid grid-cols-1 md:flex md:gap-6 md:overflow-x-auto md:pb-8 gap-6">
                                     <StructureCard title="Programs" step="01" items={programs.map(p => ({ id: p.id, name: p.name }))} value={newProgram} setValue={setNewProgram} onAdd={() => handleStructureAdd('program', newProgram)} onRemove={(id: string) => handleStructureRemove('program', id)} activeId={selectedProgramId} onSelect={setSelectedProgramId} />
                                     <StructureCard title="Years" step="02" items={years.map(y => ({ id: y.id, name: y.name }))} value={newYear} setValue={setNewYear} onAdd={() => handleStructureAdd('year', newYear)} onRemove={(id: string) => handleStructureRemove('year', id)} activeId={selectedYearId} onSelect={setSelectedYearId} disabled={!selectedProgramId} parentName={selectedProgram?.name} />
-                                    <StructureCard title="Branches" step="03" items={courses.map(c => ({ id: c.id, name: c.name }))} value={newBranch} setValue={setNewBranch} onAdd={() => handleStructureAdd('course', newBranch)} onRemove={(id: string) => handleStructureRemove('course', id)} activeId={selectedCourseId} onSelect={setSelectedCourseId} disabled={!selectedYearId} parentName={selectedYear?.name} />
-                                    <StructureCard title="Subjects" step="04" items={subjects.map(s => ({ id: typeof s === 'string' ? s : s.name, name: typeof s === 'string' ? s : s.name }))} value={newSubject} setValue={setNewSubject} onAdd={() => handleStructureAdd('subject', newSubject)} onRemove={(id: string) => handleStructureRemove('subject', id)} activeId={selectedSubjectName} onSelect={setSelectedSubjectName} disabled={!selectedCourseId} parentName={selectedCourse?.name} />
-                                    <StructureCard title="Units" step="05" items={units.map((u: any) => ({ id: u.name, name: u.name }))} value={newUnit} setValue={setNewUnit} onAdd={() => handleStructureAdd('unit', newUnit)} onRemove={(id: string) => handleStructureRemove('unit', id)} activeId={selectedUnitName} onSelect={setSelectedUnitName} disabled={!selectedSubjectName} parentName={selectedSubjectName} />
-                                    <StructureCard title="Videos" step="06" items={videos.map((v: any) => ({ id: v.id, name: v.title }))} value={newVideoTitle} setValue={setNewVideoTitle} extraInput={{ value: newVideoUrl, setValue: setNewVideoUrl, placeholder: "YouTube URL..." }} onAdd={() => handleStructureAdd('video', newVideoTitle)} onRemove={(id: string) => handleStructureRemove('video', id)} disabled={!selectedUnitName} parentName={selectedUnitName} />
+                                    <StructureCard title="Semesters" step="03" items={semesters.map(s => ({ id: s.id, name: s.name }))} value={newSemester} setValue={setNewSemester} onAdd={() => handleStructureAdd('semester', newSemester)} onRemove={(id: string) => handleStructureRemove('semester', id)} activeId={selectedSemesterId} onSelect={setSelectedSemesterId} disabled={!selectedYearId} parentName={selectedYear?.name} />
+                                    <StructureCard title="Branches" step="04" items={courses.map(c => ({ id: c.id, name: c.name }))} value={newBranch} setValue={setNewBranch} onAdd={() => handleStructureAdd('course', newBranch)} onRemove={(id: string) => handleStructureRemove('course', id)} activeId={selectedCourseId} onSelect={setSelectedCourseId} disabled={!selectedSemesterId} parentName={selectedSemester?.name} />
+                                    <StructureCard title="Subjects" step="05" items={subjects.map(s => ({ id: typeof s === 'string' ? s : s.name, name: typeof s === 'string' ? s : s.name }))} value={newSubject} setValue={setNewSubject} onAdd={() => handleStructureAdd('subject', newSubject)} onRemove={(id: string) => handleStructureRemove('subject', id)} activeId={selectedSubjectName} onSelect={setSelectedSubjectName} disabled={!selectedCourseId} parentName={selectedCourse?.name} />
+                                    <StructureCard title="Units" step="06" items={units.map((u: any) => ({ id: u.name, name: u.name }))} value={newUnit} setValue={setNewUnit} onAdd={() => handleStructureAdd('unit', newUnit)} onRemove={(id: string) => handleStructureRemove('unit', id)} activeId={selectedUnitName} onSelect={setSelectedUnitName} disabled={!selectedSubjectName} parentName={selectedSubjectName} />
+                                    <StructureCard title="Videos" step="07" items={videos.map((v: any) => ({ id: v.id, name: v.title }))} value={newVideoTitle} setValue={setNewVideoTitle} extraInput={{ value: newVideoUrl, setValue: setNewVideoUrl, placeholder: "YouTube URL..." }} onAdd={() => handleStructureAdd('video', newVideoTitle)} onRemove={(id: string) => handleStructureRemove('video', id)} disabled={!selectedUnitName} parentName={selectedUnitName} />
                                 </div>
                             </motion.div>}
                         </>

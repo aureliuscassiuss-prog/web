@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import {
     ChevronLeft, BookOpen, GraduationCap,
     ArrowRight, Loader2, Layers, Library,
-    FilterX, ChevronRight, Hash
+    FilterX, ChevronRight, Hash, Calendar
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import ResourceGrid from './ResourceGrid';
@@ -19,7 +19,7 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
         return saved ? parseInt(saved, 10) : 1;
     });
 
-    const [selections, setSelections] = useState<{ program?: string; year?: string; course?: string; subject?: string; unit?: string }>(() => {
+    const [selections, setSelections] = useState<{ program?: string; year?: string; semester?: string; course?: string; subject?: string; unit?: string }>(() => {
         const saved = localStorage.getItem('browseResourcesSelections');
         return saved ? JSON.parse(saved) : {};
     });
@@ -38,16 +38,16 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
             if (program) {
                 const year = program.years.find((y: any) => y.id === user.year?.toString());
                 if (year) {
-                    const course = year.courses.find((c: any) => c.id === user.branch);
-                    if (course) {
-                        setSelections({
-                            program: program.id,
-                            year: year.id,
-                            course: course.id
-                        });
-                        setStep(4); // Jump to Subjects
-                        autoSelectedRef.current = true;
-                    }
+                    // Note: We might need to handle semester auto-selection if user profile has it
+                    // For now, we'll stop at year or try to find course if semester structure allows
+                    // Assuming user.branch maps to course, but we need semester first.
+                    // If we can't determine semester, we stop at year (step 3).
+                    setSelections({
+                        program: program.id,
+                        year: year.id
+                    });
+                    setStep(3); // Jump to Semester selection
+                    autoSelectedRef.current = true;
                 }
             }
         }
@@ -80,7 +80,7 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
 
     // --- Loading Animation Logic ---
     useEffect(() => {
-        if (step === 6) {
+        if (step === 7) {
             const texts = ["Analyzing curriculum...", "Fetching resources...", "Personalizing results..."];
             let i = 0;
             const textInterval = setInterval(() => {
@@ -90,7 +90,7 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
 
             const finishTimeout = setTimeout(() => {
                 clearInterval(textInterval);
-                setStep(7);
+                setStep(8);
             }, 2000);
 
             return () => {
@@ -107,7 +107,10 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
     const years = useMemo(() => currentProgram?.years || [], [currentProgram]);
 
     const currentYear = useMemo(() => years.find((y: any) => y.id === selections.year), [selections.year, years]);
-    const courses = useMemo(() => currentYear?.courses || [], [currentYear]);
+    const semesters = useMemo(() => currentYear?.semesters || [], [currentYear]);
+
+    const currentSemester = useMemo(() => semesters.find((s: any) => s.id === selections.semester), [selections.semester, semesters]);
+    const courses = useMemo(() => currentSemester?.courses || [], [currentSemester]);
 
     const currentCourse = useMemo(() => courses.find((c: any) => c.id === selections.course), [selections.course, courses]);
     const subjects = useMemo(() => currentCourse?.subjects || [], [currentCourse]);
@@ -132,9 +135,9 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
 
         // Check if subject has units to decide next step
         if (typeof subject === 'object' && subject.units && subject.units.length > 0) {
-            setStep(5);
-        } else {
             setStep(6);
+        } else {
+            setStep(7);
         }
     };
 
@@ -156,13 +159,15 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
             setSelections(prev => ({ program: prev.program })); // Keep only program
         } else if (targetStep === 3) {
             setSelections(prev => ({ program: prev.program, year: prev.year })); // Keep program and year
-        } else if (targetStep === 5) {
-            setSelections(prev => ({ program: prev.program, year: prev.year, course: prev.course, subject: prev.subject })); // Keep all except unit
+        } else if (targetStep === 4) {
+            setSelections(prev => ({ program: prev.program, year: prev.year, semester: prev.semester })); // Keep program, year, semester
+        } else if (targetStep === 6) {
+            setSelections(prev => ({ program: prev.program, year: prev.year, semester: prev.semester, course: prev.course, subject: prev.subject })); // Keep all except unit
         }
     };
 
     // --- Render Helpers ---
-    const totalSteps = 5;
+    const totalSteps = 6;
     const progress = Math.min(((step - 1) / totalSteps) * 100, 100);
 
     if (isLoadingStructure) {
@@ -178,7 +183,7 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
         <div className="w-full max-w-4xl mx-auto min-h-[60vh] p-4 md:p-8">
 
             {/* Header Area */}
-            {step < 7 && (
+            {step < 8 && (
                 <div className="mb-10 animate-in fade-in slide-in-from-top-4 duration-500">
                     <div className="flex items-center justify-between mb-6">
                         {step > 1 ? (
@@ -241,13 +246,29 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
                     </div>
                 )}
 
-                {/* STEP 3: Course/Branch */}
+                {/* STEP 3: Semester */}
                 {step === 3 && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-full animate-in zoom-in-95 duration-300">
+                        {semesters.map((sem: any) => (
+                            <SelectionCard
+                                key={sem.id}
+                                onClick={() => handleSelect('semester', sem.id, 4)}
+                                title={sem.name}
+                                subtitle="Semester"
+                                icon={<Calendar className="h-6 w-6" />}
+                                centered
+                            />
+                        ))}
+                    </div>
+                )}
+
+                {/* STEP 4: Course/Branch */}
+                {step === 4 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full animate-in zoom-in-95 duration-300">
                         {courses.map((c: any) => (
                             <SelectionCard
                                 key={c.id}
-                                onClick={() => handleSelect('course', c.id, 4)}
+                                onClick={() => handleSelect('course', c.id, 5)}
                                 title={c.name}
                                 subtitle={`${c.subjects?.length || 0} Subjects Available`}
                                 icon={<Layers className="h-6 w-6" />}
@@ -256,8 +277,8 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
                     </div>
                 )}
 
-                {/* STEP 4: Subjects */}
-                {step === 4 && (
+                {/* STEP 5: Subjects */}
+                {step === 5 && (
                     <div className="w-full space-y-2 animate-in slide-in-from-right-8 duration-300">
                         {subjects.map((sub: any) => (
                             <ListItem
@@ -270,12 +291,12 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
                     </div>
                 )}
 
-                {/* STEP 5: Units */}
-                {step === 5 && (
+                {/* STEP 6: Units */}
+                {step === 6 && (
                     <div className="w-full space-y-4 animate-in slide-in-from-right-8 duration-300">
                         <div className="flex justify-between items-center px-1">
                             <span className="text-xs text-gray-500 font-medium">Narrow down your search (Optional)</span>
-                            <button onClick={() => setStep(6)} className="text-xs font-medium text-black dark:text-white underline decoration-gray-300 hover:decoration-black transition-all">
+                            <button onClick={() => setStep(7)} className="text-xs font-medium text-black dark:text-white underline decoration-gray-300 hover:decoration-black transition-all">
                                 Skip Selection
                             </button>
                         </div>
@@ -285,7 +306,7 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
                                 return (
                                     <ListItem
                                         key={unitName}
-                                        onClick={() => handleSelect('unit', unitName, 6)}
+                                        onClick={() => handleSelect('unit', unitName, 7)}
                                         title={unitName}
                                         icon={<Hash className="h-4 w-4" />}
                                     />
@@ -295,8 +316,8 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
                     </div>
                 )}
 
-                {/* STEP 6: Loading */}
-                {step === 6 && (
+                {/* STEP 7: Loading */}
+                {step === 7 && (
                     <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in duration-500">
                         <div className="relative mb-8">
                             <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full"></div>
@@ -307,8 +328,8 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
                     </div>
                 )}
 
-                {/* STEP 7: Results */}
-                {step === 7 && (
+                {/* STEP 8: Results */}
+                {step === 8 && (
                     <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
                         {/* Results Header */}
                         <div className="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl p-6">
@@ -324,8 +345,9 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
                                     <div className="flex flex-wrap gap-2">
                                         <BreadcrumbBadge label={currentProgram?.name} onClick={() => handleBreadcrumbClick(1)} />
                                         <BreadcrumbBadge label={currentYear?.name} onClick={() => handleBreadcrumbClick(2)} />
-                                        <BreadcrumbBadge label={currentCourse?.name} onClick={() => handleBreadcrumbClick(3)} />
-                                        {selections.unit && <BreadcrumbBadge label={selections.unit} active onClick={() => handleBreadcrumbClick(5)} />}
+                                        <BreadcrumbBadge label={currentSemester?.name} onClick={() => handleBreadcrumbClick(3)} />
+                                        <BreadcrumbBadge label={currentCourse?.name} onClick={() => handleBreadcrumbClick(4)} />
+                                        {selections.unit && <BreadcrumbBadge label={selections.unit} active onClick={() => handleBreadcrumbClick(6)} />}
                                     </div>
                                 </div>
                                 <button
@@ -344,6 +366,7 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
                             filters={{
                                 branch: selections.course, // Maps to API requirement
                                 year: parseInt(selections.year || '0'), // Maps to API requirement
+                                semester: selections.semester,
                                 subject: selections.subject,
                                 course: selections.program, // Maps to API requirement
                                 unit: selections.unit
@@ -364,9 +387,10 @@ function StepHeading({ step }: { step: number }) {
     const headings = {
         1: { title: "Select Program", sub: "What are you studying?" },
         2: { title: "Academic Year", sub: "Which year are you in?" },
-        3: { title: "Choose Branch", sub: "Select your specialization" },
-        4: { title: "Pick Subject", sub: "What subject do you need help with?" },
-        5: { title: "Select Unit", sub: "Looking for a specific topic?" },
+        3: { title: "Select Semester", sub: "Which semester is it?" },
+        4: { title: "Choose Branch", sub: "Select your specialization" },
+        5: { title: "Pick Subject", sub: "What subject do you need help with?" },
+        6: { title: "Select Unit", sub: "Looking for a specific topic?" },
     };
 
     const current = headings[step as keyof typeof headings] || { title: "", sub: "" };

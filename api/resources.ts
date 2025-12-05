@@ -17,7 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const db = await getDb();
 
         if (req.method === 'GET') {
-            const { search, branch, year, subject, unit, type, course, resourceType } = req.query;
+            const { search, branch, year, semester, subject, unit, type, course, resourceType } = req.query;
 
             // Build query - support both 'status: approved' and 'isPublic: true' for backward compatibility
             const query: any = {
@@ -74,6 +74,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 } else {
                     query.year = yearStr;
                 }
+            }
+
+            // Semester filtering
+            if (semester && typeof semester === 'string') {
+                query.semester = semester;
             }
 
             // Subject filtering
@@ -182,6 +187,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 branch,
                 year,
                 yearNum,
+                semester,
                 subject,
                 unit,
                 resourceType,
@@ -208,6 +214,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 course: course || 'B.Tech',
                 branch,
                 year: yearNum ? parseInt(yearNum) : (year ? parseInt(year) : 1),
+                semester: semester || '',
                 subject,
                 unit,
                 resourceType,
