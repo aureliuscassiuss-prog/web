@@ -228,37 +228,46 @@ export default function AIAssistantPage() {
     const [viewportHeight, setViewportHeight] = useState(
         typeof window !== 'undefined' ? (window.visualViewport?.height || window.innerHeight) : 0
     )
+    const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false)
 
     useEffect(() => {
-        if (typeof window === 'undefined' || !window.visualViewport) return
+        if (typeof window === 'undefined') return
 
         const handleResize = () => {
+            setIsMobile(window.innerWidth < 768)
             if (window.visualViewport) {
                 setViewportHeight(window.visualViewport.height)
-                // Scroll to bottom when keyboard opens to keep input in view
-                setTimeout(() => scrollToBottom('auto'), 100)
+                if (window.innerWidth < 768) {
+                    setTimeout(() => scrollToBottom('auto'), 100)
+                }
             }
         }
 
-        window.visualViewport.addEventListener('resize', handleResize)
-        window.visualViewport.addEventListener('scroll', handleResize)
+        window.visualViewport?.addEventListener('resize', handleResize)
+        window.addEventListener('resize', handleResize)
+
+        // Initial set
+        handleResize()
 
         return () => {
-            if (window.visualViewport) {
-                window.visualViewport.removeEventListener('resize', handleResize)
-                window.visualViewport.removeEventListener('scroll', handleResize)
-            }
+            window.visualViewport?.removeEventListener('resize', handleResize)
+            window.removeEventListener('resize', handleResize)
         }
     }, [])
 
     return (
-        /* Outer container: Dynamic height based on visual viewport to stick to keyboard */
+        /* Outer container: Fixed on mobile (to fix keyboard scroll), Relative on desktop */
         <div
-            style={{ height: `calc(${viewportHeight}px - 6.5rem)` }}
-            className="flex flex-col bg-white dark:bg-[#050505] font-sans text-gray-900 dark:text-gray-100 overflow-hidden relative rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm transition-[height] duration-75 ease-out"
+            style={{
+                height: isMobile ? `${viewportHeight - 64}px` : `calc(100vh - 8.5rem)`,
+                top: isMobile ? '64px' : 'auto'
+            }}
+            className={`
+                flex flex-col bg-white dark:bg-[#050505] font-sans text-gray-900 dark:text-gray-100 overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm transition-[height] duration-75 ease-out
+                ${isMobile ? 'fixed inset-x-0 z-40 rounded-none border-x-0 border-b-0' : 'relative'}
+            `}
         >
-
-            {/* --- HEADER (Fixed) --- */}
+            {/* Header Adjustment for Mobile (Hide local header if fixed? No, keep it) */}
             <header className="flex-none z-20 flex items-center justify-between px-4 py-2 border-b border-gray-100 dark:border-white/10 bg-white/80 dark:bg-[#050505]/80 backdrop-blur-md">
                 <div className="flex items-center gap-2.5">
                     <div className="h-8 w-8 rounded-lg bg-black dark:bg-white flex items-center justify-center text-white dark:text-black shadow-sm">
