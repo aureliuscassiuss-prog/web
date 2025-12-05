@@ -885,18 +885,21 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
         doc.save(filename)
     }
 
+    const [error, setError] = useState<string | null>(null)
+
     const handleGeneratePaper = async () => {
         if (user?.role !== 'admin' && attemptsLeft <= 0) {
-            alert('You have reached your daily limit. Try again tomorrow!')
+            setError('You have reached your daily limit. Try again tomorrow!')
             return
         }
 
         if (!filters?.subject) {
-            alert('Please select a subject first')
+            setError('Please select a subject first')
             return
         }
 
         setGenerating(true)
+        setError(null)
 
         try {
             const res = await fetch('/api/ai', {
@@ -907,7 +910,8 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                     program: filters.course,
                     year: filters.year,
                     branch: filters.branch,
-                    subject: filters.subject
+                    subject: filters.subject,
+                    semester: filters.semester
                 })
             })
 
@@ -936,7 +940,7 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
 
         } catch (error) {
             console.error('Generation failed:', error)
-            alert('Failed to generate paper. Please try again.')
+            setError('Servers are currently busy due to high traffic! Please try again in 10-15 seconds.')
         } finally {
             setGenerating(false)
         }
@@ -1004,20 +1008,22 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
 
                         <div className="flex items-center gap-2">
                             {activeTab === 'pyqs' && (
-                                <button
-                                    onClick={handleGeneratePaper}
-                                    disabled={generating}
-                                    className="hidden sm:flex group items-center gap-2 px-3 py-1.5 bg-zinc-900 dark:bg-white text-white dark:text-black text-xs font-medium rounded-lg hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed border border-zinc-800 dark:border-zinc-200 shadow-sm"
-                                >
-                                    {generating ? (
-                                        <Loader2 className="w-3.5 h-3.5 animate-spin text-green-500" />
-                                    ) : (
-                                        <div className="flex items-center justify-center w-4 h-4 rounded-full bg-green-500/10 text-green-500 text-[9px] font-bold ring-1 ring-green-500/50 group-hover:bg-green-500 group-hover:text-white transition-colors">
-                                            {user?.role === 'admin' ? '∞' : attemptsLeft}
-                                        </div>
-                                    )}
-                                    <span className="hidden sm:inline">{generating ? 'Generating...' : 'Generate Sample Paper'}</span>
-                                </button>
+                                <div className="flex flex-col items-end">
+                                    <button
+                                        onClick={handleGeneratePaper}
+                                        disabled={generating}
+                                        className="hidden sm:flex group items-center gap-2 px-3 py-1.5 bg-zinc-900 dark:bg-white text-white dark:text-black text-xs font-medium rounded-lg hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed border border-zinc-800 dark:border-zinc-200 shadow-sm"
+                                    >
+                                        {generating ? (
+                                            <Loader2 className="w-3.5 h-3.5 animate-spin text-green-500" />
+                                        ) : (
+                                            <div className="flex items-center justify-center w-4 h-4 rounded-full bg-green-500/10 text-green-500 text-[9px] font-bold ring-1 ring-green-500/50 group-hover:bg-green-500 group-hover:text-white transition-colors">
+                                                {user?.role === 'admin' ? '∞' : attemptsLeft}
+                                            </div>
+                                        )}
+                                        <span className="hidden sm:inline">{generating ? 'Generating...' : 'Generate Sample Paper'}</span>
+                                    </button>
+                                </div>
                             )}
 
                             {onUploadRequest && (
@@ -1037,6 +1043,17 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                             </span>
                         </div>
                     </div>
+
+                    {/* ERROR BANNER */}
+                    {error && (
+                        <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-lg text-red-600 dark:text-red-400 text-xs font-medium animate-in slide-in-from-top-2 fade-in">
+                            <AlertTriangle size={14} className="flex-shrink-0" />
+                            <span>{error}</span>
+                            <button onClick={() => setError(null)} className="ml-auto p-1 hover:bg-black/5 rounded">
+                                <X size={12} />
+                            </button>
+                        </div>
+                    )}
                     {/* Mobile Generate Button */}
                     {activeTab === 'pyqs' && (
                         <button

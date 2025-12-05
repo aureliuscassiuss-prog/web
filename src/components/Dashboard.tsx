@@ -113,13 +113,17 @@ export default function Dashboard() {
     const AvatarComponent = user?.avatar ? getAvatarComponent(user.avatar) : null;
     const [greeting, setGreeting] = useState('');
     const [timeOfDay, setTimeOfDay] = useState<'morning' | 'afternoon' | 'evening'>('morning');
-    const [stats, setStats] = useState([
-        { label: 'Resources', value: '...', icon: BookOpen, color: 'text-blue-500' },
-        { label: 'Users', value: '...', icon: TrendingUp, color: 'text-green-500' },
-        { label: 'Queries', value: '10k+', icon: Sparkles, color: 'text-purple-500' },
-        { label: 'Papers', value: '3k+', icon: FileText, color: 'text-orange-500' }
-    ]);
-    const [isLoading, setIsLoading] = useState(true);
+    // Initialize stats from cache if available
+    const [stats, setStats] = useState(() => {
+        const cached = localStorage.getItem('dashboard_stats');
+        return cached ? JSON.parse(cached) : [
+            { label: 'Resources', value: '0', icon: BookOpen, color: 'text-blue-500' },
+            { label: 'Users', value: '0', icon: TrendingUp, color: 'text-green-500' },
+            { label: 'Queries', value: '10k+', icon: Sparkles, color: 'text-purple-500' },
+            { label: 'Papers', value: '3k+', icon: FileText, color: 'text-orange-500' }
+        ];
+    });
+    const [isLoading, setIsLoading] = useState(!localStorage.getItem('dashboard_stats'));
 
     const isProfileIncomplete = !user?.course || !user?.year || !user?.branch;
 
@@ -129,19 +133,22 @@ export default function Dashboard() {
                 const response = await fetch('/api/stats');
                 if (response.ok) {
                     const data = await response.json();
-                    setStats([
+                    const newStats = [
                         { label: 'Resources', value: `${data.totalResources || 0}+`, icon: BookOpen, color: 'text-blue-500' },
                         { label: 'Users', value: `${data.totalUsers || 0}+`, icon: TrendingUp, color: 'text-green-500' },
                         { label: 'Queries', value: '10k+', icon: Sparkles, color: 'text-purple-500' },
                         { label: 'Papers', value: '3k+', icon: FileText, color: 'text-orange-500' }
-                    ]);
+                    ];
+                    setStats(newStats);
+                    localStorage.setItem('dashboard_stats', JSON.stringify(newStats));
                 }
             } catch (error) {
                 console.error('Failed to fetch stats:', error);
+            } finally {
+                setIsLoading(false);
             }
         };
         fetchStats();
-        setTimeout(() => setIsLoading(false), 800);
     }, []);
 
     useEffect(() => {
@@ -167,7 +174,7 @@ export default function Dashboard() {
         { title: 'Uploads', description: 'Your files', icon: Upload, link: '/uploads', color: 'from-indigo-500 to-blue-500', bgColor: 'bg-indigo-50/70 dark:bg-indigo-900/20' }
     ];
 
-    if (isLoading) {
+    if (isLoading && !stats[0].value) { // Only show full skeleton if we have no data at all
         return <SkeletonDashboard />;
     }
 
