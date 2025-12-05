@@ -117,6 +117,15 @@ export default function AdminPanel() {
         }
     }
 
+    // Helper for Unit Auto-text
+    const handleUnitChange = (val: string) => {
+        if (/^\d+$/.test(val)) {
+            setNewUnit(`Unit ${val}`)
+        } else {
+            setNewUnit(val)
+        }
+    }
+
     // Fetch Data on Tab Change
     useEffect(() => {
         const fetchData = async () => {
@@ -351,7 +360,7 @@ export default function AdminPanel() {
                                     <StructureCard title="Branches" step="03" items={courses.map(c => ({ id: c.id, name: c.name }))} value={newBranch} setValue={setNewBranch} onAdd={() => handleStructureAdd('course', newBranch)} onRemove={(id: string) => handleStructureRemove('course', id)} activeId={selectedCourseId} onSelect={setSelectedCourseId} disabled={!selectedYearId} parentName={selectedYear?.name} isLoading={isSubmitting} />
                                     <StructureCard title="Semesters" step="04" items={semesters.map(s => ({ id: s.id, name: s.name }))} value={newSemester} setValue={handleSemesterChange} onAdd={() => handleStructureAdd('semester', newSemester)} onRemove={(id: string) => handleStructureRemove('semester', id)} activeId={selectedSemesterId} onSelect={setSelectedSemesterId} disabled={!selectedCourseId} parentName={selectedCourse?.name} isLoading={isSubmitting} />
                                     <StructureCard title="Subjects" step="05" items={subjects.map(s => ({ id: typeof s === 'string' ? s : s.name, name: typeof s === 'string' ? s : s.name }))} value={newSubject} setValue={setNewSubject} onAdd={() => handleStructureAdd('subject', newSubject)} onRemove={(id: string) => handleStructureRemove('subject', id)} activeId={selectedSubjectName} onSelect={setSelectedSubjectName} disabled={!selectedSemesterId} parentName={selectedSemester?.name} isLoading={isSubmitting} />
-                                    <StructureCard title="Units" step="06" items={units.map((u: any) => ({ id: u.name, name: u.name }))} value={newUnit} setValue={setNewUnit} onAdd={() => handleStructureAdd('unit', newUnit)} onRemove={(id: string) => handleStructureRemove('unit', id)} activeId={selectedUnitName} onSelect={setSelectedUnitName} disabled={!selectedSubjectName} parentName={selectedSubjectName} isLoading={isSubmitting} />
+                                    <StructureCard title="Units" step="06" items={units.map((u: any) => ({ id: u.name, name: u.name }))} value={newUnit} setValue={handleUnitChange} onAdd={() => handleStructureAdd('unit', newUnit)} onRemove={(id: string) => handleStructureRemove('unit', id)} activeId={selectedUnitName} onSelect={setSelectedUnitName} disabled={!selectedSubjectName} parentName={selectedSubjectName} isLoading={isSubmitting} />
                                     <StructureCard title="Videos" step="07" items={videos.map((v: any) => ({ id: v.id, name: v.title }))} value={newVideoTitle} setValue={setNewVideoTitle} extraInput={{ value: newVideoUrl, setValue: setNewVideoUrl, placeholder: "YouTube URL..." }} onAdd={() => handleStructureAdd('video', newVideoTitle)} onRemove={(id: string) => handleStructureRemove('video', id)} disabled={!selectedUnitName} parentName={selectedUnitName} isLoading={isSubmitting} />
                                 </div>
                             </motion.div>}
