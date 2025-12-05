@@ -536,7 +536,7 @@ function ManageTab({ subjects, onAdd, onUpdate, onDelete }: any) {
     }
 
     return (
-        <div className="max-w-xl mx-auto">
+        <div className="max-w-2xl mx-auto space-y-6">
             <AnimatePresence>
                 {isEditing && (
                     <motion.div
@@ -546,7 +546,7 @@ function ManageTab({ subjects, onAdd, onUpdate, onDelete }: any) {
                         transition={{ duration: 0.3, ease: "easeInOut" }}
                         className="overflow-hidden"
                     >
-                        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 shadow-lg mb-6">
+                        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 shadow-lg mx-1">
                             <div className="flex justify-between items-center mb-6">
                                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">{editingId ? 'Edit Subject' : 'Add New Subject'}</h2>
                                 <button onClick={resetForm} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
@@ -636,16 +636,14 @@ function ManageTab({ subjects, onAdd, onUpdate, onDelete }: any) {
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
-    )
 
-    return (
-        <div className="space-y-4 max-w-2xl mx-auto">
-            <div className="flex justify-end">
-                <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 px-4 py-2 bg-black text-white dark:bg-white dark:text-black rounded-lg text-sm font-bold hover:opacity-90 transition-opacity shadow-sm">
-                    <Plus size={16} /> Add Subject
-                </button>
-            </div>
+            {!isEditing && (
+                <div className="flex justify-end">
+                    <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 px-4 py-2 bg-black text-white dark:bg-white dark:text-black rounded-lg text-sm font-bold hover:opacity-90 transition-opacity shadow-sm">
+                        <Plus size={16} /> Add Subject
+                    </button>
+                </div>
+            )}
 
             {subjects.length === 0 ? (
                 <EmptyState message="No subjects found. Add one to get started!" />
