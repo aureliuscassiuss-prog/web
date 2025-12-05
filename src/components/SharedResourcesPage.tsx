@@ -34,29 +34,27 @@ export default function SharedResourcesPage() {
         if (slug) fetchData();
     }, [slug]);
 
-    // --- Skeleton Loader ---
     // --- Premium Loading State (Spinner) ---
     if (isLoading) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-black font-sans">
-                <div className="relative">
+            <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-gray-50 dark:bg-black font-sans overscroll-none overflow-hidden">
+                <div className="relative transform scale-75 sm:scale-100">
                     {/* Glowing outer ring */}
                     <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full" />
 
                     {/* Reviewing Spinner */}
-                    <div className="relative w-24 h-24">
-                        <div className="absolute inset-0 rounded-full border-4 border-t-blue-600 border-r-transparent border-b-purple-600 border-l-transparent animate-spin" />
+                    <div className="relative w-16 h-16 sm:w-20 sm:h-20">
+                        <div className="absolute inset-0 rounded-full border-[3px] border-t-blue-600 border-r-transparent border-b-purple-600 border-l-transparent animate-spin" />
 
                         {/* Center Icon (Placeholder until data loads) */}
                         <div className="absolute inset-2 bg-white dark:bg-gray-900 rounded-full flex items-center justify-center shadow-inner">
-                            <User className="w-8 h-8 text-gray-400 animate-pulse" />
+                            <User className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400 animate-pulse" />
                         </div>
                     </div>
                 </div>
 
-                <div className="mt-8 text-center space-y-2 animate-fade-in">
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Fetching Profile...</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Loading shared resources</p>
+                <div className="mt-6 text-center space-y-1 animate-fade-in">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">Fetching resources...</h3>
                 </div>
             </div>
         );
@@ -94,7 +92,7 @@ export default function SharedResourcesPage() {
                         <div className="group relative">
                             <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full blur opacity-40 group-hover:opacity-60 transition-opacity duration-500" />
                             <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full p-1.5 bg-gradient-to-br from-white to-gray-100 dark:from-gray-800 dark:to-gray-900 shadow-2xl">
-                                <div className="w-full h-full rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden flex items-center justify-center border-4 border-white dark:border-gray-800">
+                                <div className="w-full h-full rounded-full bg-white dark:bg-gray-800 overflow-hidden flex items-center justify-center border-4 border-white dark:border-gray-800">
                                     {data.user.avatar ? (
                                         <img src={data.user.avatar} alt={data.user.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-out" />
                                     ) : (
@@ -157,6 +155,8 @@ const SharedGridCard = ({ resource, currentUserToken }: { resource: any, current
         e.stopPropagation();
         if (!currentUserToken) {
             alert("🔒 Login Required\n\nPlease log in to UniNotes to save, like, or report this resource.");
+            // Login Redirect
+            window.location.href = '/';
         } else {
             alert("👁️ View Only Mode\n\nTo interact with this resource, please find it in the main library.");
         }
@@ -237,4 +237,4 @@ const SharedGridCard = ({ resource, currentUserToken }: { resource: any, current
             </div>
         </div>
     );
-};
+}
