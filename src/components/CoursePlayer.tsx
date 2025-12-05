@@ -458,12 +458,12 @@ export default function CoursePlayer() {
                                     </p>
                                 </div>
 
-                                {/* Action Button */}
-                                <div className="flex items-center gap-3">
+                                {/* Action Buttons */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full md:w-auto">
                                     <button
                                         onClick={() => toggleWatched(currentVideo.id)}
                                         className={`
-                                            flex-shrink-0 group flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all duration-300 active:scale-95 border
+                                            w-full group flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all duration-300 active:scale-95 border
                                             ${watchedVideos.has(currentVideo.id)
                                                 ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-900/30'
                                                 : 'bg-white text-gray-700 border-gray-200 dark:bg-zinc-900 dark:border-zinc-800 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800'}
@@ -475,7 +475,7 @@ export default function CoursePlayer() {
                                         `}>
                                             <Check size={12} className={watchedVideos.has(currentVideo.id) ? 'opacity-100' : 'opacity-0'} />
                                         </div>
-                                        {watchedVideos.has(currentVideo.id) ? 'Completed' : 'Mark Complete'}
+                                        <span className="whitespace-nowrap">{watchedVideos.has(currentVideo.id) ? 'Completed' : 'Mark Complete'}</span>
                                     </button>
 
                                     {/* Next Video Button */}
@@ -513,9 +513,9 @@ export default function CoursePlayer() {
                                                         window.scrollTo({ top: 0, behavior: 'smooth' })
                                                     }
                                                 }}
-                                                className="flex-shrink-0 group flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm bg-black text-white dark:bg-white dark:text-black hover:opacity-90 shadow-lg shadow-gray-200 dark:shadow-none transition-all duration-300 active:scale-95"
+                                                className="w-full group flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm bg-black text-white dark:bg-white dark:text-black hover:opacity-90 shadow-lg shadow-gray-200 dark:shadow-none transition-all duration-300 active:scale-95"
                                             >
-                                                <span>{isLastVideoInUnit ? 'Next Unit' : 'Next Video'}</span>
+                                                <span className="whitespace-nowrap">{isLastVideoInUnit ? 'Next Unit' : 'Next Video'}</span>
                                                 <div className="w-5 h-5 rounded-full bg-white/20 dark:bg-black/10 flex items-center justify-center">
                                                     <Play size={10} className="fill-current ml-0.5" />
                                                 </div>

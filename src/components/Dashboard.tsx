@@ -127,12 +127,12 @@ const CountUp = ({ end, duration = 2000 }: { end: number, duration?: number }) =
             if (!startTime) startTime = currentTime
             const progress = Math.min((currentTime - startTime) / duration, 1)
 
-            // Easing function (easeOutExpo)
-            const easeOut = (x: number): number => {
-                return x === 1 ? 1 : 1 - Math.pow(2, -10 * x)
+            // Super smooth easing function (easeOutCubic)
+            const easeOutCubic = (x: number): number => {
+                return 1 - Math.pow(1 - x, 3)
             }
 
-            setCount(Math.floor(easeOut(progress) * end))
+            setCount(Math.ceil(easeOutCubic(progress) * end))
 
             if (progress < 1) {
                 requestAnimationFrame(animate)
