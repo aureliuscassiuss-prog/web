@@ -113,25 +113,34 @@ export default function Dashboard() {
     const AvatarComponent = user?.avatar ? getAvatarComponent(user.avatar) : null;
     const [greeting, setGreeting] = useState('');
     const [timeOfDay, setTimeOfDay] = useState<'morning' | 'afternoon' | 'evening'>('morning');
+    // Define structure with icons statically
+    const statConfig = [
+        { label: 'Resources', icon: BookOpen, color: 'text-blue-500', defaultValue: '0' },
+        { label: 'Users', icon: TrendingUp, color: 'text-green-500', defaultValue: '0' },
+        { label: 'Queries', icon: Sparkles, color: 'text-purple-500', defaultValue: '10k+' },
+        { label: 'Papers', icon: FileText, color: 'text-orange-500', defaultValue: '3k+' }
+    ];
+
     // Initialize stats from cache if available
     const [stats, setStats] = useState(() => {
         try {
             const cached = localStorage.getItem('dashboard_stats');
-            return cached ? JSON.parse(cached) : [
-                { label: 'Resources', value: '0', icon: BookOpen, color: 'text-blue-500' },
-                { label: 'Users', value: '0', icon: TrendingUp, color: 'text-green-500' },
-                { label: 'Queries', value: '10k+', icon: Sparkles, color: 'text-purple-500' },
-                { label: 'Papers', value: '3k+', icon: FileText, color: 'text-orange-500' }
-            ];
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                // Merge cached values with config to ensure Icons are present
+                return statConfig.map((config, index) => ({
+                    ...config,
+                    value: parsed[index]?.value || config.defaultValue
+                }));
+            }
         } catch (e) {
             console.error('Failed to parse stats cache', e);
-            return [
-                { label: 'Resources', value: '0', icon: BookOpen, color: 'text-blue-500' },
-                { label: 'Users', value: '0', icon: TrendingUp, color: 'text-green-500' },
-                { label: 'Queries', value: '10k+', icon: Sparkles, color: 'text-purple-500' },
-                { label: 'Papers', value: '3k+', icon: FileText, color: 'text-orange-500' }
-            ];
         }
+        // Default fallbacks
+        return statConfig.map(config => ({
+            ...config,
+            value: config.defaultValue
+        }));
     });
 
     // Loading if no cache or if cache has default '0' values which implies we still need fresh data
@@ -155,6 +164,7 @@ export default function Dashboard() {
                         { label: 'Papers', value: '3k+', icon: FileText, color: 'text-orange-500' }
                     ];
                     setStats(newStats);
+                    // Store only simple data in cache, we re-hydrate icons on load
                     localStorage.setItem('dashboard_stats', JSON.stringify(newStats));
                 }
             } catch (error) {
