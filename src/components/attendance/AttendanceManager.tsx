@@ -365,43 +365,80 @@ function SubjectCard({ subject }: { subject: Subject }) {
 }
 
 function DailyTab({ subjects, logs, onMark }: { subjects: Subject[], logs: AttendanceLog[], onMark: any }) {
-    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' })
+    const [selectedDate, setSelectedDate] = useState(new Date())
+    const dayName = selectedDate.toLocaleDateString('en-US', { weekday: 'long' })
+    const dateString = selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    const isToday = selectedDate.toDateString() === new Date().toDateString()
 
-    // Filter subjects that have a class today
-    const todaysClasses = subjects.filter(subject =>
-        subject.schedule.some(s => s.day === today)
+    // Filter subjects that have a class on the selected day
+    const daysClasses = subjects.filter(subject =>
+        subject.schedule.some(s => s.day === dayName)
     )
 
-    if (todaysClasses.length === 0) return <EmptyState message={`No classes scheduled for ${today}. Enjoy your day off!`} />
+    const changeDate = (days: number) => {
+        const newDate = new Date(selectedDate)
+        newDate.setDate(selectedDate.getDate() + days)
+        setSelectedDate(newDate)
+    }
 
     return (
-        <div className="space-y-3 max-w-2xl mx-auto">
-            <div className="flex items-center justify-between mb-2">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Schedule for {today}</h2>
-                <span className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 px-2 py-1 rounded-md font-medium">
-                    {todaysClasses.length} Classes
-                </span>
+        <div className="space-y-4 max-w-2xl mx-auto">
+            {/* Date Navigation */}
+            <div className="flex items-center justify-between bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
+                <button onClick={() => changeDate(-1)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-500 dark:text-gray-400">
+                    <ChevronDown className="rotate-90" size={20} />
+                </button>
+
+                <div className="text-center">
+                    <h2 className="text-sm font-bold text-gray-900 dark:text-white">{isToday ? 'Today' : dayName}</h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{dateString}</p>
+                </div>
+
+                <button onClick={() => changeDate(1)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-500 dark:text-gray-400">
+                    <ChevronDown className="-rotate-90" size={20} />
+                </button>
             </div>
 
-            {todaysClasses.map(subject => {
-                const todayLog = logs.find(l =>
-                    l.subjectId === subject.id &&
-                    new Date(l.date).toDateString() === new Date().toDateString()
-                )
+            {daysClasses.length === 0 ? (
+                <EmptyState message={`No classes scheduled for ${dayName}. Enjoy your day off!`} />
+            ) : (
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between px-1">
+                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Schedule</span>
+                        <span className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 px-2 py-1 rounded-md font-medium">
+                            {daysClasses.length} Classes
+                        </span>
+                    </div>
 
-                return <DailySubjectRow key={subject.id} subject={subject} todayLog={todayLog} onMark={onMark} />
-            })}
+                    {daysClasses.map(subject => {
+                        const log = logs.find(l =>
+                            l.subjectId === subject.id &&
+                            new Date(l.date).toDateString() === selectedDate.toDateString()
+                        )
+
+                        return (
+                            <DailySubjectRow
+                                key={subject.id}
+                                subject={subject}
+                                log={log}
+                                date={selectedDate}
+                                onMark={onMark}
+                            />
+                        )
+                    })}
+                </div>
+            )}
         </div>
     )
 }
 
-function DailySubjectRow({ subject, todayLog, onMark }: { subject: Subject, todayLog?: AttendanceLog, onMark: any }) {
+function DailySubjectRow({ subject, log, date, onMark }: { subject: Subject, log?: AttendanceLog, date: Date, onMark: any }) {
     const [loading, setLoading] = useState<string | null>(null)
 
     const handleMark = async (status: string) => {
         setLoading(status)
         await new Promise(resolve => setTimeout(resolve, 500)) // Simulate network delay
-        onMark(subject.id, status)
+        onMark(subject.id, status, date)
         setLoading(null)
     }
 
@@ -421,34 +458,34 @@ function DailySubjectRow({ subject, todayLog, onMark }: { subject: Subject, toda
                 <button
                     onClick={() => handleMark('present')}
                     disabled={!!loading}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold ${todayLog?.status === 'present'
-                        ? 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-800 ring-2 ring-green-500/20'
-                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-700'
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold ${log?.status === 'present'
+                            ? 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-800 ring-2 ring-green-500/20'
+                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-700'
                         }`}
                 >
-                    {loading === 'present' ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} className={todayLog?.status === 'present' ? 'fill-current' : ''} />}
+                    {loading === 'present' ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} className={log?.status === 'present' ? 'fill-current' : ''} />}
                     Present
                 </button>
                 <button
                     onClick={() => handleMark('absent')}
                     disabled={!!loading}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold ${todayLog?.status === 'absent'
-                        ? 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800 ring-2 ring-red-500/20'
-                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-700'
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold ${log?.status === 'absent'
+                            ? 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800 ring-2 ring-red-500/20'
+                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-700'
                         }`}
                 >
-                    {loading === 'absent' ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} className={todayLog?.status === 'absent' ? 'fill-current' : ''} />}
+                    {loading === 'absent' ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} className={log?.status === 'absent' ? 'fill-current' : ''} />}
                     Absent
                 </button>
                 <button
                     onClick={() => handleMark('cancelled')}
                     disabled={!!loading}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold ${todayLog?.status === 'cancelled'
-                        ? 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/40 dark:text-orange-300 dark:border-orange-800 ring-2 ring-orange-500/20'
-                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-700'
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold ${log?.status === 'cancelled'
+                            ? 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/40 dark:text-orange-300 dark:border-orange-800 ring-2 ring-orange-500/20'
+                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-700'
                         }`}
                 >
-                    {loading === 'cancelled' ? <Loader2 size={14} className="animate-spin" /> : <AlertTriangle size={14} className={todayLog?.status === 'cancelled' ? 'fill-current' : ''} />}
+                    {loading === 'cancelled' ? <Loader2 size={14} className="animate-spin" /> : <AlertTriangle size={14} className={log?.status === 'cancelled' ? 'fill-current' : ''} />}
                     Cancelled
                 </button>
             </div>
