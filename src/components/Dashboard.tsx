@@ -115,15 +115,30 @@ export default function Dashboard() {
     const [timeOfDay, setTimeOfDay] = useState<'morning' | 'afternoon' | 'evening'>('morning');
     // Initialize stats from cache if available
     const [stats, setStats] = useState(() => {
-        const cached = localStorage.getItem('dashboard_stats');
-        return cached ? JSON.parse(cached) : [
-            { label: 'Resources', value: '0', icon: BookOpen, color: 'text-blue-500' },
-            { label: 'Users', value: '0', icon: TrendingUp, color: 'text-green-500' },
-            { label: 'Queries', value: '10k+', icon: Sparkles, color: 'text-purple-500' },
-            { label: 'Papers', value: '3k+', icon: FileText, color: 'text-orange-500' }
-        ];
+        try {
+            const cached = localStorage.getItem('dashboard_stats');
+            return cached ? JSON.parse(cached) : [
+                { label: 'Resources', value: '0', icon: BookOpen, color: 'text-blue-500' },
+                { label: 'Users', value: '0', icon: TrendingUp, color: 'text-green-500' },
+                { label: 'Queries', value: '10k+', icon: Sparkles, color: 'text-purple-500' },
+                { label: 'Papers', value: '3k+', icon: FileText, color: 'text-orange-500' }
+            ];
+        } catch (e) {
+            console.error('Failed to parse stats cache', e);
+            return [
+                { label: 'Resources', value: '0', icon: BookOpen, color: 'text-blue-500' },
+                { label: 'Users', value: '0', icon: TrendingUp, color: 'text-green-500' },
+                { label: 'Queries', value: '10k+', icon: Sparkles, color: 'text-purple-500' },
+                { label: 'Papers', value: '3k+', icon: FileText, color: 'text-orange-500' }
+            ];
+        }
     });
-    const [isLoading, setIsLoading] = useState(!localStorage.getItem('dashboard_stats'));
+
+    // Loading if no cache or if cache has default '0' values which implies we still need fresh data
+    const [isLoading, setIsLoading] = useState(() => {
+        const cached = localStorage.getItem('dashboard_stats');
+        return !cached;
+    });
 
     const isProfileIncomplete = !user?.course || !user?.year || !user?.branch;
 
@@ -174,7 +189,7 @@ export default function Dashboard() {
         { title: 'Uploads', description: 'Your files', icon: Upload, link: '/uploads', color: 'from-indigo-500 to-blue-500', bgColor: 'bg-indigo-50/70 dark:bg-indigo-900/20' }
     ];
 
-    if (isLoading && !stats[0].value) { // Only show full skeleton if we have no data at all
+    if (isLoading && stats[0].value === '0') { // Only show full skeleton if valid data isn't present
         return <SkeletonDashboard />;
     }
 
@@ -307,7 +322,7 @@ export default function Dashboard() {
 
             {/* Stats Grid */}
             <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
-                {stats.map((stat) => (
+                {stats.map((stat: { label: string; value: string; icon: any; color: string }) => (
                     <StatCard key={stat.label} {...stat} />
                 ))}
             </div>
