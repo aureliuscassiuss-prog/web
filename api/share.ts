@@ -73,8 +73,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(404).json({ message: 'Shared list not found' });
             }
 
-            // Fetch Saved Resources logic (similar to resource-interactions)
-            const resources = await db.collection('resources').aggregate([
+            // Optional: Check for current user to return interaction states
+            let currentUserId: string | null = null;
+            const authHeader = req.headers.authorization;
+            if (authHeader && authHeader.startsWith('Bearer ') && process.env.JWT_SECRET) {
+                try {
+                    const token = authHeader.split(' ')[1];
+                    const decoded = jwt.verify(token, process.env.JWT_SECRET) as { userId: string };
+                    currentUserId = decoded.userId;
+                } catch (e) {
+                    // Invalid token, treat as guest
+                }
+            }
+
+            const aggregationPipeline: any[] = [
                 {
                     $match: {
                         savedBy: user._id.toString(),
@@ -85,16 +97,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 {
                     $lookup: {
                         from: 'users',
-                        let: {
-                            uploaderIdObj: {
-                                $convert: {
-                                    input: '$uploaderId',
-                                    to: 'objectId',
-                                    onError: null,
-                                    onNull: null
-                                }
-                            }
-                        },
+                        let: { uploaderIdObj: { $toObjectId: '$uploaderId' } },
                         pipeline: [
                             { $match: { $expr: { $eq: ['$_id', '$$uploaderIdObj'] } } },
                             { $project: { avatar: 1 } }
@@ -108,7 +111,108 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     }
                 },
                 { $project: { uploaderDetails: 0 } }
-            ]).toArray();
+            ];
+
+            // If user is logged in, lookup their interactions
+            if (currentUserId) {
+                aggregationPipeline.push(
+                    // Lookup Saved status
+                    {
+                        $lookup: {
+                            from: 'savedResources',
+                            let: { resourceId: { $toString: '$_id' } },
+                            pipeline: [
+                                {
+                                    $match: {
+                                        $expr: {
+                                            $and: [
+                                                { $eq: ['$userId', currentUserId] },
+                                                { $eq: ['$resourceId', '$$resourceId'] }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ],
+                            as: 'savedStatus'
+                        }
+                    },
+                    // Lookup Interaction status (Like/Dislike/Flag)
+                    {
+                        $lookup: {
+                            from: 'resourceInteractions',
+                            let: { resourceId: { $toString: '$_id' } },
+                            pipeline: [
+                                {
+                                    $match: {
+                                        $expr: {
+                                            $and: [
+                                                { $eq: ['$userId', currentUserId] },
+                                                { $eq: ['$resourceId', '$$resourceId'] }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ],
+                            as: 'interactionStatus'
+                        }
+                    },
+                    {
+                        $addFields: {
+                            userSaved: { $gt: [{ $size: '$savedStatus' }, 0] },
+                            userLiked: {
+                                $gt: [
+                                    {
+                                        $size: {
+                                            $filter: {
+                                                input: '$interactionStatus',
+                                                as: 'i',
+                                                cond: { $eq: ['$$i.type', 'like'] }
+                                            }
+                                        }
+                                    },
+                                    0
+                                ]
+                            },
+                            userDisliked: {
+                                $gt: [
+                                    {
+                                        $size: {
+                                            $filter: {
+                                                input: '$interactionStatus',
+                                                as: 'i',
+                                                cond: { $eq: ['$$i.type', 'dislike'] }
+                                            }
+                                        }
+                                    },
+                                    0
+                                ]
+                            },
+                            userFlagged: {
+                                $gt: [
+                                    {
+                                        $size: {
+                                            $filter: {
+                                                input: '$interactionStatus',
+                                                as: 'i',
+                                                cond: { $eq: ['$$i.type', 'flag'] }
+                                            }
+                                        }
+                                    },
+                                    0
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        $project: {
+                            savedStatus: 0,
+                            interactionStatus: 0
+                        }
+                    }
+                );
+            }
+
+            const resources = await db.collection('resources').aggregate(aggregationPipeline).toArray();
 
             return res.status(200).json({
                 user: {

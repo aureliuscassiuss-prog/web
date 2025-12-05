@@ -42,7 +42,7 @@ export default function SharedResourcesPage() {
         };
 
         if (slug) fetchData();
-    }, [slug]);
+    }, [slug, token]);
 
     // --- Premium Loading State (Spinner) ---
     // Fixed position to prevent scrolling, high z-index to cover everything
@@ -322,8 +322,8 @@ const SharedGridCard = ({ resource, currentUserToken, onLoginRequest }: { resour
                     <button
                         onClick={handleSave}
                         className={`p-1.5 rounded-lg transition-colors ${isSaved
-                                ? 'text-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                                : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10'
+                            ? 'text-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                            : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10'
                             }`}
                         title={isSaved ? "Saved" : "Save to Library"}
                     >
@@ -332,8 +332,8 @@ const SharedGridCard = ({ resource, currentUserToken, onLoginRequest }: { resour
                     <button
                         onClick={handleReport}
                         className={`p-1.5 rounded-lg transition-colors ${isReported
-                                ? 'text-red-500 bg-red-50 dark:bg-red-900/20'
-                                : 'text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10'
+                            ? 'text-red-500 bg-red-50 dark:bg-red-900/20'
+                            : 'text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10'
                             }`}
                         title={isReported ? "Reported" : "Report Issue"}
                     >
