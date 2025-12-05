@@ -103,14 +103,17 @@ export default function Preparation() {
             if (program) {
                 const year = program.years.find(y => y.id === user.year?.toString())
                 if (year) {
-                    // Try to find semester if available, otherwise stop at year
-                    // Assuming we might not have semester in user profile yet, or we try to guess?
-                    // For now, let's just set program and year.
-                    // If user has branch, we can try to find it in the first semester? No, that's risky.
-                    // Let's just set Program and Year for now.
-                    setSelProgramId(program.id)
-                    setSelYearId(year.id)
-                    autoSelectedRef.current = true
+                    const semester = year.semesters?.find(s => s.id === user.semester?.toString())
+                    if (semester) {
+                        setSelProgramId(program.id)
+                        setSelYearId(year.id)
+                        setSelSemesterId(semester.id)
+                        autoSelectedRef.current = true
+                    } else {
+                        setSelProgramId(program.id)
+                        setSelYearId(year.id)
+                        autoSelectedRef.current = true
+                    }
                 }
             }
         }

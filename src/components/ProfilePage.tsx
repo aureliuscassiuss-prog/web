@@ -195,10 +195,15 @@ export default function ProfilePage() {
         return prog?.years || [];
     }, [formData.course, programs]);
 
-    const courses = useMemo(() => {
+    const semesters = useMemo(() => {
         const yr = years.find((y: any) => y.id === formData.year.toString() || y.id === formData.year);
-        return yr?.courses || [];
+        return yr?.semesters || [];
     }, [formData.year, years]);
+
+    const courses = useMemo(() => {
+        const sem = semesters.find((s: any) => s.id === formData.semester.toString() || s.id === formData.semester);
+        return sem?.courses || [];
+    }, [formData.semester, semesters]);
 
     // Save handler
     const handleSave = async () => {
@@ -471,7 +476,7 @@ export default function ProfilePage() {
                                 placeholder="Select Program"
                                 isOpen={activeField === 'program'}
                                 onToggle={() => toggleField('program')}
-                                onChange={(val) => setFormData({ ...formData, course: val, year: 1, branch: '' })}
+                                onChange={(val) => setFormData({ ...formData, course: val, year: 1, semester: 1, branch: '' })}
                                 options={programs.map((p: any) => ({ label: p.name, value: p.id }))}
                             />
                         </UnifiedField>
@@ -484,8 +489,21 @@ export default function ProfilePage() {
                                 placeholder="Select Year"
                                 isOpen={activeField === 'year'}
                                 onToggle={() => toggleField('year')}
-                                onChange={(val) => setFormData({ ...formData, year: parseInt(val), branch: '' })}
+                                onChange={(val) => setFormData({ ...formData, year: parseInt(val), semester: 1, branch: '' })}
                                 options={years.map((y: any) => ({ label: y.name, value: y.id }))}
+                            />
+                        </UnifiedField>
+
+                        {/* Semester - Expandable */}
+                        <UnifiedField label="Current Semester" isEditing={isEditing} icon={null}>
+                            <CustomSelect
+                                value={formData.semester}
+                                disabled={!isEditing || !formData.year}
+                                placeholder="Select Semester"
+                                isOpen={activeField === 'semester'}
+                                onToggle={() => toggleField('semester')}
+                                onChange={(val) => setFormData({ ...formData, semester: parseInt(val), branch: '' })}
+                                options={semesters.map((s: any) => ({ label: s.name, value: s.id }))}
                             />
                         </UnifiedField>
 
@@ -494,7 +512,7 @@ export default function ProfilePage() {
                             <UnifiedField label="Branch / Department" icon={Hash} isEditing={isEditing}>
                                 <CustomSelect
                                     value={formData.branch}
-                                    disabled={!isEditing || !formData.year}
+                                    disabled={!isEditing || !formData.semester}
                                     placeholder="Select Branch"
                                     isOpen={activeField === 'branch'}
                                     onToggle={() => toggleField('branch')}
@@ -503,19 +521,6 @@ export default function ProfilePage() {
                                 />
                             </UnifiedField>
                         </div>
-
-                        {/* Semester - Expandable */}
-                        <UnifiedField label="Current Semester" isEditing={isEditing} icon={null}>
-                            <CustomSelect
-                                value={formData.semester}
-                                disabled={!isEditing}
-                                placeholder="Select Semester"
-                                isOpen={activeField === 'semester'}
-                                onToggle={() => toggleField('semester')}
-                                onChange={(val) => setFormData({ ...formData, semester: parseInt(val) })}
-                                options={[1, 2, 3, 4, 5, 6, 7, 8].map(sem => ({ label: `Semester ${sem}`, value: sem }))}
-                            />
-                        </UnifiedField>
 
                     </div>
                 </div>

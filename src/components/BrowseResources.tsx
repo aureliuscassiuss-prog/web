@@ -38,16 +38,23 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
             if (program) {
                 const year = program.years.find((y: any) => y.id === user.year?.toString());
                 if (year) {
-                    // Note: We might need to handle semester auto-selection if user profile has it
-                    // For now, we'll stop at year or try to find course if semester structure allows
-                    // Assuming user.branch maps to course, but we need semester first.
-                    // If we can't determine semester, we stop at year (step 3).
-                    setSelections({
-                        program: program.id,
-                        year: year.id
-                    });
-                    setStep(3); // Jump to Semester selection
-                    autoSelectedRef.current = true;
+                    const semester = year.semesters?.find((s: any) => s.id === user.semester?.toString());
+                    if (semester) {
+                        setSelections({
+                            program: program.id,
+                            year: year.id,
+                            semester: semester.id
+                        });
+                        setStep(4); // Jump to Branch selection
+                        autoSelectedRef.current = true;
+                    } else {
+                        setSelections({
+                            program: program.id,
+                            year: year.id
+                        });
+                        setStep(3); // Jump to Semester selection
+                        autoSelectedRef.current = true;
+                    }
                 }
             }
         }
@@ -192,7 +199,7 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
                                 <div className="p-1 rounded-full bg-gray-100 group-hover:bg-gray-200 dark:bg-gray-800 dark:group-hover:bg-gray-700 transition-colors">
                                     <ChevronLeft className="h-4 w-4" />
                                 </div>
-                                <span>Back</span>
+                                <span className="hidden sm:inline">Back</span>
                             </button>
                         ) : <div />}
                         <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Step {step}/{totalSteps}</span>
