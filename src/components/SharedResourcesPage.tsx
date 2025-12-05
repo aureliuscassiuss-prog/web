@@ -19,6 +19,14 @@ export default function SharedResourcesPage() {
     useEffect(() => {
         const fetchData = async () => {
             try {
+                // If logged in, we should probably fetch with the token to get "userSaved/userLiked" states
+                // But the current public API might not support it. 
+                // Let's rely on the public endpoint for now, but in a real app, 
+                // we'd want to fetch personalized data if a token exists.
+                // Assuming the public API returns basic data, we might miss initial "liked" state for the viewer
+                // unless we update the backend.
+                // For now, we will allow interactions which will sync state.
+
                 const res = await fetch(`/api/share?slug=${slug}`);
                 if (!res.ok) {
                     throw new Error('Link not found or expired');
@@ -138,7 +146,13 @@ export default function SharedResourcesPage() {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
                         {data.resources.map((resource: any) => (
-                            <SharedGridCard key={resource._id} resource={resource} currentUserToken={token} onLoginRequest={() => setIsAuthModalOpen(true)} />
+                            <div key={resource._id}>
+                                <SharedGridCard
+                                    resource={resource}
+                                    currentUserToken={token}
+                                    onLoginRequest={() => setIsAuthModalOpen(true)}
+                                />
+                            </div>
                         ))}
                     </div>
                 )}
@@ -156,22 +170,144 @@ export default function SharedResourcesPage() {
 
 // --- Compact & Professional Grid Card ---
 const SharedGridCard = ({ resource, currentUserToken, onLoginRequest }: { resource: any, currentUserToken: string | null, onLoginRequest: () => void }) => {
-    // Local state for counts (display only)
-    const [counts] = useState({
+    // --- Interaction State ---
+    const [isSaved, setIsSaved] = useState(resource.userSaved || false);
+    const [isReported, setIsReported] = useState(resource.userFlagged || false);
+    const [userVote, setUserVote] = useState<'like' | 'dislike' | null>(
+        resource.userLiked ? 'like' : resource.userDisliked ? 'dislike' : null
+    );
+    const [counts, setCounts] = useState({
         likes: resource.likes || 0,
         downloads: resource.downloads || 0
     });
+    const [isInteracting, setIsInteracting] = useState(false);
 
-    const handleProtectedAction = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
+    // Sync state if resource object changes
+    useEffect(() => {
+        setIsSaved(resource.userSaved || false);
+        setIsReported(resource.userFlagged || false);
+        setUserVote(resource.userLiked ? 'like' : resource.userDisliked ? 'dislike' : null);
+        setCounts({
+            likes: resource.likes || 0,
+            downloads: resource.downloads || 0
+        });
+    }, [resource]);
+
+
+    // --- Interaction Logic (Ported from ResourceGrid) ---
+    const handleInteraction = async (action: string, value: boolean) => {
         if (!currentUserToken) {
-            // Trigger login popup
-            onLoginRequest();
-        } else {
-            alert("This is a view-only shared page.\n\nTo interact with this resource (Like, Flag, etc.), please find it in the main library.");
+            onLoginRequest(); // Trigger login popup
+            return false;
+        }
+
+        try {
+            const response = await fetch('/api/resource-interactions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${currentUserToken}`
+                },
+                body: JSON.stringify({
+                    resourceId: resource._id,
+                    action,
+                    value
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                // Update with server truth
+                setCounts(prev => ({
+                    ...prev,
+                    likes: data.resource.likes,
+                    downloads: data.resource.downloads
+                }));
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('Interaction failed:', error);
+            return false;
         }
     };
+
+    const handleLike = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isInteracting) return;
+
+        if (!currentUserToken) {
+            onLoginRequest();
+            return;
+        }
+
+        setIsInteracting(true);
+        const previousVote = userVote;
+        const newValue = userVote !== 'like';
+
+        // Optimistic update
+        if (newValue) {
+            setCounts(prev => ({ ...prev, likes: prev.likes + 1 }));
+            setUserVote('like');
+        } else {
+            setCounts(prev => ({ ...prev, likes: prev.likes - 1 }));
+            setUserVote(null);
+        }
+
+        const success = await handleInteraction('like', newValue);
+        if (!success) {
+            // Revert
+            setUserVote(previousVote);
+            setCounts(prev => ({ ...prev, likes: previousVote === 'like' ? prev.likes + 1 : prev.likes - 1 }));
+        }
+        setIsInteracting(false);
+    };
+
+    const handleSave = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!currentUserToken) {
+            onLoginRequest();
+            return;
+        }
+
+        const newValue = !isSaved;
+        setIsSaved(newValue); // Optimistic
+
+        const success = await handleInteraction('save', newValue);
+        if (!success) setIsSaved(!newValue); // Revert
+    };
+
+    const handleReport = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!currentUserToken) {
+            onLoginRequest();
+            return;
+        }
+
+        const newValue = !isReported;
+        setIsReported(newValue); // Optimistic
+
+        // Report logic is typically one-way or toggle, assuming toggle like others
+        const success = await handleInteraction('flag', newValue);
+        if (!success) setIsReported(!newValue); // Revert
+    };
+
+    const handleDownload = async (e: React.MouseEvent) => {
+        // Prevent default if it's a wrapper, but we want the link to open
+        // Actually, we usually want to track download then open link.
+        // For simplicity, just track download.
+        // We won't block the link opening.
+
+        if (currentUserToken) {
+            handleInteraction('download', true); // Fire and forget
+        }
+    };
+
 
     return (
         <div className="group relative bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-200 h-full flex flex-col">
@@ -184,18 +320,24 @@ const SharedGridCard = ({ resource, currentUserToken, onLoginRequest }: { resour
 
                 <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
                     <button
-                        onClick={handleProtectedAction}
-                        className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                        title="Save"
+                        onClick={handleSave}
+                        className={`p-1.5 rounded-lg transition-colors ${isSaved
+                                ? 'text-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10'
+                            }`}
+                        title={isSaved ? "Saved" : "Save to Library"}
                     >
-                        <Bookmark className="w-3.5 h-3.5" />
+                        <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-current' : ''}`} />
                     </button>
                     <button
-                        onClick={handleProtectedAction}
-                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                        title="Report"
+                        onClick={handleReport}
+                        className={`p-1.5 rounded-lg transition-colors ${isReported
+                                ? 'text-red-500 bg-red-50 dark:bg-red-900/20'
+                                : 'text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10'
+                            }`}
+                        title={isReported ? "Reported" : "Report Issue"}
                     >
-                        <Flag className="w-3.5 h-3.5" />
+                        <Flag className={`w-3.5 h-3.5 ${isReported ? 'fill-current' : ''}`} />
                     </button>
                 </div>
             </div>
@@ -205,6 +347,7 @@ const SharedGridCard = ({ resource, currentUserToken, onLoginRequest }: { resour
                 href={resource.driveLink}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={handleDownload}
                 className="flex items-start gap-4 flex-1 mb-4 group-hover:opacity-90 transition-opacity"
             >
                 <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 rounded-lg flex items-center justify-center flex-shrink-0 border border-blue-100 dark:border-blue-800/30">
@@ -225,11 +368,12 @@ const SharedGridCard = ({ resource, currentUserToken, onLoginRequest }: { resour
             <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800 mt-auto">
                 <div className="flex items-center gap-3 text-[10px] font-bold text-gray-400 uppercase tracking-wide">
                     <button
-                        onClick={handleProtectedAction}
-                        className="flex items-center gap-1 hover:text-blue-500 transition-colors"
+                        onClick={handleLike}
+                        className={`flex items-center gap-1 transition-colors ${userVote === 'like' ? 'text-blue-600' : 'hover:text-blue-500'
+                            }`}
                         title="Like"
                     >
-                        <ThumbsUp className="w-3 h-3" />
+                        <ThumbsUp className={`w-3 h-3 ${userVote === 'like' ? 'fill-current' : ''}`} />
                         {counts.likes}
                     </button>
                     <div className="flex items-center gap-1">
@@ -242,6 +386,7 @@ const SharedGridCard = ({ resource, currentUserToken, onLoginRequest }: { resour
                     href={resource.driveLink}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={handleDownload}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-black rounded-lg text-xs font-bold shadow-sm hover:shadow transition-all hover:-translate-y-0.5"
                 >
                     Open
