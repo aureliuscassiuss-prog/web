@@ -17,7 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const db = await getDb();
 
         if (req.method === 'GET') {
-            const { search, branch, year, semester, subject, unit, type, course, resourceType } = req.query;
+            const { search, branch, year, semester, subject, unit, type, course, resourceType, examYear } = req.query;
 
             // Build query - support both 'status: approved' and 'isPublic: true' for backward compatibility
             const query: any = {
@@ -32,6 +32,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 query.resourceType = type;
             } else if (resourceType && typeof resourceType === 'string') {
                 query.resourceType = resourceType;
+            }
+
+            // Exam Year filtering
+            if (examYear && typeof examYear === 'string') {
+                query.examYear = examYear;
             }
 
             // Search filtering
@@ -191,12 +196,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 subject,
                 unit,
                 resourceType,
-                driveLink
+                driveLink,
+                examYear
             } = req.body;
 
             // Validate required fields
             if (!title || !branch || !subject || !resourceType || !driveLink) {
                 return res.status(400).json({ message: 'Missing required fields' });
+            }
+
+            // Validate Exam Year for PYQs
+            if (resourceType === 'pyq' && !examYear) {
+                return res.status(400).json({ message: 'Exam Year is required for Previous Year Questions' });
             }
 
             // Validate Drive Link (basic check)
@@ -219,6 +230,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 unit,
                 resourceType,
                 driveLink, // Store the link directly
+                examYear: resourceType === 'pyq' ? examYear : undefined,
                 status,
                 uploader: decoded.name || 'Anonymous',
                 uploaderId: decoded.userId,

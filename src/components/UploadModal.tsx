@@ -123,6 +123,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
         unit: '',
         resourceType: '',
         driveLink: '',
+        examYear: '', // New field for PYQs
     })
     const [isUploading, setIsUploading] = useState(false)
     const [structure, setStructure] = useState<any>(null)
@@ -227,7 +228,8 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
                 ...formData,
                 course: formData.program, // Map program -> course
                 branch: formData.course,  // Map course -> branch
-                yearNum: parseInt(formData.year) || 0 // Extract number if needed
+                yearNum: parseInt(formData.year) || 0, // Extract number if needed
+                examYear: formData.resourceType === 'pyq' ? formData.examYear : undefined // Only send for PYQs
             }
 
             const response = await fetch('/api/resources', {
@@ -271,6 +273,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
             unit: '',
             resourceType: '',
             driveLink: '',
+            examYear: ''
         })
     }
 
@@ -515,10 +518,36 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
                             </p>
                         </div>
 
+                        {/* Exam Year - Only for PYQs */}
+                        {formData.resourceType === 'pyq' && (
+                            <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5 pl-1">
+                                    Exam Year
+                                </label>
+                                <CustomSelect
+                                    icon={Calendar}
+                                    placeholder="Select Exam Year"
+                                    value={formData.examYear}
+                                    options={[
+                                        { label: '2025', value: '2025' },
+                                        { label: '2024', value: '2024' },
+                                        { label: '2023', value: '2023' },
+                                        { label: '2022', value: '2022' },
+                                        { label: '2021', value: '2021' },
+                                        { label: 'Older', value: 'older' }
+                                    ]}
+                                    onChange={(val) => setFormData({ ...formData, examYear: val })}
+                                    disabled={isUploading}
+                                    isOpen={activeField === 'examYear'}
+                                    onToggle={() => toggleField('examYear')}
+                                />
+                            </div>
+                        )}
+
                         {/* Submit Button */}
                         <button
                             type="submit"
-                            disabled={isUploading || !formData.driveLink}
+                            disabled={isUploading || !formData.driveLink || (formData.resourceType === 'pyq' && !formData.examYear)}
                             className="w-full bg-black dark:bg-white text-white dark:text-black py-3.5 rounded-xl font-bold hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-black/5 dark:shadow-white/5"
                         >
                             {isUploading ? (

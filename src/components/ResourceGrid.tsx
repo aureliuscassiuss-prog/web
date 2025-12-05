@@ -429,6 +429,7 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
 
     // UI States
     const [activeTab, setActiveTab] = useState<'notes' | 'pyqs' | 'formula' | 'ai'>('notes')
+    const [selectedPyqYear, setSelectedPyqYear] = useState<string | null>(null); // New state for PYQ folders
     const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
 
     // AI Chat States
@@ -452,7 +453,10 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
         if (filters?.subject) params.append('subject', filters.subject)
         if (filters?.course) params.append('course', filters.course)
         if (filters?.unit) params.append('unit', filters.unit)
+        if (filters?.unit) params.append('unit', filters.unit)
         if (type) params.append('type', type)
+        // Add examYear if provided
+        if (selectedPyqYear) params.append('examYear', selectedPyqYear);
         return params
     }
 
@@ -512,6 +516,15 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
         const fetchData = async () => {
             try {
                 if (view === 'resources' && activeTab !== 'ai') {
+                    // Start with empty resources if in PYQ mode and no year selected
+                    if (activeTab === 'pyqs' && !selectedPyqYear) {
+                        if (isMounted) {
+                            setResources([]);
+                            setIsLoading(false);
+                        }
+                        return;
+                    }
+
                     let typeParam = activeTab === 'notes' ? 'notes' : activeTab === 'pyqs' ? 'pyq' : 'formula-sheet'
                     const headers: any = {}
                     if (token) {
@@ -550,7 +563,7 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
         else setIsLoading(false)
 
         return () => { isMounted = false }
-    }, [view, activeTab, searchQuery, filters, token, user])
+    }, [view, activeTab, searchQuery, filters, token, user, selectedPyqYear])
 
     // AI Paper Generation Functions
     const transformDataForPdf = (aiData: any, filters: any) => {
@@ -1010,10 +1023,10 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
             {/* FIXED LAYOUT TABS */}
             <div className="mb-6 bg-gray-100/50 dark:bg-gray-800/50 p-1.5 rounded-xl border border-gray-200 dark:border-gray-800">
                 <div className="grid grid-cols-4 gap-1">
-                    <TabButton active={activeTab === 'notes'} onClick={() => setActiveTab('notes')} label="Notes" icon={<FileText className="w-4 h-4" />} />
-                    <TabButton active={activeTab === 'pyqs'} onClick={() => setActiveTab('pyqs')} label="PYQs" icon={<FileQuestion className="w-4 h-4" />} />
-                    <TabButton active={activeTab === 'formula'} onClick={() => setActiveTab('formula')} label="Formula" icon={<FileText className="w-4 h-4" />} />
-                    <TabButton active={activeTab === 'ai'} onClick={() => setActiveTab('ai')} label="AI Tutor" icon={<Sparkles className="w-4 h-4" />} isSpecial />
+                    <TabButton active={activeTab === 'notes'} onClick={() => { setActiveTab('notes'); setSelectedPyqYear(null); }} label="Notes" icon={<FileText className="w-4 h-4" />} />
+                    <TabButton active={activeTab === 'pyqs'} onClick={() => { setActiveTab('pyqs'); setSelectedPyqYear(null); }} label="PYQs" icon={<FileQuestion className="w-4 h-4" />} />
+                    <TabButton active={activeTab === 'formula'} onClick={() => { setActiveTab('formula'); setSelectedPyqYear(null); }} label="Formula" icon={<FileText className="w-4 h-4" />} />
+                    <TabButton active={activeTab === 'ai'} onClick={() => { setActiveTab('ai'); setSelectedPyqYear(null); }} label="AI Tutor" icon={<Sparkles className="w-4 h-4" />} isSpecial />
                 </div>
             </div>
 
@@ -1093,24 +1106,66 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                     )}
 
 
-                    {resources.length === 0 ? (
-                        <EmptyState
-                            icon={FileQuestion}
-                            title={`No content found`}
-                            description={`Be the first to upload for this subject.`}
-                            onUploadRequest={onUploadRequest}
-                            filters={filters}
-                            activeTab={activeTab}
-                            onGeneratePaper={handleGeneratePaper}
-                            isGenerating={generating}
-                        />
-                    ) : (
-                        // Grid Layout: 1 column mobile, 2 columns desktop
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {resources.map((resource) => (
-                                <GridCard key={resource._id} resource={resource} />
+                    {activeTab === 'pyqs' && !selectedPyqYear ? (
+                        // YEAR SELECTION FOLDER VIEW
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            {['2025', '2024', '2023', '2022', '2021', 'Older'].map((year) => (
+                                <button
+                                    key={year}
+                                    onClick={() => setSelectedPyqYear(year)}
+                                    className="group flex flex-col items-center justify-center p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl hover:border-black dark:hover:border-white transition-all shadow-sm hover:shadow-md"
+                                >
+                                    <div className="w-12 h-12 mb-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <div className="relative">
+                                            <FileText className="w-6 h-6" />
+                                            <div className="absolute -bottom-1 -right-1 bg-white dark:bg-gray-900 rounded-full p-0.5">
+                                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                        {year}
+                                    </h3>
+                                    <p className="text-xs text-gray-500 font-medium">View Papers</p>
+                                </button>
                             ))}
                         </div>
+                    ) : (
+                        // RESOURCE LIST OR EMPTY STATE
+                        <>
+                            {/* Back Button for PYQs */}
+                            {activeTab === 'pyqs' && selectedPyqYear && (
+                                <div className="mb-4">
+                                    <button
+                                        onClick={() => setSelectedPyqYear(null)}
+                                        className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-black dark:hover:text-white transition-colors"
+                                    >
+                                        <ChevronRight className="w-4 h-4 rotate-180" />
+                                        Back to Years
+                                    </button>
+                                </div>
+                            )}
+
+                            {resources.length === 0 ? (
+                                <EmptyState
+                                    icon={FileQuestion}
+                                    title={`No content found for ${selectedPyqYear || 'this selection'}`}
+                                    description={`Be the first to upload for this subject.`}
+                                    onUploadRequest={onUploadRequest}
+                                    filters={filters}
+                                    activeTab={activeTab}
+                                    onGeneratePaper={handleGeneratePaper}
+                                    isGenerating={generating}
+                                />
+                            ) : (
+                                // Grid Layout: 1 column mobile, 2 columns desktop
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in">
+                                    {resources.map((resource) => (
+                                        <GridCard key={resource._id} resource={resource} />
+                                    ))}
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
             ) : (
