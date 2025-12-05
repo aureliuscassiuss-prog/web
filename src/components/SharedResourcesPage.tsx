@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import AuthModal from './AuthModal';
 import {
     Bookmark, FileText, Download,
     ThumbsUp, Flag, Share2, User, LayoutGrid, ArrowRight
@@ -13,6 +14,7 @@ export default function SharedResourcesPage() {
     const [data, setData] = useState<{ user: any, resources: any[] } | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -112,13 +114,13 @@ export default function SharedResourcesPage() {
                                 <Share2 className="w-3 h-3" />
                                 Shared Collection
                             </div>
-                            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-gray-900 dark:text-white leading-tight tracking-tight mb-2">
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 dark:text-white leading-tight tracking-tight mb-2">
                                 <span className="text-transparent bg-clip-text bg-gradient-to-br from-gray-900 to-gray-600 dark:from-white dark:to-gray-400">
                                     {data.user.name}'s
                                 </span> Library
                             </h1>
                             <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-2xl leading-relaxed">
-                                A curated collection of <span className="font-semibold text-gray-900 dark:text-white">{data.resources.length}</span> resources, shared from UniNotes.
+                                A curated collection of <span className="font-semibold text-gray-900 dark:text-white">{data.resources.length}</span> resources, shared from Extrovert Community.
                             </p>
                         </div>
                     </div>
@@ -136,17 +138,24 @@ export default function SharedResourcesPage() {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
                         {data.resources.map((resource: any) => (
-                            <SharedGridCard key={resource._id} resource={resource} currentUserToken={token} />
+                            <SharedGridCard key={resource._id} resource={resource} currentUserToken={token} onLoginRequest={() => setIsAuthModalOpen(true)} />
                         ))}
                     </div>
                 )}
             </div>
+
+            {/* Auth Modal for Login Popup */}
+            <AuthModal
+                isOpen={isAuthModalOpen}
+                onClose={() => setIsAuthModalOpen(false)}
+                initialView="login"
+            />
         </div>
     );
 }
 
 // --- Compact & Professional Grid Card ---
-const SharedGridCard = ({ resource, currentUserToken }: { resource: any, currentUserToken: string | null }) => {
+const SharedGridCard = ({ resource, currentUserToken, onLoginRequest }: { resource: any, currentUserToken: string | null, onLoginRequest: () => void }) => {
     // Local state for counts (display only)
     const [counts] = useState({
         likes: resource.likes || 0,
@@ -157,10 +166,10 @@ const SharedGridCard = ({ resource, currentUserToken }: { resource: any, current
         e.preventDefault();
         e.stopPropagation();
         if (!currentUserToken) {
-            // Login Redirect
-            window.location.href = '/';
+            // Trigger login popup
+            onLoginRequest();
         } else {
-            alert("To interact with this resource, please find it in the main library.");
+            alert("This is a view-only shared page.\n\nTo interact with this resource (Like, Flag, etc.), please find it in the main library.");
         }
     };
 
