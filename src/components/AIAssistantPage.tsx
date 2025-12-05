@@ -404,7 +404,7 @@ export default function AIAssistantPage() {
             </main>
 
             {/* --- FOOTER (Fixed) --- */}
-            <footer className="flex-none bg-white dark:bg-[#050505] border-t border-gray-100 dark:border-white/10 z-20 pb-[env(safe-area-inset-bottom)]">
+            <footer className={`flex-none bg-white dark:bg-[#050505] border-t border-gray-100 dark:border-white/10 z-20 ${isMobile ? 'pb-2' : 'pb-[env(safe-area-inset-bottom)]'}`}>
 
                 {/* Quick Actions - Compact */}
                 <div className="px-3 py-2 overflow-x-auto no-scrollbar">
@@ -452,7 +452,8 @@ export default function AIAssistantPage() {
                             <Send size={14} className={input.trim() ? "ml-0.5" : ""} />
                         </button>
                     </div>
-                    <p className="text-[9px] text-center text-gray-400 dark:text-gray-600 mt-1.5">
+                    {/* Hide disclaimer on mobile to save space above keyboard */}
+                    <p className="hidden md:block text-[9px] text-center text-gray-400 dark:text-gray-600 mt-1.5">
                         AI can produce inaccurate info.
                     </p>
                 </div>
