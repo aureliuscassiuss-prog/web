@@ -27,7 +27,12 @@ export default function SharedResourcesPage() {
                 // unless we update the backend.
                 // For now, we will allow interactions which will sync state.
 
-                const res = await fetch(`/api/share?slug=${slug}`);
+                const headers: HeadersInit = {};
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+
+                const res = await fetch(`/api/share?slug=${slug}`, { headers });
                 if (!res.ok) {
                     throw new Error('Link not found or expired');
                 }
