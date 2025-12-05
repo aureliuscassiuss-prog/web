@@ -177,14 +177,14 @@ async function handleGetStructure(res: VercelResponse) {
                         {
                             id: '1',
                             name: '1st Year',
-                            semesters: [
+                            courses: [
                                 {
-                                    id: 'sem1',
-                                    name: 'Semester 1',
-                                    courses: [
+                                    id: 'cse',
+                                    name: 'Computer Science',
+                                    semesters: [
                                         {
-                                            id: 'cse',
-                                            name: 'Computer Science',
+                                            id: 'sem1',
+                                            name: 'Semester 1',
                                             subjects: ['Data Structures', 'Algorithms', 'Programming']
                                         }
                                     ]
@@ -291,58 +291,58 @@ async function handleUpdateStructure(body: any, res: VercelResponse) {
                 { $pull: { 'programs.$.years': { id: yearId } } } as any
             );
         }
-        else if (structureAction === 'add-semester') {
-            const newSemester = {
+        else if (structureAction === 'add-course') {
+            const newCourse = {
                 id: value.toLowerCase().replace(/\s+/g, '-'),
                 name: value,
-                courses: []
+                semesters: []
             };
 
             await db.collection('academic_structure').updateOne(
                 { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId } as any,
-                { $push: { 'programs.$[p].years.$[y].semesters': newSemester } } as any,
+                { $push: { 'programs.$[p].years.$[y].courses': newCourse } } as any,
                 { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }] }
             );
         }
-        else if (structureAction === 'remove-semester') {
+        else if (structureAction === 'remove-course') {
             await db.collection('academic_structure').updateOne(
                 { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId } as any,
-                { $pull: { 'programs.$[p].years.$[y].semesters': { id: semesterId } } } as any,
+                { $pull: { 'programs.$[p].years.$[y].courses': { id: courseId } } } as any,
                 { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }] }
             );
         }
-        else if (structureAction === 'add-course') {
-            const newCourse = {
+        else if (structureAction === 'add-semester') {
+            const newSemester = {
                 id: value.toLowerCase().replace(/\s+/g, '-'),
                 name: value,
                 subjects: []
             };
 
             await db.collection('academic_structure').updateOne(
-                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.semesters.id': semesterId } as any,
-                { $push: { 'programs.$[p].years.$[y].semesters.$[sem].courses': newCourse } } as any,
-                { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }, { 'sem.id': semesterId }] }
+                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId } as any,
+                { $push: { 'programs.$[p].years.$[y].courses.$[c].semesters': newSemester } } as any,
+                { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }] }
             );
         }
-        else if (structureAction === 'remove-course') {
+        else if (structureAction === 'remove-semester') {
             await db.collection('academic_structure').updateOne(
-                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.semesters.id': semesterId } as any,
-                { $pull: { 'programs.$[p].years.$[y].semesters.$[sem].courses': { id: courseId } } } as any,
-                { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }, { 'sem.id': semesterId }] }
+                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId } as any,
+                { $pull: { 'programs.$[p].years.$[y].courses.$[c].semesters': { id: semesterId } } } as any,
+                { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }] }
             );
         }
         else if (structureAction === 'add-subject') {
             await db.collection('academic_structure').updateOne(
-                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.semesters.id': semesterId, 'programs.years.semesters.courses.id': courseId } as any,
-                { $push: { 'programs.$[p].years.$[y].semesters.$[sem].courses.$[c].subjects': value } } as any,
-                { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }, { 'sem.id': semesterId }, { 'c.id': courseId }] }
+                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId, 'programs.years.courses.semesters.id': semesterId } as any,
+                { $push: { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects': value } } as any,
+                { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }] }
             );
         }
         else if (structureAction === 'remove-subject') {
             await db.collection('academic_structure').updateOne(
-                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.semesters.id': semesterId, 'programs.years.semesters.courses.id': courseId } as any,
-                { $pull: { 'programs.$[p].years.$[y].semesters.$[sem].courses.$[c].subjects': { $in: [value] } } } as any,
-                { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }, { 'sem.id': semesterId }, { 'c.id': courseId }] }
+                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId, 'programs.years.courses.semesters.id': semesterId } as any,
+                { $pull: { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects': { $in: [value] } } } as any,
+                { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }] }
             );
         }
         else if (structureAction === 'add-unit') {
@@ -352,13 +352,13 @@ async function handleUpdateStructure(body: any, res: VercelResponse) {
             const structure = await db.collection('academic_structure').findOne({ _id: 'main' } as any);
             const program = structure?.programs?.find((p: any) => p.id === programId);
             const year = program?.years?.find((y: any) => y.id === yearId);
-            const semester = year?.semesters?.find((s: any) => s.id === semesterId);
-            const course = semester?.courses?.find((c: any) => c.id === courseId);
-            const subject = course?.subjects?.find((s: any) =>
+            const course = year?.courses?.find((c: any) => c.id === courseId);
+            const semester = course?.semesters?.find((s: any) => s.id === semesterId);
+            const subject = semester?.subjects?.find((s: any) =>
                 (typeof s === 'string' ? s : s.name).trim() === subjectName.trim()
             );
 
-            console.log('add-unit debug:', { programId, yearId, semesterId, courseId, subjectName, foundSubject: subject });
+            console.log('add-unit debug:', { programId, yearId, courseId, semesterId, subjectName, foundSubject: subject });
 
             if (!subject) {
                 return res.status(404).json({ message: 'Subject not found' });
@@ -368,26 +368,26 @@ async function handleUpdateStructure(body: any, res: VercelResponse) {
             if (typeof subject === 'string') {
                 // Convert string subject to object with units array
                 result = await db.collection('academic_structure').updateOne(
-                    { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.semesters.id': semesterId, 'programs.years.semesters.courses.id': courseId } as any,
+                    { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId, 'programs.years.courses.semesters.id': semesterId } as any,
                     {
                         $set: {
-                            'programs.$[p].years.$[y].semesters.$[sem].courses.$[c].subjects.$[s]': {
+                            'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s]': {
                                 name: subject,
                                 units: [value]
                             }
                         }
                     } as any,
-                    { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }, { 'sem.id': semesterId }, { 'c.id': courseId }, { 's': subject }] }
+                    { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }, { 's': subject }] }
                 );
             } else {
                 // Subject is already an object, just push the unit
                 console.log('Subject is object, pushing unit. Subject name:', subject.name);
-                const filters = [{ 'p.id': programId }, { 'y.id': yearId }, { 'sem.id': semesterId }, { 'c.id': courseId }, { 's.name': subject.name }];
+                const filters = [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }, { 's.name': subject.name }];
                 console.log('Array filters:', JSON.stringify(filters));
 
                 result = await db.collection('academic_structure').updateOne(
-                    { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.semesters.id': semesterId, 'programs.years.semesters.courses.id': courseId } as any,
-                    { $push: { 'programs.$[p].years.$[y].semesters.$[sem].courses.$[c].subjects.$[s].units': value } } as any,
+                    { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId, 'programs.years.courses.semesters.id': semesterId } as any,
+                    { $push: { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units': value } } as any,
                     { arrayFilters: filters }
                 );
             }
@@ -401,9 +401,9 @@ async function handleUpdateStructure(body: any, res: VercelResponse) {
             const { subjectName } = body;
 
             await db.collection('academic_structure').updateOne(
-                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.semesters.id': semesterId, 'programs.years.semesters.courses.id': courseId } as any,
-                { $pull: { 'programs.$[p].years.$[y].semesters.$[sem].courses.$[c].subjects.$[s].units': value } } as any,
-                { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }, { 'sem.id': semesterId }, { 'c.id': courseId }, { 's.name': subjectName }] }
+                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId, 'programs.years.courses.semesters.id': semesterId } as any,
+                { $pull: { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units': value } } as any,
+                { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }, { 's.name': subjectName }] }
             );
         }
         else if (structureAction === 'add-video') {
@@ -415,14 +415,14 @@ async function handleUpdateStructure(body: any, res: VercelResponse) {
                     _id: 'main',
                     'programs.id': programId,
                     'programs.years.id': yearId,
-                    'programs.years.semesters.id': semesterId,
-                    'programs.years.semesters.courses.id': courseId,
-                    'programs.years.semesters.courses.subjects.name': subjectName,
-                    'programs.years.semesters.courses.subjects.units': unitName // Matches string unit
+                    'programs.years.courses.id': courseId,
+                    'programs.years.courses.semesters.id': semesterId,
+                    'programs.years.courses.semesters.subjects.name': subjectName,
+                    'programs.years.courses.semesters.subjects.units': unitName // Matches string unit
                 } as any,
                 {
                     $set: {
-                        'programs.$[p].years.$[y].semesters.$[sem].courses.$[c].subjects.$[s].units.$[u]': {
+                        'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units.$[u]': {
                             name: unitName,
                             videos: []
                         }
@@ -432,8 +432,8 @@ async function handleUpdateStructure(body: any, res: VercelResponse) {
                     arrayFilters: [
                         { 'p.id': programId },
                         { 'y.id': yearId },
-                        { 'sem.id': semesterId },
                         { 'c.id': courseId },
+                        { 'sem.id': semesterId },
                         { 's.name': subjectName },
                         { 'u': unitName } // Matches the string value
                     ]
@@ -449,14 +449,14 @@ async function handleUpdateStructure(body: any, res: VercelResponse) {
             };
 
             await db.collection('academic_structure').updateOne(
-                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.semesters.id': semesterId, 'programs.years.semesters.courses.id': courseId } as any,
-                { $push: { 'programs.$[p].years.$[y].semesters.$[sem].courses.$[c].subjects.$[s].units.$[u].videos': newVideo } } as any,
+                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId, 'programs.years.courses.semesters.id': semesterId } as any,
+                { $push: { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units.$[u].videos': newVideo } } as any,
                 {
                     arrayFilters: [
                         { 'p.id': programId },
                         { 'y.id': yearId },
-                        { 'sem.id': semesterId },
                         { 'c.id': courseId },
+                        { 'sem.id': semesterId },
                         { 's.name': subjectName },
                         { 'u.name': unitName } // Matches the object name
                     ]
@@ -467,14 +467,14 @@ async function handleUpdateStructure(body: any, res: VercelResponse) {
             const { subjectName, unitName, videoId } = body;
 
             await db.collection('academic_structure').updateOne(
-                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.semesters.id': semesterId, 'programs.years.semesters.courses.id': courseId } as any,
-                { $pull: { 'programs.$[p].years.$[y].semesters.$[sem].courses.$[c].subjects.$[s].units.$[u].videos': { id: videoId } } } as any,
+                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId, 'programs.years.courses.semesters.id': semesterId } as any,
+                { $pull: { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units.$[u].videos': { id: videoId } } } as any,
                 {
                     arrayFilters: [
                         { 'p.id': programId },
                         { 'y.id': yearId },
-                        { 'sem.id': semesterId },
                         { 'c.id': courseId },
+                        { 'sem.id': semesterId },
                         { 's.name': subjectName },
                         { 'u.name': unitName }
                     ]

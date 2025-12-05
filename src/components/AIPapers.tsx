@@ -36,6 +36,12 @@ interface Year {
 interface Course {
     id: string
     name: string
+    semesters: Semester[]
+}
+
+interface Semester {
+    id: string
+    name: string
     subjects: (string | SubjectObject)[]
 }
 
@@ -54,6 +60,7 @@ export default function AIPapers() {
     const [selectedProgramId, setSelectedProgramId] = useState('')
     const [selectedYearId, setSelectedYearId] = useState('')
     const [selectedCourseId, setSelectedCourseId] = useState('')
+    const [selectedSemesterId, setSelectedSemesterId] = useState('')
     const [selectedSubject, setSelectedSubject] = useState('')
 
     // Generation State
@@ -102,7 +109,9 @@ export default function AIPapers() {
     const selectedYear = years.find(y => y.id === selectedYearId)
     const courses = selectedYear?.courses || []
     const selectedCourse = courses.find(c => c.id === selectedCourseId)
-    const subjects = selectedCourse?.subjects || []
+    const semesters = selectedCourse?.semesters || []
+    const selectedSemester = semesters.find(s => s.id === selectedSemesterId)
+    const subjects = selectedSemester?.subjects || []
 
     const handleGenerate = async () => {
         if (user?.role !== 'admin' && attemptsLeft <= 0) return
@@ -118,6 +127,7 @@ export default function AIPapers() {
                     program: selectedProgram?.name,
                     year: selectedYear?.name,
                     branch: selectedCourse?.name,
+                    semester: selectedSemester?.name,
                     subject: selectedSubject
                 })
             })
@@ -139,7 +149,7 @@ export default function AIPapers() {
             }
 
             // Map AI data to the specific keys expected by the PDF generator
-            const flatData = transformDataForPdf(paperData, selectedSubject, selectedCourse?.name || '', selectedProgram?.name || '')
+            const flatData = transformDataForPdf(paperData, selectedSubject, selectedCourse?.name || '', selectedProgram?.name || '', selectedSemester?.name || '')
 
             generatePDF(flatData)
 
@@ -158,7 +168,7 @@ export default function AIPapers() {
         }
     }
 
-    const transformDataForPdf = (aiData: any, subject: string, branch: string, program: string) => {
+    const transformDataForPdf = (aiData: any, subject: string, branch: string, program: string, semester: string) => {
         const flat: any = {
             EXAM_MONTH: new Date().toLocaleString('default', { month: 'short' }),
             EXAM_YEAR: new Date().getFullYear().toString(),
@@ -166,6 +176,7 @@ export default function AIPapers() {
             SUBJECT_NAME: subject,
             PROGRAMME: program,
             BRANCH: branch,
+            SEMESTER: semester
         }
 
         // Map MCQs (Section A)
@@ -247,7 +258,7 @@ export default function AIPapers() {
         doc.setFont("times", "normal");
         doc.setFontSize(9);
         doc.text(`Programme: ${data.PROGRAMME}`, 40, 43);
-        doc.text(`Branch/Specialisation: ${data.BRANCH}`, 135, 43, { align: "right" });
+        doc.text(`Branch: ${data.BRANCH} (${data.SEMESTER})`, 135, 43, { align: "right" });
 
         doc.setFont("times", "bold");
         doc.setFontSize(9);
@@ -603,7 +614,7 @@ export default function AIPapers() {
                                             label="Select Program"
                                             icon={GraduationCap}
                                             value={selectedProgramId}
-                                            onChange={(e: any) => { setSelectedProgramId(e.target.value); setSelectedYearId(''); setSelectedCourseId(''); setSelectedSubject('') }}
+                                            onChange={(e: any) => { setSelectedProgramId(e.target.value); setSelectedYearId(''); setSelectedCourseId(''); setSelectedSemesterId(''); setSelectedSubject('') }}
                                             placeholder="Choose Academic Program"
                                             options={programs.map(p => ({ value: p.id, label: p.name }))}
                                         />
@@ -613,7 +624,7 @@ export default function AIPapers() {
                                         label="Academic Year"
                                         icon={Calendar}
                                         value={selectedYearId}
-                                        onChange={(e: any) => { setSelectedYearId(e.target.value); setSelectedCourseId(''); setSelectedSubject('') }}
+                                        onChange={(e: any) => { setSelectedYearId(e.target.value); setSelectedCourseId(''); setSelectedSemesterId(''); setSelectedSubject('') }}
                                         disabled={!selectedProgramId}
                                         placeholder="Select Year"
                                         options={years.map(y => ({ value: y.id, label: y.name }))}
@@ -623,10 +634,20 @@ export default function AIPapers() {
                                         label="Branch / Course"
                                         icon={Layers}
                                         value={selectedCourseId}
-                                        onChange={(e: any) => { setSelectedCourseId(e.target.value); setSelectedSubject('') }}
+                                        onChange={(e: any) => { setSelectedCourseId(e.target.value); setSelectedSemesterId(''); setSelectedSubject('') }}
                                         disabled={!selectedYearId}
                                         placeholder="Select Branch"
                                         options={courses.map(c => ({ value: c.id, label: c.name }))}
+                                    />
+
+                                    <SelectInput
+                                        label="Semester"
+                                        icon={Calendar}
+                                        value={selectedSemesterId}
+                                        onChange={(e: any) => { setSelectedSemesterId(e.target.value); setSelectedSubject('') }}
+                                        disabled={!selectedCourseId}
+                                        placeholder="Select Semester"
+                                        options={semesters.map(s => ({ value: s.id, label: s.name }))}
                                     />
 
                                     <div className="md:col-span-2">
@@ -635,7 +656,7 @@ export default function AIPapers() {
                                             icon={BookOpen}
                                             value={selectedSubject}
                                             onChange={(e: any) => setSelectedSubject(e.target.value)}
-                                            disabled={!selectedCourseId}
+                                            disabled={!selectedSemesterId}
                                             placeholder="Choose Subject to Generate Paper"
                                             options={subjects.map(s => {
                                                 const name = typeof s === 'string' ? s : s.name

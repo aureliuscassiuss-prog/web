@@ -180,32 +180,32 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
         return prog?.years || []
     }, [formData.program, programs])
 
-    const semesters = useMemo(() => {
+    const courses = useMemo(() => {
         if (!formData.year) return []
         const yr = years.find((y: any) => y.id === formData.year)
-        return yr?.semesters || []
+        return yr?.courses || []
     }, [formData.year, years])
 
-    const courses = useMemo(() => {
-        if (!formData.semester) return []
-        const sem = semesters.find((s: any) => s.id === formData.semester)
-        return sem?.courses || []
-    }, [formData.semester, semesters])
-
-    const subjects = useMemo(() => {
+    const semesters = useMemo(() => {
         if (!formData.course) return []
         const crs = courses.find((c: any) => c.id === formData.course)
-        return crs?.subjects || []
+        return crs?.semesters || []
     }, [formData.course, courses])
+
+    const subjects = useMemo(() => {
+        if (!formData.semester) return []
+        const sem = semesters.find((s: any) => s.id === formData.semester)
+        return sem?.subjects || []
+    }, [formData.semester, semesters])
 
     const units = useMemo(() => {
         if (!formData.subject) return []
         const subjectName = formData.subject
-        // Find the subject object in the current course
-        const crs = courses.find((c: any) => c.id === formData.course)
-        if (!crs) return []
+        // Find the subject object in the current semester
+        const sem = semesters.find((s: any) => s.id === formData.semester)
+        if (!sem) return []
 
-        const subject = crs.subjects.find((s: any) =>
+        const subject = sem.subjects.find((s: any) =>
             (typeof s === 'string' ? s : s.name) === subjectName
         )
 
@@ -213,7 +213,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
             return subject.units
         }
         return []
-    }, [formData.subject, formData.course, courses])
+    }, [formData.subject, formData.semester, semesters])
 
     if (!isOpen) return null
 
@@ -287,7 +287,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
                                     <select
                                         required
                                         value={formData.program}
-                                        onChange={(e) => setFormData({ ...formData, program: e.target.value, year: '', semester: '', course: '', subject: '', unit: '' })}
+                                        onChange={(e) => setFormData({ ...formData, program: e.target.value, year: '', course: '', semester: '', subject: '', unit: '' })}
                                         disabled={isUploading}
                                         className="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10 dark:text-white appearance-none cursor-pointer"
                                     >
@@ -307,33 +307,13 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
                                     <select
                                         required
                                         value={formData.year}
-                                        onChange={(e) => setFormData({ ...formData, year: e.target.value, semester: '', course: '', subject: '', unit: '' })}
+                                        onChange={(e) => setFormData({ ...formData, year: e.target.value, course: '', semester: '', subject: '', unit: '' })}
                                         disabled={!formData.program || isUploading}
                                         className="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10 dark:text-white appearance-none cursor-pointer disabled:opacity-50"
                                     >
                                         <option value="">Select Year...</option>
                                         {years.map((y: any) => (
                                             <option key={y.id} value={y.id}>{y.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-
-                            {/* Semester */}
-                            <div>
-                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">Semester</label>
-                                <div className="relative">
-                                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                                    <select
-                                        required
-                                        value={formData.semester}
-                                        onChange={(e) => setFormData({ ...formData, semester: e.target.value, course: '', subject: '', unit: '' })}
-                                        disabled={!formData.year || isUploading}
-                                        className="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10 dark:text-white appearance-none cursor-pointer disabled:opacity-50"
-                                    >
-                                        <option value="">Select Semester...</option>
-                                        {semesters.map((s: any) => (
-                                            <option key={s.id} value={s.id}>{s.name}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -347,13 +327,33 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
                                     <select
                                         required
                                         value={formData.course}
-                                        onChange={(e) => setFormData({ ...formData, course: e.target.value, subject: '', unit: '' })}
-                                        disabled={!formData.semester || isUploading}
+                                        onChange={(e) => setFormData({ ...formData, course: e.target.value, semester: '', subject: '', unit: '' })}
+                                        disabled={!formData.year || isUploading}
                                         className="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10 dark:text-white appearance-none cursor-pointer disabled:opacity-50"
                                     >
                                         <option value="">Select Branch...</option>
                                         {courses.map((c: any) => (
                                             <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Semester */}
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">Semester</label>
+                                <div className="relative">
+                                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                                    <select
+                                        required
+                                        value={formData.semester}
+                                        onChange={(e) => setFormData({ ...formData, semester: e.target.value, subject: '', unit: '' })}
+                                        disabled={!formData.course || isUploading}
+                                        className="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10 dark:text-white appearance-none cursor-pointer disabled:opacity-50"
+                                    >
+                                        <option value="">Select Semester...</option>
+                                        {semesters.map((s: any) => (
+                                            <option key={s.id} value={s.id}>{s.name}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -368,7 +368,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
                                         required
                                         value={formData.subject}
                                         onChange={(e) => setFormData({ ...formData, subject: e.target.value, unit: '' })}
-                                        disabled={!formData.course || isUploading}
+                                        disabled={!formData.semester || isUploading}
                                         className="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10 dark:text-white appearance-none cursor-pointer disabled:opacity-50"
                                     >
                                         <option value="">Select Subject...</option>

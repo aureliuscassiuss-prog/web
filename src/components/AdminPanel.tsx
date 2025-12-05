@@ -44,16 +44,16 @@ interface Program {
 interface Year {
     id: string
     name: string
-    semesters: Semester[]
-}
-
-interface Semester {
-    id: string
-    name: string
     courses: Course[]
 }
 
 interface Course {
+    id: string
+    name: string
+    semesters: Semester[]
+}
+
+interface Semester {
     id: string
     name: string
     subjects: (string | SubjectObject)[]
@@ -195,16 +195,16 @@ export default function AdminPanel() {
 
         if (type === 'program') payload.structureAction = 'add-program'
         else if (type === 'year') { payload.structureAction = 'add-year'; payload.programId = selectedProgramId }
-        else if (type === 'semester') { payload.structureAction = 'add-semester'; payload.programId = selectedProgramId; payload.yearId = selectedYearId }
-        else if (type === 'course') { payload.structureAction = 'add-course'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.semesterId = selectedSemesterId }
-        else if (type === 'subject') { payload.structureAction = 'add-subject'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.semesterId = selectedSemesterId; payload.courseId = selectedCourseId }
-        else if (type === 'unit') { payload.structureAction = 'add-unit'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.semesterId = selectedSemesterId; payload.courseId = selectedCourseId; payload.subjectName = selectedSubjectName }
+        else if (type === 'course') { payload.structureAction = 'add-course'; payload.programId = selectedProgramId; payload.yearId = selectedYearId }
+        else if (type === 'semester') { payload.structureAction = 'add-semester'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.courseId = selectedCourseId }
+        else if (type === 'subject') { payload.structureAction = 'add-subject'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.courseId = selectedCourseId; payload.semesterId = selectedSemesterId }
+        else if (type === 'unit') { payload.structureAction = 'add-unit'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.courseId = selectedCourseId; payload.semesterId = selectedSemesterId; payload.subjectName = selectedSubjectName }
         else if (type === 'video') {
             payload.structureAction = 'add-video'
             payload.programId = selectedProgramId
             payload.yearId = selectedYearId
-            payload.semesterId = selectedSemesterId
             payload.courseId = selectedCourseId
+            payload.semesterId = selectedSemesterId
             payload.subjectName = selectedSubjectName
             payload.unitName = selectedUnitName
             payload.videoTitle = value
@@ -240,16 +240,16 @@ export default function AdminPanel() {
         const payload: any = { action: 'structure', value }
         if (type === 'program') { payload.structureAction = 'remove-program'; payload.programId = value }
         else if (type === 'year') { payload.structureAction = 'remove-year'; payload.programId = selectedProgramId; payload.yearId = value }
-        else if (type === 'semester') { payload.structureAction = 'remove-semester'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.semesterId = value }
-        else if (type === 'course') { payload.structureAction = 'remove-course'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.semesterId = selectedSemesterId; payload.courseId = value }
-        else if (type === 'subject') { payload.structureAction = 'remove-subject'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.semesterId = selectedSemesterId; payload.courseId = selectedCourseId; payload.value = value }
-        else if (type === 'unit') { payload.structureAction = 'remove-unit'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.semesterId = selectedSemesterId; payload.courseId = selectedCourseId; payload.subjectName = selectedSubjectName; payload.value = value }
+        else if (type === 'course') { payload.structureAction = 'remove-course'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.courseId = value }
+        else if (type === 'semester') { payload.structureAction = 'remove-semester'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.courseId = selectedCourseId; payload.semesterId = value }
+        else if (type === 'subject') { payload.structureAction = 'remove-subject'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.courseId = selectedCourseId; payload.semesterId = selectedSemesterId; payload.value = value }
+        else if (type === 'unit') { payload.structureAction = 'remove-unit'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.courseId = selectedCourseId; payload.semesterId = selectedSemesterId; payload.subjectName = selectedSubjectName; payload.value = value }
         else if (type === 'video') {
             payload.structureAction = 'remove-video'
             payload.programId = selectedProgramId
             payload.yearId = selectedYearId
-            payload.semesterId = selectedSemesterId
             payload.courseId = selectedCourseId
+            payload.semesterId = selectedSemesterId
             payload.subjectName = selectedSubjectName
             payload.unitName = selectedUnitName
             payload.videoId = value
@@ -273,11 +273,11 @@ export default function AdminPanel() {
     const selectedProgram = programs.find(p => p.id === selectedProgramId)
     const years = selectedProgram?.years || []
     const selectedYear = years.find(y => y.id === selectedYearId)
-    const semesters = selectedYear?.semesters || []
-    const selectedSemester = semesters.find(s => s.id === selectedSemesterId)
-    const courses = selectedSemester?.courses || []
+    const courses = selectedYear?.courses || []
     const selectedCourse = courses.find(c => c.id === selectedCourseId)
-    const subjects = selectedCourse?.subjects || []
+    const semesters = selectedCourse?.semesters || []
+    const selectedSemester = semesters.find(s => s.id === selectedSemesterId)
+    const subjects = selectedSemester?.subjects || []
     const getSubjectName = (s: any) => typeof s === 'string' ? s : s.name
     const selectedSubject = subjects.find(s => getSubjectName(s) === selectedSubjectName)
     const units = (selectedSubject && typeof selectedSubject === 'object' && selectedSubject.units)
@@ -348,9 +348,9 @@ export default function AdminPanel() {
                                 <div className="grid grid-cols-1 md:flex md:gap-6 md:overflow-x-auto md:pb-8 gap-6">
                                     <StructureCard title="Programs" step="01" items={programs.map(p => ({ id: p.id, name: p.name }))} value={newProgram} setValue={setNewProgram} onAdd={() => handleStructureAdd('program', newProgram)} onRemove={(id: string) => handleStructureRemove('program', id)} activeId={selectedProgramId} onSelect={setSelectedProgramId} isLoading={isSubmitting} />
                                     <StructureCard title="Years" step="02" items={years.map(y => ({ id: y.id, name: y.name }))} value={newYear} setValue={setNewYear} onAdd={() => handleStructureAdd('year', newYear)} onRemove={(id: string) => handleStructureRemove('year', id)} activeId={selectedYearId} onSelect={setSelectedYearId} disabled={!selectedProgramId} parentName={selectedProgram?.name} isLoading={isSubmitting} />
-                                    <StructureCard title="Semesters" step="03" items={semesters.map(s => ({ id: s.id, name: s.name }))} value={newSemester} setValue={handleSemesterChange} onAdd={() => handleStructureAdd('semester', newSemester)} onRemove={(id: string) => handleStructureRemove('semester', id)} activeId={selectedSemesterId} onSelect={setSelectedSemesterId} disabled={!selectedYearId} parentName={selectedYear?.name} isLoading={isSubmitting} />
-                                    <StructureCard title="Branches" step="04" items={courses.map(c => ({ id: c.id, name: c.name }))} value={newBranch} setValue={setNewBranch} onAdd={() => handleStructureAdd('course', newBranch)} onRemove={(id: string) => handleStructureRemove('course', id)} activeId={selectedCourseId} onSelect={setSelectedCourseId} disabled={!selectedSemesterId} parentName={selectedSemester?.name} isLoading={isSubmitting} />
-                                    <StructureCard title="Subjects" step="05" items={subjects.map(s => ({ id: typeof s === 'string' ? s : s.name, name: typeof s === 'string' ? s : s.name }))} value={newSubject} setValue={setNewSubject} onAdd={() => handleStructureAdd('subject', newSubject)} onRemove={(id: string) => handleStructureRemove('subject', id)} activeId={selectedSubjectName} onSelect={setSelectedSubjectName} disabled={!selectedCourseId} parentName={selectedCourse?.name} isLoading={isSubmitting} />
+                                    <StructureCard title="Branches" step="03" items={courses.map(c => ({ id: c.id, name: c.name }))} value={newBranch} setValue={setNewBranch} onAdd={() => handleStructureAdd('course', newBranch)} onRemove={(id: string) => handleStructureRemove('course', id)} activeId={selectedCourseId} onSelect={setSelectedCourseId} disabled={!selectedYearId} parentName={selectedYear?.name} isLoading={isSubmitting} />
+                                    <StructureCard title="Semesters" step="04" items={semesters.map(s => ({ id: s.id, name: s.name }))} value={newSemester} setValue={handleSemesterChange} onAdd={() => handleStructureAdd('semester', newSemester)} onRemove={(id: string) => handleStructureRemove('semester', id)} activeId={selectedSemesterId} onSelect={setSelectedSemesterId} disabled={!selectedCourseId} parentName={selectedCourse?.name} isLoading={isSubmitting} />
+                                    <StructureCard title="Subjects" step="05" items={subjects.map(s => ({ id: typeof s === 'string' ? s : s.name, name: typeof s === 'string' ? s : s.name }))} value={newSubject} setValue={setNewSubject} onAdd={() => handleStructureAdd('subject', newSubject)} onRemove={(id: string) => handleStructureRemove('subject', id)} activeId={selectedSubjectName} onSelect={setSelectedSubjectName} disabled={!selectedSemesterId} parentName={selectedSemester?.name} isLoading={isSubmitting} />
                                     <StructureCard title="Units" step="06" items={units.map((u: any) => ({ id: u.name, name: u.name }))} value={newUnit} setValue={setNewUnit} onAdd={() => handleStructureAdd('unit', newUnit)} onRemove={(id: string) => handleStructureRemove('unit', id)} activeId={selectedUnitName} onSelect={setSelectedUnitName} disabled={!selectedSubjectName} parentName={selectedSubjectName} isLoading={isSubmitting} />
                                     <StructureCard title="Videos" step="07" items={videos.map((v: any) => ({ id: v.id, name: v.title }))} value={newVideoTitle} setValue={setNewVideoTitle} extraInput={{ value: newVideoUrl, setValue: setNewVideoUrl, placeholder: "YouTube URL..." }} onAdd={() => handleStructureAdd('video', newVideoTitle)} onRemove={(id: string) => handleStructureRemove('video', id)} disabled={!selectedUnitName} parentName={selectedUnitName} isLoading={isSubmitting} />
                                 </div>

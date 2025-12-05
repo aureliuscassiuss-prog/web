@@ -38,21 +38,37 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
             if (program) {
                 const year = program.years.find((y: any) => y.id === user.year?.toString());
                 if (year) {
-                    const semester = year.semesters?.find((s: any) => s.id === user.semester?.toString());
-                    if (semester) {
-                        setSelections({
-                            program: program.id,
-                            year: year.id,
-                            semester: semester.id
-                        });
-                        setStep(4); // Jump to Branch selection
-                        autoSelectedRef.current = true;
+                    // Try to auto-select branch/course if available in user profile
+                    // Note: user.branch might store the ID or name, need to check how it's stored.
+                    // Assuming user.branch stores ID based on ProfilePage logic.
+                    const course = year.courses?.find((c: any) => c.id === user.branch);
+
+                    if (course) {
+                        const semester = course.semesters?.find((s: any) => s.id === user.semester?.toString());
+                        if (semester) {
+                            setSelections({
+                                program: program.id,
+                                year: year.id,
+                                course: course.id,
+                                semester: semester.id
+                            });
+                            setStep(5); // Jump to Subject selection
+                            autoSelectedRef.current = true;
+                        } else {
+                            setSelections({
+                                program: program.id,
+                                year: year.id,
+                                course: course.id
+                            });
+                            setStep(4); // Jump to Semester selection
+                            autoSelectedRef.current = true;
+                        }
                     } else {
                         setSelections({
                             program: program.id,
                             year: year.id
                         });
-                        setStep(3); // Jump to Semester selection
+                        setStep(3); // Jump to Branch selection
                         autoSelectedRef.current = true;
                     }
                 }
@@ -114,21 +130,21 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
     const years = useMemo(() => currentProgram?.years || [], [currentProgram]);
 
     const currentYear = useMemo(() => years.find((y: any) => y.id === selections.year), [selections.year, years]);
-    const semesters = useMemo(() => currentYear?.semesters || [], [currentYear]);
-
-    const currentSemester = useMemo(() => semesters.find((s: any) => s.id === selections.semester), [selections.semester, semesters]);
-    const courses = useMemo(() => currentSemester?.courses || [], [currentSemester]);
+    const courses = useMemo(() => currentYear?.courses || [], [currentYear]);
 
     const currentCourse = useMemo(() => courses.find((c: any) => c.id === selections.course), [selections.course, courses]);
-    const subjects = useMemo(() => currentCourse?.subjects || [], [currentCourse]);
+    const semesters = useMemo(() => currentCourse?.semesters || [], [currentCourse]);
+
+    const currentSemester = useMemo(() => semesters.find((s: any) => s.id === selections.semester), [selections.semester, semesters]);
+    const subjects = useMemo(() => currentSemester?.subjects || [], [currentSemester]);
 
     const units = useMemo(() => {
-        if (!selections.subject || !currentCourse) return [];
-        const subjectObj = currentCourse.subjects.find((s: any) =>
+        if (!selections.subject || !currentSemester) return []; // Updated dependency
+        const subjectObj = subjects.find((s: any) => // Updated source
             (typeof s === 'string' ? s : s.name) === selections.subject
         );
         return (subjectObj && typeof subjectObj === 'object' && subjectObj.units) ? subjectObj.units : [];
-    }, [selections.subject, currentCourse]);
+    }, [selections.subject, subjects]); // Updated dependency
 
     // --- Handlers ---
     const handleSelect = (key: keyof typeof selections, value: string, nextStep: number) => {
@@ -167,9 +183,9 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
         } else if (targetStep === 3) {
             setSelections(prev => ({ program: prev.program, year: prev.year })); // Keep program and year
         } else if (targetStep === 4) {
-            setSelections(prev => ({ program: prev.program, year: prev.year, semester: prev.semester })); // Keep program, year, semester
+            setSelections(prev => ({ program: prev.program, year: prev.year, course: prev.course })); // Keep program, year, course
         } else if (targetStep === 6) {
-            setSelections(prev => ({ program: prev.program, year: prev.year, semester: prev.semester, course: prev.course, subject: prev.subject })); // Keep all except unit
+            setSelections(prev => ({ program: prev.program, year: prev.year, course: prev.course, semester: prev.semester, subject: prev.subject })); // Keep all except unit
         }
     };
 
@@ -253,32 +269,32 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
                     </div>
                 )}
 
-                {/* STEP 3: Semester */}
+                {/* STEP 3: Course/Branch */}
                 {step === 3 && (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-full animate-in zoom-in-95 duration-300">
-                        {semesters.map((sem: any) => (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full animate-in zoom-in-95 duration-300">
+                        {courses.map((c: any) => (
                             <SelectionCard
-                                key={sem.id}
-                                onClick={() => handleSelect('semester', sem.id, 4)}
-                                title={sem.name}
-                                subtitle="Semester"
-                                icon={<Calendar className="h-6 w-6" />}
-                                centered
+                                key={c.id}
+                                onClick={() => handleSelect('course', c.id, 4)}
+                                title={c.name}
+                                subtitle={`${c.semesters?.length || 0} Semesters`}
+                                icon={<Layers className="h-6 w-6" />}
                             />
                         ))}
                     </div>
                 )}
 
-                {/* STEP 4: Course/Branch */}
+                {/* STEP 4: Semester */}
                 {step === 4 && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full animate-in zoom-in-95 duration-300">
-                        {courses.map((c: any) => (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-full animate-in zoom-in-95 duration-300">
+                        {semesters.map((sem: any) => (
                             <SelectionCard
-                                key={c.id}
-                                onClick={() => handleSelect('course', c.id, 5)}
-                                title={c.name}
-                                subtitle={`${c.subjects?.length || 0} Subjects Available`}
-                                icon={<Layers className="h-6 w-6" />}
+                                key={sem.id}
+                                onClick={() => handleSelect('semester', sem.id, 5)}
+                                title={sem.name}
+                                subtitle="Semester"
+                                icon={<Calendar className="h-6 w-6" />}
+                                centered
                             />
                         ))}
                     </div>
@@ -352,8 +368,8 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
                                     <div className="flex flex-wrap gap-2">
                                         <BreadcrumbBadge label={currentProgram?.name} onClick={() => handleBreadcrumbClick(1)} />
                                         <BreadcrumbBadge label={currentYear?.name} onClick={() => handleBreadcrumbClick(2)} />
-                                        <BreadcrumbBadge label={currentSemester?.name} onClick={() => handleBreadcrumbClick(3)} />
-                                        <BreadcrumbBadge label={currentCourse?.name} onClick={() => handleBreadcrumbClick(4)} />
+                                        <BreadcrumbBadge label={currentCourse?.name} onClick={() => handleBreadcrumbClick(3)} />
+                                        <BreadcrumbBadge label={currentSemester?.name} onClick={() => handleBreadcrumbClick(4)} />
                                         {selections.unit && <BreadcrumbBadge label={selections.unit} active onClick={() => handleBreadcrumbClick(6)} />}
                                     </div>
                                 </div>
@@ -394,8 +410,8 @@ function StepHeading({ step }: { step: number }) {
     const headings = {
         1: { title: "Select Program", sub: "What are you studying?" },
         2: { title: "Academic Year", sub: "Which year are you in?" },
-        3: { title: "Select Semester", sub: "Which semester is it?" },
-        4: { title: "Choose Branch", sub: "Select your specialization" },
+        3: { title: "Choose Branch", sub: "Select your specialization" },
+        4: { title: "Select Semester", sub: "Which semester is it?" },
         5: { title: "Pick Subject", sub: "What subject do you need help with?" },
         6: { title: "Select Unit", sub: "Looking for a specific topic?" },
     };

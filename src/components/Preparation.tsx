@@ -23,16 +23,16 @@ interface Program {
 interface Year {
     id: string
     name: string
-    semesters: Semester[]
-}
-
-interface Semester {
-    id: string
-    name: string
     courses: Course[]
 }
 
 interface Course {
+    id: string
+    name: string
+    semesters: Semester[]
+}
+
+interface Semester {
     id: string
     name: string
     subjects: (string | SubjectObject)[]
@@ -103,12 +103,21 @@ export default function Preparation() {
             if (program) {
                 const year = program.years.find(y => y.id === user.year?.toString())
                 if (year) {
-                    const semester = year.semesters?.find(s => s.id === user.semester?.toString())
-                    if (semester) {
-                        setSelProgramId(program.id)
-                        setSelYearId(year.id)
-                        setSelSemesterId(semester.id)
-                        autoSelectedRef.current = true
+                    const course = year.courses?.find(c => c.id === user.branch) // Branch/Course
+                    if (course) {
+                        const semester = course.semesters?.find(s => s.id === user.semester?.toString())
+                        if (semester) {
+                            setSelProgramId(program.id)
+                            setSelYearId(year.id)
+                            setSelCourseId(course.id)
+                            setSelSemesterId(semester.id)
+                            autoSelectedRef.current = true
+                        } else {
+                            setSelProgramId(program.id)
+                            setSelYearId(year.id)
+                            setSelCourseId(course.id)
+                            autoSelectedRef.current = true
+                        }
                     } else {
                         setSelProgramId(program.id)
                         setSelYearId(year.id)
@@ -142,11 +151,11 @@ export default function Preparation() {
                         {
                             id: 'p1', name: 'Bachelor of Technology', years: [
                                 {
-                                    id: 'y1', name: '1st Year', semesters: [
+                                    id: 'y1', name: '1st Year', courses: [
                                         {
-                                            id: 's1', name: 'Semester 1', courses: [
+                                            id: 'c1', name: 'Computer Science & Engineering', semesters: [
                                                 {
-                                                    id: 'c1', name: 'Computer Science & Engineering', subjects: [
+                                                    id: 's1', name: 'Semester 1', subjects: [
                                                         { name: 'Engineering Physics', units: ['Quantum Mechanics', 'Optics', 'Lasers', 'Fiber Optics'] },
                                                         { name: 'Mathematics I', units: ['Calculus', 'Matrices', 'Vector Spaces'] }
                                                     ]
@@ -155,7 +164,7 @@ export default function Preparation() {
                                         }
                                     ]
                                 },
-                                { id: 'y2', name: '2nd Year', semesters: [] }
+                                { id: 'y2', name: '2nd Year', courses: [] }
                             ]
                         },
                         { id: 'p2', name: 'Bachelor of Pharmacy', years: [] }
@@ -169,11 +178,11 @@ export default function Preparation() {
     const selectedProgram = programs.find(p => p.id === selProgramId)
     const years = selectedProgram?.years || []
     const selectedYear = years.find(y => y.id === selYearId)
-    const semesters = selectedYear?.semesters || []
-    const selectedSemester = semesters.find(s => s.id === selSemesterId)
-    const courses = selectedSemester?.courses || []
+    const courses = selectedYear?.courses || []
     const selectedCourse = courses.find(c => c.id === selCourseId)
-    const subjects = selectedCourse?.subjects || []
+    const semesters = selectedCourse?.semesters || []
+    const selectedSemester = semesters.find(s => s.id === selSemesterId)
+    const subjects = selectedSemester?.subjects || []
 
     const handleStart = (subjectName: string) => {
         const params = new URLSearchParams({
@@ -284,40 +293,7 @@ export default function Preparation() {
                                         key={y.id}
                                         label={y.name}
                                         selected={y.id === selYearId}
-                                        onClick={() => { setSelYearId(y.id); setSelSemesterId(''); setSelCourseId('') }}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Semester Dropdown */}
-                    <div className="relative min-w-0">
-                        <button
-                            onClick={(e) => { e.stopPropagation(); if (selYearId) setOpenDropdown(openDropdown === 'semester' ? null : 'semester') }}
-                            disabled={!selYearId}
-                            className={`w-full flex items-center justify-between px-2 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg text-xs font-medium transition-all
-                                ${!selYearId ? 'opacity-50 cursor-not-allowed' : ''}
-                                ${openDropdown === 'semester' ? 'ring-2 ring-black/5 dark:ring-white/10' : ''}
-                            `}
-                        >
-                            <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-                                <Calendar size={14} className="text-gray-400 shrink-0 hidden md:block" />
-                                <span className={`truncate ${selSemesterId ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>
-                                    {selectedSemester?.name || "Semester"}
-                                </span>
-                            </div>
-                            <ChevronDown size={14} className="text-gray-400 shrink-0 ml-1" />
-                        </button>
-
-                        {openDropdown === 'semester' && (
-                            <div className="absolute top-full left-0 mt-1 w-full bg-white dark:bg-[#09090b] border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl p-1.5 z-30 animate-in fade-in slide-in-from-top-1 duration-200">
-                                {semesters.map(s => (
-                                    <DropdownItem
-                                        key={s.id}
-                                        label={s.name}
-                                        selected={s.id === selSemesterId}
-                                        onClick={() => { setSelSemesterId(s.id); setSelCourseId('') }}
+                                        onClick={() => { setSelYearId(y.id); setSelCourseId(''); setSelSemesterId('') }}
                                     />
                                 ))}
                             </div>
@@ -327,10 +303,10 @@ export default function Preparation() {
                     {/* Branch Dropdown */}
                     <div className="relative min-w-0">
                         <button
-                            onClick={(e) => { e.stopPropagation(); if (selSemesterId) setOpenDropdown(openDropdown === 'course' ? null : 'course') }}
-                            disabled={!selSemesterId}
+                            onClick={(e) => { e.stopPropagation(); if (selYearId) setOpenDropdown(openDropdown === 'course' ? null : 'course') }}
+                            disabled={!selYearId}
                             className={`w-full flex items-center justify-between px-2 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg text-xs font-medium transition-all
-                                ${!selSemesterId ? 'opacity-50 cursor-not-allowed' : ''}
+                                ${!selYearId ? 'opacity-50 cursor-not-allowed' : ''}
                                 ${openDropdown === 'course' ? 'ring-2 ring-black/5 dark:ring-white/10' : ''}
                             `}
                         >
@@ -350,7 +326,40 @@ export default function Preparation() {
                                         key={c.id}
                                         label={c.name}
                                         selected={c.id === selCourseId}
-                                        onClick={() => setSelCourseId(c.id)}
+                                        onClick={() => { setSelCourseId(c.id); setSelSemesterId('') }}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Semester Dropdown */}
+                    <div className="relative min-w-0">
+                        <button
+                            onClick={(e) => { e.stopPropagation(); if (selCourseId) setOpenDropdown(openDropdown === 'semester' ? null : 'semester') }}
+                            disabled={!selCourseId}
+                            className={`w-full flex items-center justify-between px-2 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg text-xs font-medium transition-all
+                                ${!selCourseId ? 'opacity-50 cursor-not-allowed' : ''}
+                                ${openDropdown === 'semester' ? 'ring-2 ring-black/5 dark:ring-white/10' : ''}
+                            `}
+                        >
+                            <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                                <Calendar size={14} className="text-gray-400 shrink-0 hidden md:block" />
+                                <span className={`truncate ${selSemesterId ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>
+                                    {selectedSemester?.name || "Semester"}
+                                </span>
+                            </div>
+                            <ChevronDown size={14} className="text-gray-400 shrink-0 ml-1" />
+                        </button>
+
+                        {openDropdown === 'semester' && (
+                            <div className="absolute top-full left-0 mt-1 w-full bg-white dark:bg-[#09090b] border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl p-1.5 z-30 animate-in fade-in slide-in-from-top-1 duration-200">
+                                {semesters.map(s => (
+                                    <DropdownItem
+                                        key={s.id}
+                                        label={s.name}
+                                        selected={s.id === selSemesterId}
+                                        onClick={() => setSelSemesterId(s.id)}
                                     />
                                 ))}
                             </div>
