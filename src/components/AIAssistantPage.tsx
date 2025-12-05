@@ -1,10 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import {
     Send, Sparkles, RotateCcw, Bot, Copy, Check,
-    User, ThumbsUp, ThumbsDown, ArrowDown
+    User, ThumbsUp, ThumbsDown
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import ReactMarkdown from 'react-markdown'
 
 // --- Types ---
 interface Message {
@@ -36,12 +35,14 @@ export default function AIAssistantPage() {
     const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([])
     const [input, setInput] = useState('')
     const [isTyping, setIsTyping] = useState(false)
+    const [isLoadingHistory, setIsLoadingHistory] = useState(true)
     const [copiedId, setCopiedId] = useState<string | null>(null)
 
     // --- Refs ---
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const chatContainerRef = useRef<HTMLDivElement>(null)
+
     // --- Effects ---
     const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
         messagesEndRef.current?.scrollIntoView({ behavior })
@@ -49,12 +50,15 @@ export default function AIAssistantPage() {
 
     useEffect(() => {
         scrollToBottom()
-    }, [messages, isTyping])
+    }, [messages, isTyping, isLoadingHistory])
 
     // Fetch History on Mount
     useEffect(() => {
         const fetchHistory = async () => {
-            if (!token) return;
+            if (!token) {
+                setIsLoadingHistory(false)
+                return;
+            }
             try {
                 const res = await fetch('/api/ai?action=history', {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -81,6 +85,8 @@ export default function AIAssistantPage() {
                 }
             } catch (err) {
                 console.error('Failed to load history', err);
+            } finally {
+                setIsLoadingHistory(false)
             }
         };
         fetchHistory();
@@ -133,16 +139,41 @@ export default function AIAssistantPage() {
             if (!response.ok) throw new Error('Failed to get AI response')
             const data = await response.json()
 
+            // Simulate typing effect
+            setIsTyping(false);
+            const botMsgId = (Date.now() + 1).toString();
+
+            // Add empty message first
             setMessages(prev => [...prev, {
-                id: (Date.now() + 1).toString(),
-                text: data.answer,
+                id: botMsgId,
+                text: '', // Start empty for typewriter
                 sender: 'bot',
                 feedback: null,
                 timestamp: new Date()
-            }])
+            }]);
+
+            let i = -1;
+            const fullText = data.answer;
+            const typingSpeed = 15; // ms per char
+
+            const interval = setInterval(() => {
+                i++;
+                if (i >= fullText.length) {
+                    clearInterval(interval);
+                    return;
+                }
+
+                setMessages(prev => prev.map(msg =>
+                    msg.id === botMsgId
+                        ? { ...msg, text: fullText.substring(0, i + 1) }
+                        : msg
+                ));
+            }, typingSpeed);
+
             setConversationHistory(data.conversationHistory || [])
 
         } catch (error) {
+            setIsTyping(false);
             setMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
                 text: "Sorry, I encountered an error. Please try again later.",
@@ -150,8 +181,6 @@ export default function AIAssistantPage() {
                 feedback: null,
                 timestamp: new Date()
             }])
-        } finally {
-            setIsTyping(false)
         }
     }
 
@@ -235,71 +264,88 @@ export default function AIAssistantPage() {
                         </span>
                     </div>
 
-                    {messages.map((msg) => (
-                        <div key={msg.id} className={`flex w-full ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-1 duration-200`}>
-                            <div className={`flex gap-2 max-w-[85%] md:max-w-[75%] ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                    {isLoadingHistory ? (
+                        /* Skeleton Loading for History */
+                        <div className="flex flex-col gap-4 w-full animate-pulse">
+                            {[1, 2, 3].map((i) => (
+                                <div key={i} className={`flex w-full ${i % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`flex gap-2 max-w-[75%] ${i % 2 === 0 ? 'flex-row-reverse' : 'flex-row'}`}>
+                                        <div className="h-6 w-6 rounded-full bg-gray-200 dark:bg-gray-800"></div>
+                                        <div className="flex flex-col gap-2 w-[200px]">
+                                            <div className="h-10 rounded-2xl bg-gray-200 dark:bg-gray-800 w-full"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        messages.map((msg) => (
+                            <div key={msg.id} className={`flex w-full ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-1 duration-200`}>
+                                <div className={`flex gap-2 max-w-[85%] md:max-w-[75%] ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
 
-                                {/* Avatar (Small) */}
-                                <div className={`
+                                    {/* Avatar (Small) */}
+                                    <div className={`
                                     flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold mt-1 overflow-hidden
                                     ${msg.sender === 'user'
-                                        ? 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300'
-                                        : 'bg-black text-white dark:bg-white dark:text-black'}
+                                            ? 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300'
+                                            : 'bg-black text-white dark:bg-white dark:text-black'}
                                 `}>
-                                    {msg.sender === 'user' ? (
-                                        user?.avatar ? (
-                                            <img src={user.avatar} alt="User" className="w-full h-full object-cover" />
+                                        {msg.sender === 'user' ? (
+                                            user?.avatar ? (
+                                                <img src={user.avatar} alt="User" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <User size={12} />
+                                            )
                                         ) : (
-                                            <User size={12} />
-                                        )
-                                    ) : (
-                                        <Bot size={12} />
-                                    )}
-                                </div>
-
-                                {/* Content Bubble (Compact) */}
-                                <div className="flex flex-col gap-1 min-w-0">
-                                    <div className={`
-                                        rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap shadow-sm
-                                        ${msg.sender === 'user'
-                                            ? 'bg-black text-white rounded-tr-sm dark:bg-white dark:text-black'
-                                            : 'bg-white text-gray-800 border border-gray-100 rounded-tl-sm dark:bg-gray-900 dark:border-white/10 dark:text-gray-100'}
-                                    `}>
-                                        {msg.text}
+                                            <Bot size={12} />
+                                        )}
                                     </div>
 
-                                    {/* Bot Actions (Small) */}
-                                    {msg.sender === 'bot' && (
-                                        <div className="flex items-center gap-2 px-1">
-                                            <ActionBtn
-                                                onClick={() => copyToClipboard(msg.text, msg.id)}
-                                                icon={copiedId === msg.id ? <Check size={10} className="text-green-500" /> : <Copy size={10} />}
-                                                label={copiedId === msg.id ? "Copied" : "Copy"}
-                                                active={copiedId === msg.id}
-                                            />
-                                            <div className="h-2 w-px bg-gray-200 dark:bg-white/10"></div>
-                                            <div className="flex gap-1">
-                                                <ActionBtn
-                                                    onClick={() => handleFeedback(msg.id, 'like')}
-                                                    icon={<ThumbsUp size={10} />}
-                                                    active={msg.feedback === 'like'}
-                                                    activeClass="text-green-600 dark:text-green-400"
-                                                />
-                                                <ActionBtn
-                                                    onClick={() => handleFeedback(msg.id, 'dislike')}
-                                                    icon={<ThumbsDown size={10} />}
-                                                    active={msg.feedback === 'dislike'}
-                                                    activeClass="text-red-600 dark:text-red-400"
-                                                />
-                                            </div>
+                                    {/* Content Bubble (Compact) */}
+                                    <div className="flex flex-col gap-1 min-w-0">
+                                        <div className={`
+                                        rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap shadow-sm
+                                        ${msg.sender === 'user'
+                                                ? 'bg-black text-white rounded-tr-sm dark:bg-white dark:text-black'
+                                                : 'bg-white text-gray-800 border border-gray-100 rounded-tl-sm dark:bg-gray-900 dark:border-white/10 dark:text-gray-100'}
+                                    `}>
+                                            {/* Typewriter effect logic handled by raw text updates in state, so we just render text */}
+                                            {msg.text}
                                         </div>
-                                    )}
+
+                                        {/* Bot Actions (Small) */}
+                                        {msg.sender === 'bot' && !isTyping && msg.text.length > 0 && (
+                                            <div className="flex items-center gap-2 px-1">
+                                                <ActionBtn
+                                                    onClick={() => copyToClipboard(msg.text, msg.id)}
+                                                    icon={copiedId === msg.id ? <Check size={10} className="text-green-500" /> : <Copy size={10} />}
+                                                    label={copiedId === msg.id ? "Copied" : "Copy"}
+                                                    active={copiedId === msg.id}
+                                                />
+                                                <div className="h-2 w-px bg-gray-200 dark:bg-white/10"></div>
+                                                <div className="flex gap-1">
+                                                    <ActionBtn
+                                                        onClick={() => handleFeedback(msg.id, 'like')}
+                                                        icon={<ThumbsUp size={10} />}
+                                                        active={msg.feedback === 'like'}
+                                                        activeClass="text-green-600 dark:text-green-400"
+                                                    />
+                                                    <ActionBtn
+                                                        onClick={() => handleFeedback(msg.id, 'dislike')}
+                                                        icon={<ThumbsDown size={10} />}
+                                                        active={msg.feedback === 'dislike'}
+                                                        activeClass="text-red-600 dark:text-red-400"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        ))
+                    )}
 
-                    {/* Typing Indicator */}
+                    {/* Typing Indicator / "Thinking" */}
                     {isTyping && (
                         <div className="flex justify-start">
                             <div className="flex gap-2 max-w-[85%]">
@@ -307,9 +353,7 @@ export default function AIAssistantPage() {
                                     <Bot size={12} />
                                 </div>
                                 <div className="flex items-center gap-1 rounded-2xl rounded-tl-sm bg-gray-50 px-3 py-2 dark:bg-gray-900 border border-gray-100 dark:border-white/10">
-                                    <span className="h-1 w-1 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.3s]"></span>
-                                    <span className="h-1 w-1 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.15s]"></span>
-                                    <span className="h-1 w-1 animate-bounce rounded-full bg-gray-400"></span>
+                                    <span className="text-xs text-gray-400 animate-pulse font-medium">Thinking...</span>
                                 </div>
                             </div>
                         </div>

@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import ReactMarkdown from 'react-markdown'
 
 interface Message {
+    id: string
     text: string
     sender: 'user' | 'bot'
 }
@@ -17,26 +18,75 @@ export default function AIAssistant() {
     const { token } = useAuth()
     const [isOpen, setIsOpen] = useState(false)
     const [messages, setMessages] = useState<Message[]>([
-        { text: "Hello! I'm your Extrovert AI tutor. I can help you study, create flashcards, or quiz you on any topic. How can I assist you today?", sender: 'bot' }
+        { id: 'init-1', text: "Hello! I'm your Extrovert AI tutor. I can help you study, create flashcards, or quiz you on any topic. How can I assist you today?", sender: 'bot' }
     ])
     const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([])
     const [input, setInput] = useState('')
     const [isTyping, setIsTyping] = useState(false)
+    const [isLoadingHistory, setIsLoadingHistory] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+        messagesEndRef.current?.scrollIntoView({ behavior })
     }
 
     useEffect(() => {
-        scrollToBottom()
-    }, [messages, isTyping, isOpen])
+        if (isOpen) {
+            scrollToBottom()
+        }
+    }, [messages, isTyping, isOpen, isLoadingHistory])
+
+    // Fetch History on Open
+    useEffect(() => {
+        const fetchHistory = async () => {
+            if (!token || !isOpen) return;
+
+            // Only fetch if we haven't already loaded history (or simpler: fetch every time open)
+            // But let's check if we have messages other than init
+            if (messages.length > 1) return;
+
+            setIsLoadingHistory(true);
+            try {
+                const res = await fetch('/api/ai?action=history', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.history && Array.isArray(data.history) && data.history.length > 0) {
+                        const historyMessages: Message[] = data.history.map((msg: any, i: number) => ({
+                            id: `hist-${i}`,
+                            text: msg.content,
+                            sender: msg.role === 'user' ? 'user' : 'bot'
+                        }));
+
+                        setMessages(prev => {
+                            if (prev.length === 1 && prev[0].id === 'init-1') {
+                                return [prev[0], ...historyMessages];
+                            }
+                            return historyMessages.length > 0 ? historyMessages : prev;
+                        });
+                        setConversationHistory(data.history);
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to load history', err);
+            } finally {
+                setIsLoadingHistory(false);
+            }
+        };
+
+        if (isOpen) {
+            fetchHistory();
+        }
+    }, [isOpen, token]);
 
     const handleSend = async () => {
         if (!input.trim()) return
 
-        const userMessage = input
-        setMessages(prev => [...prev, { text: userMessage, sender: 'user' }])
+        const userMessage = input.trim()
+        const newMsgId = Date.now().toString()
+
+        setMessages(prev => [...prev, { id: newMsgId, text: userMessage, sender: 'user' }])
         setInput('')
         setIsTyping(true)
 
@@ -63,18 +113,49 @@ export default function AIAssistant() {
             }
 
             const data = await response.json()
-            setMessages(prev => [...prev, { text: data.answer, sender: 'bot' }])
+
+            // Simulate typing effect
+            setIsTyping(false);
+            const botMsgId = (Date.now() + 1).toString();
+
+            setMessages(prev => [...prev, { id: botMsgId, text: '', sender: 'bot' }]);
+
+            let i = -1;
+            const fullText = data.answer;
+            const typingSpeed = 15;
+
+            const interval = setInterval(() => {
+                i++;
+                if (i >= fullText.length) {
+                    clearInterval(interval);
+                    return;
+                }
+
+                setMessages(prev => prev.map(msg =>
+                    msg.id === botMsgId
+                        ? { ...msg, text: fullText.substring(0, i + 1) }
+                        : msg
+                ));
+            }, typingSpeed);
+
             setConversationHistory(data.conversationHistory || [])
         } catch (error) {
-            setMessages(prev => [...prev, { text: "Sorry, I encountered an error. Please try again later.", sender: 'bot' }])
-        } finally {
-            setIsTyping(false)
+            setIsTyping(false);
+            setMessages(prev => [...prev, { id: Date.now().toString(), text: "Sorry, I encountered an error. Please try again later.", sender: 'bot' }])
         }
     }
 
-    const resetConversation = () => {
+    const resetConversation = async () => {
+        if (token) {
+            try {
+                await fetch('/api/ai?action=clear', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+            } catch (e) { console.error(e); }
+        }
         setMessages([
-            { text: "Hello! I'm your Extrovert AI tutor. How can I assist you today?", sender: 'bot' }
+            { id: Date.now().toString(), text: "Hello! I'm your Extrovert AI tutor. How can I assist you today?", sender: 'bot' }
         ])
         setConversationHistory([])
     }
@@ -135,37 +216,49 @@ export default function AIAssistant() {
 
                     {/* Messages Area */}
                     <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white dark:bg-black scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800">
-                        {messages.map((msg, idx) => (
-                            <div
-                                key={idx}
-                                className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                            >
-                                <div
-                                    className={`
-                                        max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm
-                                        ${msg.sender === 'user'
-                                            ? 'bg-black text-white dark:bg-white dark:text-black rounded-tr-none'
-                                            : 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100 rounded-tl-none border border-gray-200 dark:border-gray-700'
-                                        }
-                                    `}
-                                >
-                                    {msg.sender === 'bot' ? (
-                                        <ReactMarkdown className="prose prose-sm max-w-none dark:prose-invert">
-                                            {msg.text}
-                                        </ReactMarkdown>
-                                    ) : (
-                                        msg.text
-                                    )}
-                                </div>
+
+                        {isLoadingHistory ? (
+                            <div className="flex flex-col gap-4 w-full animate-pulse">
+                                {[1, 2].map((i) => (
+                                    <div key={i} className={`flex w-full ${i % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
+                                        <div className={`flex gap-2 max-w-[85%] ${i % 2 === 0 ? 'flex-row-reverse' : 'flex-row'}`}>
+                                            <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-800 shrink-0"></div>
+                                            <div className="h-8 rounded-2xl bg-gray-200 dark:bg-gray-800 w-[150px]"></div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
+                        ) : (
+                            messages.map((msg, idx) => (
+                                <div
+                                    key={idx}
+                                    className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                                >
+                                    <div
+                                        className={`
+                                            max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm
+                                            ${msg.sender === 'user'
+                                                ? 'bg-black text-white dark:bg-white dark:text-black rounded-tr-none'
+                                                : 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100 rounded-tl-none border border-gray-200 dark:border-gray-700'
+                                            }
+                                        `}
+                                    >
+                                        {msg.sender === 'bot' ? (
+                                            <ReactMarkdown className="prose prose-sm max-w-none dark:prose-invert">
+                                                {msg.text}
+                                            </ReactMarkdown>
+                                        ) : (
+                                            msg.text
+                                        )}
+                                    </div>
+                                </div>
+                            ))
+                        )}
 
                         {isTyping && (
                             <div className="flex justify-start">
                                 <div className="flex items-center gap-1 rounded-2xl rounded-tl-none bg-gray-100 px-4 py-3 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                                    <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.3s]"></div>
-                                    <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.15s]"></div>
-                                    <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400"></div>
+                                    <span className="text-xs text-gray-500 animate-pulse font-medium">Thinking...</span>
                                 </div>
                             </div>
                         )}
