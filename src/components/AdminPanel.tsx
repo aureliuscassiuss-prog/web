@@ -89,6 +89,7 @@ export default function AdminPanel() {
     const [isLoading, setIsLoading] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [processingId, setProcessingId] = useState<string | null>(null)
+    const [removingId, setRemovingId] = useState<string | null>(null)
 
     // Structure Selection State
     const [selectedProgramId, setSelectedProgramId] = useState<string>('')
@@ -246,6 +247,7 @@ export default function AdminPanel() {
     const handleStructureRemove = async (type: 'program' | 'year' | 'semester' | 'course' | 'subject' | 'unit' | 'video', value: string) => {
         if (!confirm(`Delete "${value}" ? This cannot be undone.`)) return
 
+        setRemovingId(value)
         const payload: any = { action: 'structure', value }
         if (type === 'program') { payload.structureAction = 'remove-program'; payload.programId = value }
         else if (type === 'year') { payload.structureAction = 'remove-year'; payload.programId = selectedProgramId; payload.yearId = value }
@@ -274,7 +276,7 @@ export default function AdminPanel() {
                 const data = await res.json()
                 setStructure(data)
             }
-        } catch (err) { console.error(err) }
+        } catch (err) { console.error(err) } finally { setRemovingId(null) }
     }
 
     // --- Derived State for Structure ---
@@ -355,13 +357,13 @@ export default function AdminPanel() {
                             {activeTab === 'users' && <motion.div key="users" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}><UsersView users={users} processingId={processingId} onAction={handleUserAction} /></motion.div>}
                             {activeTab === 'structure' && <motion.div key="structure" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}>
                                 <div className="grid grid-cols-1 md:flex md:gap-6 md:overflow-x-auto md:pb-8 gap-6">
-                                    <StructureCard title="Programs" step="01" items={programs.map(p => ({ id: p.id, name: p.name }))} value={newProgram} setValue={setNewProgram} onAdd={() => handleStructureAdd('program', newProgram)} onRemove={(id: string) => handleStructureRemove('program', id)} activeId={selectedProgramId} onSelect={setSelectedProgramId} isLoading={isSubmitting} />
-                                    <StructureCard title="Years" step="02" items={years.map(y => ({ id: y.id, name: y.name }))} value={newYear} setValue={setNewYear} onAdd={() => handleStructureAdd('year', newYear)} onRemove={(id: string) => handleStructureRemove('year', id)} activeId={selectedYearId} onSelect={setSelectedYearId} disabled={!selectedProgramId} parentName={selectedProgram?.name} isLoading={isSubmitting} />
-                                    <StructureCard title="Branches" step="03" items={courses.map(c => ({ id: c.id, name: c.name }))} value={newBranch} setValue={setNewBranch} onAdd={() => handleStructureAdd('course', newBranch)} onRemove={(id: string) => handleStructureRemove('course', id)} activeId={selectedCourseId} onSelect={setSelectedCourseId} disabled={!selectedYearId} parentName={selectedYear?.name} isLoading={isSubmitting} />
-                                    <StructureCard title="Semesters" step="04" items={semesters.map(s => ({ id: s.id, name: s.name }))} value={newSemester} setValue={handleSemesterChange} onAdd={() => handleStructureAdd('semester', newSemester)} onRemove={(id: string) => handleStructureRemove('semester', id)} activeId={selectedSemesterId} onSelect={setSelectedSemesterId} disabled={!selectedCourseId} parentName={selectedCourse?.name} isLoading={isSubmitting} />
-                                    <StructureCard title="Subjects" step="05" items={subjects.map(s => ({ id: typeof s === 'string' ? s : s.name, name: typeof s === 'string' ? s : s.name }))} value={newSubject} setValue={setNewSubject} onAdd={() => handleStructureAdd('subject', newSubject)} onRemove={(id: string) => handleStructureRemove('subject', id)} activeId={selectedSubjectName} onSelect={setSelectedSubjectName} disabled={!selectedSemesterId} parentName={selectedSemester?.name} isLoading={isSubmitting} />
-                                    <StructureCard title="Units" step="06" items={units.map((u: any) => ({ id: u.name, name: u.name }))} value={newUnit} setValue={handleUnitChange} onAdd={() => handleStructureAdd('unit', newUnit)} onRemove={(id: string) => handleStructureRemove('unit', id)} activeId={selectedUnitName} onSelect={setSelectedUnitName} disabled={!selectedSubjectName} parentName={selectedSubjectName} isLoading={isSubmitting} />
-                                    <StructureCard title="Videos" step="07" items={videos.map((v: any) => ({ id: v.id, name: v.title }))} value={newVideoTitle} setValue={setNewVideoTitle} extraInput={{ value: newVideoUrl, setValue: setNewVideoUrl, placeholder: "YouTube URL..." }} onAdd={() => handleStructureAdd('video', newVideoTitle)} onRemove={(id: string) => handleStructureRemove('video', id)} disabled={!selectedUnitName} parentName={selectedUnitName} isLoading={isSubmitting} />
+                                    <StructureCard title="Programs" step="01" items={programs.map(p => ({ id: p.id, name: p.name }))} value={newProgram} setValue={setNewProgram} onAdd={() => handleStructureAdd('program', newProgram)} onRemove={(id: string) => handleStructureRemove('program', id)} activeId={selectedProgramId} onSelect={setSelectedProgramId} isLoading={isSubmitting} removingId={removingId} />
+                                    <StructureCard title="Years" step="02" items={years.map(y => ({ id: y.id, name: y.name }))} value={newYear} setValue={setNewYear} onAdd={() => handleStructureAdd('year', newYear)} onRemove={(id: string) => handleStructureRemove('year', id)} activeId={selectedYearId} onSelect={setSelectedYearId} disabled={!selectedProgramId} parentName={selectedProgram?.name} isLoading={isSubmitting} removingId={removingId} />
+                                    <StructureCard title="Branches" step="03" items={courses.map(c => ({ id: c.id, name: c.name }))} value={newBranch} setValue={setNewBranch} onAdd={() => handleStructureAdd('course', newBranch)} onRemove={(id: string) => handleStructureRemove('course', id)} activeId={selectedCourseId} onSelect={setSelectedCourseId} disabled={!selectedYearId} parentName={selectedYear?.name} isLoading={isSubmitting} removingId={removingId} />
+                                    <StructureCard title="Semesters" step="04" items={semesters.map(s => ({ id: s.id, name: s.name }))} value={newSemester} setValue={handleSemesterChange} onAdd={() => handleStructureAdd('semester', newSemester)} onRemove={(id: string) => handleStructureRemove('semester', id)} activeId={selectedSemesterId} onSelect={setSelectedSemesterId} disabled={!selectedCourseId} parentName={selectedCourse?.name} isLoading={isSubmitting} removingId={removingId} />
+                                    <StructureCard title="Subjects" step="05" items={subjects.map(s => ({ id: typeof s === 'string' ? s : s.name, name: typeof s === 'string' ? s : s.name }))} value={newSubject} setValue={setNewSubject} onAdd={() => handleStructureAdd('subject', newSubject)} onRemove={(id: string) => handleStructureRemove('subject', id)} activeId={selectedSubjectName} onSelect={setSelectedSubjectName} disabled={!selectedSemesterId} parentName={selectedSemester?.name} isLoading={isSubmitting} removingId={removingId} />
+                                    <StructureCard title="Units" step="06" items={units.map((u: any) => ({ id: u.name, name: u.name }))} value={newUnit} setValue={handleUnitChange} onAdd={() => handleStructureAdd('unit', newUnit)} onRemove={(id: string) => handleStructureRemove('unit', id)} activeId={selectedUnitName} onSelect={setSelectedUnitName} disabled={!selectedSubjectName} parentName={selectedSubjectName} isLoading={isSubmitting} removingId={removingId} />
+                                    <StructureCard title="Videos" step="07" items={videos.map((v: any) => ({ id: v.id, name: v.title }))} value={newVideoTitle} setValue={setNewVideoTitle} extraInput={{ value: newVideoUrl, setValue: setNewVideoUrl, placeholder: "YouTube URL..." }} onAdd={() => handleStructureAdd('video', newVideoTitle)} onRemove={(id: string) => handleStructureRemove('video', id)} disabled={!selectedUnitName} parentName={selectedUnitName} isLoading={isSubmitting} removingId={removingId} />
                                 </div>
                             </motion.div>}
                         </>
@@ -403,7 +405,7 @@ function TabButton({ active, onClick, icon, label, count }: any) {
     )
 }
 
-function StructureCard({ title, step, items, value, setValue, extraInput, onAdd, onRemove, activeId, onSelect, disabled, parentName, isLoading }: any) {
+function StructureCard({ title, step, items, value, setValue, extraInput, onAdd, onRemove, activeId, onSelect, disabled, parentName, isLoading, removingId }: any) {
     return (
         <div className={`flex flex-col h-[400px] w-full min-w-[280px] rounded-xl border bg-white dark:bg-gray-900 shadow-sm transition-all duration-300 ${disabled ? 'border-gray-100 opacity-50 dark:border-gray-800' : 'border-gray-200 dark:border-gray-800 ring-1 ring-transparent hover:ring-gray-200 dark:hover:ring-gray-700'}`}>
             <div className="flex-none p-4 border-b border-gray-100 dark:border-gray-800">
@@ -433,8 +435,19 @@ function StructureCard({ title, step, items, value, setValue, extraInput, onAdd,
                                 className={`group flex items-center justify-between p-2 rounded-lg cursor-pointer text-sm transition-colors ${activeId === item.id ? 'bg-black text-white dark:bg-white dark:text-black' : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'}`}
                             >
                                 <span className="truncate flex-1">{item.name}</span>
-                                <button onClick={(e) => { e.stopPropagation(); onRemove(item.id) }} className={`p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity ${activeId === item.id ? 'hover:bg-gray-800 dark:hover:bg-gray-200' : 'hover:bg-red-100 text-red-500'}`}>
-                                    <Trash2 size={14} />
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); onRemove(item.id) }}
+                                    className={`p-1 rounded transition-opacity ${removingId === item.id
+                                            ? 'opacity-100'
+                                            : `opacity-0 group-hover:opacity-100 ${activeId === item.id ? 'hover:bg-gray-800 dark:hover:bg-gray-200' : 'hover:bg-red-100 text-red-500'}`
+                                        }`}
+                                    disabled={!!removingId}
+                                >
+                                    {removingId === item.id ? (
+                                        <Loader2 size={14} className="animate-spin" />
+                                    ) : (
+                                        <Trash2 size={14} />
+                                    )}
                                 </button>
                             </motion.div>
                         ))}

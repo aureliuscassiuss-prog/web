@@ -14,7 +14,8 @@ import {
     Sparkles,
     ChevronDown,
     Printer,
-    RotateCcw
+    RotateCcw,
+    AlertCircle
 } from 'lucide-react'
 import jsPDF from 'jspdf'
 // @ts-ignore
@@ -49,6 +50,100 @@ interface SubjectObject {
     name: string
 }
 
+// --- Custom Components ---
+
+// Smooth Accordion Style Select
+const CustomSelect = ({
+    value,
+    onChange,
+    options,
+    placeholder,
+    disabled,
+    isOpen,
+    onToggle,
+    label,
+    icon: Icon
+}: {
+    value: string;
+    onChange: (val: any) => void;
+    options: { value: string, label: string }[];
+    placeholder: string;
+    disabled: boolean;
+    isOpen: boolean;
+    onToggle: () => void;
+    label: string;
+    icon: any;
+}) => {
+    const selectedOption = options.find(opt => opt.value === value);
+
+    return (
+        <div className="space-y-1.5 w-full">
+            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide ml-1 flex items-center gap-1.5">
+                {Icon && <Icon size={12} />} {label}
+            </label>
+            <div className="relative">
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (!disabled) onToggle();
+                    }}
+                    disabled={disabled}
+                    className={`
+                        w-full h-[48px] px-3 flex items-center justify-between outline-none transition-all rounded-xl border
+                        ${disabled
+                            ? 'bg-gray-50 dark:bg-zinc-900/50 border-gray-200 dark:border-zinc-800 opacity-70 cursor-not-allowed'
+                            : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 cursor-pointer hover:border-blue-400 dark:hover:border-blue-500/50'}
+                    `}
+                >
+                    <span className={`text-sm ${!selectedOption ? 'text-gray-400' : 'text-gray-900 dark:text-white font-medium'}`}>
+                        {selectedOption ? selectedOption.label : placeholder}
+                    </span>
+
+                    {!disabled && (
+                        <ChevronDown
+                            size={16}
+                            className={`text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180 text-blue-600' : ''}`}
+                        />
+                    )}
+                </button>
+
+                {/* Dropdown Options */}
+                <div className={`
+                    absolute left-0 right-0 top-full mt-2 z-50 bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden origin-top transition-all duration-200
+                    ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'}
+                `}>
+                    <div className="max-h-[240px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800">
+                        {options.length > 0 ? (
+                            options.map((opt) => (
+                                <div
+                                    key={opt.value}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onChange(opt.value);
+                                        onToggle();
+                                    }}
+                                    className={`
+                                        px-4 py-3 text-sm cursor-pointer border-b border-gray-50 dark:border-zinc-800/50 last:border-0 flex items-center justify-between transition-colors
+                                        ${value === opt.value
+                                            ? 'text-blue-600 dark:text-blue-400 font-semibold bg-blue-50/50 dark:bg-blue-900/10'
+                                            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800'}
+                                    `}
+                                >
+                                    {opt.label}
+                                    {value === opt.value && <Check size={14} />}
+                                </div>
+                            ))
+                        ) : (
+                            <div className="px-4 py-3 text-xs text-gray-400 text-center">No options available</div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export default function AIPapers() {
     const { user } = useAuth()
 
@@ -63,10 +158,25 @@ export default function AIPapers() {
     const [selectedSemesterId, setSelectedSemesterId] = useState('')
     const [selectedSubject, setSelectedSubject] = useState('')
 
+    // UI state for dropdowns
+    const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
+
     // Generation State
     const [generating, setGenerating] = useState(false)
     const [attemptsLeft, setAttemptsLeft] = useState(3) // Mock daily limit
     const [generatedPdf, setGeneratedPdf] = useState<{ blob: Blob, filename: string } | null>(null)
+    const [error, setError] = useState<string | null>(null)
+
+    // Close dropdowns on click outside
+    useEffect(() => {
+        const close = () => setActiveDropdown(null)
+        window.addEventListener('click', close)
+        return () => window.removeEventListener('click', close)
+    }, [])
+
+    const toggleDropdown = (id: string) => {
+        setActiveDropdown(prev => prev === id ? null : id)
+    }
 
     useEffect(() => {
         // Fetch structure
@@ -117,6 +227,7 @@ export default function AIPapers() {
         if (user?.role !== 'admin' && attemptsLeft <= 0) return
         setGenerating(true)
         setGeneratedPdf(null)
+        setError(null)
 
         try {
             const res = await fetch('/api/ai', {
@@ -143,6 +254,14 @@ export default function AIPapers() {
                 const match = data.answer.match(/```json\n([\s\S]*)\n```/)
                 if (match) {
                     paperData = JSON.parse(match[1])
+                } else if (data.answer.includes('{') && data.answer.includes('}')) {
+                    // Try loose JSON parsing if simple JSON.parse fails
+                    try {
+                        const jsonStr = data.answer.slice(data.answer.indexOf('{'), data.answer.lastIndexOf('}') + 1)
+                        paperData = JSON.parse(jsonStr)
+                    } catch (err) {
+                        throw new Error('Failed to parse AI response structure')
+                    }
                 } else {
                     throw new Error('Failed to parse AI response')
                 }
@@ -162,7 +281,7 @@ export default function AIPapers() {
 
         } catch (error) {
             console.error('Generation failed:', error)
-            alert('Failed to generate paper. Please try again.')
+            setError('High traffic on AI service. Please try again in a moment.')
         } finally {
             setGenerating(false)
         }
@@ -535,34 +654,6 @@ export default function AIPapers() {
         setSelectedSubject('')
     }
 
-    // --- UI HELPERS (FROM CODE 1) ---
-    const SelectInput = ({ label, icon: Icon, value, onChange, options, disabled, placeholder }: any) => (
-        <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide ml-1">
-                {label}
-            </label>
-            <div className="relative group">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors pointer-events-none">
-                    <Icon size={16} />
-                </div>
-                <select
-                    value={value}
-                    onChange={onChange}
-                    disabled={disabled}
-                    className="w-full pl-10 pr-10 py-3 bg-white dark:bg-black/20 border border-gray-200 dark:border-gray-800 rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none appearance-none disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer shadow-sm"
-                >
-                    <option value="" disabled>{placeholder}</option>
-                    {options.map((opt: any) => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                </select>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                    <ChevronDown size={14} />
-                </div>
-            </div>
-        </div>
-    )
-
     if (loadingStructure) return (
         <div className="h-screen flex items-center justify-center bg-white dark:bg-[#09090b] text-sm font-medium text-gray-400">
             <Loader2 className="animate-spin mr-2" size={18} />
@@ -605,68 +696,95 @@ export default function AIPapers() {
                 <div className="lg:col-span-8 space-y-6">
                     <div className="bg-white dark:bg-transparent rounded-none">
 
+                        {error && (
+                            <div className="mb-6 p-4 rounded-xl bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-500/20 flex items-start gap-3">
+                                <AlertTriangle className="text-orange-500 shrink-0 mt-0.5" size={18} />
+                                <div>
+                                    <h4 className="text-sm font-bold text-orange-800 dark:text-orange-200">Generation Failed</h4>
+                                    <p className="text-xs text-orange-600 dark:text-orange-300 mt-1">{error}</p>
+                                </div>
+                            </div>
+                        )}
+
                         {!generatedPdf ? (
                             // Input State
                             <>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                    <div className="md:col-span-2">
-                                        <SelectInput
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 relative z-10">
+                                    <div className="md:col-span-2 relative z-50">
+                                        <CustomSelect
                                             label="Select Program"
                                             icon={GraduationCap}
                                             value={selectedProgramId}
-                                            onChange={(e: any) => { setSelectedProgramId(e.target.value); setSelectedYearId(''); setSelectedCourseId(''); setSelectedSemesterId(''); setSelectedSubject('') }}
+                                            onChange={(val: any) => { setSelectedProgramId(val); setSelectedYearId(''); setSelectedCourseId(''); setSelectedSemesterId(''); setSelectedSubject('') }}
                                             placeholder="Choose Academic Program"
                                             options={programs.map(p => ({ value: p.id, label: p.name }))}
+                                            disabled={false}
+                                            isOpen={activeDropdown === 'program'}
+                                            onToggle={() => toggleDropdown('program')}
                                         />
                                     </div>
 
-                                    <SelectInput
-                                        label="Academic Year"
-                                        icon={Calendar}
-                                        value={selectedYearId}
-                                        onChange={(e: any) => { setSelectedYearId(e.target.value); setSelectedCourseId(''); setSelectedSemesterId(''); setSelectedSubject('') }}
-                                        disabled={!selectedProgramId}
-                                        placeholder="Select Year"
-                                        options={years.map(y => ({ value: y.id, label: y.name }))}
-                                    />
+                                    <div className="relative z-40">
+                                        <CustomSelect
+                                            label="Academic Year"
+                                            icon={Calendar}
+                                            value={selectedYearId}
+                                            onChange={(val: any) => { setSelectedYearId(val); setSelectedCourseId(''); setSelectedSemesterId(''); setSelectedSubject('') }}
+                                            disabled={!selectedProgramId}
+                                            placeholder="Select Year"
+                                            options={years.map(y => ({ value: y.id, label: y.name }))}
+                                            isOpen={activeDropdown === 'year'}
+                                            onToggle={() => toggleDropdown('year')}
+                                        />
+                                    </div>
 
-                                    <SelectInput
-                                        label="Branch / Course"
-                                        icon={Layers}
-                                        value={selectedCourseId}
-                                        onChange={(e: any) => { setSelectedCourseId(e.target.value); setSelectedSemesterId(''); setSelectedSubject('') }}
-                                        disabled={!selectedYearId}
-                                        placeholder="Select Branch"
-                                        options={courses.map(c => ({ value: c.id, label: c.name }))}
-                                    />
+                                    <div className="relative z-30">
+                                        <CustomSelect
+                                            label="Branch / Course"
+                                            icon={Layers}
+                                            value={selectedCourseId}
+                                            onChange={(val: any) => { setSelectedCourseId(val); setSelectedSemesterId(''); setSelectedSubject('') }}
+                                            disabled={!selectedYearId}
+                                            placeholder="Select Branch"
+                                            options={courses.map(c => ({ value: c.id, label: c.name }))}
+                                            isOpen={activeDropdown === 'course'}
+                                            onToggle={() => toggleDropdown('course')}
+                                        />
+                                    </div>
 
-                                    <SelectInput
-                                        label="Semester"
-                                        icon={Calendar}
-                                        value={selectedSemesterId}
-                                        onChange={(e: any) => { setSelectedSemesterId(e.target.value); setSelectedSubject('') }}
-                                        disabled={!selectedCourseId}
-                                        placeholder="Select Semester"
-                                        options={semesters.map(s => ({ value: s.id, label: s.name }))}
-                                    />
+                                    <div className="relative z-20">
+                                        <CustomSelect
+                                            label="Semester"
+                                            icon={Calendar}
+                                            value={selectedSemesterId}
+                                            onChange={(val: any) => { setSelectedSemesterId(val); setSelectedSubject('') }}
+                                            disabled={!selectedCourseId}
+                                            placeholder="Select Semester"
+                                            options={semesters.map(s => ({ value: s.id, label: s.name }))}
+                                            isOpen={activeDropdown === 'semester'}
+                                            onToggle={() => toggleDropdown('semester')}
+                                        />
+                                    </div>
 
-                                    <div className="md:col-span-2">
-                                        <SelectInput
+                                    <div className="md:col-span-2 relative z-10">
+                                        <CustomSelect
                                             label="Target Subject"
                                             icon={BookOpen}
                                             value={selectedSubject}
-                                            onChange={(e: any) => setSelectedSubject(e.target.value)}
+                                            onChange={(val: any) => setSelectedSubject(val)}
                                             disabled={!selectedSemesterId}
                                             placeholder="Choose Subject to Generate Paper"
                                             options={subjects.map(s => {
                                                 const name = typeof s === 'string' ? s : s.name
                                                 return { value: name, label: name }
                                             })}
+                                            isOpen={activeDropdown === 'subject'}
+                                            onToggle={() => toggleDropdown('subject')}
                                         />
                                     </div>
                                 </div>
 
-                                <div className="mt-8">
+                                <div className="mt-8 relative z-0">
                                     <button
                                         onClick={handleGenerate}
                                         disabled={generating || !selectedSubject || (user?.role !== 'admin' && attemptsLeft <= 0)}
