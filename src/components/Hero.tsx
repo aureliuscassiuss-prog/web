@@ -16,14 +16,14 @@ export default function Hero({ onGetStarted, user }: HeroProps) {
         // Fetch real student data
         const fetchStudentData = async () => {
             try {
-                const response = await fetch('/api/stats')
+                const response = await fetch('/api/admin?action=stats')
                 if (response.ok) {
                     const data = await response.json()
                     setStudentCount(data.totalUsers || 0)
                 }
 
                 // Fetch recent users for avatars
-                const leaderboardResponse = await fetch('/api/leaderboard')
+                const leaderboardResponse = await fetch('/api/resources?action=leaderboard')
                 if (leaderboardResponse.ok) {
                     const leaderboardData = await leaderboardResponse.json()
                     setRecentStudents(leaderboardData.leaderboard?.slice(0, 4) || [])

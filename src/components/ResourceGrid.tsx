@@ -548,7 +548,7 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                     }
                 }
                 else if (view === 'leaderboard') {
-                    const res = await fetch('/api/leaderboard')
+                    const res = await fetch('/api/resources?action=leaderboard')
                     const data = await res.json()
                     if (isMounted) setLeaderboard(data.leaderboard || [])
                 }

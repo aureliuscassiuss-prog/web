@@ -22,9 +22,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Route based on URL path or query parameter
         const { action } = req.query;
 
-        // Allow public access for reading structure
-        if (req.method === 'GET' && action === 'structure') {
-            return await handleGetStructure(res);
+        // Allow public access for reading structure or stats
+        if (req.method === 'GET') {
+            if (action === 'structure') {
+                return await handleGetStructure(res);
+            } else if (action === 'stats') {
+                return await handleGetStats(res);
+            }
         }
 
         // Verify admin access
@@ -599,4 +603,24 @@ async function handleUserAction(body: any, res: VercelResponse) {
     }
 
     return res.status(200).json({ message: `User ${action} successful`, user: result });
+}
+
+async function handleGetStats(res: VercelResponse) {
+    const db = await getDb();
+
+    // Count total approved resources
+    const totalResources = await db.collection('resources').countDocuments({
+        $or: [
+            { status: 'approved' },
+            { isPublic: true }
+        ]
+    });
+
+    // Count total active users
+    const totalUsers = await db.collection('users').countDocuments({});
+
+    return res.status(200).json({
+        totalResources,
+        totalUsers
+    });
 }

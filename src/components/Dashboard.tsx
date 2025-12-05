@@ -192,7 +192,7 @@ export default function Dashboard() {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const response = await fetch('/api/stats');
+                const response = await fetch('/api/admin?action=stats');
                 if (response.ok) {
                     const data = await response.json();
                     const newStats = [
