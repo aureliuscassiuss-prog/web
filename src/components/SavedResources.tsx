@@ -15,6 +15,10 @@ export default function SavedResources() {
     const [shareUrl, setShareUrl] = useState<string | null>(null);
     const [justCopied, setJustCopied] = useState(false);
 
+    // Note State
+    const [showNoteModal, setShowNoteModal] = useState(false);
+    const [shareNote, setShareNote] = useState('');
+
     // Selection Mode State
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -63,7 +67,7 @@ export default function SavedResources() {
         fetchSavedResources();
     }, [token]);
 
-    const handleShare = async () => {
+    const handleShare = () => {
         if (!token) return;
 
         // If we already have the URL, just copy it again
@@ -74,12 +78,25 @@ export default function SavedResources() {
             return;
         }
 
+        // If selecting specific items, ASK FOR NOTE first
+        if (isSelectionMode && selectedIds.size > 0) {
+            setShowNoteModal(true);
+            return;
+        }
+
+        // Otherwise share full profile (legacy)
+        performShare();
+    };
+
+    const performShare = async (note?: string) => {
         setIsSharing(true);
-        setIsSharing(true);
+        setShowNoteModal(false); // Close modal if open
+
         try {
             const body: any = {};
             if (isSelectionMode && selectedIds.size > 0) {
                 body.resourceIds = Array.from(selectedIds);
+                if (note) body.note = note;
             }
 
             const res = await fetch('/api/share', {
@@ -195,6 +212,41 @@ export default function SavedResources() {
                             onToggleSelect={() => toggleSelection(resource._id)}
                         />
                     ))}
+                </div>
+            )}
+
+            {/* Note Modal */}
+            {showNoteModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+                    <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md p-6 shadow-xl border border-gray-200 dark:border-gray-800">
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Add a Note? (Optional)</h3>
+                        <p className="text-sm text-gray-500 mb-4">
+                            Add a personal message to display at the top of this shared list.
+                        </p>
+
+                        <textarea
+                            value={shareNote}
+                            onChange={(e) => setShareNote(e.target.value)}
+                            placeholder="e.g. Here are the notes for Unit 1 we discussed..."
+                            className="w-full h-24 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none text-sm mb-6 resize-none"
+                            autoFocus
+                        />
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => performShare(shareNote)} // Share WITH note
+                                className="flex-1 bg-black dark:bg-white text-white dark:text-black py-2.5 rounded-xl font-bold hover:opacity-90 transition-opacity"
+                            >
+                                Add Note & Share
+                            </button>
+                            <button
+                                onClick={() => performShare()} // Share WITHOUT note
+                                className="px-4 py-2.5 rounded-xl font-medium text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            >
+                                Skip
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

@@ -36,7 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (!user) return res.status(404).json({ message: 'User not found' });
 
             // CHECK: Selective Sharing
-            const { resourceIds } = req.body;
+            const { resourceIds, note } = req.body;
 
             if (Array.isArray(resourceIds) && resourceIds.length > 0) {
                 // Create a new shared list
@@ -46,6 +46,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     slug,
                     ownerId: userId,
                     resources: resourceIds, // Store just the IDs
+                    note: note || '', // Store the note
                     createdAt: new Date()
                 });
 
@@ -181,6 +182,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     name: ownerUser?.name || 'Anonymous',
                     avatar: ownerUser?.avatar
                 },
+                list: sharedList ? {
+                    note: sharedList.note,
+                    createdAt: sharedList.createdAt
+                } : null,
                 resources
             });
 

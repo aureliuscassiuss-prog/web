@@ -11,7 +11,7 @@ import {
 export default function SharedResourcesPage() {
     const { slug } = useParams();
     const { token } = useAuth(); // To check if viewer is logged in
-    const [data, setData] = useState<{ user: any, resources: any[] } | null>(null);
+    const [data, setData] = useState<{ user: any, resources: any[], list?: { note?: string, createdAt: string } } | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -19,14 +19,6 @@ export default function SharedResourcesPage() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // If logged in, we should probably fetch with the token to get "userSaved/userLiked" states
-                // But the current public API might not support it. 
-                // Let's rely on the public endpoint for now, but in a real app, 
-                // we'd want to fetch personalized data if a token exists.
-                // Assuming the public API returns basic data, we might miss initial "liked" state for the viewer
-                // unless we update the backend.
-                // For now, we will allow interactions which will sync state.
-
                 const headers: HeadersInit = {};
                 if (token) {
                     headers['Authorization'] = `Bearer ${token}`;
@@ -41,7 +33,6 @@ export default function SharedResourcesPage() {
             } catch (err: any) {
                 setError(err.message);
             } finally {
-                // Add a small artificial delay to show off the cool loading screen
                 setTimeout(() => setIsLoading(false), 1500);
             }
         };
@@ -50,25 +41,18 @@ export default function SharedResourcesPage() {
     }, [slug, token]);
 
     // --- Premium Loading State (Spinner) ---
-    // Fixed position to prevent scrolling, high z-index to cover everything
     if (isLoading) {
         return (
             <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-gray-50 dark:bg-black font-sans overflow-hidden touch-none">
                 <div className="relative mb-6">
-                    {/* Glowing outer ring */}
                     <div className="absolute inset-0 bg-blue-500/20 blur-3xl rounded-full scale-150" />
-
-                    {/* Reviewing Spinner - LARGE */}
                     <div className="relative w-28 h-28 sm:w-32 sm:h-32">
                         <div className="absolute inset-0 rounded-full border-[6px] border-t-blue-600 border-r-transparent border-b-purple-600 border-l-transparent animate-spin" />
-
-                        {/* Center Icon (Placeholder until data loads) */}
                         <div className="absolute inset-3 bg-white dark:bg-gray-900 rounded-full flex items-center justify-center shadow-inner">
                             <User className="w-10 h-10 sm:w-12 sm:h-12 text-gray-400 animate-pulse" />
                         </div>
                     </div>
                 </div>
-
                 <div className="text-center space-y-2 animate-fade-in relative z-10 px-4">
                     <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Fetching resources...</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Please wait while we load the collection</p>
@@ -137,6 +121,23 @@ export default function SharedResourcesPage() {
                             </p>
                         </div>
                     </div>
+
+                    {/* Special Note Card */}
+                    {data.list?.note && (
+                        <div className="relative z-10 mt-6 bg-yellow-50/50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-900/30 rounded-xl p-4 sm:p-5 flex gap-3 text-left">
+                            <div className="shrink-0 pt-0.5">
+                                <FileText className="w-5 h-5 text-yellow-600 dark:text-yellow-500" />
+                            </div>
+                            <div>
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-yellow-600 dark:text-yellow-500 mb-1">
+                                    Message from {data.user.name.split(' ')[0]}
+                                </h4>
+                                <p className="text-sm sm:text-base text-gray-800 dark:text-gray-200 leading-relaxed font-medium">
+                                    "{data.list.note}"
+                                </p>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Grid Content */}
@@ -198,12 +199,10 @@ const SharedGridCard = ({ resource, currentUserToken, onLoginRequest }: { resour
         });
     }, [resource]);
 
-
-    // --- Interaction Logic (Ported from ResourceGrid) ---
     const handleInteraction = async (action: string, value: boolean) => {
         if (!currentUserToken) {
-            onLoginRequest(); // Trigger login popup
-            return false;
+            onLoginRequest();
+            return;
         }
 
         try {
@@ -222,36 +221,21 @@ const SharedGridCard = ({ resource, currentUserToken, onLoginRequest }: { resour
 
             if (response.ok) {
                 const data = await response.json();
-                // Update with server truth
-                setCounts(prev => ({
-                    ...prev,
+                setCounts({
                     likes: data.resource.likes,
                     downloads: data.resource.downloads
-                }));
-                return true;
+                });
             }
-            return false;
         } catch (error) {
             console.error('Interaction failed:', error);
-            return false;
         }
     };
 
-    const handleLike = async (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
+    const handleLike = () => {
         if (isInteracting) return;
-
-        if (!currentUserToken) {
-            onLoginRequest();
-            return;
-        }
-
-        setIsInteracting(true);
-        const previousVote = userVote;
         const newValue = userVote !== 'like';
+        setIsInteracting(true);
 
-        // Optimistic update
         if (newValue) {
             setCounts(prev => ({ ...prev, likes: prev.likes + 1 }));
             setUserVote('like');
@@ -259,88 +243,69 @@ const SharedGridCard = ({ resource, currentUserToken, onLoginRequest }: { resour
             setCounts(prev => ({ ...prev, likes: prev.likes - 1 }));
             setUserVote(null);
         }
-
-        const success = await handleInteraction('like', newValue);
-        if (!success) {
-            // Revert
-            setUserVote(previousVote);
-            setCounts(prev => ({ ...prev, likes: previousVote === 'like' ? prev.likes + 1 : prev.likes - 1 }));
-        }
-        setIsInteracting(false);
+        handleInteraction('like', newValue).finally(() => setIsInteracting(false));
     };
 
-    const handleSave = async (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (!currentUserToken) {
-            onLoginRequest();
-            return;
-        }
-
-        const newValue = !isSaved;
-        setIsSaved(newValue); // Optimistic
-
-        const success = await handleInteraction('save', newValue);
-        if (!success) setIsSaved(!newValue); // Revert
+    const handleDislike = () => {
+        if (isInteracting) return;
+        const newValue = userVote !== 'dislike';
+        setIsInteracting(true);
+        setUserVote(newValue ? 'dislike' : null);
+        handleInteraction('dislike', newValue).finally(() => setIsInteracting(false));
     };
 
-    const handleReport = async (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (!currentUserToken) {
-            onLoginRequest();
-            return;
-        }
-
-        const newValue = !isReported;
-        setIsReported(newValue); // Optimistic
-
-        // Report logic is typically one-way or toggle, assuming toggle like others
-        const success = await handleInteraction('flag', newValue);
-        if (!success) setIsReported(!newValue); // Revert
+    const handleSave = () => {
+        if (isInteracting) return;
+        setIsInteracting(true);
+        setIsSaved(!isSaved);
+        handleInteraction('save', !isSaved).finally(() => setIsInteracting(false));
     };
 
-    const handleDownload = async (e: React.MouseEvent) => {
-        // Prevent default if it's a wrapper, but we want the link to open
-        // Actually, we usually want to track download then open link.
-        // For simplicity, just track download.
-        // We won't block the link opening.
-
-        if (currentUserToken) {
-            handleInteraction('download', true); // Fire and forget
+    const handleFlag = () => {
+        if (isInteracting || isReported) return;
+        if (confirm('Flag this resource as inappropriate?')) {
+            setIsInteracting(true);
+            setIsReported(true);
+            handleInteraction('flag', true).finally(() => setIsInteracting(false));
         }
     };
 
+    const handleDownload = () => {
+        if (isInteracting) return;
+        setIsInteracting(true);
+        setCounts(prev => ({ ...prev, downloads: prev.downloads + 1 }));
+        handleInteraction('download', true).finally(() => setIsInteracting(false));
+    };
 
     return (
-        <div className="group relative bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-200 h-full flex flex-col">
+        <div className="group flex flex-col h-full bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 hover:shadow-xl hover:shadow-blue-900/5 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+            {/* Top Section: Subject Tag & Actions */}
+            <div className="flex items-start justify-between mb-3 z-10 relative">
+                <div className="flex-1 mr-2">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
+                        {resource.subject || 'General'}
+                    </span>
+                </div>
 
-            {/* Top Row: Tag & Actions */}
-            <div className="flex justify-between items-start mb-3">
-                <span className="inline-flex items-center px-2 py-0.5 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-[10px] font-bold uppercase rounded border border-gray-100 dark:border-gray-700">
-                    {resource.subject || 'Resource'}
-                </span>
-
-                <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
+                {/* Actions (Save/Flag) */}
+                <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
                     <button
-                        onClick={handleSave}
+                        onClick={(e) => { e.preventDefault(); handleSave(); }}
                         className={`p-1.5 rounded-lg transition-colors ${isSaved
                             ? 'text-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                            : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10'
+                            : 'text-gray-400 hover:text-blue-500 hover:bg-gray-50 dark:hover:bg-gray-800'
                             }`}
-                        title={isSaved ? "Saved" : "Save to Library"}
+                        title={isSaved ? "Unsave" : "Save"}
                     >
                         <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-current' : ''}`} />
                     </button>
                     <button
-                        onClick={handleReport}
+                        onClick={(e) => { e.preventDefault(); handleFlag(); }}
                         className={`p-1.5 rounded-lg transition-colors ${isReported
                             ? 'text-red-500 bg-red-50 dark:bg-red-900/20'
-                            : 'text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10'
+                            : 'text-gray-400 hover:text-red-500 hover:bg-gray-50 dark:hover:bg-gray-800'
                             }`}
-                        title={isReported ? "Reported" : "Report Issue"}
+                        title="Report"
                     >
                         <Flag className={`w-3.5 h-3.5 ${isReported ? 'fill-current' : ''}`} />
                     </button>
@@ -348,56 +313,69 @@ const SharedGridCard = ({ resource, currentUserToken, onLoginRequest }: { resour
             </div>
 
             {/* Main Content */}
-            <a
-                href={resource.driveLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={handleDownload}
-                className="flex items-start gap-4 flex-1 mb-4 group-hover:opacity-90 transition-opacity"
-            >
-                <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 rounded-lg flex items-center justify-center flex-shrink-0 border border-blue-100 dark:border-blue-800/30">
-                    <FileText className="w-5 h-5" />
-                </div>
-                <div>
-                    <h3 className="text-sm font-bold text-gray-900 dark:text-white leading-tight line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                        {resource.title}
-                    </h3>
-                    <div className="flex items-center gap-1 mt-1 text-[11px] text-gray-500 dark:text-gray-400 font-medium">
-                        <span>View file details</span>
-                        <ArrowRight className="w-3 h-3 -rotate-45" />
-                    </div>
-                </div>
-            </a>
-
-            {/* Footer: Metrics & Action */}
-            <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800 mt-auto">
-                <div className="flex items-center gap-3 text-[10px] font-bold text-gray-400 uppercase tracking-wide">
-                    <button
-                        onClick={handleLike}
-                        className={`flex items-center gap-1 transition-colors ${userVote === 'like' ? 'text-blue-600' : 'hover:text-blue-500'
-                            }`}
-                        title="Like"
-                    >
-                        <ThumbsUp className={`w-3 h-3 ${userVote === 'like' ? 'fill-current' : ''}`} />
-                        {counts.likes}
-                    </button>
-                    <div className="flex items-center gap-1">
-                        <Download className="w-3 h-3" />
-                        {counts.downloads}
-                    </div>
-                </div>
-
+            <div className="flex items-start gap-4 mb-4 flex-1 z-10 relative">
                 <a
                     href={resource.driveLink}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={handleDownload}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-black rounded-lg text-xs font-bold shadow-sm hover:shadow transition-all hover:-translate-y-0.5"
+                    className="flex-shrink-0 w-12 h-12 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center border border-gray-100 dark:border-gray-700 text-blue-500 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300 shadow-sm"
                 >
-                    Open
-                    <Share2 className="w-3 h-3" />
+                    <FileText className="w-6 h-6" />
                 </a>
+                <a
+                    href={resource.driveLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={handleDownload}
+                    className="block min-w-0 flex-1"
+                >
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-white leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 mb-1">
+                        {resource.title}
+                    </h3>
+                    <div className="flex items-center text-[10px] text-gray-500 dark:text-gray-400 gap-2">
+                        <span>PDF</span>
+                        <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
+                        <span className="group-hover:translate-x-1 transition-transform inline-flex items-center">
+                            View File <ArrowRight className="w-2.5 h-2.5 ml-0.5" />
+                        </span>
+                    </div>
+                </a>
+            </div>
+
+            {/* FOOTER */}
+            <div className="mt-auto pt-3 border-t border-gray-50 dark:border-gray-800/50 flex items-center justify-between gap-2 z-10 relative">
+                {/* Voting */}
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={(e) => { e.stopPropagation(); handleLike(); }}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-colors ${userVote === 'like'
+                            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                            : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'
+                            }`}
+                    >
+                        <ThumbsUp className={`w-3 h-3 ${userVote === 'like' ? 'fill-current' : ''}`} />
+                        <span>{counts.likes}</span>
+                    </button>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); handleDislike(); }}
+                        className={`p-1 rounded-md transition-colors ${userVote === 'dislike'
+                            ? 'text-red-500 bg-red-50 dark:bg-red-900/20'
+                            : 'text-gray-400 hover:text-red-500 hover:bg-gray-50 dark:hover:bg-gray-800'
+                            }`}
+                    >
+                        <ThumbsDown className={`w-3 h-3 ${userVote === 'dislike' ? 'fill-current' : ''}`} />
+                    </button>
+                </div>
+
+                {/* Downloads & Uploader */}
+                <div className="flex items-center gap-3">
+                    <div className="text-[10px] font-medium text-gray-400 flex items-center gap-1">
+                        <Download className="w-3 h-3" />
+                        {counts.downloads}
+                    </div>
+                </div>
             </div>
         </div>
     );
-}
+};
