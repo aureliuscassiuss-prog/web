@@ -190,6 +190,17 @@ function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
 function AppContent() {
   const { user } = useAuth()
 
+  // --- PROTECTION: Prevent Context Menu (Right Click) ---
+  useEffect(() => {
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+    };
+    document.addEventListener('contextmenu', handleContextMenu);
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+    };
+  }, []);
+
   // Modal States
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
