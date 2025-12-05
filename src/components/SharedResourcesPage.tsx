@@ -224,10 +224,14 @@ const SharedGridCard = ({ resource, currentUserToken, onLoginRequest }: { resour
             {/* Footer: Metrics & Action */}
             <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800 mt-auto">
                 <div className="flex items-center gap-3 text-[10px] font-bold text-gray-400 uppercase tracking-wide">
-                    <div className="flex items-center gap-1">
+                    <button
+                        onClick={handleProtectedAction}
+                        className="flex items-center gap-1 hover:text-blue-500 transition-colors"
+                        title="Like"
+                    >
                         <ThumbsUp className="w-3 h-3" />
                         {counts.likes}
-                    </div>
+                    </button>
                     <div className="flex items-center gap-1">
                         <Download className="w-3 h-3" />
                         {counts.downloads}
