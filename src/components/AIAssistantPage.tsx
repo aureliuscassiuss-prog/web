@@ -224,9 +224,39 @@ export default function AIAssistantPage() {
         { label: 'Simplify', prompt: 'Explain simply: ', icon: Sparkles },
     ]
 
+    // --- Visual Viewport Handling for Mobile Keyboard ---
+    const [viewportHeight, setViewportHeight] = useState(
+        typeof window !== 'undefined' ? (window.visualViewport?.height || window.innerHeight) : 0
+    )
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || !window.visualViewport) return
+
+        const handleResize = () => {
+            if (window.visualViewport) {
+                setViewportHeight(window.visualViewport.height)
+                // Scroll to bottom when keyboard opens to keep input in view
+                setTimeout(() => scrollToBottom('auto'), 100)
+            }
+        }
+
+        window.visualViewport.addEventListener('resize', handleResize)
+        window.visualViewport.addEventListener('scroll', handleResize)
+
+        return () => {
+            if (window.visualViewport) {
+                window.visualViewport.removeEventListener('resize', handleResize)
+                window.visualViewport.removeEventListener('scroll', handleResize)
+            }
+        }
+    }, [])
+
     return (
-        /* Outer container: Fixed height to viewport minus layout offset, column flex */
-        <div className="flex flex-col h-[calc(100dvh-6rem)] bg-white dark:bg-[#050505] font-sans text-gray-900 dark:text-gray-100 overflow-hidden relative rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
+        /* Outer container: Dynamic height based on visual viewport to stick to keyboard */
+        <div
+            style={{ height: `calc(${viewportHeight}px - 6.5rem)` }}
+            className="flex flex-col bg-white dark:bg-[#050505] font-sans text-gray-900 dark:text-gray-100 overflow-hidden relative rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm transition-[height] duration-75 ease-out"
+        >
 
             {/* --- HEADER (Fixed) --- */}
             <header className="flex-none z-20 flex items-center justify-between px-4 py-2 border-b border-gray-100 dark:border-white/10 bg-white/80 dark:bg-[#050505]/80 backdrop-blur-md">
