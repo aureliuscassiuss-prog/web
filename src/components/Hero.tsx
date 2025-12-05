@@ -66,12 +66,12 @@ export default function Hero({ onGetStarted, user }: HeroProps) {
             </h1>
 
             {/* Subheading */}
-            <p className="mt-10 md:mt-12 max-w-2xl text-base md:text-xl text-gray-600 dark:text-gray-400 animate-slide-up opacity-0 [animation-fill-mode:forwards] [animation-delay:0.2s] leading-relaxed px-4">
+            <p className="mt-10 md:mt-12 max-w-2xl text-base md:text-xl text-gray-600 dark:text-gray-400 animate-slide-up opacity-0 [animation-fill-mode:forwards] [animation-delay:0.1s] leading-relaxed px-4">
                 The all-in-one academic platform for Medicaps University. Access premium notes, PYQs, and get instant guidance from your personal AI Tutor.
             </p>
 
             {/* Action Buttons */}
-            <div className="mt-8 md:mt-10 flex flex-col gap-3 md:gap-4 w-full sm:w-auto sm:flex-row animate-slide-up opacity-0 [animation-fill-mode:forwards] [animation-delay:0.3s]">
+            <div className="mt-8 md:mt-10 flex flex-col gap-3 md:gap-4 w-full sm:w-auto sm:flex-row animate-slide-up opacity-0 [animation-fill-mode:forwards] [animation-delay:0.15s]">
                 <button
                     onClick={onGetStarted}
                     className="relative h-12 px-8 rounded-full text-base font-medium text-white bg-black dark:bg-white dark:text-black shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 w-full sm:w-auto flex items-center justify-center overflow-hidden"
@@ -99,7 +99,7 @@ export default function Hero({ onGetStarted, user }: HeroProps) {
             </div>
 
             {/* Social Proof (Real Data) */}
-            <div className="mt-8 md:mt-10 flex flex-col md:flex-row items-center gap-4 animate-fade-in opacity-0 [animation-fill-mode:forwards] [animation-delay:0.4s]">
+            <div className="mt-8 md:mt-10 flex flex-col md:flex-row items-center gap-4 animate-fade-in opacity-0 [animation-fill-mode:forwards] [animation-delay:0.2s]">
                 <div className="flex -space-x-3">
                     {recentStudents.length > 0 ? (
                         <>
@@ -139,7 +139,7 @@ export default function Hero({ onGetStarted, user }: HeroProps) {
             </div>
 
             {/* --- Visual / Video Section (Professional Glass) --- */}
-            <div className="relative mt-16 md:mt-20 w-full max-w-6xl animate-fade-in opacity-0 [animation-fill-mode:forwards] [animation-delay:0.5s] px-4">
+            <div className="relative mt-16 md:mt-20 w-full max-w-6xl animate-fade-in opacity-0 [animation-fill-mode:forwards] [animation-delay:0.25s] px-4">
 
                 {/* Clean Glow (No Pink) */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] h-[50%] bg-blue-500/20 blur-[90px] rounded-full -z-10"></div>
