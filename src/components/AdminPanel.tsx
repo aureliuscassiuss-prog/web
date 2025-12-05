@@ -312,33 +312,48 @@ export default function AdminPanel() {
                 </div>
 
                 <div className="mb-8 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
-                    <div className="relative flex gap-1 p-1 bg-gray-200/50 dark:bg-white/5 rounded-xl justify-around sm:justify-start sm:w-auto">
-                        {/* Animated Tab Indicator */}
-                        {activeTab === 'pending' && (
-                            <motion.div
-                                layoutId="active-tab"
-                                className="absolute bottom-1 left-1 top-1 rounded-lg bg-white dark:bg-gray-800 shadow-sm z-0"
-                                style={{ width: 'calc(33.33% - 0.5rem)' }}
-                                transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
-                            />
-                        )}
-                        {activeTab === 'users' && (
-                            <motion.div
-                                layoutId="active-tab"
-                                className="absolute bottom-1 top-1 rounded-lg bg-white dark:bg-gray-800 shadow-sm z-0"
-                                style={{ left: '33.33%', width: 'calc(33.33% - 0.5rem)' }}
-                                transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
-                            />
-                        )}
-                        {activeTab === 'structure' && (
-                            <motion.div
-                                layoutId="active-tab"
-                                className="absolute bottom-1 right-1 top-1 rounded-lg bg-white dark:bg-gray-800 shadow-sm z-0"
-                                style={{ width: 'calc(33.33% - 0.5rem)' }}
-                                transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
-                            />
-                        )}
-                        <div className="relative z-10 flex w-full sm:w-auto justify-around sm:justify-start gap-1">
+                    <div className="relative flex md:grid md:grid-cols-3 gap-1 p-1 bg-gray-200/50 dark:bg-white/5 rounded-xl justify-around md:justify-start md:w-full">
+
+                        {/* Mobile Indicators (Individual) */}
+                        <div className="contents md:hidden">
+                            {activeTab === 'pending' && (
+                                <motion.div
+                                    layoutId="active-tab-mobile"
+                                    className="absolute bottom-1 left-1 top-1 rounded-lg bg-white dark:bg-gray-800 shadow-sm z-0"
+                                    style={{ width: 'calc(33.33% - 0.5rem)' }}
+                                    transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                                />
+                            )}
+                            {activeTab === 'users' && (
+                                <motion.div
+                                    layoutId="active-tab-mobile"
+                                    className="absolute bottom-1 top-1 rounded-lg bg-white dark:bg-gray-800 shadow-sm z-0"
+                                    style={{ left: '33.33%', width: 'calc(33.33% - 0.5rem)' }}
+                                    transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                                />
+                            )}
+                            {activeTab === 'structure' && (
+                                <motion.div
+                                    layoutId="active-tab-mobile"
+                                    className="absolute bottom-1 right-1 top-1 rounded-lg bg-white dark:bg-gray-800 shadow-sm z-0"
+                                    style={{ width: 'calc(33.33% - 0.5rem)' }}
+                                    transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                                />
+                            )}
+                        </div>
+
+                        {/* Desktop Indicator (Single Sliding) */}
+                        <motion.div
+                            layoutId="active-tab-desktop"
+                            className="absolute bottom-1 top-1 rounded-lg bg-white dark:bg-gray-800 shadow-sm z-0 hidden md:block"
+                            style={{
+                                left: activeTab === 'pending' ? '0.25rem' : activeTab === 'users' ? 'calc(33.333% + 0.125rem)' : 'calc(66.666% + 0.25rem)',
+                                width: 'calc(33.333% - 0.375rem)'
+                            }}
+                            transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                        />
+
+                        <div className="relative z-10 flex md:grid md:grid-cols-3 w-full gap-1 justify-around md:justify-start">
                             <TabButton active={activeTab === 'pending'} onClick={() => setActiveTab('pending')} icon={<Clock size={16} />} label="Approvals" count={pendingResources.length} />
                             <TabButton active={activeTab === 'users'} onClick={() => setActiveTab('users')} icon={<User size={16} />} label="Users" />
                             <TabButton active={activeTab === 'structure'} onClick={() => setActiveTab('structure')} icon={<Settings size={16} />} label="Structure" />
