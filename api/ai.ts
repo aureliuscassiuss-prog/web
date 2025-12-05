@@ -27,10 +27,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        const { action } = req.query;
+        const { action: queryAction } = req.query;
 
         // --- Credits Management ---
-        if (action === 'check-credits' || action === 'use-credit') {
+        if (queryAction === 'check-credits' || queryAction === 'use-credit') {
             // Verify JWT token
             const authHeader = req.headers.authorization;
             if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -90,14 +90,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 user.aiPaperCredits = 3;
             }
 
-            if (req.method === 'GET' && action === 'check-credits') {
+            if (req.method === 'GET' && queryAction === 'check-credits') {
                 return res.status(200).json({
                     credits: user.aiPaperCredits || 0,
                     lastReset: user.lastCreditReset
                 });
             }
 
-            if (req.method === 'POST' && action === 'use-credit') {
+            if (req.method === 'POST' && queryAction === 'use-credit') {
                 // Use one credit
                 if ((user.aiPaperCredits || 0) <= 0) {
                     return res.status(403).json({
@@ -118,41 +118,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 });
             }
 
-            if (req.method === 'GET' && action === 'history') {
-                const token = req.headers.authorization?.replace('Bearer ', '');
-                if (!token) return res.status(401).json({ message: 'Unauthorized' });
-
-                try {
-                    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
-                    const db = await getDb();
-                    // Retrieve active conversation
-                    const conversation = await db.collection('ai_conversations').findOne({
-                        userId: new ObjectId(decoded.userId)
-                    });
-
-                    return res.status(200).json({
-                        history: conversation ? conversation.messages : []
-                    });
-                } catch (e) {
-                    return res.status(401).json({ message: 'Invalid token' });
-                }
-            }
-
-            if (req.method === 'POST' && action === 'clear') {
-                const token = req.headers.authorization?.replace('Bearer ', '');
-                if (!token) return res.status(401).json({ message: 'Unauthorized' });
-
-                try {
-                    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
-                    const db = await getDb();
-                    await db.collection('ai_conversations').deleteOne({ userId: new ObjectId(decoded.userId) });
-                    return res.status(200).json({ message: 'Conversation cleared' });
-                } catch (e) {
-                    return res.status(401).json({ message: 'Invalid token' });
-                }
-            }
-
             return res.status(400).json({ message: 'Invalid credits action' });
+        }
+
+        // --- History & Persistence Management ---
+        if (req.method === 'GET' && queryAction === 'history') {
+            const token = req.headers.authorization?.replace('Bearer ', '');
+            if (!token) return res.status(401).json({ message: 'Unauthorized' });
+
+            try {
+                const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
+                const db = await getDb();
+                // Retrieve active conversation
+                const conversation = await db.collection('ai_conversations').findOne({
+                    userId: new ObjectId(decoded.userId)
+                });
+
+                return res.status(200).json({
+                    history: conversation ? conversation.messages : []
+                });
+            } catch (e) {
+                return res.status(401).json({ message: 'Invalid token' });
+            }
+        }
+
+        if (req.method === 'POST' && queryAction === 'clear') {
+            const token = req.headers.authorization?.replace('Bearer ', '');
+            if (!token) return res.status(401).json({ message: 'Unauthorized' });
+
+            try {
+                const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
+                const db = await getDb();
+                await db.collection('ai_conversations').deleteOne({ userId: new ObjectId(decoded.userId) });
+                return res.status(200).json({ message: 'Conversation cleared' });
+            } catch (e) {
+                return res.status(401).json({ message: 'Invalid token' });
+            }
         }
 
         // --- Standard AI Generation ---
@@ -160,9 +161,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(405).json({ message: 'Method not allowed' });
         }
 
-        const { question, conversationHistory, systemPrompt, subject, context, type, action } = req.body;
+        const { question, conversationHistory, systemPrompt, subject, context, type, action: bodyAction } = req.body;
 
-        if (!question && type !== 'generate-paper' && action !== 'chat') {
+        if (!question && type !== 'generate-paper' && bodyAction !== 'chat') {
             return res.status(400).json({ message: 'Question is required' });
         }
 
@@ -193,7 +194,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // Determine if this is a chat (with history) or a simple ask
-        const isChat = (conversationHistory && Array.isArray(conversationHistory)) || action === 'chat';
+        const isChat = (conversationHistory && Array.isArray(conversationHistory)) || bodyAction === 'chat';
 
         // Build messages array
         const messages: any[] = [
