@@ -105,7 +105,11 @@ export default function Preparation() {
                 if (year) {
                     const course = year.courses?.find(c => c.id === user.branch) // Branch/Course
                     if (course) {
-                        const semester = course.semesters?.find(s => s.id === user.semester?.toString())
+                        const semester = course.semesters?.find(s =>
+                            s.id === user.semester?.toString() ||
+                            s.name === user.semester?.toString() ||
+                            s.id === `semester-${user.semester}`
+                        )
                         if (semester) {
                             setSelProgramId(program.id)
                             setSelYearId(year.id)

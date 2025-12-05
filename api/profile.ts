@@ -111,7 +111,7 @@ async function handleUpdateProfile(req: VercelRequest, userId: string, res: Verc
     if (name) updateFields.name = name;
     if (email) updateFields.email = email;
     if (phone) updateFields.phone = phone;
-    if (semester) updateFields.semester = parseInt(semester as string);
+    if (semester) updateFields.semester = semester;
     if (college) updateFields.college = college;
     if (branch) updateFields.branch = branch;
     if (course) updateFields.course = course;

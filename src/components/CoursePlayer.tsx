@@ -8,7 +8,6 @@ import {
     X,
     Search,
     ChevronDown,
-    BookOpen,
     MonitorPlay,
     ListVideo,
     Clock,
@@ -37,6 +36,7 @@ export default function CoursePlayer() {
     const programId = searchParams.get('program')
     const yearId = searchParams.get('year')
     const courseId = searchParams.get('course')
+    const semesterId = searchParams.get('semester')
     const subjectName = searchParams.get('subject')
 
     // State
@@ -89,62 +89,19 @@ export default function CoursePlayer() {
         // Scroll top on mount
         window.scrollTo(0, 0)
 
-        const fetchStructure = async () => {
-            try {
-                // 1. Try Fetching from API
-                const res = await fetch('/api/admin?action=structure')
-                if (!res.ok) throw new Error('API Failed')
-                const data = await res.json()
-                processData(data)
-            } catch (err) {
-                // 2. Fallback: Use Mock Data if API fails
-                console.log("Using Mock Data (Fallback)")
-                const mockData = {
-                    programs: [
-                        {
-                            id: 'p1', name: 'B.Tech', years: [
-                                {
-                                    id: 'y1', name: '1st Year', courses: [
-                                        {
-                                            id: 'c1', name: 'CSE', subjects: [
-                                                {
-                                                    name: 'Engineering Physics',
-                                                    units: [
-                                                        {
-                                                            name: 'Quantum Mechanics',
-                                                            videos: [
-                                                                { id: 'v1', title: 'Introduction to Quantum Mechanics', url: 'https://www.youtube.com/watch?v=PyCS5xG9d_c', duration: '10:05' },
-                                                                { id: 'v2', title: 'Wave Particle Duality', url: 'https://www.youtube.com/watch?v=Q_h4IoPJXZw', duration: '15:20' },
-                                                                { id: 'v3', title: 'Schrodinger Wave Equation', url: 'https://www.youtube.com/watch?v=uK60IdXN6RE', duration: '12:45' }
-                                                            ]
-                                                        },
-                                                        {
-                                                            name: 'Optics & Lasers',
-                                                            videos: [
-                                                                { id: 'v4', title: 'Interference of Light', url: 'https://www.youtube.com/watch?v=M9Uvl0FqNww', duration: '08:30' },
-                                                                { id: 'v5', title: 'Diffraction Gratings', url: 'https://www.youtube.com/watch?v=9D8cPrEAGqc', duration: '14:10' }
-                                                            ]
-                                                        }
-                                                    ]
-                                                },
-                                                // Add more mock subjects if needed
-                                            ]
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
-                    ]
-                }
-                processData(mockData)
-            }
-        }
-
         const processData = (data: any) => {
             const program = data.programs?.find((p: any) => p.id === programId)
             const year = program?.years?.find((y: any) => y.id === yearId)
             const course = year?.courses?.find((c: any) => c.id === courseId)
-            const subject = course?.subjects?.find((s: any) => (typeof s === 'string' ? s : s.name) === subjectName)
+
+            // Find Semester
+            let semester = course?.semesters?.find((s: any) => s.id === semesterId)
+            // Fallback for ID mismatch
+            if (!semester && semesterId) {
+                semester = course?.semesters?.find((s: any) => s.name === semesterId || s.id === `semester-${semesterId}`)
+            }
+
+            const subject = semester?.subjects?.find((s: any) => (typeof s === 'string' ? s : s.name) === subjectName)
 
             if (subject) {
                 // Normalize data structure
@@ -171,8 +128,62 @@ export default function CoursePlayer() {
             setLoading(false)
         }
 
+        const fetchStructure = async () => {
+            try {
+                // 1. Try Fetching from API
+                const res = await fetch('/api/admin?action=structure')
+                if (!res.ok) throw new Error('API Failed')
+                const data = await res.json()
+                processData(data)
+            } catch (err) {
+                // 2. Fallback: Use Mock Data if API fails
+                console.log("Using Mock Data (Fallback)")
+                const mockData = {
+                    programs: [
+                        {
+                            id: 'p1', name: 'B.Tech', years: [
+                                {
+                                    id: 'y1', name: '1st Year', courses: [
+                                        {
+                                            id: 'c1', name: 'CSE', semesters: [
+                                                {
+                                                    id: 's1', name: 'Semester 1', subjects: [
+                                                        {
+                                                            name: 'Engineering Physics',
+                                                            units: [
+                                                                {
+                                                                    name: 'Quantum Mechanics',
+                                                                    videos: [
+                                                                        { id: 'v1', title: 'Introduction to Quantum Mechanics', url: 'https://www.youtube.com/watch?v=PyCS5xG9d_c', duration: '10:05' },
+                                                                        { id: 'v2', title: 'Wave Particle Duality', url: 'https://www.youtube.com/watch?v=Q_h4IoPJXZw', duration: '15:20' },
+                                                                        { id: 'v3', title: 'Schrodinger Wave Equation', url: 'https://www.youtube.com/watch?v=uK60IdXN6RE', duration: '12:45' }
+                                                                    ]
+                                                                },
+                                                                {
+                                                                    name: 'Optics & Lasers',
+                                                                    videos: [
+                                                                        { id: 'v4', title: 'Interference of Light', url: 'https://www.youtube.com/watch?v=M9Uvl0FqNww', duration: '08:30' },
+                                                                        { id: 'v5', title: 'Diffraction Gratings', url: 'https://www.youtube.com/watch?v=9D8cPrEAGqc', duration: '14:10' }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+                processData(mockData)
+            }
+        }
+
         fetchStructure()
-    }, [programId, yearId, courseId, subjectName])
+    }, [programId, yearId, courseId, semesterId, subjectName])
 
     // Helper: Extract YouTube ID
     const getYouTubeId = (url: string) => {

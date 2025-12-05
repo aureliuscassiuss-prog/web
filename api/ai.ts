@@ -83,6 +83,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 Program: ${program}
                 Year: ${year}
                 Branch: ${branch}
+                Semester: ${req.body.semester}
                 
                 Strictly return ONLY a valid JSON object with this structure (no markdown, no other text):
                 {

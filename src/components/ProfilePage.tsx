@@ -172,7 +172,7 @@ export default function ProfilePage() {
         name: user?.name || '',
         email: user?.email || '',
         phone: user?.phone || '',
-        semester: user?.semester || 1,
+        semester: user?.semester || '',
         college: user?.college || 'Medicaps University',
         course: user?.course || '',
         branch: user?.branch || '',
@@ -476,7 +476,7 @@ export default function ProfilePage() {
                                 placeholder="Select Program"
                                 isOpen={activeField === 'program'}
                                 onToggle={() => toggleField('program')}
-                                onChange={(val) => setFormData({ ...formData, course: val, year: 1, branch: '', semester: 1 })}
+                                onChange={(val) => setFormData({ ...formData, course: val, year: 1, branch: '', semester: '' })}
                                 options={programs.map((p: any) => ({ label: p.name, value: p.id }))}
                             />
                         </UnifiedField>
@@ -489,7 +489,7 @@ export default function ProfilePage() {
                                 placeholder="Select Year"
                                 isOpen={activeField === 'year'}
                                 onToggle={() => toggleField('year')}
-                                onChange={(val) => setFormData({ ...formData, year: parseInt(val), branch: '', semester: 1 })}
+                                onChange={(val) => setFormData({ ...formData, year: parseInt(val), branch: '', semester: '' })}
                                 options={years.map((y: any) => ({ label: y.name, value: y.id }))}
                             />
                         </UnifiedField>
@@ -503,7 +503,7 @@ export default function ProfilePage() {
                                     placeholder="Select Branch"
                                     isOpen={activeField === 'branch'}
                                     onToggle={() => toggleField('branch')}
-                                    onChange={(val) => setFormData({ ...formData, branch: val, semester: 1 })}
+                                    onChange={(val) => setFormData({ ...formData, branch: val, semester: '' })}
                                     options={courses.map((c: any) => ({ label: c.name, value: c.id }))}
                                 />
                             </UnifiedField>
@@ -517,7 +517,7 @@ export default function ProfilePage() {
                                 placeholder="Select Semester"
                                 isOpen={activeField === 'semester'}
                                 onToggle={() => toggleField('semester')}
-                                onChange={(val) => setFormData({ ...formData, semester: parseInt(val) })}
+                                onChange={(val) => setFormData({ ...formData, semester: val })}
                                 options={semesters.map((s: any) => ({ label: s.name, value: s.id }))}
                             />
                         </UnifiedField>
