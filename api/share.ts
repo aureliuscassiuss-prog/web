@@ -113,103 +113,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 { $project: { uploaderDetails: 0 } }
             ];
 
-            // If user is logged in, lookup their interactions
+            // If user is logged in, check their interactions from the arrays
             if (currentUserId) {
-                aggregationPipeline.push(
-                    // Lookup Saved status
-                    {
-                        $lookup: {
-                            from: 'savedResources',
-                            let: { resourceId: { $toString: '$_id' } },
-                            pipeline: [
-                                {
-                                    $match: {
-                                        $expr: {
-                                            $and: [
-                                                { $eq: ['$userId', currentUserId] },
-                                                { $eq: ['$resourceId', '$$resourceId'] }
-                                            ]
-                                        }
-                                    }
-                                }
-                            ],
-                            as: 'savedStatus'
-                        }
-                    },
-                    // Lookup Interaction status (Like/Dislike/Flag)
-                    {
-                        $lookup: {
-                            from: 'resourceInteractions',
-                            let: { resourceId: { $toString: '$_id' } },
-                            pipeline: [
-                                {
-                                    $match: {
-                                        $expr: {
-                                            $and: [
-                                                { $eq: ['$userId', currentUserId] },
-                                                { $eq: ['$resourceId', '$$resourceId'] }
-                                            ]
-                                        }
-                                    }
-                                }
-                            ],
-                            as: 'interactionStatus'
-                        }
-                    },
-                    {
-                        $addFields: {
-                            userSaved: { $gt: [{ $size: '$savedStatus' }, 0] },
-                            userLiked: {
-                                $gt: [
-                                    {
-                                        $size: {
-                                            $filter: {
-                                                input: '$interactionStatus',
-                                                as: 'i',
-                                                cond: { $eq: ['$$i.type', 'like'] }
-                                            }
-                                        }
-                                    },
-                                    0
-                                ]
-                            },
-                            userDisliked: {
-                                $gt: [
-                                    {
-                                        $size: {
-                                            $filter: {
-                                                input: '$interactionStatus',
-                                                as: 'i',
-                                                cond: { $eq: ['$$i.type', 'dislike'] }
-                                            }
-                                        }
-                                    },
-                                    0
-                                ]
-                            },
-                            userFlagged: {
-                                $gt: [
-                                    {
-                                        $size: {
-                                            $filter: {
-                                                input: '$interactionStatus',
-                                                as: 'i',
-                                                cond: { $eq: ['$$i.type', 'flag'] }
-                                            }
-                                        }
-                                    },
-                                    0
-                                ]
-                            }
-                        }
-                    },
-                    {
-                        $project: {
-                            savedStatus: 0,
-                            interactionStatus: 0
+                aggregationPipeline.push({
+                    $addFields: {
+                        userSaved: {
+                            $in: [currentUserId, { $ifNull: ['$savedBy', []] }]
+                        },
+                        userLiked: {
+                            $in: [currentUserId, { $ifNull: ['$likedBy', []] }]
+                        },
+                        userDisliked: {
+                            $in: [currentUserId, { $ifNull: ['$dislikedBy', []] }]
+                        },
+                        userFlagged: {
+                            $in: [currentUserId, { $ifNull: ['$flaggedBy', []] }]
                         }
                     }
-                );
+                });
             }
 
             const resources = await db.collection('resources').aggregate(aggregationPipeline).toArray();
