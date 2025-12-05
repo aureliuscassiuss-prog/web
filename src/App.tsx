@@ -167,6 +167,25 @@ function ProtectedRoute({ children, onAuthRequired }: { children: React.ReactNod
   return <>{children}</>
 }
 
+// Protected Admin Route Component
+function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth()
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-white dark:bg-black">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
+      </div>
+    )
+  }
+
+  if (!user || !['admin', 'semi-admin', 'content-reviewer', 'structure-manager'].includes(user.role || '')) {
+    return <Navigate to="/" replace />
+  }
+
+  return <>{children}</>
+}
+
 function AppContent() {
   const { user } = useAuth()
 
@@ -357,7 +376,9 @@ function AppContent() {
 
           {/* Admin Route (Protected) */}
           <Route path="/admin" element={
-            user && ['admin', 'semi-admin', 'content-reviewer', 'structure-manager'].includes(user.role || '') ? <AdminPanel /> : <Navigate to="/" replace />
+            <ProtectedAdminRoute>
+              <AdminPanel />
+            </ProtectedAdminRoute>
           } />
 
 
