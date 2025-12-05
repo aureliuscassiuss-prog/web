@@ -35,28 +35,28 @@ export default function SharedResourcesPage() {
     }, [slug]);
 
     // --- Skeleton Loader ---
+    // --- Premium Loading State (Spinner) ---
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-gray-50 dark:bg-black p-4 sm:p-8">
-                <div className="max-w-7xl mx-auto space-y-8 animate-pulse">
-                    {/* Header Skeleton */}
-                    <div className="bg-white/50 dark:bg-gray-900/50 rounded-3xl p-6 sm:p-10 border border-gray-200 dark:border-gray-800 h-64 flex flex-col justify-center relative overflow-hidden">
-                        <div className="flex items-center gap-6">
-                            <div className="w-24 h-24 rounded-full bg-gray-200 dark:bg-gray-800" />
-                            <div className="space-y-3 flex-1">
-                                <div className="h-4 w-32 bg-gray-200 dark:bg-gray-800 rounded" />
-                                <div className="h-8 w-64 bg-gray-200 dark:bg-gray-800 rounded" />
-                                <div className="h-4 w-48 bg-gray-200 dark:bg-gray-800 rounded" />
-                            </div>
+            <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-black font-sans">
+                <div className="relative">
+                    {/* Glowing outer ring */}
+                    <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full" />
+
+                    {/* Reviewing Spinner */}
+                    <div className="relative w-24 h-24">
+                        <div className="absolute inset-0 rounded-full border-4 border-t-blue-600 border-r-transparent border-b-purple-600 border-l-transparent animate-spin" />
+
+                        {/* Center Icon (Placeholder until data loads) */}
+                        <div className="absolute inset-2 bg-white dark:bg-gray-900 rounded-full flex items-center justify-center shadow-inner">
+                            <User className="w-8 h-8 text-gray-400 animate-pulse" />
                         </div>
                     </div>
+                </div>
 
-                    {/* Grid Skeleton */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                        {[1, 2, 3, 4, 5, 6].map((i) => (
-                            <div key={i} className="h-48 rounded-2xl bg-gray-200 dark:bg-gray-900" />
-                        ))}
-                    </div>
+                <div className="mt-8 text-center space-y-2 animate-fade-in">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Fetching Profile...</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Loading shared resources</p>
                 </div>
             </div>
         );
