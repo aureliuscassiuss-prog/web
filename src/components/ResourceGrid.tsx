@@ -453,7 +453,6 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
         if (filters?.subject) params.append('subject', filters.subject)
         if (filters?.course) params.append('course', filters.course)
         if (filters?.unit) params.append('unit', filters.unit)
-        if (filters?.unit) params.append('unit', filters.unit)
         if (type) params.append('type', type)
         // Add examYear if provided
         if (selectedPyqYear) params.append('examYear', selectedPyqYear);

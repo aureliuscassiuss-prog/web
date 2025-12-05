@@ -127,8 +127,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             // Unit filtering
+            // Unit filtering (Flexible matching)
             if (typeof unit === 'string') {
-                query.unit = unit;
+                // escape regex strings
+                const escapedUnit = unit.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                // Create a regex that allows optional "Unit " prefix and case insensitivity
+                // If user sends "1", it matches "Unit 1", "unit 1", "1"
+                // If user sends "Unit 1", it matches "Unit 1"
+                // We'll strip "Unit" "unit" from the input and from the db just to be safe or just use flexible regex
+
+                const numberOnly = unit.replace(/unit\s*/i, '');
+
+                query.unit = {
+                    $regex: new RegExp(`(unit\\s*)?${numberOnly}$`, 'i')
+                };
             }
 
             // Fetch resources with uploader details
