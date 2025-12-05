@@ -1,11 +1,11 @@
-
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import AuthModal from './AuthModal';
 import {
     Bookmark, FileText, Download,
-    ThumbsUp, ThumbsDown, Flag, Share2, User, LayoutGrid, ArrowRight
+    ThumbsUp, ThumbsDown, Flag, Share2, User, LayoutGrid, ArrowRight,
+    Sun, Moon, CloudSun
 } from 'lucide-react';
 
 export default function SharedResourcesPage() {
@@ -15,6 +15,7 @@ export default function SharedResourcesPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+    const [timeOfDay, setTimeOfDay] = useState<'morning' | 'afternoon' | 'evening'>('morning');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -39,6 +40,30 @@ export default function SharedResourcesPage() {
 
         if (slug) fetchData();
     }, [slug, token]);
+
+    useEffect(() => {
+        const hour = new Date().getHours();
+        if (hour >= 5 && hour < 12) {
+            setTimeOfDay('morning');
+        } else if (hour >= 12 && hour < 17) {
+            setTimeOfDay('afternoon');
+        } else {
+            setTimeOfDay('evening');
+        }
+    }, []);
+
+    const getHeroBackground = () => {
+        switch (timeOfDay) {
+            case 'morning':
+                return 'from-orange-100 via-amber-100 to-blue-100 dark:from-orange-950/30 dark:via-amber-900/20 dark:to-blue-950/30';
+            case 'afternoon':
+                return 'from-blue-100 via-sky-100 to-cyan-100 dark:from-blue-950/30 dark:via-sky-900/20 dark:to-cyan-950/30';
+            case 'evening':
+                return 'from-indigo-100 via-purple-100 to-slate-200 dark:from-indigo-950/40 dark:via-purple-950/30 dark:to-slate-900/40';
+            default:
+                return 'from-gray-100 to-gray-200';
+        }
+    };
 
     // --- Premium Loading State (Spinner) ---
     if (isLoading) {
@@ -83,17 +108,40 @@ export default function SharedResourcesPage() {
             <div className="max-w-7xl mx-auto space-y-6 animate-fade-in-up">
 
                 {/* Dashboard-style Header */}
-                <div className="relative overflow-hidden bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-[2rem] p-6 sm:p-10 border border-white/50 dark:border-gray-800/50 shadow-sm">
-                    {/* Background Gradients */}
-                    <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-br from-blue-400/10 to-purple-400/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
-                    <div className="absolute bottom-0 left-0 w-[250px] h-[250px] bg-gradient-to-tr from-emerald-400/10 to-teal-400/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3 pointer-events-none" />
+                <div className={`relative overflow-hidden rounded-[2rem] bg-gradient-to-br ${getHeroBackground()} backdrop-blur-xl p-6 sm:p-10 border border-white/40 dark:border-gray-700/30 shadow-2xl shadow-gray-200/50 dark:shadow-black/20 transition-colors duration-1000`}>
+
+                    {/* Dynamic Celestial Bodies */}
+                    <div className="absolute top-0 right-0 w-full h-full pointer-events-none overflow-hidden">
+                        {timeOfDay === 'morning' && (
+                            <>
+                                <div className="absolute -top-10 -right-10 w-48 h-48 bg-yellow-300/40 rounded-full blur-3xl animate-pulse" />
+                                <Sun className="absolute top-6 right-6 w-24 h-24 text-orange-400/20 rotate-12" />
+                                <CloudSun className="absolute top-12 right-20 w-16 h-16 text-white/40 dark:text-white/10" />
+                            </>
+                        )}
+                        {timeOfDay === 'afternoon' && (
+                            <>
+                                <div className="absolute -top-20 -right-20 w-64 h-64 bg-yellow-200/50 rounded-full blur-[60px]" />
+                                <Sun className="absolute -top-4 -right-4 w-32 h-32 text-yellow-500/20 animate-spin-slow" style={{ animationDuration: '20s' }} />
+                            </>
+                        )}
+                        {timeOfDay === 'evening' && (
+                            <>
+                                <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-900/20 via-transparent to-transparent" />
+                                <div className="absolute top-8 right-32 w-1 h-1 bg-white rounded-full animate-ping" />
+                                <div className="absolute top-20 right-10 w-1 h-1 bg-white rounded-full animate-pulse" />
+                                <div className="absolute top-4 right-52 w-0.5 h-0.5 bg-white rounded-full" />
+                                <Moon className="absolute top-6 right-6 w-20 h-20 text-indigo-300/30 -rotate-12 drop-shadow-lg" />
+                            </>
+                        )}
+                    </div>
 
                     <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6 sm:gap-8 text-center md:text-left">
                         {/* Profile Picture */}
                         <div className="group relative shrink-0">
-                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full blur opacity-40 group-hover:opacity-60 transition-opacity duration-500" />
-                            <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full p-1 bg-gradient-to-br from-white to-gray-100 dark:from-gray-800 dark:to-gray-900 shadow-xl">
-                                <div className="w-full h-full rounded-full bg-white dark:bg-gray-800 overflow-hidden flex items-center justify-center border-4 border-white dark:border-gray-800">
+                            <div className={`absolute inset-0 bg-gradient-to-br ${timeOfDay === 'evening' ? 'from-indigo-500 to-purple-600' : 'from-orange-400 to-yellow-500'} rounded-full blur opacity-40 group-hover:opacity-60 transition-opacity duration-500`} />
+                            <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full p-1 bg-white/80 dark:bg-black/30 backdrop-blur-md shadow-xl border border-white/50 dark:border-white/10">
+                                <div className="w-full h-full rounded-full bg-white dark:bg-gray-800 overflow-hidden flex items-center justify-center">
                                     {data.user.avatar ? (
                                         <img src={data.user.avatar} alt={data.user.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-out" />
                                     ) : (
@@ -107,7 +155,7 @@ export default function SharedResourcesPage() {
                         </div>
 
                         <div className="flex-1 pt-1">
-                            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50/80 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 rounded-full text-[10px] sms:text-xs font-bold uppercase tracking-wider mb-3 border border-blue-100 dark:border-blue-800/50 shadow-sm">
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/70 dark:bg-black/40 backdrop-blur-md text-blue-600 dark:text-blue-300 rounded-full text-[10px] sms:text-xs font-bold uppercase tracking-wider mb-3 border border-white/50 dark:border-white/10 shadow-sm">
                                 <Share2 className="w-3 h-3" />
                                 Shared Collection
                             </div>
@@ -124,7 +172,7 @@ export default function SharedResourcesPage() {
 
                     {/* Special Note Card */}
                     {data.list?.note && (
-                        <div className="relative z-10 mt-6 bg-yellow-50/50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-900/30 rounded-xl p-4 sm:p-5 flex gap-3 text-left">
+                        <div className="relative z-10 mt-6 bg-white/60 dark:bg-black/20 backdrop-blur-md border border-white/40 dark:border-white/5 rounded-xl p-4 sm:p-5 flex gap-3 text-left shadow-sm">
                             <div className="shrink-0 pt-0.5">
                                 <FileText className="w-5 h-5 text-yellow-600 dark:text-yellow-500" />
                             </div>
