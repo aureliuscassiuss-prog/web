@@ -80,7 +80,7 @@ export default function SharedResourcesPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#F3F4F6] dark:bg-black p-4 sm:p-8 font-sans selection:bg-blue-100 dark:selection:bg-blue-900">
+        <div className="min-h-screen bg-white dark:bg-black p-4 sm:p-8 font-sans selection:bg-blue-100 dark:selection:bg-blue-900">
             <div className="max-w-7xl mx-auto space-y-6 animate-fade-in-up">
 
                 {/* Dashboard-style Header */}
