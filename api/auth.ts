@@ -28,7 +28,7 @@ interface User {
     updatedAt?: Date;
 }
 
-const ADMIN_EMAIL = 'rajraja8852@gmail.com';
+const ADMIN_EMAIL = 'trilliontip@gmail.com';
 
 // Configure Nodemailer Transporter for Brevo
 const transporter = nodemailer.createTransport({
