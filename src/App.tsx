@@ -29,6 +29,7 @@ import DocsPage from './components/DocsPage'
 import PrivacyPage from './components/PrivacyPage'
 import TermsPage from './components/TermsPage'
 import SavedResources from './components/SavedResources'
+import SharedResourcesPage from './components/SharedResourcesPage'
 import SEO from './components/SEO'
 import AttendanceManager from './components/attendance/AttendanceManager'
 
@@ -439,6 +440,9 @@ function AppContent() {
 
           {/* Terms Route */}
           <Route path="/terms" element={<TermsPage />} />
+
+          {/* Shared Resources Route */}
+          <Route path="/shared/:slug" element={<SharedResourcesPage />} />
 
           {/* Catch all */}
           <Route path="*" element={<Navigate to="/" replace />} />

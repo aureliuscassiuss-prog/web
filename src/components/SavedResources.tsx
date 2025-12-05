@@ -2,13 +2,18 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
     Bookmark, Loader2, FileText, Download,
-    ThumbsUp, ThumbsDown, Flag, Trash2
+    ThumbsUp, ThumbsDown, Flag, Share2, Check
 } from 'lucide-react';
 
 export default function SavedResources() {
     const { token } = useAuth();
     const [resources, setResources] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+
+    // Share State
+    const [isSharing, setIsSharing] = useState(false);
+    const [shareUrl, setShareUrl] = useState<string | null>(null);
+    const [justCopied, setJustCopied] = useState(false);
 
     useEffect(() => {
         const fetchSavedResources = async () => {
@@ -38,10 +43,45 @@ export default function SavedResources() {
         fetchSavedResources();
     }, [token]);
 
+    const handleShare = async () => {
+        if (!token) return;
+
+        // If we already have the URL, just copy it again
+        if (shareUrl) {
+            navigator.clipboard.writeText(shareUrl);
+            setJustCopied(true);
+            setTimeout(() => setJustCopied(false), 2000);
+            return;
+        }
+
+        setIsSharing(true);
+        try {
+            const res = await fetch('/api/share', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                const url = `${window.location.origin}/shared/${data.slug}`;
+                setShareUrl(url);
+                navigator.clipboard.writeText(url);
+                setJustCopied(true);
+                setTimeout(() => setJustCopied(false), 2000);
+            }
+        } catch (error) {
+            console.error('Failed to generate share link', error);
+        } finally {
+            setIsSharing(false);
+        }
+    };
+
     // Optional: Handler if you want items to disappear immediately when unsaved
-    const handleUnsave = (id: string) => {
+    const handleUnsave = (_id: string) => {
         // setResources(prev => prev.filter(r => r._id !== id));
     };
+
+    // ... Loading and Auth checks ...
 
     if (isLoading) {
         return (
@@ -63,11 +103,33 @@ export default function SavedResources() {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
-            <div className="mb-8">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Saved Resources</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    You have <strong>{resources.length}</strong> bookmarked resource{resources.length !== 1 && 's'}
-                </p>
+            <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Saved Resources</h1>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        You have <strong>{resources.length}</strong> bookmarked resource{resources.length !== 1 && 's'}
+                    </p>
+                </div>
+
+                {resources.length > 0 && (
+                    <button
+                        onClick={handleShare}
+                        disabled={isSharing}
+                        className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all shadow-sm ${justCopied
+                            ? 'bg-green-100 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800'
+                            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md'
+                            }`}
+                    >
+                        {isSharing ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : justCopied ? (
+                            <Check className="w-4 h-4" />
+                        ) : (
+                            <Share2 className="w-4 h-4" />
+                        )}
+                        {isSharing ? 'Generating Link...' : justCopied ? 'Link Copied!' : 'Share Collection'}
+                    </button>
+                )}
             </div>
 
             {resources.length === 0 ? (
