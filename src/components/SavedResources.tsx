@@ -142,21 +142,21 @@ export default function SavedResources() {
                 </div>
 
                 {resources.length > 0 && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
                         <button
                             onClick={toggleSelectionMode}
-                            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all shadow-sm ${isSelectionMode
+                            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-xl text-sm font-medium transition-all shadow-sm ${isSelectionMode
                                 ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800'
                                 : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                                 }`}
                         >
-                            {isSelectionMode ? 'Cancel Selection' : 'Select'}
+                            {isSelectionMode ? 'Cancel' : 'Select'}
                         </button>
 
                         <button
                             onClick={handleShare}
                             disabled={isSharing || (isSelectionMode && selectedIds.size === 0)}
-                            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all shadow-sm ${justCopied
+                            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-xl text-sm font-medium transition-all shadow-sm ${justCopied
                                 ? 'bg-green-100 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800'
                                 : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md'
                                 } ${(isSelectionMode && selectedIds.size === 0) ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -168,7 +168,7 @@ export default function SavedResources() {
                             ) : (
                                 <Share2 className="w-4 h-4" />
                             )}
-                            {isSharing ? 'Generating...' : justCopied ? 'Copied!' : (isSelectionMode && selectedIds.size > 0 ? `Share (${selectedIds.size})` : 'Share Collection')}
+                            {isSharing ? 'Generating...' : justCopied ? 'Copied!' : (isSelectionMode && selectedIds.size > 0 ? `Share (${selectedIds.size})` : 'Share')}
                         </button>
                     </div>
                 )}
@@ -333,8 +333,8 @@ const GridCard = ({ resource, onUnsave, isSelectionMode, isSelected, onToggleSel
             {isSelectionMode && (
                 <div className="absolute top-4 right-4 z-10">
                     <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${isSelected
-                            ? 'bg-blue-500 border-blue-500 text-white'
-                            : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600'
+                        ? 'bg-blue-500 border-blue-500 text-white'
+                        : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600'
                         }`}>
                         {isSelected && <Check className="w-3.5 h-3.5" />}
                     </div>
