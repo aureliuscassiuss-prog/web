@@ -80,7 +80,16 @@ export default function AdminPanel() {
     const { token } = useAuth()
 
     // Tabs & Data State
-    const [activeTab, setActiveTab] = useState<'pending' | 'users' | 'structure'>('pending')
+    const [activeTab, setActiveTab] = useState<'pending' | 'users' | 'structure'>(() => {
+        if (typeof window !== 'undefined') {
+            return (localStorage.getItem('adminActiveTab') as 'pending' | 'users' | 'structure') || 'pending'
+        }
+        return 'pending'
+    })
+
+    useEffect(() => {
+        localStorage.setItem('adminActiveTab', activeTab)
+    }, [activeTab])
     const [pendingResources, setPendingResources] = useState<PendingResource[]>([])
     const [users, setUsers] = useState<UserData[]>([])
     const [structure, setStructure] = useState<{ programs: Program[] }>({ programs: [] })
@@ -308,55 +317,31 @@ export default function AdminPanel() {
                     </div>
                 </div>
 
+                {/* --- NAVIGATION TABS START --- */}
                 <div className="mb-8 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
-                    <div className="relative flex md:grid md:grid-cols-3 gap-1 p-1 bg-gray-200/50 dark:bg-white/5 rounded-xl justify-around md:w-full">
-
-                        {/* Mobile Indicators (Individual) */}
-                        <div className="contents md:hidden">
-                            {activeTab === 'pending' && (
-                                <motion.div
-                                    layoutId="active-tab-mobile"
-                                    className="absolute bottom-1 left-1 top-1 rounded-lg bg-white dark:bg-gray-800 shadow-sm z-0"
-                                    style={{ width: 'calc(33.33% - 0.5rem)' }}
-                                    transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
-                                />
-                            )}
-                            {activeTab === 'users' && (
-                                <motion.div
-                                    layoutId="active-tab-mobile"
-                                    className="absolute bottom-1 top-1 rounded-lg bg-white dark:bg-gray-800 shadow-sm z-0"
-                                    style={{ left: '33.33%', width: 'calc(33.33% - 0.5rem)' }}
-                                    transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
-                                />
-                            )}
-                            {activeTab === 'structure' && (
-                                <motion.div
-                                    layoutId="active-tab-mobile"
-                                    className="absolute bottom-1 right-1 top-1 rounded-lg bg-white dark:bg-gray-800 shadow-sm z-0"
-                                    style={{ width: 'calc(33.33% - 0.5rem)' }}
-                                    transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
-                                />
-                            )}
-                        </div>
-
-                        {/* Desktop Indicator (Single Sliding) */}
-                        <motion.div
-                            layoutId="active-tab-desktop"
-                            className="absolute bottom-1 top-1 rounded-lg bg-white dark:bg-gray-800 shadow-sm z-0 hidden md:block"
-                            style={{
-                                left: activeTab === 'pending' ? '0.25rem' : activeTab === 'users' ? 'calc(33.333% + 0.125rem)' : 'calc(66.666% + 0.25rem)',
-                                width: 'calc(33.333% - 0.375rem)'
-                            }}
-                            transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                    <div className="relative flex md:grid md:grid-cols-3 gap-1 p-1 bg-gray-200/50 dark:bg-white/5 rounded-xl w-full">
+                        <TabButton
+                            active={activeTab === 'pending'}
+                            onClick={() => setActiveTab('pending')}
+                            icon={<Clock size={16} />}
+                            label="Approvals"
+                            count={pendingResources.length}
                         />
-
-                        <div className="relative z-10 flex md:grid md:grid-cols-3 w-full gap-1 justify-around">
-                            <TabButton active={activeTab === 'pending'} onClick={() => setActiveTab('pending')} icon={<Clock size={16} />} label="Approvals" count={pendingResources.length} />
-                            <TabButton active={activeTab === 'users'} onClick={() => setActiveTab('users')} icon={<User size={16} />} label="Users" />
-                            <TabButton active={activeTab === 'structure'} onClick={() => setActiveTab('structure')} icon={<Settings size={16} />} label="Structure" />
-                        </div>
+                        <TabButton
+                            active={activeTab === 'users'}
+                            onClick={() => setActiveTab('users')}
+                            icon={<User size={16} />}
+                            label="Users"
+                        />
+                        <TabButton
+                            active={activeTab === 'structure'}
+                            onClick={() => setActiveTab('structure')}
+                            icon={<Settings size={16} />}
+                            label="Structure"
+                        />
                     </div>
                 </div>
+                {/* --- NAVIGATION TABS END --- */}
 
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                     {isLoading ? (
@@ -399,21 +384,27 @@ function StatusBadge({ type, label }: { type: 'success' | 'warning' | 'danger' |
 
 function TabButton({ active, onClick, icon, label, count }: any) {
     return (
-        <motion.button
+        <button
             onClick={onClick}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            transition={{ duration: 0.2 }}
-            className={`relative flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all md:w-full ${active ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-white/5'}`}
+            className={`relative flex-1 flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all w-full ${active ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-white/5'}`}
         >
-            {icon}
-            <span className="hidden sm:inline">{label}</span>
+            {active && (
+                <motion.div
+                    layoutId="active-tab-indicator"
+                    className="absolute inset-0 rounded-lg bg-white dark:bg-gray-800 shadow-sm z-0"
+                    transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                />
+            )}
+            <span className="relative z-10 flex items-center gap-2">
+                {icon}
+                <span className="hidden sm:inline">{label}</span>
+            </span>
             {count > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white shadow-sm ring-2 ring-white dark:ring-gray-900 sm:static sm:h-auto sm:w-auto sm:px-1.5 sm:py-0.5 sm:ring-0">
+                <span className="relative z-10 -ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white shadow-sm ring-2 ring-white dark:ring-gray-900 sm:ml-0 sm:-mt-2">
                     {count}
                 </span>
             )}
-        </motion.button>
+        </button>
     )
 }
 
