@@ -4,7 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
     Bookmark, FileText, Download,
-    ThumbsUp, Flag, Share2, User, LayoutGrid
+    ThumbsUp, Flag, Share2, User, LayoutGrid, ArrowRight
 } from 'lucide-react';
 
 export default function SharedResourcesPage() {
