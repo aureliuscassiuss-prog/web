@@ -42,7 +42,6 @@ export default function AIAssistantPage() {
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const chatContainerRef = useRef<HTMLDivElement>(null)
-
     // --- Effects ---
     const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
         messagesEndRef.current?.scrollIntoView({ behavior })
@@ -51,6 +50,41 @@ export default function AIAssistantPage() {
     useEffect(() => {
         scrollToBottom()
     }, [messages, isTyping])
+
+    // Fetch History on Mount
+    useEffect(() => {
+        const fetchHistory = async () => {
+            if (!token) return;
+            try {
+                const res = await fetch('/api/ai?action=history', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.history && Array.isArray(data.history) && data.history.length > 0) {
+                        const historyMessages: Message[] = data.history.map((msg: any, i: number) => ({
+                            id: `hist-${i}`,
+                            text: msg.content,
+                            sender: msg.role === 'user' ? 'user' : 'bot',
+                            timestamp: new Date()
+                        }));
+
+                        setMessages(prev => {
+                            // Keep initial greeting if history is empty or if it's just the default
+                            if (prev.length === 1 && prev[0].id === 'init-1') {
+                                return [prev[0], ...historyMessages];
+                            }
+                            return historyMessages.length > 0 ? historyMessages : prev;
+                        });
+                        setConversationHistory(data.history);
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to load history', err);
+            }
+        };
+        fetchHistory();
+    }, [token]);
 
     // Auto-resize textarea
     useEffect(() => {
@@ -121,7 +155,16 @@ export default function AIAssistantPage() {
         }
     }
 
-    const resetConversation = () => {
+    const resetConversation = async () => {
+        if (token) {
+            try {
+                await fetch('/api/ai?action=clear', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+            } catch (e) { console.error(e); }
+        }
+
         setMessages([{
             id: Date.now().toString(),
             text: "Hello! I'm your Extrovert AI tutor. How can I assist you today?",

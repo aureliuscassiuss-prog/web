@@ -118,6 +118,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 });
             }
 
+            if (req.method === 'GET' && action === 'history') {
+                const token = req.headers.authorization?.replace('Bearer ', '');
+                if (!token) return res.status(401).json({ message: 'Unauthorized' });
+
+                try {
+                    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
+                    const db = await getDb();
+                    // Retrieve active conversation
+                    const conversation = await db.collection('ai_conversations').findOne({
+                        userId: new ObjectId(decoded.userId)
+                    });
+
+                    return res.status(200).json({
+                        history: conversation ? conversation.messages : []
+                    });
+                } catch (e) {
+                    return res.status(401).json({ message: 'Invalid token' });
+                }
+            }
+
+            if (req.method === 'POST' && action === 'clear') {
+                const token = req.headers.authorization?.replace('Bearer ', '');
+                if (!token) return res.status(401).json({ message: 'Unauthorized' });
+
+                try {
+                    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
+                    const db = await getDb();
+                    await db.collection('ai_conversations').deleteOne({ userId: new ObjectId(decoded.userId) });
+                    return res.status(200).json({ message: 'Conversation cleared' });
+                } catch (e) {
+                    return res.status(401).json({ message: 'Invalid token' });
+                }
+            }
+
             return res.status(400).json({ message: 'Invalid credits action' });
         }
 
@@ -126,15 +160,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(405).json({ message: 'Method not allowed' });
         }
 
-        const { question, conversationHistory, systemPrompt, subject, context, type } = req.body;
+        const { question, conversationHistory, systemPrompt, subject, context, type, action } = req.body;
 
-        if (!question && type !== 'generate-paper') {
+        if (!question && type !== 'generate-paper' && action !== 'chat') {
             return res.status(400).json({ message: 'Question is required' });
         }
 
         // Get user ID if authenticated
         let userId = null;
+        let isRestricted = false;
         const token = req.headers.authorization?.replace('Bearer ', '');
+
         if (token && process.env.JWT_SECRET) {
             try {
                 const decoded = jwt.verify(token, process.env.JWT_SECRET) as { userId: string };
@@ -145,15 +181,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
 
                 if (user && (user.isRestricted || user.isBanned)) {
-                    return res.status(403).json({ message: 'You have been restricted from using AI services.' });
+                    isRestricted = true;
                 }
             } catch (e) {
                 // Token invalid, continue as guest
             }
         }
 
+        if (isRestricted) {
+            return res.status(403).json({ message: 'You have been restricted from using AI services.' });
+        }
+
         // Determine if this is a chat (with history) or a simple ask
-        const isChat = conversationHistory && Array.isArray(conversationHistory);
+        const isChat = (conversationHistory && Array.isArray(conversationHistory)) || action === 'chat';
 
         // Build messages array
         const messages: any[] = [
@@ -168,7 +208,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ];
 
         // Add conversation history if present
-        if (isChat) {
+        if (isChat && conversationHistory) {
             messages.push(...conversationHistory);
         }
 
@@ -227,16 +267,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const answer = chatCompletion.choices[0]?.message?.content || 'Sorry, I could not generate a response.';
 
-        // Save conversation to database if user is authenticated and it's a chat
+        // --- PERSISTENCE & TTL LOGIC ---
         if (userId && isChat) {
             const db = await getDb();
-            await db.collection('chatSessions').insertOne({
-                userId: new ObjectId(userId),
-                question,
-                answer,
-                conversationHistory,
-                createdAt: new Date()
-            });
+            const conversationCollection = db.collection('ai_conversations');
+
+            // Create TTL index (only needs to be done once, but safe to call)
+            // Expire after 10 days (864000 seconds)
+            await conversationCollection.createIndex({ updatedAt: 1 }, { expireAfterSeconds: 864000 });
+
+            // Only store the new exchange to append to the document
+            const newMessages = [
+                { role: 'user', content: question },
+                { role: 'assistant', content: answer }
+            ];
+
+            await conversationCollection.updateOne(
+                { userId: new ObjectId(userId) },
+                {
+                    $push: { messages: { $each: newMessages } },
+                    $set: { updatedAt: new Date() },
+                    $setOnInsert: { createdAt: new Date() }
+                },
+                { upsert: true }
+            );
         }
 
         // Return appropriate response format
@@ -244,7 +298,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             res.json({
                 answer,
                 conversationHistory: [
-                    ...conversationHistory,
+                    ...(conversationHistory || []),
                     { role: 'user', content: question },
                     { role: 'assistant', content: answer }
                 ]
