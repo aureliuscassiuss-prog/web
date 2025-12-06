@@ -194,21 +194,22 @@
       transform: scale(1);
     }
   }
+}
 
 
 
-  /* --- PROTECTION STYLES --- */
-  /* Prevent Text Selection globally (except inputs) */
-  *:not(input):not(textarea) {
-    -webkit-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    -webkit-touch-callout: none;
-  }
+/* --- PROTECTION STYLES --- */
+/* Prevent Text Selection globally (except inputs) */
+*:not(input):not(textarea) {
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
 
-  /* Prevent Image Dragging & Interaction */
-  img {
-    pointer-events: none;
-    -webkit-user-drag: none;
-    user-select: none;
-  }
+/* Prevent Image Dragging & Interaction */
+img {
+  pointer-events: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}
