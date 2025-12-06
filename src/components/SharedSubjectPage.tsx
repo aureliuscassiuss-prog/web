@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Share2, BookOpen, ChevronDown, PlayCircle, Lock,
+    Share2, ChevronDown, Lock,
     Sun, Moon, Copy, ExternalLink, Play
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -241,31 +242,41 @@ export default function SharedSubjectPage() {
                                 </div>
 
                                 {/* Unit Content (Videos) */}
-                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isUnitExpanded ? 'max-h-[800px] opacity-100 border-t border-gray-100 dark:border-gray-800' : 'max-h-0 opacity-0'}`}>
-                                    <div className="p-4 bg-gray-50/50 dark:bg-black/20 space-y-2">
-                                        {videos.length > 0 ? (
-                                            videos.map((video: any, vIdx: number) => (
-                                                <div
-                                                    key={vIdx}
-                                                    onClick={handlePlayVideo}
-                                                    className="group flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 hover:border-blue-500/30 hover:shadow-md cursor-pointer transition-all"
-                                                >
-                                                    <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                                                        <Play size={14} className="ml-0.5" />
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{video.title}</h4>
-                                                    </div>
-                                                    <div className="px-3 py-1 rounded-lg bg-gray-100 dark:bg-white/10 text-xs font-bold text-gray-600 dark:text-gray-300 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                                                        Play
-                                                    </div>
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <div className="text-center py-6 text-gray-400 text-sm">No videos available.</div>
-                                        )}
-                                    </div>
-                                </div>
+                                <AnimatePresence initial={false}>
+                                    {isUnitExpanded && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: "auto", opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            transition={{ duration: 0.3, ease: "easeInOut" }}
+                                            className="overflow-hidden border-t border-gray-100 dark:border-gray-800"
+                                        >
+                                            <div className="p-4 bg-gray-50/50 dark:bg-black/20 space-y-2">
+                                                {videos.length > 0 ? (
+                                                    videos.map((video: any, vIdx: number) => (
+                                                        <div
+                                                            key={vIdx}
+                                                            onClick={handlePlayVideo}
+                                                            className="group flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 hover:border-blue-500/30 hover:shadow-md cursor-pointer transition-all"
+                                                        >
+                                                            <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                                                <Play size={14} className="ml-0.5" />
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{video.title}</h4>
+                                                            </div>
+                                                            <div className="px-3 py-1 rounded-lg bg-gray-100 dark:bg-white/10 text-xs font-bold text-gray-600 dark:text-gray-300 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                                                Play
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <div className="text-center py-6 text-gray-400 text-sm">No videos available.</div>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         );
                     })}
