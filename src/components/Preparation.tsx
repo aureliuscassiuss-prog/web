@@ -463,14 +463,14 @@ export default function Preparation() {
                                             {idx + 1}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate flex items-center gap-2">
-                                                {subName}
+                                            <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2 min-w-0">
+                                                <span className="truncate">{subName}</span>
                                                 <button
                                                     onClick={(e) => handleShareSubject(e, subName)}
-                                                    className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 hover:text-blue-500 transition-colors opacity-0 group-hover:opacity-100"
+                                                    className="shrink-0 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 hover:text-blue-500 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
                                                     title="Share Subject"
                                                 >
-                                                    <Share2 size={14} />
+                                                    <Share2 size={15} />
                                                 </button>
                                             </h3>
                                             <p className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-2">
