@@ -431,7 +431,7 @@ export default function AIPapers() {
 
             // Check for Column Break (Left Column Margin)
             // Using 185mm to leave space for potential footer/margins
-            if (yPos + hBlock > 185) {
+            if (yPos + hBlock > 195) {
                 // Determine if we should push this and remaining to right column
                 for (let k = i; k <= 9; k++) {
                     rightColumnMCQs.push(k);
@@ -495,7 +495,7 @@ export default function AIPapers() {
             const hBlock = (4 * lines.length) + hRow1 + hRow2 + 4;
 
             // Check overflow for right column
-            if (yCol2 + hBlock > 185) {
+            if (yCol2 + hBlock > 195) {
                 doc.addPage();
                 yCol2 = 20;
                 // Repeat headers on new page? For now just continue at top
@@ -529,7 +529,7 @@ export default function AIPapers() {
 
         // Helper to check page break
         const checkPageBreak = (heightNeeded: number) => {
-            if (yCol2 + heightNeeded > 185) {
+            if (yCol2 + heightNeeded > 195) {
                 doc.addPage()
                 yCol2 = 20
             }
