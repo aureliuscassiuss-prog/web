@@ -511,6 +511,17 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
     // --- DATA FETCHING ---
     useEffect(() => {
         let isMounted = true
+        const controller = new AbortController()
+        const { signal } = controller
+
+        // Safety timeout to prevent infinite loading
+        const safetyTimeout = setTimeout(() => {
+            if (isMounted && isLoading) {
+                console.warn('Force stopping loading indicator due to timeout')
+                setIsLoading(false)
+            }
+        }, 12000)
+
         setIsLoading(true)
 
         const fetchData = async () => {
@@ -530,12 +541,16 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                     if (token) {
                         headers['Authorization'] = `Bearer ${token}`
                     }
-                    const res = await fetch(`/api/resources?${buildQueryParams(typeParam)}`, { headers })
+                    const res = await fetch(`/api/resources?${buildQueryParams(typeParam)}`, { headers, signal })
                     const data = await res.json()
+                    // Filter duplicates if any
                     if (isMounted) setResources(data.resources || [])
                 }
                 else if (view === 'uploads' && token) {
-                    const res = await fetch('/api/profile?action=uploads', { headers: { 'Authorization': `Bearer ${token}` } })
+                    const res = await fetch('/api/profile?action=uploads', {
+                        headers: { 'Authorization': `Bearer ${token}` },
+                        signal
+                    })
                     const data = await res.json()
                     if (isMounted) {
                         // Inject current user's avatar since they are the uploader
@@ -548,12 +563,14 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                     }
                 }
                 else if (view === 'leaderboard') {
-                    const res = await fetch('/api/resources?action=leaderboard')
+                    const res = await fetch('/api/resources?action=leaderboard', { signal })
                     const data = await res.json()
                     if (isMounted) setLeaderboard(data.leaderboard || [])
                 }
-            } catch (err) {
-                console.error(`Failed to fetch data:`, err)
+            } catch (err: any) {
+                if (err.name !== 'AbortError') {
+                    console.error(`Failed to fetch data:`, err)
+                }
             } finally {
                 if (isMounted) setIsLoading(false)
             }
@@ -562,7 +579,11 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
         if (activeTab !== 'ai') fetchData()
         else setIsLoading(false)
 
-        return () => { isMounted = false }
+        return () => {
+            isMounted = false
+            controller.abort()
+            clearTimeout(safetyTimeout)
+        }
     }, [view, activeTab, searchQuery, filters, token, user, selectedPyqYear])
 
     // AI Paper Generation Functions

@@ -251,7 +251,7 @@ export default function AdminPanel() {
                 const errorData = await res.json()
                 alert(errorData.message || 'Failed to add item')
             }
-        } catch (err) { console.error(err); alert('Failed to add item') } finally { setIsSubmitting(false) }
+        } catch (err) { console.error(err); alert('Failed to add item') } finally { setTimeout(() => setIsSubmitting(false), 500) }
     }
 
     const handleStructureRemove = async (type: 'program' | 'year' | 'semester' | 'course' | 'subject' | 'unit' | 'video', value: string) => {
@@ -286,7 +286,7 @@ export default function AdminPanel() {
                 const data = await res.json()
                 setStructure(data)
             }
-        } catch (err) { console.error(err) } finally { setRemovingId(null) }
+        } catch (err) { console.error(err) } finally { setTimeout(() => setRemovingId(null), 500) }
     }
 
     // --- Derived State for Structure ---
@@ -879,7 +879,7 @@ function UsersView({ users, processingId, onAction }: any) {
                                         {/* Processing Indicator */}
                                         {isProcessing && (
                                             <div className="flex items-center justify-center gap-2 text-xs text-blue-600 dark:text-blue-400 py-1">
-                                                <Loader2 size={14} className="animate-spin" />
+                                                <TyreLoader size={14} />
                                                 Processing...
                                             </div>
                                         )}
