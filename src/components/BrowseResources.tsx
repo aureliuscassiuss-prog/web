@@ -2,11 +2,12 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import {
     ChevronLeft, BookOpen, GraduationCap,
-    ArrowRight, Loader2, Layers, Library,
+    ArrowRight, Layers, Library,
     FilterX, ChevronRight, Hash, Calendar
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import ResourceGrid from './ResourceGrid';
+import TyreLoader from './TyreLoader';
 
 interface BrowseResourcesProps {
     onUploadRequest?: (data: any) => void;
@@ -196,7 +197,7 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
     if (isLoadingStructure) {
         return (
             <div className="flex h-[50vh] flex-col items-center justify-center gap-4 text-gray-500">
-                <Loader2 className="h-8 w-8 animate-spin text-black dark:text-white" />
+                <TyreLoader size={50} />
                 <p className="text-sm font-medium animate-pulse">Loading academic data...</p>
             </div>
         );
@@ -342,9 +343,9 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
                 {/* STEP 7: Loading */}
                 {step === 7 && (
                     <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in duration-500">
-                        <div className="relative mb-8">
-                            <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full"></div>
-                            <Loader2 className="h-12 w-12 animate-spin text-black dark:text-white relative z-10" />
+                        <div className="relative mb-8 flex justify-center">
+                            <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full transform scale-150"></div>
+                            <TyreLoader size={80} className="relative z-10" />
                         </div>
                         <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{loadingText}</h3>
                         <p className="text-sm text-gray-500">Curating the best study materials for you.</p>

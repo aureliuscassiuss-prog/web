@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     Check, X, Clock, AlertCircle, Shield,
-    User, Loader2, Plus, Trash2, Settings, Layers,
+    User, Plus, Trash2, Settings, Layers,
     Ban, ExternalLink, ChevronRight, Search
 } from 'lucide-react'
+import TyreLoader from './TyreLoader'
 import { useAuth } from '../contexts/AuthContext'
 
 // --- Types ---
@@ -346,7 +347,7 @@ export default function AdminPanel() {
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                     {isLoading ? (
                         <div className="flex h-64 items-center justify-center">
-                            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                            <TyreLoader size={40} />
                         </div>
                     ) : (
                         <>
@@ -447,7 +448,7 @@ function StructureCard({ title, step, items, value, setValue, extraInput, onAdd,
                                     disabled={!!removingId}
                                 >
                                     {removingId === item.id ? (
-                                        <Loader2 size={14} className="animate-spin" />
+                                        <TyreLoader size={14} />
                                     ) : (
                                         <Trash2 size={14} />
                                     )}
@@ -462,7 +463,7 @@ function StructureCard({ title, step, items, value, setValue, extraInput, onAdd,
                 <div className="flex gap-2">
                     <input type="text" value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !disabled && onAdd()} disabled={disabled} placeholder={`Add ${title}...`} className="flex-1 min-w-0 bg-gray-50 dark:bg-gray-800 border-0 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-black dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed" />
                     <button onClick={onAdd} disabled={disabled || !value.trim() || isLoading} className="flex-none p-2 rounded-md bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-9 flex items-center justify-center">
-                        {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                        {isLoading ? <TyreLoader size={16} /> : <Plus size={16} />}
                     </button>
                 </div>
             </div>
@@ -624,7 +625,7 @@ function PendingView({ resources, processingId, onAction }: any) {
                                             disabled={isProcessing}
                                             className="px-2 py-1.5 rounded-md text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
                                         >
-                                            {isProcessing ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                                            {isProcessing ? <TyreLoader size={14} /> : <Check size={14} />}
                                             <span className="hidden sm:inline">Approve</span>
                                         </button>
 

@@ -3,8 +3,9 @@ import { useAuth } from '../contexts/AuthContext';
 import {
     User, Save, AlertCircle, CheckCircle2, Pencil, Camera,
     School, Phone, Hash, BookOpen, Calendar,
-    Star, ChevronDown, Check, Loader2
-} from 'lucide-react';
+    Star, ChevronDown, Check
+} from 'lucide-react'
+import TyreLoader from './TyreLoader';
 import ProfileBanner from './ProfileBanner';
 
 const NeutralAvatar = ({ className }: { className?: string }) => (
@@ -364,7 +365,7 @@ export default function ProfilePage() {
                                 <button onClick={handleSave} disabled={isSaving} className="px-3 py-1.5 bg-white text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-50 shadow-lg flex items-center gap-2 disabled:opacity-70 transition-all hover:scale-105 active:scale-95">
                                     {isSaving ? (
                                         <>
-                                            <Loader2 size={12} className="animate-spin" />
+                                            <TyreLoader size={12} />
                                             Saving...
                                         </>
                                     ) : (

@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import {
     FileText,
     Download,
-    Loader2,
+
     AlertTriangle,
     GraduationCap,
     Calendar,
@@ -19,6 +19,7 @@ import {
 import jsPDF from 'jspdf'
 // @ts-ignore
 import autoTable from 'jspdf-autotable'
+import TyreLoader from './TyreLoader'
 
 // --- Types ---
 interface Program {
@@ -654,8 +655,8 @@ export default function AIPapers() {
     }
 
     if (loadingStructure) return (
-        <div className="h-screen flex items-center justify-center bg-white dark:bg-[#09090b] text-sm font-medium text-gray-400">
-            <Loader2 className="animate-spin mr-2" size={18} />
+        <div className="h-screen flex items-center justify-center bg-white dark:bg-[#09090b] text-sm font-medium text-gray-400 gap-3">
+            <TyreLoader size={40} />
             Loading AI Generator...
         </div>
     )
@@ -796,7 +797,7 @@ export default function AIPapers() {
                                     >
                                         {generating ? (
                                             <>
-                                                <Loader2 className="animate-spin" size={18} />
+                                                <TyreLoader size={18} />
                                                 <span>Designing Question Paper...</span>
                                             </>
                                         ) : (

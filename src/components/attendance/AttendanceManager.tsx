@@ -15,8 +15,9 @@ import {
     RefreshCw,
     ChevronDown,
     ChevronUp,
-    Loader2
+    Download
 } from 'lucide-react'
+import TyreLoader from '../TyreLoader'
 import { useAuth } from '../../contexts/AuthContext'
 import { Subject, AttendanceLog, Schedule } from '../../types/attendance'
 
@@ -463,7 +464,7 @@ function DailySubjectRow({ subject, log, date, onMark }: { subject: Subject, log
                         : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-700'
                         }`}
                 >
-                    {loading === 'present' ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} className={log?.status === 'present' ? 'fill-current' : ''} />}
+                    {loading === 'present' ? <TyreLoader size={14} /> : <CheckCircle2 size={14} className={log?.status === 'present' ? 'fill-current' : ''} />}
                     Present
                 </button>
                 <button
@@ -474,7 +475,7 @@ function DailySubjectRow({ subject, log, date, onMark }: { subject: Subject, log
                         : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-700'
                         }`}
                 >
-                    {loading === 'absent' ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} className={log?.status === 'absent' ? 'fill-current' : ''} />}
+                    {loading === 'absent' ? <TyreLoader size={14} /> : <XCircle size={14} className={log?.status === 'absent' ? 'fill-current' : ''} />}
                     Absent
                 </button>
                 <button
@@ -485,7 +486,7 @@ function DailySubjectRow({ subject, log, date, onMark }: { subject: Subject, log
                         : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-700'
                         }`}
                 >
-                    {loading === 'cancelled' ? <Loader2 size={14} className="animate-spin" /> : <AlertTriangle size={14} className={log?.status === 'cancelled' ? 'fill-current' : ''} />}
+                    {loading === 'cancelled' ? <TyreLoader size={14} /> : <AlertTriangle size={14} className={log?.status === 'cancelled' ? 'fill-current' : ''} />}
                     Cancelled
                 </button>
             </div>

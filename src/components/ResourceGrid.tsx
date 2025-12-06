@@ -2,7 +2,7 @@ import {
     Upload as UploadIcon, FileText, User,
     Trophy, Sparkles, FileQuestion, ArrowUp,
     Copy, ThumbsUp, ThumbsDown, Trash2, Bot, Download,
-    Check, ChevronRight, Bookmark, Flag, AlertTriangle, Loader2, X
+    Check, ChevronRight, Bookmark, Flag, AlertTriangle, X
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
@@ -11,6 +11,7 @@ import LeaderboardView from './LeaderboardView'
 import jsPDF from 'jspdf'
 // @ts-ignore
 import autoTable from 'jspdf-autotable'
+import TyreLoader from './TyreLoader'
 
 interface ResourceGridProps {
     view: 'resources' | 'leaderboard' | 'papers' | 'uploads'
@@ -1006,9 +1007,9 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
     // --- MAIN RENDER ---
     if (isLoading) {
         return (
-            <div className="flex h-64 flex-col items-center justify-center space-y-3">
-                <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-blue-600 dark:border-gray-800 dark:border-t-blue-400"></div>
-                <p className="text-sm text-gray-500 animate-pulse">Loading...</p>
+            <div className="flex h-64 flex-col items-center justify-center space-y-4">
+                <TyreLoader size={50} />
+                <p className="text-sm font-medium text-gray-400 animate-pulse tracking-widest uppercase text-[10px]">Loading Resources</p>
             </div>
         )
     }
@@ -1047,7 +1048,7 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                                         className="hidden sm:flex group items-center gap-2 px-3 py-1.5 bg-zinc-900 dark:bg-white text-white dark:text-black text-xs font-medium rounded-lg hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed border border-zinc-800 dark:border-zinc-200 shadow-sm"
                                     >
                                         {generating ? (
-                                            <Loader2 className="w-3.5 h-3.5 animate-spin text-green-500" />
+                                            <TyreLoader size={14} />
                                         ) : (
                                             <div className="flex items-center justify-center w-4 h-4 rounded-full bg-green-500/10 text-green-500 text-[9px] font-bold ring-1 ring-green-500/50 group-hover:bg-green-500 group-hover:text-white transition-colors">
                                                 {user?.role === 'admin' ? '∞' : attemptsLeft}
@@ -1094,7 +1095,7 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                             className="flex sm:hidden w-full items-center justify-center gap-2 mt-3 px-4 py-3 bg-zinc-900 dark:bg-white text-white dark:text-black text-sm font-medium rounded-xl hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                         >
                             {generating ? (
-                                <Loader2 className="w-4 h-4 animate-spin text-green-500" />
+                                <TyreLoader size={16} />
                             ) : (
                                 <div className="flex items-center justify-center w-5 h-5 rounded-full bg-green-500/10 text-green-500 text-[10px] font-bold ring-1 ring-green-500/50">
                                     {user?.role === 'admin' ? '∞' : attemptsLeft}

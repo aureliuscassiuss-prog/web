@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { X, Mail, Lock, User, ArrowRight, Loader2 } from 'lucide-react'
+import { X, Mail, Lock, User, ArrowRight } from 'lucide-react'
+import TyreLoader from './TyreLoader'
 import { useAuth } from '../contexts/AuthContext'
 import { useGoogleLogin } from '@react-oauth/google'
 
@@ -238,7 +239,7 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess, initialVie
                                 className="btn btn-primary w-full h-9 md:h-10 text-sm md:text-base"
                             >
                                 {isLoading ? (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    <div className="mr-2"><TyreLoader size={16} /></div>
                                 ) : (
                                     'Verify Email'
                                 )}
@@ -281,7 +282,7 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess, initialVie
                                 className="btn btn-primary w-full h-9 md:h-10 text-sm md:text-base"
                             >
                                 {isLoading ? (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    <div className="mr-2"><TyreLoader size={16} /></div>
                                 ) : (
                                     'Send Reset Code'
                                 )}
@@ -358,7 +359,7 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess, initialVie
                                 className="btn btn-primary w-full h-9 md:h-10 text-sm md:text-base"
                             >
                                 {isLoading ? (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    <div className="mr-2"><TyreLoader size={16} /></div>
                                 ) : (
                                     'Reset Password'
                                 )}
@@ -451,7 +452,7 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess, initialVie
                                 className="btn btn-primary w-full h-9 md:h-10 text-sm md:text-base"
                             >
                                 {isLoading ? (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    <div className="mr-2"><TyreLoader size={16} /></div>
                                 ) : (
                                     <>
                                         {isLogin ? 'Sign In' : 'Sign Up'}

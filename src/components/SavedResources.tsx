@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
-    Bookmark, Loader2, FileText, Download,
+    Bookmark, FileText, Download,
     ThumbsUp, ThumbsDown, Flag, Share2, Check
 } from 'lucide-react';
+import TyreLoader from './TyreLoader';
 
 export default function SavedResources() {
     const { token } = useAuth();
@@ -133,7 +134,7 @@ export default function SavedResources() {
     if (isLoading) {
         return (
             <div className="flex h-64 flex-col items-center justify-center space-y-3">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                <TyreLoader size={40} />
                 <p className="text-sm text-gray-500">Loading saved resources...</p>
             </div>
         );
@@ -179,7 +180,7 @@ export default function SavedResources() {
                                 } ${(isSelectionMode && selectedIds.size === 0) ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                             {isSharing ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <TyreLoader size={16} />
                             ) : justCopied ? (
                                 <Check className="w-4 h-4" />
                             ) : (

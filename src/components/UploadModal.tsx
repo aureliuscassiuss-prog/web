@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { X, Upload as UploadIcon, Link as LinkIcon, Loader2, FileText, Layers, Calendar, GraduationCap, BookOpen, ChevronDown, Check, Sparkles, Target } from 'lucide-react'
+import { X, Upload as UploadIcon, Link as LinkIcon, FileText, Layers, Calendar, GraduationCap, BookOpen, ChevronDown, Check, Sparkles, Target } from 'lucide-react'
+import TyreLoader from './TyreLoader'
 import { useAuth } from '../contexts/AuthContext'
 import Toast from './Toast'
 
@@ -389,7 +390,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
 
                     {isLoadingStructure ? (
                         <div className="py-20 flex flex-col items-center justify-center text-gray-400 animate-pulse">
-                            <Loader2 className="w-10 h-10 animate-spin text-blue-500 mb-4" />
+                            <TyreLoader size={40} className="mb-4" />
                             <p className="text-sm font-medium">Loading academic structure...</p>
                         </div>
                     ) : (
@@ -609,7 +610,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
                             >
                                 {isUploading ? (
                                     <>
-                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        <TyreLoader size={20} />
                                         Submitting Request...
                                     </>
                                 ) : (
