@@ -250,7 +250,7 @@ export default function CoursePlayer() {
 
     if (loading) {
         return (
-            <div className="h-screen w-full flex flex-col items-center justify-center bg-white dark:bg-[#09090b] text-gray-500 gap-4">
+            <div className="h-screen w-full flex flex-col items-center justify-center bg-white dark:bg-black text-gray-500 gap-4">
                 <div className="w-8 h-8 border-2 border-gray-200 border-t-blue-600 rounded-full animate-spin dark:border-gray-800 dark:border-t-blue-500"></div>
                 <p className="text-xs font-medium tracking-wide animate-pulse">LOADING CLASSROOM...</p>
             </div>
@@ -258,15 +258,15 @@ export default function CoursePlayer() {
     }
 
     return (
-        <div className="flex h-screen bg-white dark:bg-[#09090b] overflow-hidden text-gray-900 dark:text-gray-100 font-sans selection:bg-blue-100 dark:selection:bg-blue-900/30">
+        <div className="flex h-screen bg-white dark:bg-black overflow-hidden text-gray-900 dark:text-gray-100 font-sans selection:bg-blue-100 dark:selection:bg-blue-900/30">
 
             {/* --- SIDEBAR --- */}
             <aside
                 className={`
-                    fixed inset-y-0 left-0 z-50 w-full md:w-[380px] bg-gray-50/80 dark:bg-[#09090b]/95 backdrop-blur-xl border-r border-gray-200 dark:border-gray-800 
+                    fixed inset-y-0 left-0 z-50 w-full md:w-[380px] bg-gray-50/80 dark:bg-black/95 backdrop-blur-xl border-r border-gray-200 dark:border-gray-800 
                     transform transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1) flex flex-col
                     ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-                    md:relative md:translate-x-0 md:bg-white md:dark:bg-[#09090b]
+                    md:relative md:translate-x-0 md:bg-white md:dark:bg-black
                 `}
             >
                 {/* Header */}
@@ -403,7 +403,7 @@ export default function CoursePlayer() {
             </aside>
 
             {/* --- MAIN CONTENT --- */}
-            <main className="flex-1 flex flex-col min-w-0 relative bg-white dark:bg-[#09090b]">
+            <main className="flex-1 flex flex-col min-w-0 relative bg-white dark:bg-black">
 
                 {/* Mobile Top Bar */}
                 <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-white/80 dark:bg-black/50 backdrop-blur-md sticky top-0 z-30">
