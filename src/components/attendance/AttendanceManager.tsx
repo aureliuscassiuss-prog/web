@@ -190,7 +190,7 @@ export default function AttendanceManager() {
     )
 
     return (
-        <div className="min-h-screen bg-white dark:bg-[#050505] text-gray-900 dark:text-gray-100 font-sans">
+        <div className="min-h-screen bg-white dark:bg-black text-gray-900 dark:text-gray-100 font-sans">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
 
                 {/* --- Header Section --- */}
@@ -459,8 +459,8 @@ function DailySubjectRow({ subject, log, date, onMark }: { subject: Subject, log
                     onClick={() => handleMark('present')}
                     disabled={!!loading}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold ${log?.status === 'present'
-                            ? 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-800 ring-2 ring-green-500/20'
-                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-700'
+                        ? 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-800 ring-2 ring-green-500/20'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-700'
                         }`}
                 >
                     {loading === 'present' ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} className={log?.status === 'present' ? 'fill-current' : ''} />}
@@ -470,8 +470,8 @@ function DailySubjectRow({ subject, log, date, onMark }: { subject: Subject, log
                     onClick={() => handleMark('absent')}
                     disabled={!!loading}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold ${log?.status === 'absent'
-                            ? 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800 ring-2 ring-red-500/20'
-                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-700'
+                        ? 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800 ring-2 ring-red-500/20'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-700'
                         }`}
                 >
                     {loading === 'absent' ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} className={log?.status === 'absent' ? 'fill-current' : ''} />}
@@ -481,8 +481,8 @@ function DailySubjectRow({ subject, log, date, onMark }: { subject: Subject, log
                     onClick={() => handleMark('cancelled')}
                     disabled={!!loading}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold ${log?.status === 'cancelled'
-                            ? 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/40 dark:text-orange-300 dark:border-orange-800 ring-2 ring-orange-500/20'
-                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-700'
+                        ? 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/40 dark:text-orange-300 dark:border-orange-800 ring-2 ring-orange-500/20'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-700'
                         }`}
                 >
                     {loading === 'cancelled' ? <Loader2 size={14} className="animate-spin" /> : <AlertTriangle size={14} className={log?.status === 'cancelled' ? 'fill-current' : ''} />}
