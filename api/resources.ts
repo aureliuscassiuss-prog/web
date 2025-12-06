@@ -36,20 +36,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     .toArray();
 
                 // Calculate upload counts for each user (Reverted to countDocuments for reliability)
-                const leaderboard = await Promise.all(
-                    topUsers.map(async (user: any, index: number) => {
-                        const uploadCount = await db.collection('resources')
-                            .countDocuments({ uploaderId: user._id.toString() });
+                // Optimized: Use Aggregation to count uploads in one go (avoids N+1 query timeout)
+                const userIds = topUsers.map((u: any) => u._id);
+                // Convert string IDs to ObjectIds if they aren't already (usually they are from db)
+                // But uploaderId in resources is often stored as string. Let's check schema.
+                // Assuming uploaderId is stored as STRING based on u.toString() usage previously.
 
-                        return {
-                            rank: index + 1,
-                            name: user.name,
-                            points: user.reputation || 0,
-                            uploads: uploadCount,
-                            avatar: user.avatar || 'boy1'
-                        };
-                    })
-                );
+                const uploadCounts = await db.collection('resources').aggregate([
+                    { $match: { uploaderId: { $in: userIds.map((id: any) => id.toString()) } } },
+                    { $group: { _id: '$uploaderId', count: { $sum: 1 } } }
+                ]).toArray();
+
+                // Create a map for fast lookup
+                const countMap = new Map();
+                uploadCounts.forEach((item: any) => {
+                    countMap.set(item._id, item.count);
+                });
+
+                const leaderboard = topUsers.map((user: any, index: number) => {
+                    return {
+                        rank: index + 1,
+                        name: user.name,
+                        points: user.reputation || 0,
+                        uploads: countMap.get(user._id.toString()) || 0,
+                        avatar: user.avatar || 'boy1'
+                    };
+                });
 
                 return res.status(200).json({ leaderboard });
             }
