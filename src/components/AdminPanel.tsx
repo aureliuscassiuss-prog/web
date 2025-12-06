@@ -307,7 +307,7 @@ export default function AdminPanel() {
     const videos = selectedUnit ? selectedUnit.videos || [] : []
 
     return (
-        <div className="min-h-screen bg-white dark:bg-[#050505] text-gray-900 dark:text-gray-100 font-sans">
+        <div className="min-h-screen bg-white dark:bg-black text-gray-900 dark:text-gray-100 font-sans">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
                     <div>
