@@ -678,7 +678,7 @@ export default function AIPapers() {
     }
 
     if (loadingStructure) return (
-        <div className="h-screen flex items-center justify-center bg-white dark:bg-[#09090b] text-sm font-medium text-gray-400 gap-3">
+        <div className="h-screen flex items-center justify-center bg-white dark:bg-black text-sm font-medium text-gray-400 gap-3">
             <TyreLoader size={40} />
             Loading AI Generator...
         </div>
@@ -686,7 +686,7 @@ export default function AIPapers() {
 
     // --- RENDER (CODE 1 UI STRUCTURE with CODE 2 STATE) ---
     return (
-        <div className="min-h-[calc(100vh-6rem)] w-full max-w-5xl mx-auto p-4 md:p-6 bg-white dark:bg-[#09090b] rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
+        <div className="min-h-[calc(100vh-6rem)] w-full max-w-5xl mx-auto p-4 md:p-6 bg-white dark:bg-black rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
 
             {/* --- HEADER --- */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-gray-100 dark:border-gray-800">
