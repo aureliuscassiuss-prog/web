@@ -68,12 +68,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             })
 
             if (!response.ok) {
+                const text = await response.text()
                 let errorMessage = 'Backend sync failed'
                 try {
-                    const error = await response.json()
+                    const error = JSON.parse(text)
                     errorMessage = error.message || error.error || errorMessage
                 } catch (e) {
-                    const text = await response.text()
                     console.error('Non-JSON error response:', text)
                     errorMessage = `Server Error (${response.status}): Check console for details`
                 }
@@ -110,12 +110,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             })
 
             if (!response.ok) {
+                const text = await response.text()
                 let errorMessage = 'Registration sync failed'
                 try {
-                    const error = await response.json()
+                    const error = JSON.parse(text)
                     errorMessage = error.message || error.error || errorMessage
                 } catch (e) {
-                    const text = await response.text()
                     console.error('Non-JSON error response:', text)
                     errorMessage = `Server Error (${response.status}): Check console for details`
                 }
@@ -153,12 +153,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             })
 
             if (!response.ok) {
+                const text = await response.text()
                 let errorMessage = 'Google login failed'
                 try {
-                    const error = await response.json()
+                    const error = JSON.parse(text)
                     errorMessage = error.message || error.error || errorMessage
                 } catch (e) {
-                    const text = await response.text()
                     console.error('Non-JSON error response:', text)
                     errorMessage = `Server Error (${response.status}): Check console for details`
                 }
