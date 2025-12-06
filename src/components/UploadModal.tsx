@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { X, Upload as UploadIcon, Link as LinkIcon, Loader2, FileText, Layers, Calendar, GraduationCap, BookOpen, ChevronDown, Check, Sparkles } from 'lucide-react'
+import { X, Upload as UploadIcon, Link as LinkIcon, Loader2, FileText, Layers, Calendar, GraduationCap, BookOpen, ChevronDown, Check, Sparkles, Target } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import Toast from './Toast'
 
@@ -522,6 +522,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
                                         <div>
                                             <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-1.5 pl-1">Unit (Optional)</label>
                                             <CustomSelect
+                                                icon={Target}
                                                 placeholder="Select Unit"
                                                 value={formData.unit}
                                                 options={units.map((u: any) => ({ label: (typeof u === 'string' ? u : u.name), value: (typeof u === 'string' ? u : u.name) }))}
