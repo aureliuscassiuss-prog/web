@@ -62,162 +62,79 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             // 2. Sync with Backend to get App Token & User Data
             const response = await fetch('/api/auth', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'firebase-login', token: idToken })
-            })
-
-            if (!response.ok) {
-                const error = await response.json()
-                throw new Error(error.message || 'Backend sync failed')
-            }
-
-            const data = await response.json()
-            setToken(data.token)
-            setUser(data.user)
-            localStorage.setItem('token', data.token)
-            localStorage.setItem('user', JSON.stringify(data.user))
-        } catch (error: any) {
-            console.error('Login error:', error)
-            throw new Error(error.message || 'Login failed')
-        }
-    }
-
-    const register = async (name: string, email: string, password: string) => {
-        try {
-            // 1. Firebase Register
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-            const firebaseUser = userCredential.user
-            const idToken = await firebaseUser.getIdToken()
-
-            // 2. Sync with Backend (Create User)
-            const response = await fetch('/api/auth', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'firebase-login',
-                    token: idToken,
-                    userData: { name } // Pass extra data
-                })
-            })
-
-            if (!response.ok) {
-                const error = await response.json()
-                throw new Error(error.message || 'Registration sync failed')
-            }
-
-            const data = await response.json()
-            setToken(data.token)
-            setUser(data.user)
-            localStorage.setItem('token', data.token)
-            localStorage.setItem('user', JSON.stringify(data.user))
-            return data
-        } catch (error: any) {
-            console.error('Registration error:', error)
-            throw new Error(error.message || 'Registration failed')
-        }
-    }
-
-    const verifyOtp = async (email: string, otp: string) => {
-        // Firebase handles email verification differently (sendEmailVerification)
-        // For now, we might skip this or implement Firebase's email verification
-        throw new Error('OTP verification is deprecated in favor of Firebase Auth')
-    }
-
-    const googleLogin = async () => {
-        try {
-            const provider = new GoogleAuthProvider()
-            const result = await signInWithPopup(auth, provider)
-            const idToken = await result.user.getIdToken()
-
-            const response = await fetch('/api/auth', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'firebase-login', token: idToken })
-            })
-
-            if (!response.ok) {
-                const error = await response.json()
+                localStorage.setItem('user', JSON.stringify(data.user))
+            } catch (error: any) {
+                console.error('Google login error:', error)
                 throw new Error(error.message || 'Google login failed')
             }
-
-            const data = await response.json()
-            setToken(data.token)
-            setUser(data.user)
-            localStorage.setItem('token', data.token)
-            localStorage.setItem('user', JSON.stringify(data.user))
-        } catch (error: any) {
-            console.error('Google login error:', error)
-            throw new Error(error.message || 'Google login failed')
         }
-    }
 
     const logout = () => {
-        setToken(null)
-        setUser(null)
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-    }
-
-    const updateUser = (updatedUser: User) => {
-        setUser(updatedUser)
-        localStorage.setItem('user', JSON.stringify(updatedUser))
-    }
-
-    const forgotPassword = async (email: string) => {
-        const response = await fetch('/api/auth', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'forgot-password', email })
-        })
-
-        if (!response.ok) {
-            let errorMessage = 'Failed to send reset code'
-            try {
-                const error = await response.json()
-                errorMessage = error.message || error.error || 'Failed to send reset code'
-            } catch (e) {
-                errorMessage = `Server error (${response.status}): ${response.statusText}`
-            }
-            throw new Error(errorMessage)
+            setToken(null)
+            setUser(null)
+            localStorage.removeItem('token')
+            localStorage.removeItem('user')
         }
 
-        const data = await response.json()
-        return data
-    }
-
-    const resetPassword = async (email: string, otp: string, newPassword: string) => {
-        const response = await fetch('/api/auth', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'reset-password', email, otp, newPassword })
-        })
-
-        if (!response.ok) {
-            let errorMessage = 'Password reset failed'
-            try {
-                const error = await response.json()
-                errorMessage = error.message || error.error || 'Password reset failed'
-            } catch (e) {
-                errorMessage = `Server error (${response.status}): ${response.statusText}`
-            }
-            throw new Error(errorMessage)
+        const updateUser = (updatedUser: User) => {
+            setUser(updatedUser)
+            localStorage.setItem('user', JSON.stringify(updatedUser))
         }
 
-        await response.json()
+        const forgotPassword = async (email: string) => {
+            const response = await fetch('/api/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'forgot-password', email })
+            })
+
+            if (!response.ok) {
+                let errorMessage = 'Failed to send reset code'
+                try {
+                    const error = await response.json()
+                    errorMessage = error.message || error.error || 'Failed to send reset code'
+                } catch (e) {
+                    errorMessage = `Server error (${response.status}): ${response.statusText}`
+                }
+                throw new Error(errorMessage)
+            }
+
+            const data = await response.json()
+            return data
+        }
+
+        const resetPassword = async (email: string, otp: string, newPassword: string) => {
+            const response = await fetch('/api/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'reset-password', email, otp, newPassword })
+            })
+
+            if (!response.ok) {
+                let errorMessage = 'Password reset failed'
+                try {
+                    const error = await response.json()
+                    errorMessage = error.message || error.error || 'Password reset failed'
+                } catch (e) {
+                    errorMessage = `Server error (${response.status}): ${response.statusText}`
+                }
+                throw new Error(errorMessage)
+            }
+
+            await response.json()
+        }
+
+        return (
+            <AuthContext.Provider value={{ user, token, login, register, verifyOtp, forgotPassword, resetPassword, googleLogin, logout, updateUser, isLoading }}>
+                {children}
+            </AuthContext.Provider>
+        )
     }
 
-    return (
-        <AuthContext.Provider value={{ user, token, login, register, verifyOtp, forgotPassword, resetPassword, googleLogin, logout, updateUser, isLoading }}>
-            {children}
-        </AuthContext.Provider>
-    )
-}
-
-export function useAuth() {
-    const context = useContext(AuthContext)
-    if (context === undefined) {
-        throw new Error('useAuth must be used within an AuthProvider')
+    export function useAuth() {
+        const context = useContext(AuthContext)
+        if (context === undefined) {
+            throw new Error('useAuth must be used within an AuthProvider')
+        }
+        return context
     }
-    return context
-}
