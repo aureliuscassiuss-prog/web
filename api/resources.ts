@@ -25,60 +25,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 console.log('[Leaderboard] Fetching leaderboard data...');
 
                 try {
-                    // Use aggregation pipeline for better performance and handle missing reputation
-                    const leaderboard = await db.collection('users').aggregate([
+                    // Optimized: Split query approach is often faster on M0 free tier than complex $lookup
+
+                    // 1. Get top users
+                    const topUsers = await db.collection('users')
+                        .aggregate([
+                            { $addFields: { reputation: { $ifNull: ['$reputation', 0] } } },
+                            { $sort: { reputation: -1 } },
+                            { $limit: 50 },
+                            { $project: { name: 1, reputation: 1, avatar: 1 } }
+                        ]).toArray();
+
+                    console.log(`[Leaderboard] Found ${topUsers.length} top users`);
+
+                    if (topUsers.length === 0) {
+                        return res.status(200).json({ leaderboard: [] });
+                    }
+
+                    // 2. Get upload counts for these users in one go
+                    const userIds = topUsers.map(u => u._id.toString());
+
+                    const uploadCounts = await db.collection('resources').aggregate([
                         {
-                            // Add reputation field if it doesn't exist, default to 0
-                            $addFields: {
-                                reputation: { $ifNull: ['$reputation', 0] }
+                            $match: {
+                                uploaderId: { $in: userIds },
+                                status: 'approved'
                             }
                         },
-                        {
-                            // Sort by reputation
-                            $sort: { reputation: -1 }
-                        },
-                        {
-                            // Limit to top 50 users
-                            $limit: 50
-                        },
-                        {
-                            // Lookup to count uploads
-                            $lookup: {
-                                from: 'resources',
-                                let: { userIdStr: { $toString: '$_id' } },
-                                pipeline: [
-                                    {
-                                        $match: {
-                                            $expr: { $eq: ['$uploaderId', '$$userIdStr'] },
-                                            status: 'approved' // Only count approved uploads
-                                        }
-                                    },
-                                    { $count: 'total' }
-                                ],
-                                as: 'uploadStats'
-                            }
-                        },
-                        {
-                            // Project final fields
-                            $project: {
-                                name: 1,
-                                reputation: 1,
-                                avatar: 1,
-                                uploads: { $ifNull: [{ $arrayElemAt: ['$uploadStats.total', 0] }, 0] }
-                            }
-                        }
+                        { $group: { _id: '$uploaderId', count: { $sum: 1 } } }
                     ]).toArray();
 
-                    console.log(`[Leaderboard] Found ${leaderboard.length} users`);
+                    // 3. Map counts
+                    const countMap = new Map();
+                    uploadCounts.forEach((item: any) => {
+                        countMap.set(item._id, item.count);
+                    });
 
-                    // Add rank to each user
-                    const rankedLeaderboard = leaderboard.map((user: any, index: number) => ({
+                    // 4. Assemble result
+                    const rankedLeaderboard = topUsers.map((user: any, index: number) => ({
                         rank: index + 1,
                         name: user.name || 'Anonymous',
                         points: user.reputation || 0,
-                        uploads: user.uploads || 0,
+                        uploads: countMap.get(user._id.toString()) || 0,
                         avatar: user.avatar || 'boy1'
                     }));
+
+                    console.log(`[Leaderboard] Processed ${rankedLeaderboard.length} entries`);
 
                     return res.status(200).json({ leaderboard: rankedLeaderboard });
                 } catch (leaderboardError) {

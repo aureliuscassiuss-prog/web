@@ -7,13 +7,13 @@ if (!uri) {
 }
 
 const options = {
-    maxPoolSize: 1, // Optimal for serverless (prevent connection limits)
+    maxPoolSize: 5, // Increased from 1 to avoid blocking concurrent requests in same container
     minPoolSize: 0,
-    serverSelectionTimeoutMS: 15000, // Increased for cold starts/network latency
+    serverSelectionTimeoutMS: 15000,
     socketTimeoutMS: 45000,
-    connectTimeoutMS: 15000, // Explicit connect timeout
+    connectTimeoutMS: 15000,
     tls: true,
-    tlsAllowInvalidCertificates: true, // Temporary fix for SSL handshake issue
+    tlsAllowInvalidCertificates: true,
     retryWrites: true,
 };
 
