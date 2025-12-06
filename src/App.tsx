@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { GoogleOAuthProvider } from '@react-oauth/google'
-import { X } from 'lucide-react'
+import { X, Upload } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 
 // Components
@@ -407,7 +407,16 @@ function AppContent() {
               setIsAuthModalOpen(true)
             }}>
               <div className="space-y-6">
-                <h1 className="text-3xl font-bold tracking-tight">My Contributions</h1>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <h1 className="text-3xl font-bold tracking-tight">My Contributions</h1>
+                  <button
+                    onClick={handleUploadClick}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-black dark:bg-white text-white dark:text-black rounded-xl font-medium hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-black/5 dark:shadow-white/5"
+                  >
+                    <Upload size={18} />
+                    <span>Upload More</span>
+                  </button>
+                </div>
                 <ResourceGrid view="uploads" searchQuery={searchQuery} onUploadRequest={handleUploadWithData} />
               </div>
             </ProtectedRoute>
