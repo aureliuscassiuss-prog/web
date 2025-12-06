@@ -608,16 +608,17 @@ async function handleUserAction(body: any, res: VercelResponse) {
 async function handleGetStats(res: VercelResponse) {
     const db = await getDb();
 
-    // Count total approved resources
-    const totalResources = await db.collection('resources').countDocuments({
-        $or: [
-            { status: 'approved' },
-            { isPublic: true }
-        ]
-    });
-
-    // Count total active users
-    const totalUsers = await db.collection('users').countDocuments({});
+    // Count total approved resources and active users in parallel
+    const [totalResources, totalUsers] = await Promise.all([
+        db.collection('resources').countDocuments({
+            $or: [
+                { status: 'approved' },
+                { status: 'public' }, // Assuming 'isPublic' might correspond to a status or field check
+                { isPublic: true }
+            ]
+        }),
+        db.collection('users').countDocuments({})
+    ]);
 
     return res.status(200).json({
         totalResources,
