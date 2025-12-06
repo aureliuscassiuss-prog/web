@@ -402,8 +402,8 @@ export default function AIPapers() {
         doc.setFontSize(9);
         doc.text("Q.1", 8, yPos);
 
-        // Render MCQs 1-8
-        let savedQ9 = null;
+        // Render MCQs 1-9
+        const rightColumnMCQs: number[] = [];
 
         for (let i = 1; i <= 9; i++) {
             const key = `MCQ_${i}`;
@@ -419,7 +419,6 @@ export default function AIPapers() {
             const optD = `(d) ${data[`${key}_OPTION_D`] || ''}`;
 
             // Wrap options to prevent collision
-            // Column 1 width ~55, Column 2 width ~60
             const optALines = doc.splitTextToSize(optA, 55);
             const optBLines = doc.splitTextToSize(optB, 60);
             const optCLines = doc.splitTextToSize(optC, 55);
@@ -430,9 +429,13 @@ export default function AIPapers() {
             const hRow2 = Math.max(optCLines.length, optDLines.length) * 4;
             const hBlock = (4 * lines.length) + hRow1 + hRow2 + 4;
 
-            // Check for Column Break
-            if (i === 9 && (yPos + hBlock > 200)) {
-                savedQ9 = { qText, lines, optALines, optBLines, optCLines, optDLines };
+            // Check for Column Break (Left Column Margin)
+            // Using 185mm to leave space for potential footer/margins
+            if (yPos + hBlock > 185) {
+                // Determine if we should push this and remaining to right column
+                for (let k = i; k <= 9; k++) {
+                    rightColumnMCQs.push(k);
+                }
                 break;
             }
 
@@ -466,45 +469,21 @@ export default function AIPapers() {
         doc.text("[2]", 220, 8, { align: "center" });
         doc.setFontSize(9);
 
-        // Render Q9 if saved
-        if (savedQ9) {
-            doc.setFont("times", "normal");
-            doc.text("ix.", 156, yCol2);
-            doc.text(savedQ9.lines, 160, yCol2);
-            doc.setFont("times", "bold");
-            doc.text("1", 285, yCol2);
-            doc.setFont("times", "normal");
-            yCol2 += (4 * savedQ9.lines.length);
+        // Helper to render MCQ in Right Column
+        const renderRightColMCQ = (index: number) => {
+            const key = `MCQ_${index}`;
+            const romans = ["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"];
 
-            const hRow1 = Math.max(savedQ9.optALines.length, savedQ9.optBLines.length) * 4;
-            const hRow2 = Math.max(savedQ9.optCLines.length, savedQ9.optDLines.length) * 4;
+            const qText = data[`${key}_QUESTION`];
+            if (!qText) return;
 
-            doc.text(savedQ9.optALines, 160, yCol2);
-            doc.text(savedQ9.optBLines, 220, yCol2);
-            yCol2 += hRow1 + 1;
+            const lines = doc.splitTextToSize(qText, 120); // Slightly wider for right column
 
-            doc.text(savedQ9.optCLines, 160, yCol2);
-            doc.text(savedQ9.optDLines, 220, yCol2);
-            yCol2 += hRow2 + 3;
-        }
-
-        // Render Q10
-        const q10Key = "MCQ_10";
-        const q10Text = data[`${q10Key}_QUESTION`];
-        if (q10Text) {
-            const q10Lines = doc.splitTextToSize(q10Text, 120);
-
-            doc.text("x.", 156, yCol2);
-            doc.text(q10Lines, 160, yCol2);
-            doc.setFont("times", "bold");
-            doc.text("1", 285, yCol2);
-            doc.setFont("times", "normal");
-            yCol2 += (4 * q10Lines.length);
-
-            const optA = `(a) ${data[`${q10Key}_OPTION_A`] || ''}`;
-            const optB = `(b) ${data[`${q10Key}_OPTION_B`] || ''}`;
-            const optC = `(c) ${data[`${q10Key}_OPTION_C`] || ''}`;
-            const optD = `(d) ${data[`${q10Key}_OPTION_D`] || ''}`;
+            // Calculate height needed
+            const optA = `(a) ${data[`${key}_OPTION_A`] || ''}`;
+            const optB = `(b) ${data[`${key}_OPTION_B`] || ''}`;
+            const optC = `(c) ${data[`${key}_OPTION_C`] || ''}`;
+            const optD = `(d) ${data[`${key}_OPTION_D`] || ''}`;
 
             const optALines = doc.splitTextToSize(optA, 55);
             const optBLines = doc.splitTextToSize(optB, 60);
@@ -513,6 +492,23 @@ export default function AIPapers() {
 
             const hRow1 = Math.max(optALines.length, optBLines.length) * 4;
             const hRow2 = Math.max(optCLines.length, optDLines.length) * 4;
+            const hBlock = (4 * lines.length) + hRow1 + hRow2 + 4;
+
+            // Check overflow for right column
+            if (yCol2 + hBlock > 185) {
+                doc.addPage();
+                yCol2 = 20;
+                // Repeat headers on new page? For now just continue at top
+            }
+
+            const roman = romans[index - 1];
+            doc.setFont("times", "normal");
+            doc.text(`${roman}.`, 156, yCol2);
+            doc.text(lines, 160, yCol2);
+            doc.setFont("times", "bold");
+            doc.text("1", 285, yCol2);
+            doc.setFont("times", "normal");
+            yCol2 += (4 * lines.length);
 
             doc.text(optALines, 160, yCol2);
             doc.text(optBLines, 220, yCol2);
@@ -523,8 +519,25 @@ export default function AIPapers() {
             yCol2 += hRow2 + 3;
         }
 
+        // Render overflowed MCQs from Left Column
+        rightColumnMCQs.forEach(idx => renderRightColMCQ(idx));
+
+        // Render Q10 (always expected to be here or later)
+        if (data[`MCQ_10_QUESTION`]) {
+            renderRightColMCQ(10);
+        }
+
+        // Helper to check page break
+        const checkPageBreak = (heightNeeded: number) => {
+            if (yCol2 + heightNeeded > 185) {
+                doc.addPage()
+                yCol2 = 20
+            }
+        }
+
         // Descriptive Q2
         doc.setFont("times", "normal");
+        checkPageBreak(5);
         doc.text("Q.2", 150, yCol2);
 
         const q2Parts = [
@@ -537,28 +550,35 @@ export default function AIPapers() {
             if (!part.t) return;
             doc.setFont("times", "normal");
             const pl = doc.splitTextToSize(part.t, 120);
+            const h = (4 * pl.length) + 2;
+            checkPageBreak(h);
+
             doc.text(part.l, 156, yCol2);
             doc.text(pl, 160, yCol2);
             doc.setFont("times", "bold");
             doc.text(part.m, 285, yCol2);
-            yCol2 += (4 * pl.length) + 2;
+            yCol2 += h;
         });
 
         if (data.Q2_OR_PART) {
+            const q2Or = doc.splitTextToSize(data.Q2_OR_PART, 120);
+            const h = (4 * q2Or.length) + 6;
+            checkPageBreak(h);
+
             doc.setFont("times", "normal");
             doc.text("OR", 150, yCol2);
-            const q2Or = doc.splitTextToSize(data.Q2_OR_PART, 120);
             doc.text("iv.", 156, yCol2);
             doc.text(q2Or, 160, yCol2);
             doc.setFont("times", "bold");
             doc.text("5", 285, yCol2);
-            yCol2 += (4 * q2Or.length) + 6;
+            yCol2 += h;
         }
 
         // Loop Q3 - Q5
         for (let q = 3; q <= 5; q++) {
             if (!data[`Q${q}_PART_1`]) continue;
 
+            checkPageBreak(5);
             doc.setFont("times", "normal");
             doc.text(`Q.${q}`, 150, yCol2);
 
@@ -572,29 +592,36 @@ export default function AIPapers() {
 
             parts.forEach(part => {
                 if (!part.t) return;
-                doc.setFont("times", "normal");
                 const pl = doc.splitTextToSize(part.t, 120);
+                const h = (4 * pl.length) + 2;
+                checkPageBreak(h);
+
+                doc.setFont("times", "normal");
                 doc.text(part.l, 156, yCol2);
                 doc.text(pl, 160, yCol2);
                 doc.setFont("times", "bold");
                 doc.text(part.m, 285, yCol2);
-                yCol2 += (4 * pl.length) + 2;
+                yCol2 += h;
             });
 
             if (data[`Q${q}_OR_PART`]) {
+                const orText = doc.splitTextToSize(data[`Q${q}_OR_PART`], 120);
+                const h = (4 * orText.length) + 6;
+                checkPageBreak(h);
+
                 doc.setFont("times", "normal");
                 doc.text("OR", 150, yCol2);
-                const orText = doc.splitTextToSize(data[`Q${q}_OR_PART`], 120);
                 doc.text("iii.", 156, yCol2);
                 doc.text(orText, 160, yCol2);
                 doc.setFont("times", "bold");
                 doc.text(orMark, 285, yCol2);
-                yCol2 += (4 * orText.length) + 6;
+                yCol2 += h;
             }
         }
 
         // Q6
         if (data.Q6_PART_1) {
+            checkPageBreak(10);
             doc.setFont("times", "normal");
             doc.text("Q.6", 150, yCol2);
             doc.text("Attempt any two:", 156, yCol2);
@@ -610,11 +637,7 @@ export default function AIPapers() {
                 if (!part.t) return;
                 const pl = doc.splitTextToSize(part.t, 120);
                 const heightNeeded = (4 * pl.length) + 2;
-
-                if (yCol2 + heightNeeded > 200) {
-                    doc.addPage();
-                    yCol2 = 20;
-                }
+                checkPageBreak(heightNeeded);
 
                 doc.setFont("times", "normal");
                 doc.setFontSize(9);
