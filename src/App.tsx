@@ -30,6 +30,7 @@ import PrivacyPage from './components/PrivacyPage'
 import TermsPage from './components/TermsPage'
 import SavedResources from './components/SavedResources'
 import SharedResourcesPage from './components/SharedResourcesPage'
+import SharedUnitPage from './components/SharedUnitPage'
 import SEO from './components/SEO'
 import AttendanceManager from './components/attendance/AttendanceManager'
 
@@ -50,7 +51,7 @@ function Layout({
   const isChatPage = location.pathname === '/ai-assistant'
 
   return (
-    <div className="flex min-h-screen flex-col bg-white dark:bg-black text-gray-950 dark:text-gray-50 transition-colors duration-200 font-sans selection:bg-gray-900 selection:text-white dark:selection:bg-gray-100 dark:selection:text-black">
+    <div className={`flex flex-col bg-white dark:bg-black text-gray-950 dark:text-gray-50 transition-colors duration-200 font-sans selection:bg-gray-900 selection:text-white dark:selection:bg-gray-100 dark:selection:text-black ${isChatPage ? 'h-[100dvh] overflow-hidden' : 'min-h-screen'}`}>
 
       {/* 1. Sticky Top Navigation (Glassmorphism) */}
       <Header
@@ -458,6 +459,9 @@ function AppContent() {
 
           {/* Shared Resources Route */}
           <Route path="/shared/:slug" element={<SharedResourcesPage />} />
+
+          {/* Shared Unit Route */}
+          <Route path="/share/unit" element={<SharedUnitPage />} />
 
           {/* Catch all */}
           <Route path="*" element={<Navigate to="/" replace />} />
