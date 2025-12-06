@@ -201,29 +201,6 @@ export default function Preparation() {
         navigate(`/preparation/play?${params.toString()}`)
     }
 
-    // --- Share Functionality ---
-    const [toastMessage, setToastMessage] = useState('')
-    const [showToast, setShowToast] = useState(false)
-
-    const handleShareUnit = (subjectName: string, unitName: string) => {
-        const params = new URLSearchParams({
-            prog: selProgramId,
-            yr: selYearId,
-            sem: selSemesterId,
-            cr: selCourseId,
-            sub: subjectName,
-            unit: unitName
-        })
-        const url = `${window.location.origin}/share/unit?${params.toString()}`
-
-        navigator.clipboard.writeText(url).then(() => {
-            setToastMessage('Link copied to clipboard!')
-            setShowToast(true)
-            setTimeout(() => setShowToast(false), 3000)
-        })
-    }
-
-    // Helper to render dropdown items
     const DropdownItem = ({ label, selected, onClick }: any) => (
         <button
             onClick={(e) => {
@@ -458,34 +435,6 @@ export default function Preparation() {
 
                                     {/* Expanded Content */}
                                     <div className={`
-                                        transition-all duration-300 ease-in-out overflow-hidden bg-gray-50/50 dark:bg-black/20
-                                        ${isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}
-                                    `}>
-                                        <div className="p-3 pt-0 border-t border-gray-100 dark:border-white/5">
-                                            <div className="py-3 grid gap-1.5">
-                                                {units.map((unit, uIdx) => (
-                                                    <div key={uIdx} className="flex items-center justify-between gap-2 text-[11px] text-gray-600 dark:text-gray-400 px-2 py-1 rounded hover:bg-white dark:hover:bg-white/5 transition-colors group/unit">
-                                                        <div className="flex items-center gap-2 min-w-0">
-                                                            <span className="w-4 h-4 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[9px] font-bold shrink-0">
-                                                                {uIdx + 1}
-                                                            </span>
-                                                            <span className="truncate">{unit.name}</span>
-                                                        </div>
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); handleShareUnit(subName, unit.name) }}
-                                                            className="opacity-0 group-hover/unit:opacity-100 p-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500 rounded transition-all"
-                                                            title="Share Unit"
-                                                        >
-                                                            <Share2 size={12} />
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                                {units.length === 0 && <span className="text-[10px] text-gray-400 italic px-2">Syllabus details coming soon.</span>}
-                                            </div>
-
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); handleStart(subName) }}
-                                                className="w-full mt-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-black dark:bg-white text-white dark:text-black rounded-lg text-xs font-bold hover:opacity-90 active:scale-[0.98] transition-all"
                                             >
                                                 <PlayCircle size={14} />
                                                 Start Preparation

@@ -30,7 +30,8 @@ import PrivacyPage from './components/PrivacyPage'
 import TermsPage from './components/TermsPage'
 import SavedResources from './components/SavedResources'
 import SharedResourcesPage from './components/SharedResourcesPage'
-import SharedUnitPage from './components/SharedUnitPage'
+import SharedUnitPage from './components/SharedUnitPage';
+import SharedSubjectPage from './components/SharedSubjectPage';
 import SEO from './components/SEO'
 import AttendanceManager from './components/attendance/AttendanceManager'
 
@@ -462,6 +463,7 @@ function AppContent() {
 
           {/* Shared Unit Route */}
           <Route path="/share/unit" element={<SharedUnitPage />} />
+          <Route path="/share/subject" element={<SharedSubjectPage />} />
 
           {/* Catch all */}
           <Route path="*" element={<Navigate to="/" replace />} />
