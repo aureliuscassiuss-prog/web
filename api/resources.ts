@@ -35,16 +35,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     })
                     .toArray();
 
-                // Calculate upload counts directly from user object (assuming 'uploads' array exists)
-                const leaderboard = topUsers.map((user: any, index: number) => {
-                    return {
-                        rank: index + 1,
-                        name: user.name,
-                        points: user.reputation || 0,
-                        uploads: Array.isArray(user.uploads) ? user.uploads.length : 0,
-                        avatar: user.avatar || 'boy1'
-                    };
-                });
+                // Calculate upload counts for each user (Reverted to countDocuments for reliability)
+                const leaderboard = await Promise.all(
+                    topUsers.map(async (user: any, index: number) => {
+                        const uploadCount = await db.collection('resources')
+                            .countDocuments({ uploaderId: user._id.toString() });
+
+                        return {
+                            rank: index + 1,
+                            name: user.name,
+                            points: user.reputation || 0,
+                            uploads: uploadCount,
+                            avatar: user.avatar || 'boy1'
+                        };
+                    })
+                );
 
                 return res.status(200).json({ leaderboard });
             }
