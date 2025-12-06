@@ -9,7 +9,7 @@ import resourcesHandler from './api/resources.ts';
 import profileHandler from './api/profile.ts';
 import adminHandler from './api/admin.ts';
 import aiHandler from './api/ai.ts';
-import leaderboardHandler from './api/leaderboard.ts';
+// import leaderboardHandler from './api/leaderboard.ts'; // File does not exist, leaderboard handled in resources.ts
 import statsHandler from './api/stats.ts';
 import attendanceHandler from './api/attendance.ts';
 
@@ -81,7 +81,7 @@ app.all('/api/admin', jsonParser, adaptHandler(adminHandler));
 app.all('/api/ai', jsonParser, adaptHandler(aiHandler));
 
 // 6. Leaderboard
-app.all('/api/leaderboard', jsonParser, adaptHandler(leaderboardHandler));
+// app.all('/api/leaderboard', jsonParser, adaptHandler(leaderboardHandler));
 
 // 7. Stats
 // 7. Stats
