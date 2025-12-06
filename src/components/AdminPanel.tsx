@@ -323,20 +323,35 @@ export default function AdminPanel() {
                     <div className="relative flex md:grid md:grid-cols-3 gap-1 p-1 bg-gray-200/50 dark:bg-white/5 rounded-xl w-full">
                         <TabButton
                             active={activeTab === 'pending'}
-                            onClick={() => setActiveTab('pending')}
+                            onClick={() => {
+                                if (activeTab !== 'pending') {
+                                    setIsLoading(true)
+                                    setActiveTab('pending')
+                                }
+                            }}
                             icon={<Clock size={16} />}
                             label="Approvals"
                             count={pendingResources.length}
                         />
                         <TabButton
                             active={activeTab === 'users'}
-                            onClick={() => setActiveTab('users')}
+                            onClick={() => {
+                                if (activeTab !== 'users') {
+                                    setIsLoading(true)
+                                    setActiveTab('users')
+                                }
+                            }}
                             icon={<User size={16} />}
                             label="Users"
                         />
                         <TabButton
                             active={activeTab === 'structure'}
-                            onClick={() => setActiveTab('structure')}
+                            onClick={() => {
+                                if (activeTab !== 'structure') {
+                                    setIsLoading(true)
+                                    setActiveTab('structure')
+                                }
+                            }}
                             icon={<Settings size={16} />}
                             label="Structure"
                         />
