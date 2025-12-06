@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react'
-import { X, Upload as UploadIcon, Link as LinkIcon, Loader2, FileText, Layers, Calendar, GraduationCap, BookOpen, ChevronDown, Check } from 'lucide-react'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { X, Upload as UploadIcon, Link as LinkIcon, Loader2, FileText, Layers, Calendar, GraduationCap, BookOpen, ChevronDown, Check, Sparkles } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import Toast from './Toast'
 
 // --- CUSTOM SELECT COMPONENT ---
 interface Option {
@@ -28,6 +29,17 @@ const CustomSelect = ({
     icon?: any
 }) => {
     const selectedOption = options.find(opt => String(opt.value) === String(value))
+    const dropdownRef = useRef<HTMLDivElement>(null)
+
+    // Scroll active option into view when opened
+    useEffect(() => {
+        if (isOpen && dropdownRef.current) {
+            const activeItem = dropdownRef.current.querySelector('[data-selected="true"]')
+            if (activeItem) {
+                activeItem.scrollIntoView({ block: 'nearest' })
+            }
+        }
+    }, [isOpen])
 
     const handleSelect = (val: any, e: React.MouseEvent) => {
         e.stopPropagation()
@@ -37,7 +49,7 @@ const CustomSelect = ({
 
     return (
         <div className="relative">
-            {Icon && <Icon className="absolute left-3 top-3.5 w-4 h-4 text-gray-400 pointer-events-none z-10" />}
+            {Icon && <Icon className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none z-10" />}
             <button
                 type="button"
                 onClick={(e) => {
@@ -46,12 +58,15 @@ const CustomSelect = ({
                 }}
                 disabled={disabled}
                 className={`
-                    w-full pl-10 pr-4 py-2.5 text-sm border rounded-xl flex items-center justify-between outline-none transition-all
-                    ${isOpen ? 'ring-2 ring-black/5 dark:ring-white/10 border-transparent' : 'border-gray-200 dark:border-gray-800'}
-                    ${disabled ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed opacity-60' : 'bg-gray-50 dark:bg-gray-900 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800'}
+                    w-full pl-10 pr-4 py-3 text-sm border rounded-xl flex items-center justify-between outline-none transition-all
+                    ${isOpen
+                        ? 'ring-2 ring-black/5 dark:ring-white/10 border-transparent bg-white dark:bg-zinc-900'
+                        : 'border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-zinc-900/50 hover:bg-white dark:hover:bg-zinc-900'
+                    }
+                    ${disabled && 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-zinc-900'}
                 `}
             >
-                <span className={`truncate ${!selectedOption ? 'text-gray-400' : 'text-gray-900 dark:text-white'}`}>
+                <span className={`truncate ${!selectedOption ? 'text-gray-400' : 'text-gray-900 dark:text-gray-200'}`}>
                     {selectedOption ? selectedOption.label : placeholder}
                 </span>
                 <ChevronDown
@@ -62,20 +77,21 @@ const CustomSelect = ({
 
             {/* Dropdown Menu */}
             <div className={`
-                absolute z-50 w-full mt-1 bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden transition-all duration-300 ease-out origin-top
+                absolute z-[60] w-full mt-2 bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden transition-all duration-300 ease-out origin-top font-sans
                 ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'}
             `}>
-                <div className="max-h-[240px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800">
+                <div ref={dropdownRef} className="max-h-[240px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-zinc-700">
                     {options.length > 0 ? (
                         options.map((opt) => (
                             <div
                                 key={opt.value}
+                                data-selected={String(value) === String(opt.value)}
                                 onClick={(e) => handleSelect(opt.value, e)}
                                 className={`
-                                    px-4 py-2.5 text-sm cursor-pointer flex items-center justify-between transition-colors
+                                    px-4 py-3 text-sm cursor-pointer flex items-center justify-between transition-colors
                                     ${String(value) === String(opt.value)
                                         ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium'
-                                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'}
+                                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800'}
                                 `}
                             >
                                 <span className="truncate">{opt.label}</span>
@@ -129,6 +145,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
     const [structure, setStructure] = useState<any>(null)
     const [isLoadingStructure, setIsLoadingStructure] = useState(false)
     const [activeField, setActiveField] = useState<string | null>(null)
+    const [toast, setToast] = useState<{ message: string, type: 'success' | 'error', show: boolean }>({ message: '', type: 'success', show: false })
 
     // Close dropdowns on outside click
     useEffect(() => {
@@ -202,17 +219,22 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
         }
     }
 
+    const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+        setToast({ message, type, show: true })
+        setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000)
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
         // 1. Basic Validation
         if (!formData.driveLink) {
-            alert('Please enter a Google Drive link')
+            showToast('Please enter a Google Drive link', 'error')
             return
         }
 
         if (!navigator.onLine) {
-            alert('No internet connection')
+            showToast('No internet connection', 'error')
             return
         }
 
@@ -248,14 +270,18 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
             }
 
             // Success
-            alert('We have sent the request. Your notes are updated after approval. Thank you for your notes.')
-            onSuccess(formData.title)
-            resetForm()
-            onClose()
+            showToast('Request sent! Thank you for your contribution.', 'success')
+
+            // Allow toast to show before closing
+            setTimeout(() => {
+                onSuccess(formData.title)
+                resetForm()
+                onClose()
+            }, 1500)
 
         } catch (error: any) {
             console.error('Upload Process Error:', error)
-            alert(error.message || 'Failed to upload resource.')
+            showToast(error.message || 'Failed to upload resource.', 'error')
         } finally {
             setIsUploading(false)
         }
@@ -324,247 +350,280 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
     if (!isOpen) return null
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-            <div className="bg-white dark:bg-[#09090b] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-modal-in border border-gray-200 dark:border-gray-800 scrollbar-hide">
+        <div className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 animate-fade-in p-0 sm:p-4">
+
+            {/* Modal Container */}
+            <div className="
+                w-full sm:max-w-2xl bg-white dark:bg-[#09090b] 
+                rounded-t-3xl sm:rounded-3xl shadow-2xl relative
+                flex flex-col
+                max-h-[90dvh] sm:max-h-[85vh]
+                animate-slide-up sm:animate-modal-in
+                border border-transparent sm:border-gray-200 sm:dark:border-white/10
+                ring-1 ring-black/5 dark:ring-white/5
+            ">
 
                 {/* HEADER */}
-                <div className="sticky top-0 bg-white/80 dark:bg-[#09090b]/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 p-5 flex justify-between items-center z-10">
-                    <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
-                            <UploadIcon size={20} strokeWidth={2.5} />
+                <div className="flex-none p-5 sm:p-6 border-b border-gray-100 dark:border-white/5 bg-white/50 dark:bg-black/20 backdrop-blur-xl rounded-t-3xl z-10 flex items-center justify-between">
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">Upload Resource</h2>
+                            <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                                <Sparkles size={10} />
+                                Beta
+                            </span>
                         </div>
-                        <div>
-                            <h2 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">Upload Resource</h2>
-                            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Share your knowledge with the community</p>
-                        </div>
+                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Share your knowledge with the community</p>
                     </div>
                     <button
                         onClick={onClose}
                         disabled={isUploading}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-500 dark:text-gray-400 disabled:opacity-50"
+                        className="p-2.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-600 dark:text-gray-400 disabled:opacity-50"
                     >
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                {isLoadingStructure ? (
-                    <div className="p-12 flex justify-center">
-                        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                    </div>
-                ) : (
-                    <form onSubmit={handleSubmit} className="p-5 space-y-6">
+                {/* SCROLLABLE CONTENT */}
+                <div className="flex-1 overflow-y-auto overflow-x-hidden p-5 sm:p-6 space-y-6 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-zinc-800">
 
-                        {/* Title & Description */}
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5 pl-1">Title</label>
-                                <input
-                                    type="text"
-                                    required
-                                    placeholder="e.g. Data Structures Complete Notes"
-                                    value={formData.title}
-                                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                    disabled={isUploading}
-                                    className="w-full px-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10 dark:text-white transition-all placeholder:text-gray-400"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5 pl-1">Description</label>
-                                <textarea
-                                    required
-                                    rows={3}
-                                    placeholder="Briefly describe what this resource contains..."
-                                    value={formData.description}
-                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    disabled={isUploading}
-                                    className="w-full px-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10 dark:text-white transition-all resize-none placeholder:text-gray-400"
-                                />
-                            </div>
+                    {isLoadingStructure ? (
+                        <div className="py-20 flex flex-col items-center justify-center text-gray-400 animate-pulse">
+                            <Loader2 className="w-10 h-10 animate-spin text-blue-500 mb-4" />
+                            <p className="text-sm font-medium">Loading academic structure...</p>
                         </div>
+                    ) : (
+                        <form onSubmit={handleSubmit} className="space-y-8">
 
-                        {/* Dropdown Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            {/* Program */}
-                            <div>
-                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5 pl-1">Program</label>
-                                <CustomSelect
-                                    icon={GraduationCap}
-                                    placeholder="Select Program"
-                                    value={formData.program}
-                                    options={programs.map((p: any) => ({ label: p.name, value: p.id }))}
-                                    onChange={(val) => setFormData({ ...formData, program: val, year: '', course: '', semester: '', subject: '', unit: '' })}
-                                    disabled={isUploading}
-                                    isOpen={activeField === 'program'}
-                                    onToggle={() => toggleField('program')}
-                                />
-                            </div>
+                            {/* Section 1: Basic Info */}
+                            <div className="space-y-5">
+                                <div className="space-y-4">
+                                    <div className="group">
+                                        <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-2 pl-1 group-focus-within:text-blue-500 transition-colors">Resource Title</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="e.g. Data Structures Complete Notes"
+                                            value={formData.title}
+                                            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                                            disabled={isUploading}
+                                            className="w-full px-4 py-3 text-sm bg-gray-50/50 dark:bg-zinc-900/50 border border-gray-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10 dark:text-white transition-all placeholder:text-gray-400 hover:bg-white dark:hover:bg-zinc-900"
+                                        />
+                                    </div>
 
-                            {/* Year */}
-                            <div>
-                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5 pl-1">Year</label>
-                                <CustomSelect
-                                    icon={Calendar}
-                                    placeholder="Select Year"
-                                    value={formData.year}
-                                    options={years.map((y: any) => ({ label: y.name, value: y.id }))}
-                                    onChange={(val) => setFormData({ ...formData, year: val, course: '', semester: '', subject: '', unit: '' })}
-                                    disabled={!formData.program || isUploading}
-                                    isOpen={activeField === 'year'}
-                                    onToggle={() => toggleField('year')}
-                                />
-                            </div>
-
-                            {/* Branch */}
-                            <div>
-                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5 pl-1">Branch</label>
-                                <CustomSelect
-                                    icon={Layers}
-                                    placeholder="Select Branch"
-                                    value={formData.course}
-                                    options={courses.map((c: any) => ({ label: c.name, value: c.id }))}
-                                    onChange={(val) => setFormData({ ...formData, course: val, semester: '', subject: '', unit: '' })}
-                                    disabled={!formData.year || isUploading}
-                                    isOpen={activeField === 'course'}
-                                    onToggle={() => toggleField('course')}
-                                />
-                            </div>
-
-                            {/* Semester */}
-                            <div>
-                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5 pl-1">Semester</label>
-                                <CustomSelect
-                                    icon={Calendar}
-                                    placeholder="Select Semester"
-                                    value={formData.semester}
-                                    options={semesters.map((s: any) => ({ label: s.name, value: s.id }))}
-                                    onChange={(val) => setFormData({ ...formData, semester: val, subject: '', unit: '' })}
-                                    disabled={!formData.course || isUploading}
-                                    isOpen={activeField === 'semester'}
-                                    onToggle={() => toggleField('semester')}
-                                />
-                            </div>
-
-                            {/* Subject */}
-                            <div className="md:col-span-2">
-                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5 pl-1">Subject</label>
-                                <CustomSelect
-                                    icon={BookOpen}
-                                    placeholder="Select Subject"
-                                    value={formData.subject}
-                                    options={subjects.map((s: any) => ({ label: (typeof s === 'string' ? s : s.name), value: (typeof s === 'string' ? s : s.name) }))}
-                                    onChange={(val) => setFormData({ ...formData, subject: val, unit: '' })}
-                                    disabled={!formData.semester || isUploading}
-                                    isOpen={activeField === 'subject'}
-                                    onToggle={() => toggleField('subject')}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Optional Unit & Type */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            {units.length > 0 && (
-                                <div>
-                                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5 pl-1">Unit (Optional)</label>
-                                    <CustomSelect
-                                        placeholder="Select Unit"
-                                        value={formData.unit}
-                                        options={units.map((u: any) => ({ label: (typeof u === 'string' ? u : u.name), value: (typeof u === 'string' ? u : u.name) }))}
-                                        onChange={(val) => setFormData({ ...formData, unit: val })}
-                                        disabled={!formData.subject || isUploading}
-                                        isOpen={activeField === 'unit'}
-                                        onToggle={() => toggleField('unit')}
-                                    />
+                                    <div className="group">
+                                        <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-2 pl-1 group-focus-within:text-blue-500 transition-colors">Description</label>
+                                        <textarea
+                                            required
+                                            rows={2}
+                                            placeholder="Briefly describe what this resource contains..."
+                                            value={formData.description}
+                                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                            disabled={isUploading}
+                                            className="w-full px-4 py-3 text-sm bg-gray-50/50 dark:bg-zinc-900/50 border border-gray-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10 dark:text-white transition-all resize-none placeholder:text-gray-400 hover:bg-white dark:hover:bg-zinc-900"
+                                        />
+                                    </div>
                                 </div>
-                            )}
-
-                            <div className={units.length === 0 ? "col-span-2" : ""}>
-                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5 pl-1">Resource Type</label>
-                                <CustomSelect
-                                    icon={FileText}
-                                    placeholder="Select Type"
-                                    value={formData.resourceType}
-                                    options={[
-                                        { label: 'Lecture Notes', value: 'notes' },
-                                        { label: 'Previous Year Questions', value: 'pyq' },
-                                        { label: 'Formula Sheet', value: 'formula-sheet' }
-                                    ]}
-                                    onChange={(val) => setFormData({ ...formData, resourceType: val })}
-                                    disabled={isUploading}
-                                    isOpen={activeField === 'resourceType'}
-                                    onToggle={() => toggleField('resourceType')}
-                                />
                             </div>
-                        </div>
 
-                        {/* Drive Link */}
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5 pl-1">Google Drive Link</label>
-                            <div className="relative">
-                                <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                                <input
-                                    type="url"
-                                    required
-                                    placeholder="https://drive.google.com/..."
-                                    value={formData.driveLink}
-                                    onChange={(e) => setFormData({ ...formData, driveLink: e.target.value })}
-                                    disabled={isUploading}
-                                    className="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10 dark:text-white transition-all placeholder:text-gray-400"
-                                />
+                            <hr className="border-gray-100 dark:border-white/5" />
+
+                            {/* Section 2: Academic Details */}
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-200 flex items-center gap-2">
+                                    <Layers size={16} className="text-blue-500" />
+                                    Academic Details
+                                </h3>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div>
+                                        <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-1.5 pl-1">Program</label>
+                                        <CustomSelect
+                                            icon={GraduationCap}
+                                            placeholder="Select Program"
+                                            value={formData.program}
+                                            options={programs.map((p: any) => ({ label: p.name, value: p.id }))}
+                                            onChange={(val) => setFormData({ ...formData, program: val, year: '', course: '', semester: '', subject: '', unit: '' })}
+                                            disabled={isUploading}
+                                            isOpen={activeField === 'program'}
+                                            onToggle={() => toggleField('program')}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-1.5 pl-1">Year</label>
+                                        <CustomSelect
+                                            icon={Calendar}
+                                            placeholder="Select Year"
+                                            value={formData.year}
+                                            options={years.map((y: any) => ({ label: y.name, value: y.id }))}
+                                            onChange={(val) => setFormData({ ...formData, year: val, course: '', semester: '', subject: '', unit: '' })}
+                                            disabled={!formData.program || isUploading}
+                                            isOpen={activeField === 'year'}
+                                            onToggle={() => toggleField('year')}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-1.5 pl-1">Branch</label>
+                                        <CustomSelect
+                                            icon={Layers}
+                                            placeholder="Select Branch"
+                                            value={formData.course}
+                                            options={courses.map((c: any) => ({ label: c.name, value: c.id }))}
+                                            onChange={(val) => setFormData({ ...formData, course: val, semester: '', subject: '', unit: '' })}
+                                            disabled={!formData.year || isUploading}
+                                            isOpen={activeField === 'course'}
+                                            onToggle={() => toggleField('course')}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-1.5 pl-1">Semester</label>
+                                        <CustomSelect
+                                            icon={Calendar}
+                                            placeholder="Select Semester"
+                                            value={formData.semester}
+                                            options={semesters.map((s: any) => ({ label: s.name, value: s.id }))}
+                                            onChange={(val) => setFormData({ ...formData, semester: val, subject: '', unit: '' })}
+                                            disabled={!formData.course || isUploading}
+                                            isOpen={activeField === 'semester'}
+                                            onToggle={() => toggleField('semester')}
+                                        />
+                                    </div>
+
+                                    <div className="md:col-span-2">
+                                        <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-1.5 pl-1">Subject</label>
+                                        <CustomSelect
+                                            icon={BookOpen}
+                                            placeholder="Select Subject"
+                                            value={formData.subject}
+                                            options={subjects.map((s: any) => ({ label: (typeof s === 'string' ? s : s.name), value: (typeof s === 'string' ? s : s.name) }))}
+                                            onChange={(val) => setFormData({ ...formData, subject: val, unit: '' })}
+                                            disabled={!formData.semester || isUploading}
+                                            isOpen={activeField === 'subject'}
+                                            onToggle={() => toggleField('subject')}
+                                        />
+                                    </div>
+                                </div>
                             </div>
-                            <p className="mt-1.5 text-[11px] text-gray-400 flex items-center gap-1">
-                                <div className="w-1 h-1 rounded-full bg-blue-500"></div>
-                                Ensure the link has "Anyone with the link" access enabled.
-                            </p>
-                        </div>
 
-                        {/* Exam Year - Only for PYQs */}
-                        {formData.resourceType === 'pyq' && (
-                            <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5 pl-1">
-                                    Exam Year
-                                </label>
-                                <CustomSelect
-                                    icon={Calendar}
-                                    placeholder="Select Exam Year"
-                                    value={formData.examYear}
-                                    options={[
-                                        { label: '2025', value: '2025' },
-                                        { label: '2024', value: '2024' },
-                                        { label: '2023', value: '2023' },
-                                        { label: '2022', value: '2022' },
-                                        { label: '2021', value: '2021' },
-                                        { label: 'Older', value: 'older' }
-                                    ]}
-                                    onChange={(val) => setFormData({ ...formData, examYear: val })}
-                                    disabled={isUploading}
-                                    isOpen={activeField === 'examYear'}
-                                    onToggle={() => toggleField('examYear')}
-                                />
+                            <hr className="border-gray-100 dark:border-white/5" />
+
+                            {/* Section 3: Resource Details */}
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-200 flex items-center gap-2">
+                                    <FileText size={16} className="text-purple-500" />
+                                    Resource Files
+                                </h3>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    {units.length > 0 && (
+                                        <div>
+                                            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-1.5 pl-1">Unit (Optional)</label>
+                                            <CustomSelect
+                                                placeholder="Select Unit"
+                                                value={formData.unit}
+                                                options={units.map((u: any) => ({ label: (typeof u === 'string' ? u : u.name), value: (typeof u === 'string' ? u : u.name) }))}
+                                                onChange={(val) => setFormData({ ...formData, unit: val })}
+                                                disabled={!formData.subject || isUploading}
+                                                isOpen={activeField === 'unit'}
+                                                onToggle={() => toggleField('unit')}
+                                            />
+                                        </div>
+                                    )}
+
+                                    <div className={units.length === 0 ? "col-span-2" : ""}>
+                                        <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-1.5 pl-1">Type</label>
+                                        <CustomSelect
+                                            icon={FileText}
+                                            placeholder="Select Type"
+                                            value={formData.resourceType}
+                                            options={[
+                                                { label: 'Lecture Notes', value: 'notes' },
+                                                { label: 'Previous Year Questions', value: 'pyq' },
+                                                { label: 'Formula Sheet', value: 'formula-sheet' }
+                                            ]}
+                                            onChange={(val) => setFormData({ ...formData, resourceType: val })}
+                                            disabled={isUploading}
+                                            isOpen={activeField === 'resourceType'}
+                                            onToggle={() => toggleField('resourceType')}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Exam Year for PYQs */}
+                                {formData.resourceType === 'pyq' && (
+                                    <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-1.5 pl-1">
+                                            Exam Year
+                                        </label>
+                                        <CustomSelect
+                                            icon={Calendar}
+                                            placeholder="Select Exam Year"
+                                            value={formData.examYear}
+                                            options={[
+                                                { label: '2025', value: '2025' },
+                                                { label: '2024', value: '2024' },
+                                                { label: '2023', value: '2023' },
+                                                { label: '2022', value: '2022' },
+                                                { label: '2021', value: '2021' },
+                                                { label: 'Older', value: 'older' }
+                                            ]}
+                                            onChange={(val) => setFormData({ ...formData, examYear: val })}
+                                            disabled={isUploading}
+                                            isOpen={activeField === 'examYear'}
+                                            onToggle={() => toggleField('examYear')}
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Drive Link */}
+                                <div>
+                                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-1.5 pl-1">Google Drive Link</label>
+                                    <div className="relative group">
+                                        <LinkIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none group-focus-within:text-blue-500 transition-colors" />
+                                        <input
+                                            type="url"
+                                            required
+                                            placeholder="https://drive.google.com/..."
+                                            value={formData.driveLink}
+                                            onChange={(e) => setFormData({ ...formData, driveLink: e.target.value })}
+                                            disabled={isUploading}
+                                            className="w-full pl-10 pr-4 py-3 text-sm bg-gray-50/50 dark:bg-zinc-900/50 border border-gray-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10 dark:text-white transition-all placeholder:text-gray-400 hover:bg-white dark:hover:bg-zinc-900"
+                                        />
+                                    </div>
+                                    <p className="mt-2 text-[10px] text-gray-400 flex items-center gap-1.5">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                        Ensure "Anyone with the link" access is enabled.
+                                    </p>
+                                </div>
                             </div>
-                        )}
 
-                        {/* Submit Button */}
-                        <button
-                            type="submit"
-                            disabled={isUploading || !formData.driveLink || (formData.resourceType === 'pyq' && !formData.examYear)}
-                            className="w-full bg-black dark:bg-white text-white dark:text-black py-3.5 rounded-xl font-bold hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-black/5 dark:shadow-white/5"
-                        >
-                            {isUploading ? (
-                                <>
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                    Submitting...
-                                </>
-                            ) : (
-                                <>
-                                    <UploadIcon className="w-5 h-5" />
-                                    Submit Resource
-                                </>
-                            )}
-                        </button>
-                    </form>
-                )}
+                            {/* Submit Button */}
+                            <button
+                                type="submit"
+                                disabled={isUploading || !formData.driveLink || (formData.resourceType === 'pyq' && !formData.examYear)}
+                                className="w-full bg-black dark:bg-white text-white dark:text-black py-4 rounded-xl font-bold hover:shadow-lg hover:shadow-black/20 dark:hover:shadow-white/10 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
+                            >
+                                {isUploading ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        Submitting Request...
+                                    </>
+                                ) : (
+                                    <>
+                                        <UploadIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                        Submit Resource
+                                    </>
+                                )}
+                            </button>
+                        </form>
+                    )}
+                </div>
             </div>
+
+            <Toast message={toast.message} show={toast.show} type={toast.type} />
         </div>
     )
 }
