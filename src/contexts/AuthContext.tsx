@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { auth } from '../lib/firebase'
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth'
 
 interface User {
     id: string
@@ -52,111 +54,102 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, [])
 
     const login = async (email: string, password: string) => {
-        const response = await fetch('/api/auth', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'login', email, password })
-        })
+        try {
+            // 1. Firebase Login
+            const userCredential = await signInWithEmailAndPassword(auth, email, password)
+            const firebaseUser = userCredential.user
+            const idToken = await firebaseUser.getIdToken()
 
-        if (!response.ok) {
-            let errorMessage = 'Login failed'
-            try {
+            // 2. Sync with Backend to get App Token & User Data
+            const response = await fetch('/api/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'firebase-login', token: idToken })
+            })
+
+            if (!response.ok) {
                 const error = await response.json()
-                errorMessage = error.message || error.error || 'Login failed'
-            } catch (e) {
-                // Response is not JSON (likely HTML error page)
-                errorMessage = `Server error (${response.status}): ${response.statusText}`
+                throw new Error(error.message || 'Backend sync failed')
             }
-            throw new Error(errorMessage)
-        }
 
-        const data = await response.json()
-        setToken(data.token)
-        setUser(data.user)
-        localStorage.setItem('token', data.token)
-        localStorage.setItem('user', JSON.stringify(data.user))
+            const data = await response.json()
+            setToken(data.token)
+            setUser(data.user)
+            localStorage.setItem('token', data.token)
+            localStorage.setItem('user', JSON.stringify(data.user))
+        } catch (error: any) {
+            console.error('Login error:', error)
+            throw new Error(error.message || 'Login failed')
+        }
     }
 
     const register = async (name: string, email: string, password: string) => {
-        const response = await fetch('/api/auth', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'register', name, email, password })
-        })
+        try {
+            // 1. Firebase Register
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+            const firebaseUser = userCredential.user
+            const idToken = await firebaseUser.getIdToken()
 
-        if (!response.ok) {
-            let errorMessage = 'Registration failed'
-            try {
+            // 2. Sync with Backend (Create User)
+            const response = await fetch('/api/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'firebase-login',
+                    token: idToken,
+                    userData: { name } // Pass extra data
+                })
+            })
+
+            if (!response.ok) {
                 const error = await response.json()
-                errorMessage = error.message || error.error || 'Registration failed'
-            } catch (e) {
-                errorMessage = `Server error (${response.status}): ${response.statusText}`
+                throw new Error(error.message || 'Registration sync failed')
             }
-            throw new Error(errorMessage)
-        }
 
-        const data = await response.json()
-
-        // If OTP is required, don't set user/token yet
-        if (data.requireOtp) {
+            const data = await response.json()
+            setToken(data.token)
+            setUser(data.user)
+            localStorage.setItem('token', data.token)
+            localStorage.setItem('user', JSON.stringify(data.user))
             return data
+        } catch (error: any) {
+            console.error('Registration error:', error)
+            throw new Error(error.message || 'Registration failed')
         }
-
-        setToken(data.token)
-        setUser(data.user)
-        localStorage.setItem('token', data.token)
-        localStorage.setItem('user', JSON.stringify(data.user))
-        return data
     }
 
     const verifyOtp = async (email: string, otp: string) => {
-        const response = await fetch('/api/auth', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'verify-otp', email, otp })
-        })
-
-        if (!response.ok) {
-            let errorMessage = 'OTP verification failed'
-            try {
-                const error = await response.json()
-                errorMessage = error.message || error.error || 'OTP verification failed'
-            } catch (e) {
-                errorMessage = `Server error (${response.status}): ${response.statusText}`
-            }
-            throw new Error(errorMessage)
-        }
-
-        const data = await response.json()
-        setToken(data.token)
-        setUser(data.user)
-        localStorage.setItem('token', data.token)
-        localStorage.setItem('user', JSON.stringify(data.user))
+        // Firebase handles email verification differently (sendEmailVerification)
+        // For now, we might skip this or implement Firebase's email verification
+        throw new Error('OTP verification is deprecated in favor of Firebase Auth')
     }
 
-    const googleLogin = async (credential: string) => {
-        const response = await fetch('/api/auth', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'google', token: credential })
-        })
+    const googleLogin = async () => {
+        try {
+            const provider = new GoogleAuthProvider()
+            const result = await signInWithPopup(auth, provider)
+            const idToken = await result.user.getIdToken()
 
-        if (!response.ok) {
-            let errorMessage = 'Google login failed'
-            try {
+            const response = await fetch('/api/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'firebase-login', token: idToken })
+            })
+
+            if (!response.ok) {
                 const error = await response.json()
-                errorMessage = error.message || error.error || 'Google login failed'
-            } catch (e) {
-                errorMessage = `Server error (${response.status}): ${response.statusText}`
+                throw new Error(error.message || 'Google login failed')
             }
-            throw new Error(errorMessage)
-        }
 
-        const data = await response.json()
-        setToken(data.token)
-        setUser(data.user)
-        localStorage.setItem('token', data.token)
-        localStorage.setItem('user', JSON.stringify(data.user))
+            const data = await response.json()
+            setToken(data.token)
+            setUser(data.user)
+            localStorage.setItem('token', data.token)
+            localStorage.setItem('user', JSON.stringify(data.user))
+        } catch (error: any) {
+            console.error('Google login error:', error)
+            throw new Error(error.message || 'Google login failed')
+        }
     }
 
     const logout = () => {

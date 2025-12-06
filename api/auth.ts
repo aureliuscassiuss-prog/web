@@ -26,6 +26,7 @@ interface User {
     canUpload?: boolean;
     createdAt: Date;
     updatedAt?: Date;
+    firebaseUid?: string;
 }
 
 const ADMIN_EMAIL = 'trilliontip@gmail.com';
@@ -41,6 +42,8 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+import { auth as adminAuth } from '../lib/firebase-admin.js';
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -53,17 +56,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Method not allowed' });
-    }
-
-    // Check for required environment variables
-    if (!process.env.MONGODB_URI) {
-        console.error('MONGODB_URI not set');
-        return res.status(500).json({ message: 'Server misconfiguration: MONGODB_URI not set' });
-    }
-
-    if (!process.env.JWT_SECRET) {
-        console.error('JWT_SECRET not set');
-        return res.status(500).json({ message: 'Server misconfiguration: JWT_SECRET not set' });
     }
 
     try {
@@ -81,7 +73,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.log('Auth API Request:', { action, email: body?.email });
 
         // Route to appropriate handler based on action
-        if (action === 'login') {
+        if (action === 'firebase-login') {
+            return await handleFirebaseLogin(body, res);
+        } else if (action === 'login') {
             return await handleLogin(body, res);
         } else if (action === 'register') {
             return await handleRegister(body, res);
@@ -94,7 +88,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         } else if (action === 'google') {
             return await handleGoogleAuth(body, res);
         } else {
-            return res.status(400).json({ message: 'Invalid action. Use: login, register, verify-otp, forgot-password, reset-password, or google' });
+            return res.status(400).json({ message: 'Invalid action.' });
         }
     } catch (error) {
         console.error('Auth error:', error);
@@ -552,5 +546,96 @@ async function handleResetPassword(body: any, res: VercelResponse) {
     return res.status(200).json({
         message: 'Password reset successfully'
     });
+}
+
+async function handleFirebaseLogin(body: any, res: VercelResponse) {
+    const { token, userData } = body;
+
+    if (!token) {
+        return res.status(400).json({ message: 'No firebase token provided' });
+    }
+
+    try {
+        // 1. Verify Firebase Token
+        const decodedToken = await adminAuth.verifyIdToken(token);
+        const { email, uid, name, picture } = decodedToken;
+
+        if (!email) {
+            return res.status(400).json({ message: 'Email not found in firebase token' });
+        }
+
+        const db = await getDb();
+        const usersCollection = db.collection('users');
+
+        // 2. Check if user exists in MongoDB
+        let user = await usersCollection.findOne({ email }) as unknown as User | null;
+        const isAdmin = email === 'trilliontip@gmail.com'; // Hardcoded admin check from code
+
+        if (!user) {
+            // Create new user
+            const newUser = {
+                name: name || userData?.name || 'User',
+                email,
+                firebaseUid: uid,
+                avatar: picture || '/boy1.png',
+                reputation: 0,
+                role: isAdmin ? 'admin' : 'user',
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                isBanned: false, // Default
+                isRestricted: false, // Default
+                uploads: [] // Default
+            };
+
+            const result = await usersCollection.insertOne(newUser);
+            user = { ...newUser, _id: result.insertedId } as User;
+        } else {
+            // Update existing user with Firebase UID if missing
+            if (!user.firebaseUid || (picture && !user.avatar)) {
+                await usersCollection.updateOne(
+                    { _id: user._id },
+                    {
+                        $set: {
+                            firebaseUid: uid,
+                            updatedAt: new Date(),
+                            ...(picture && !user.avatar ? { avatar: picture } : {})
+                        }
+                    }
+                );
+            }
+
+            if (user.isBanned) {
+                return res.status(403).json({ message: 'User is banned' });
+            }
+        }
+
+        // 3. Generate App JWT (Backwards Compatibility)
+        const appToken = jwt.sign(
+            { userId: user._id, email: user.email, name: user.name, role: user.role },
+            process.env.JWT_SECRET!,
+            { expiresIn: '7d' }
+        );
+
+        return res.status(200).json({
+            token: appToken,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                reputation: user.reputation || 0,
+                avatar: user.avatar,
+                role: user.role,
+                semester: user.semester,
+                college: user.college,
+                branch: user.branch,
+                course: user.course,
+                year: user.year
+            }
+        });
+
+    } catch (error) {
+        console.error('Firebase login error:', error);
+        return res.status(401).json({ message: 'Invalid firebase token', error: String(error) });
+    }
 }
 
