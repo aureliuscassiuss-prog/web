@@ -195,96 +195,20 @@
     }
   }
 
-  /* Starfield Effect for Dark Mode */
-  .dark body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+
+
+  /* --- PROTECTION STYLES --- */
+  /* Prevent Text Selection globally (except inputs) */
+  *:not(input):not(textarea) {
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  /* Prevent Image Dragging & Interaction */
+  img {
     pointer-events: none;
-    z-index: 0;
-    background-image:
-      radial-gradient(2px 2px at 20px 30px, white, transparent),
-      radial-gradient(2px 2px at 60px 70px, white, transparent),
-      radial-gradient(1px 1px at 50px 50px, white, transparent),
-      radial-gradient(1px 1px at 130px 80px, white, transparent),
-      radial-gradient(2px 2px at 90px 10px, white, transparent),
-      radial-gradient(1px 1px at 200px 150px, white, transparent),
-      radial-gradient(1px 1px at 170px 100px, white, transparent),
-      radial-gradient(2px 2px at 250px 60px, white, transparent),
-      radial-gradient(1px 1px at 300px 120px, white, transparent),
-      radial-gradient(1px 1px at 350px 40px, white, transparent);
-    background-repeat: repeat;
-    background-size: 400px 400px;
-    animation: twinkle 5s ease-in-out infinite;
-    opacity: 0.6;
+    -webkit-user-drag: none;
+    user-select: none;
   }
-
-  @keyframes twinkle {
-
-    0%,
-    100% {
-      opacity: 0.6;
-    }
-
-    50% {
-      opacity: 0.3;
-    }
-  }
-
-  /* Shooting Star Effect */
-  .dark body::after {
-    content: '';
-    position: fixed;
-    top: -100px;
-    right: -100px;
-    width: 2px;
-    height: 2px;
-    background: white;
-    border-radius: 50%;
-    box-shadow: 0 0 6px 2px rgba(255, 255, 255, 0.8);
-    pointer-events: none;
-    z-index: 0;
-    animation: shootingStar 8s linear infinite;
-    opacity: 0;
-  }
-
-  @keyframes shootingStar {
-    0% {
-      opacity: 0;
-      transform: translate(0, 0) rotate(-45deg);
-    }
-
-    5% {
-      opacity: 1;
-    }
-
-    10% {
-      opacity: 0;
-      transform: translate(-300px, 300px) rotate(-45deg);
-    }
-
-    100% {
-      opacity: 0;
-      transform: translate(-300px, 300px) rotate(-45deg);
-    }
-  }
-}
-
-/* --- PROTECTION STYLES --- */
-/* Prevent Text Selection globally (except inputs) */
-*:not(input):not(textarea) {
-  -webkit-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
-}
-
-/* Prevent Image Dragging & Interaction */
-img {
-  pointer-events: none;
-  -webkit-user-drag: none;
-  user-select: none;
-}
