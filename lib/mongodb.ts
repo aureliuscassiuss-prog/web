@@ -7,12 +7,14 @@ if (!uri) {
 }
 
 const options = {
-    maxPoolSize: 10,
-    minPoolSize: 1,
-    serverSelectionTimeoutMS: 5000,
+    maxPoolSize: 1, // Optimal for serverless (prevent connection limits)
+    minPoolSize: 0,
+    serverSelectionTimeoutMS: 15000, // Increased for cold starts/network latency
     socketTimeoutMS: 45000,
+    connectTimeoutMS: 15000, // Explicit connect timeout
     tls: true,
     tlsAllowInvalidCertificates: true, // Temporary fix for SSL handshake issue
+    retryWrites: true,
 };
 
 let client: MongoClient;
