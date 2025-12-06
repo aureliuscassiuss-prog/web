@@ -495,15 +495,38 @@ async function handleUpdateStructure(body: any, res: VercelResponse) {
 }
 
 async function handleGetUsers(res: VercelResponse) {
-    const db = await getDb();
+    console.log('[Admin] Fetching users...');
 
-    // Fetch all users (excluding passwords)
-    const users = await db.collection('users')
-        .find({}, { projection: { password: 0 } })
-        .sort({ createdAt: -1 })
-        .toArray();
+    try {
+        const db = await getDb();
 
-    return res.status(200).json({ users });
+        // Fetch all users (excluding passwords)
+        const users = await db.collection('users')
+            .find({}, { projection: { password: 0 } })
+            .sort({ createdAt: -1 })
+            .toArray();
+
+        console.log(`[Admin] Found ${users.length} users`);
+
+        // Log first user for debugging (without sensitive data)
+        if (users.length > 0) {
+            console.log('[Admin] Sample user:', {
+                name: users[0].name,
+                email: users[0].email,
+                role: users[0].role,
+                hasAvatar: !!users[0].avatar
+            });
+        }
+
+        return res.status(200).json({ users });
+    } catch (error) {
+        console.error('[Admin] Error fetching users:', error);
+        return res.status(500).json({
+            users: [],
+            message: 'Failed to fetch users',
+            error: String(error)
+        });
+    }
 }
 
 async function handleUserAction(body: any, res: VercelResponse) {
