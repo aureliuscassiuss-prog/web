@@ -14,6 +14,7 @@ import {
     Check
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import TyreLoader from './TyreLoader'
 
 // --- Types ---
 interface VideoObject {
@@ -248,10 +249,12 @@ export default function CoursePlayer() {
         })).filter(unit => (unit.videos && unit.videos.length > 0) || unit.name.toLowerCase().includes(searchQuery.toLowerCase()))
     }, [units, searchQuery])
 
+
+
     if (loading) {
         return (
             <div className="h-screen w-full flex flex-col items-center justify-center bg-white dark:bg-black text-gray-500 gap-4">
-                <div className="w-8 h-8 border-2 border-gray-200 border-t-blue-600 rounded-full animate-spin dark:border-gray-800 dark:border-t-blue-500"></div>
+                <TyreLoader size={50} />
                 <p className="text-xs font-medium tracking-wide animate-pulse">LOADING CLASSROOM...</p>
             </div>
         )

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import Toast from './Toast'
+import TyreLoader from './TyreLoader'
 
 // --- Types ---
 interface Program {
@@ -256,7 +257,14 @@ export default function Preparation() {
         </button>
     )
 
-    if (loading) return <div className="h-screen flex items-center justify-center text-sm font-medium text-gray-400">Loading library...</div>
+
+
+    if (loading) return (
+        <div className="min-h-[calc(100vh-6rem)] flex flex-col items-center justify-center gap-3">
+            <TyreLoader size={50} />
+            <p className="text-sm font-medium text-gray-400">Loading library...</p>
+        </div>
+    )
 
     return (
         /* Container: Fixed Height, No Global Scroll */

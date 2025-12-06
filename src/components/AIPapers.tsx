@@ -678,7 +678,7 @@ export default function AIPapers() {
     }
 
     if (loadingStructure) return (
-        <div className="h-screen flex items-center justify-center bg-white dark:bg-black text-sm font-medium text-gray-400 gap-3">
+        <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white dark:bg-black text-sm font-medium text-gray-400 gap-3">
             <TyreLoader size={40} />
             Loading AI Generator...
         </div>
