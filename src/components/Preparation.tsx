@@ -72,6 +72,14 @@ export default function Preparation() {
     // UI State
     const [openDropdown, setOpenDropdown] = useState<'program' | 'year' | 'semester' | 'course' | null>(null)
     const [expandedSubject, setExpandedSubject] = useState<string | null>(null)
+    const [toastMessage, setToastMessage] = useState('')
+    const [showToast, setShowToast] = useState(false)
+
+    const triggerToast = (msg: string) => {
+        setToastMessage(msg)
+        setShowToast(true)
+        setTimeout(() => setShowToast(false), 3000)
+    }
 
     // --- Persist selections to localStorage ---
     useEffect(() => {
@@ -199,6 +207,37 @@ export default function Preparation() {
             subject: subjectName
         })
         navigate(`/preparation/play?${params.toString()}`)
+    }
+
+    const handleShareUnit = (e: React.MouseEvent, subjectName: string, unitName: string) => {
+        e.stopPropagation()
+        const params = new URLSearchParams({
+            prog: selProgramId,
+            yr: selYearId,
+            cr: selCourseId,
+            sem: selSemesterId,
+            sub: subjectName,
+            unit: unitName
+        })
+
+        const url = `${window.location.origin}/share/unit?${params.toString()}`
+        navigator.clipboard.writeText(url)
+        triggerToast('Unit link copied to clipboard!')
+    }
+
+    const handleShareSubject = (e: React.MouseEvent, subjectName: string) => {
+        e.stopPropagation()
+        const params = new URLSearchParams({
+            prog: selProgramId,
+            yr: selYearId,
+            cr: selCourseId,
+            sem: selSemesterId,
+            sub: subjectName
+        })
+
+        const url = `${window.location.origin}/share/subject?${params.toString()}`
+        navigator.clipboard.writeText(url)
+        triggerToast('Subject link copied to clipboard!')
     }
 
     const DropdownItem = ({ label, selected, onClick }: any) => (
@@ -415,7 +454,7 @@ export default function Preparation() {
                                     {/* Card Header (Clickable) */}
                                     <div
                                         onClick={() => setExpandedSubject(isExpanded ? null : subName)}
-                                        className="p-4 flex items-center gap-3 cursor-pointer select-none"
+                                        className="p-4 flex items-center gap-3 cursor-pointer select-none group"
                                     >
                                         <div className={`
                                             h-9 w-9 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold transition-colors
@@ -424,7 +463,16 @@ export default function Preparation() {
                                             {idx + 1}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{subName}</h3>
+                                            <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate flex items-center gap-2">
+                                                {subName}
+                                                <button
+                                                    onClick={(e) => handleShareSubject(e, subName)}
+                                                    className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 hover:text-blue-500 transition-colors opacity-0 group-hover:opacity-100"
+                                                    title="Share Subject"
+                                                >
+                                                    <Share2 size={14} />
+                                                </button>
+                                            </h3>
                                             <p className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-2">
                                                 <BookOpen size={10} />
                                                 {units.length} Units available
@@ -435,10 +483,39 @@ export default function Preparation() {
 
                                     {/* Expanded Content */}
                                     <div className={`
-                                            >
-                                                <PlayCircle size={14} />
-                                                Start Preparation
-                                            </button>
+                                        grid transition-[grid-template-rows] duration-300 ease-out
+                                        ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}
+                                    `}>
+                                        <div className="overflow-hidden">
+                                            <div className="p-4 pt-0 space-y-2">
+                                                {units.map((unit: any, uIdx: number) => (
+                                                    <div key={uIdx} className="flex items-center gap-2 text-[11px] text-gray-600 dark:text-gray-400 px-2 py-1.5 rounded hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group/unit">
+                                                        <span className="w-4 h-4 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[9px] font-bold shrink-0">
+                                                            {uIdx + 1}
+                                                        </span>
+                                                        <span className="truncate flex-1">{unit.name}</span>
+                                                        <button
+                                                            onClick={(e) => handleShareUnit(e, subName, unit.name)}
+                                                            className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-400 hover:text-blue-500 transition-colors opacity-0 group-hover/unit:opacity-100"
+                                                            title="Share Unit"
+                                                        >
+                                                            <Share2 size={12} />
+                                                        </button>
+                                                    </div>
+                                                ))}
+
+                                                {units.length > 0 && (
+                                                    <div className="pt-2 mt-2 border-t border-gray-100 dark:border-gray-800">
+                                                        <button
+                                                            onClick={() => handleStart(subName)}
+                                                            className="w-full flex items-center justify-center gap-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 py-2 rounded-lg transition-colors"
+                                                        >
+                                                            <PlayCircle size={14} />
+                                                            Start Preparation
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
