@@ -288,6 +288,77 @@ export default function AdminPanel() {
         } catch (err) { console.error(err) } finally { setTimeout(() => setRemovingId(null), 500) }
     }
 
+
+    const handleReorder = async (type: string, newOrder: any[]) => {
+        // Optimistic update
+        const newStructure = JSON.parse(JSON.stringify(structure));
+        let targetArray = null;
+
+        if (type === 'program') {
+            newStructure.programs = newOrder;
+        } else if (type === 'year') {
+            const p = newStructure.programs.find((p: any) => p.id === selectedProgramId);
+            if (p) p.years = newOrder;
+        } else if (type === 'course') {
+            const p = newStructure.programs.find((p: any) => p.id === selectedProgramId);
+            const y = p?.years.find((y: any) => y.id === selectedYearId);
+            if (y) y.courses = newOrder;
+        } else if (type === 'semester') {
+            const p = newStructure.programs.find((p: any) => p.id === selectedProgramId);
+            const y = p?.years.find((y: any) => y.id === selectedYearId);
+            const c = y?.courses.find((c: any) => c.id === selectedCourseId);
+            if (c) c.semesters = newOrder;
+        } else if (type === 'subject') {
+            const p = newStructure.programs.find((p: any) => p.id === selectedProgramId);
+            const y = p?.years.find((y: any) => y.id === selectedYearId);
+            const c = y?.courses.find((c: any) => c.id === selectedCourseId);
+            const s = c?.semesters.find((s: any) => s.id === selectedSemesterId);
+            if (s) s.subjects = newOrder;
+        } else if (type === 'unit') {
+            const p = newStructure.programs.find((p: any) => p.id === selectedProgramId);
+            const y = p?.years.find((y: any) => y.id === selectedYearId);
+            const c = y?.courses.find((c: any) => c.id === selectedCourseId);
+            const s = c?.semesters.find((s: any) => s.id === selectedSemesterId);
+            const sub = s?.subjects.find((sub: any) => (typeof sub === 'string' ? sub : sub.name) === selectedSubjectName);
+            if (sub && typeof sub !== 'string') sub.units = newOrder;
+        } else if (type === 'video') {
+            const p = newStructure.programs.find((p: any) => p.id === selectedProgramId);
+            const y = p?.years.find((y: any) => y.id === selectedYearId);
+            const c = y?.courses.find((c: any) => c.id === selectedCourseId);
+            const s = c?.semesters.find((s: any) => s.id === selectedSemesterId);
+            const sub = s?.subjects.find((sub: any) => (typeof sub === 'string' ? sub : sub.name) === selectedSubjectName);
+            const u = sub?.units?.find((u: any) => u.name === selectedUnitName);
+            if (u) u.videos = newOrder;
+        } else {
+            return;
+        }
+
+        setStructure(newStructure);
+
+        try {
+            await fetch('/api/admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({
+                    action: 'structure',
+                    structureAction: 'reorder',
+                    type,
+                    newOrder,
+                    programId: selectedProgramId,
+                    yearId: selectedYearId,
+                    courseId: selectedCourseId,
+                    semesterId: selectedSemesterId,
+                    subjectName: selectedSubjectName,
+                    unitName: selectedUnitName
+                })
+            });
+        } catch (error) {
+            console.error('Reorder failed:', error);
+            // Revert on failure (reload from server)
+            fetchStructure();
+        }
+    };
+
     // --- Derived State for Structure ---
     const programs = structure.programs || []
     const selectedProgram = programs.find(p => p.id === selectedProgramId)
