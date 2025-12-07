@@ -480,368 +480,373 @@ async function handleUpdateStructure(body: any, res: VercelResponse) {
                     } as any,
                     { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }, { 's.name': subjectName }] }
                 );
+                console.log('[Remove Unit] Result:', result);
+            } catch (err) {
+                console.error('[Remove Unit] Error:', err);
+                throw err;
             }
+        }
         else if (structureAction === 'add-video') {
-                const { subjectName, unitName, videoTitle, videoUrl } = body;
+            const { subjectName, unitName, videoTitle, videoUrl } = body;
 
-                // 1. Convert unit string to object if necessary
-                await db.collection('academic_structure').updateOne(
-                    {
-                        _id: 'main',
-                        'programs.id': programId,
-                        'programs.years.id': yearId,
-                        'programs.years.courses.id': courseId,
-                        'programs.years.courses.semesters.id': semesterId,
-                        'programs.years.courses.semesters.subjects.name': subjectName,
-                        'programs.years.courses.semesters.subjects.units': unitName // Matches string unit
-                    } as any,
-                    {
-                        $set: {
-                            'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units.$[u]': {
-                                name: unitName,
-                                videos: []
-                            }
+            // 1. Convert unit string to object if necessary
+            await db.collection('academic_structure').updateOne(
+                {
+                    _id: 'main',
+                    'programs.id': programId,
+                    'programs.years.id': yearId,
+                    'programs.years.courses.id': courseId,
+                    'programs.years.courses.semesters.id': semesterId,
+                    'programs.years.courses.semesters.subjects.name': subjectName,
+                    'programs.years.courses.semesters.subjects.units': unitName // Matches string unit
+                } as any,
+                {
+                    $set: {
+                        'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units.$[u]': {
+                            name: unitName,
+                            videos: []
                         }
-                    } as any,
-                    {
-                        arrayFilters: [
-                            { 'p.id': programId },
-                            { 'y.id': yearId },
-                            { 'c.id': courseId },
-                            { 'sem.id': semesterId },
-                            { 's.name': subjectName },
-                            { 'u': unitName } // Matches the string value
-                        ]
                     }
-                );
-
-                // 2. Add the video
-                const newVideo = {
-                    id: Date.now().toString(),
-                    title: videoTitle,
-                    url: videoUrl,
-                    watched: false // Default state for user progress (though this should be user-specific ideally)
-                };
-
-                await db.collection('academic_structure').updateOne(
-                    { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId, 'programs.years.courses.semesters.id': semesterId } as any,
-                    { $push: { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units.$[u].videos': newVideo } } as any,
-                    {
-                        arrayFilters: [
-                            { 'p.id': programId },
-                            { 'y.id': yearId },
-                            { 'c.id': courseId },
-                            { 'sem.id': semesterId },
-                            { 's.name': subjectName },
-                            { 'u.name': unitName } // Matches the object name
-                        ]
-                    }
-                );
-            }
-            else if (structureAction === 'remove-video') {
-                const { subjectName, unitName, videoId } = body;
-
-                await db.collection('academic_structure').updateOne(
-                    { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId, 'programs.years.courses.semesters.id': semesterId } as any,
-                    { $pull: { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units.$[u].videos': { id: videoId } } } as any,
-                    {
-                        arrayFilters: [
-                            { 'p.id': programId },
-                            { 'y.id': yearId },
-                            { 'c.id': courseId },
-                            { 'sem.id': semesterId },
-                            { 's.name': subjectName },
-                            { 'u.name': unitName }
-                        ]
-                    }
-                );
-            }
-            else if (structureAction === 'rename') {
-                const { type, id, newName, subjectName, unitName } = body;
-                const structure = await db.collection('academic_structure').findOne({ _id: 'main' } as any);
-                const targetId = id; // Renaming relies on ID matching (or name for sub/unit)
-
-                console.log('Renaming:', { type, targetId, newName });
-
-                let updateQuery = {};
-                let arrayFilters = [];
-
-                if (type === 'program') {
-                    updateQuery = { 'programs.$[p].name': newName };
-                    arrayFilters = [{ 'p.id': targetId }];
-                } else if (type === 'year') {
-                    updateQuery = { 'programs.$[p].years.$[y].name': newName };
-                    arrayFilters = [{ 'p.id': programId }, { 'y.id': targetId }];
-                } else if (type === 'course') {
-                    updateQuery = { 'programs.$[p].years.$[y].courses.$[c].name': newName };
-                    arrayFilters = [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': targetId }];
-                } else if (type === 'semester') {
-                    updateQuery = { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].name': newName };
-                    arrayFilters = [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': targetId }];
-                } else if (type === 'subject') {
-                    // Subject rename is tricky because it might be a string or object.
-                    // WE ONLY SUPPORT OBJECTS for robust renaming, or simple string replacement.
-                    // Assuming object structure for consistency or complex update.
-                    updateQuery = { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].name': newName }; // If object
-                    // If it's a string, we might need a different approach, but let's assume objects for "editable" items as per new structure?
-                    // Actually, the frontend maps strings to objects.
-                    // Let's try to match by name (since subject ID is name often).
-                    // If the stored item is a string, we need to locate it by value and replace it.
-                    // MongoDB doesn't easily support "replace string in array if match".
-                    // So, we will assume we are modifying the object form or we have to pull and push.
-                    // For now, let's assume we match by name.
-                    const originalName = subjectName;
-                    // We'll stick to object update. If it fails (because it's a string), we might need migration.
-                    // But wait, the StructureCard uses "id" as name for strings.
-                    // Let's rely on arrayFilters matching the "name" property if object, or the value if string?
-                    // Actually, $set on a scalar array element is supported.
-                    // But we can't easily distinguish.
-                    // SIMPLIFICATION: Only support renaming if it's an object OR accept mixed.
-                    // We will try updating the 'name' field. If it's a string, this op does nothing.
-                    // To support string renaming, we need a separate logic found by value.
-
-                    // For this implementation, let's assume we target the object path 'name'.
-                    updateQuery = { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].name': newName };
-                    arrayFilters = [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }, { 's.name': originalName }];
-                } else if (type === 'unit') {
-                    updateQuery = { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units.$[u].name': newName };
-                    arrayFilters = [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }, { 's.name': subjectName }, { 'u.name': unitName }];
-                } else if (type === 'video') {
-                    updateQuery = { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units.$[u].videos.$[v].title': newName };
-                    arrayFilters = [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }, { 's.name': subjectName }, { 'u.name': unitName }, { 'v.id': targetId }];
+                } as any,
+                {
+                    arrayFilters: [
+                        { 'p.id': programId },
+                        { 'y.id': yearId },
+                        { 'c.id': courseId },
+                        { 'sem.id': semesterId },
+                        { 's.name': subjectName },
+                        { 'u': unitName } // Matches the string value
+                    ]
                 }
+            );
 
-                if (Object.keys(updateQuery).length > 0) {
-                    await db.collection('academic_structure').updateOne(
-                        { _id: 'main' } as any,
-                        { $set: updateQuery } as any,
-                        { arrayFilters }
-                    );
+            // 2. Add the video
+            const newVideo = {
+                id: Date.now().toString(),
+                title: videoTitle,
+                url: videoUrl,
+                watched: false // Default state for user progress (though this should be user-specific ideally)
+            };
+
+            await db.collection('academic_structure').updateOne(
+                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId, 'programs.years.courses.semesters.id': semesterId } as any,
+                { $push: { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units.$[u].videos': newVideo } } as any,
+                {
+                    arrayFilters: [
+                        { 'p.id': programId },
+                        { 'y.id': yearId },
+                        { 'c.id': courseId },
+                        { 'sem.id': semesterId },
+                        { 's.name': subjectName },
+                        { 'u.name': unitName } // Matches the object name
+                    ]
                 }
+            );
+        }
+        else if (structureAction === 'remove-video') {
+            const { subjectName, unitName, videoId } = body;
+
+            await db.collection('academic_structure').updateOne(
+                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId, 'programs.years.courses.semesters.id': semesterId } as any,
+                { $pull: { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units.$[u].videos': { id: videoId } } } as any,
+                {
+                    arrayFilters: [
+                        { 'p.id': programId },
+                        { 'y.id': yearId },
+                        { 'c.id': courseId },
+                        { 'sem.id': semesterId },
+                        { 's.name': subjectName },
+                        { 'u.name': unitName }
+                    ]
+                }
+            );
+        }
+        else if (structureAction === 'rename') {
+            const { type, id, newName, subjectName, unitName } = body;
+            const structure = await db.collection('academic_structure').findOne({ _id: 'main' } as any);
+            const targetId = id; // Renaming relies on ID matching (or name for sub/unit)
+
+            console.log('Renaming:', { type, targetId, newName });
+
+            let updateQuery = {};
+            let arrayFilters = [];
+
+            if (type === 'program') {
+                updateQuery = { 'programs.$[p].name': newName };
+                arrayFilters = [{ 'p.id': targetId }];
+            } else if (type === 'year') {
+                updateQuery = { 'programs.$[p].years.$[y].name': newName };
+                arrayFilters = [{ 'p.id': programId }, { 'y.id': targetId }];
+            } else if (type === 'course') {
+                updateQuery = { 'programs.$[p].years.$[y].courses.$[c].name': newName };
+                arrayFilters = [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': targetId }];
+            } else if (type === 'semester') {
+                updateQuery = { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].name': newName };
+                arrayFilters = [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': targetId }];
+            } else if (type === 'subject') {
+                // Subject rename is tricky because it might be a string or object.
+                // WE ONLY SUPPORT OBJECTS for robust renaming, or simple string replacement.
+                // Assuming object structure for consistency or complex update.
+                updateQuery = { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].name': newName }; // If object
+                // If it's a string, we might need a different approach, but let's assume objects for "editable" items as per new structure?
+                // Actually, the frontend maps strings to objects.
+                // Let's try to match by name (since subject ID is name often).
+                // If the stored item is a string, we need to locate it by value and replace it.
+                // MongoDB doesn't easily support "replace string in array if match".
+                // So, we will assume we are modifying the object form or we have to pull and push.
+                // For now, let's assume we match by name.
+                const originalName = subjectName;
+                // We'll stick to object update. If it fails (because it's a string), we might need migration.
+                // But wait, the StructureCard uses "id" as name for strings.
+                // Let's rely on arrayFilters matching the "name" property if object, or the value if string?
+                // Actually, $set on a scalar array element is supported.
+                // But we can't easily distinguish.
+                // SIMPLIFICATION: Only support renaming if it's an object OR accept mixed.
+                // We will try updating the 'name' field. If it's a string, this op does nothing.
+                // To support string renaming, we need a separate logic found by value.
+
+                // For this implementation, let's assume we target the object path 'name'.
+                updateQuery = { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].name': newName };
+                arrayFilters = [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }, { 's.name': originalName }];
+            } else if (type === 'unit') {
+                updateQuery = { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units.$[u].name': newName };
+                arrayFilters = [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }, { 's.name': subjectName }, { 'u.name': unitName }];
+            } else if (type === 'video') {
+                updateQuery = { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units.$[u].videos.$[v].title': newName };
+                arrayFilters = [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }, { 's.name': subjectName }, { 'u.name': unitName }, { 'v.id': targetId }];
             }
-            else if (structureAction === 'reorder') {
-                const { type, newOrder, subjectName, unitName } = body;
 
-                // To safely reorder, it's often easiest to fetch, update in memory, and set back the specific path.
-                // Using arrayFilters for replacement is possible but complex for deep nesting.
-                // Given the document size is likely manageable, fetching 'main' is acceptable.
-
-                const structure = await db.collection('academic_structure').findOne({ _id: 'main' } as any);
-                if (!structure) throw new Error('Structure not found');
-
-                let target: any = structure;
-                let path = '';
-
-                if (type === 'program') {
-                    target.programs = newOrder;
-                    path = 'programs';
-                } else if (type === 'year') {
-                    const p = target.programs.find((p: any) => p.id === programId);
-                    if (p) p.years = newOrder;
-                    path = 'programs'; // We update the whole programs array to be safe or use positional operator if we were using updateOne logic strictly
-                } else if (type === 'course') {
-                    const p = target.programs.find((p: any) => p.id === programId);
-                    const y = p?.years.find((y: any) => y.id === yearId);
-                    if (y) y.courses = newOrder;
-                    path = 'programs';
-                } else if (type === 'semester') {
-                    const p = target.programs.find((p: any) => p.id === programId);
-                    const y = p?.years.find((y: any) => y.id === yearId);
-                    const c = y?.courses.find((c: any) => c.id === courseId);
-                    if (c) c.semesters = newOrder;
-                    path = 'programs';
-                } else if (type === 'subject') {
-                    const p = target.programs.find((p: any) => p.id === programId);
-                    const y = p?.years.find((y: any) => y.id === yearId);
-                    const c = y?.courses.find((c: any) => c.id === courseId);
-                    const s = c?.semesters.find((s: any) => s.id === semesterId);
-                    if (s) s.subjects = newOrder;
-                    path = 'programs';
-                } else if (type === 'unit') {
-                    const p = target.programs.find((p: any) => p.id === programId);
-                    const y = p?.years.find((y: any) => y.id === yearId);
-                    const c = y?.courses.find((c: any) => c.id === courseId);
-                    const s = c?.semesters.find((s: any) => s.id === semesterId);
-                    const sub = s?.subjects.find((sub: any) => (typeof sub === 'string' ? sub : sub.name) === subjectName);
-                    if (sub && typeof sub !== 'string') sub.units = newOrder;
-                    path = 'programs';
-                } else if (type === 'video') {
-                    const p = target.programs.find((p: any) => p.id === programId);
-                    const y = p?.years.find((y: any) => y.id === yearId);
-                    const c = y?.courses.find((c: any) => c.id === courseId);
-                    const s = c?.semesters.find((s: any) => s.id === semesterId);
-                    const sub = s?.subjects.find((sub: any) => (typeof sub === 'string' ? sub : sub.name) === subjectName);
-                    const u = sub?.units?.find((u: any) => u.name === unitName);
-                    if (u) u.videos = newOrder;
-                    path = 'programs';
-                }
-
-                // Save the updated structure (replacing the programs array is safest for nested integrity)
+            if (Object.keys(updateQuery).length > 0) {
                 await db.collection('academic_structure').updateOne(
                     { _id: 'main' } as any,
-                    { $set: { programs: target.programs } } as any
+                    { $set: updateQuery } as any,
+                    { arrayFilters }
                 );
             }
-
-            const updatedStructure = await db.collection('academic_structure').findOne({ _id: 'main' } as any);
-            return res.status(200).json(updatedStructure);
-        } catch (error) {
-            console.error('Structure Update Error:', error);
-            return res.status(500).json({ message: 'Failed to update structure', error: String(error) });
         }
+        else if (structureAction === 'reorder') {
+            const { type, newOrder, subjectName, unitName } = body;
+
+            // To safely reorder, it's often easiest to fetch, update in memory, and set back the specific path.
+            // Using arrayFilters for replacement is possible but complex for deep nesting.
+            // Given the document size is likely manageable, fetching 'main' is acceptable.
+
+            const structure = await db.collection('academic_structure').findOne({ _id: 'main' } as any);
+            if (!structure) throw new Error('Structure not found');
+
+            let target: any = structure;
+            let path = '';
+
+            if (type === 'program') {
+                target.programs = newOrder;
+                path = 'programs';
+            } else if (type === 'year') {
+                const p = target.programs.find((p: any) => p.id === programId);
+                if (p) p.years = newOrder;
+                path = 'programs'; // We update the whole programs array to be safe or use positional operator if we were using updateOne logic strictly
+            } else if (type === 'course') {
+                const p = target.programs.find((p: any) => p.id === programId);
+                const y = p?.years.find((y: any) => y.id === yearId);
+                if (y) y.courses = newOrder;
+                path = 'programs';
+            } else if (type === 'semester') {
+                const p = target.programs.find((p: any) => p.id === programId);
+                const y = p?.years.find((y: any) => y.id === yearId);
+                const c = y?.courses.find((c: any) => c.id === courseId);
+                if (c) c.semesters = newOrder;
+                path = 'programs';
+            } else if (type === 'subject') {
+                const p = target.programs.find((p: any) => p.id === programId);
+                const y = p?.years.find((y: any) => y.id === yearId);
+                const c = y?.courses.find((c: any) => c.id === courseId);
+                const s = c?.semesters.find((s: any) => s.id === semesterId);
+                if (s) s.subjects = newOrder;
+                path = 'programs';
+            } else if (type === 'unit') {
+                const p = target.programs.find((p: any) => p.id === programId);
+                const y = p?.years.find((y: any) => y.id === yearId);
+                const c = y?.courses.find((c: any) => c.id === courseId);
+                const s = c?.semesters.find((s: any) => s.id === semesterId);
+                const sub = s?.subjects.find((sub: any) => (typeof sub === 'string' ? sub : sub.name) === subjectName);
+                if (sub && typeof sub !== 'string') sub.units = newOrder;
+                path = 'programs';
+            } else if (type === 'video') {
+                const p = target.programs.find((p: any) => p.id === programId);
+                const y = p?.years.find((y: any) => y.id === yearId);
+                const c = y?.courses.find((c: any) => c.id === courseId);
+                const s = c?.semesters.find((s: any) => s.id === semesterId);
+                const sub = s?.subjects.find((sub: any) => (typeof sub === 'string' ? sub : sub.name) === subjectName);
+                const u = sub?.units?.find((u: any) => u.name === unitName);
+                if (u) u.videos = newOrder;
+                path = 'programs';
+            }
+
+            // Save the updated structure (replacing the programs array is safest for nested integrity)
+            await db.collection('academic_structure').updateOne(
+                { _id: 'main' } as any,
+                { $set: { programs: target.programs } } as any
+            );
+        }
+
+        const updatedStructure = await db.collection('academic_structure').findOne({ _id: 'main' } as any);
+        return res.status(200).json(updatedStructure);
+    } catch (error) {
+        console.error('Structure Update Error:', error);
+        return res.status(500).json({ message: 'Failed to update structure', error: String(error) });
     }
+}
 
 async function handleGetUsers(res: VercelResponse) {
-        console.log('[Admin] Fetching users...');
+    console.log('[Admin] Fetching users...');
 
-        try {
-            const db = await getDb();
-
-            // Fetch all users (excluding passwords)
-            const users = await db.collection('users')
-                .find({}, { projection: { password: 0 } })
-                .sort({ createdAt: -1 })
-                .toArray();
-
-            console.log(`[Admin] Found ${users.length} users`);
-
-            // Log first user for debugging (without sensitive data)
-            if (users.length > 0) {
-                console.log('[Admin] Sample user:', {
-                    name: users[0].name,
-                    email: users[0].email,
-                    role: users[0].role,
-                    hasAvatar: !!users[0].avatar
-                });
-            }
-
-            return res.status(200).json({ users });
-        } catch (error) {
-            console.error('[Admin] Error fetching users:', error);
-            return res.status(500).json({
-                users: [],
-                message: 'Failed to fetch users',
-                error: String(error)
-            });
-        }
-    }
-
-    async function handleUserAction(body: any, res: VercelResponse) {
-        const { action, userId, role } = body;
-
-        console.log('handleUserAction called with action:', action, 'userId:', userId);
-
-        if (!userId) {
-            return res.status(400).json({ message: 'User ID is required' });
-        }
-
+    try {
         const db = await getDb();
 
-        // Handle delete action separately as it requires deletion instead of update
-        if (action === 'delete') {
-            console.log('DELETE ACTION DETECTED - Starting user deletion process');
-            // First check if user exists
-            const user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
+        // Fetch all users (excluding passwords)
+        const users = await db.collection('users')
+            .find({}, { projection: { password: 0 } })
+            .sort({ createdAt: -1 })
+            .toArray();
 
-            if (!user) {
-                console.log('User not found:', userId);
-                return res.status(404).json({ message: 'User not found' });
-            }
+        console.log(`[Admin] Found ${users.length} users`);
 
-            console.log('User found, deleting resources for userId:', userId);
-            // Delete all resources/uploads by this user
-            // Note: uploaderId is stored as a string in resources collection
-            const resourcesDeleted = await db.collection('resources').deleteMany({
-                uploaderId: userId
-            });
-            console.log('Resources deleted:', resourcesDeleted.deletedCount);
-
-            // Delete the user
-            const userDeleted = await db.collection('users').deleteOne({
-                _id: new ObjectId(userId)
-            });
-            console.log('User deleted:', userDeleted.deletedCount);
-
-            if (userDeleted.deletedCount === 0) {
-                return res.status(404).json({ message: 'User not found' });
-            }
-
-            return res.status(200).json({
-                message: 'User and all associated data deleted successfully',
-                deletedUser: user.name,
-                deletedResources: resourcesDeleted.deletedCount
+        // Log first user for debugging (without sensitive data)
+        if (users.length > 0) {
+            console.log('[Admin] Sample user:', {
+                name: users[0].name,
+                email: users[0].email,
+                role: users[0].role,
+                hasAvatar: !!users[0].avatar
             });
         }
 
-        console.log('Not a delete action, proceeding to switch statement');
+        return res.status(200).json({ users });
+    } catch (error) {
+        console.error('[Admin] Error fetching users:', error);
+        return res.status(500).json({
+            users: [],
+            message: 'Failed to fetch users',
+            error: String(error)
+        });
+    }
+}
 
-        let updateOperation: any = {};
+async function handleUserAction(body: any, res: VercelResponse) {
+    const { action, userId, role } = body;
 
-        switch (action) {
-            case 'ban':
-                updateOperation = { $set: { isBanned: true, canUpload: false } };
-                break;
-            case 'unban':
-                updateOperation = { $set: { isBanned: false, canUpload: true } };
-                break;
-            case 'restrict-upload':
-                // Legacy support, maps to restrict
-                updateOperation = { $set: { isRestricted: true, canUpload: false } };
-                break;
-            case 'allow-upload':
-                // Legacy support, maps to unrestrict
-                updateOperation = { $set: { isRestricted: false, canUpload: true } };
-                break;
-            case 'restrict':
-                updateOperation = { $set: { isRestricted: true, canUpload: false } };
-                break;
-            case 'unrestrict':
-                updateOperation = { $set: { isRestricted: false, canUpload: true } };
-                break;
-            case 'trust':
-                updateOperation = { $set: { isTrusted: true } };
-                break;
-            case 'untrust':
-                updateOperation = { $set: { isTrusted: false } };
-                break;
-            case 'assign-role':
-                if (!role) return res.status(400).json({ message: 'Role is required' });
-                updateOperation = { $set: { role: role } };
-                break;
-            default:
-                return res.status(400).json({ message: 'Invalid user action' });
-        }
+    console.log('handleUserAction called with action:', action, 'userId:', userId);
 
-        const result = await db.collection('users').findOneAndUpdate(
-            { _id: new ObjectId(userId) },
-            updateOperation,
-            { returnDocument: 'after', projection: { password: 0 } }
-        );
+    if (!userId) {
+        return res.status(400).json({ message: 'User ID is required' });
+    }
 
-        if (!result) {
+    const db = await getDb();
+
+    // Handle delete action separately as it requires deletion instead of update
+    if (action === 'delete') {
+        console.log('DELETE ACTION DETECTED - Starting user deletion process');
+        // First check if user exists
+        const user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
+
+        if (!user) {
+            console.log('User not found:', userId);
             return res.status(404).json({ message: 'User not found' });
         }
 
-        return res.status(200).json({ message: `User ${action} successful`, user: result });
-    }
+        console.log('User found, deleting resources for userId:', userId);
+        // Delete all resources/uploads by this user
+        // Note: uploaderId is stored as a string in resources collection
+        const resourcesDeleted = await db.collection('resources').deleteMany({
+            uploaderId: userId
+        });
+        console.log('Resources deleted:', resourcesDeleted.deletedCount);
 
-    async function handleGetStats(res: VercelResponse) {
-        const db = await getDb();
+        // Delete the user
+        const userDeleted = await db.collection('users').deleteOne({
+            _id: new ObjectId(userId)
+        });
+        console.log('User deleted:', userDeleted.deletedCount);
 
-        // Count total approved resources and active users in parallel
-        const [totalResources, totalUsers] = await Promise.all([
-            db.collection('resources').countDocuments({
-                $or: [
-                    { status: 'approved' },
-                    { status: 'public' }, // Assuming 'isPublic' might correspond to a status or field check
-                    { isPublic: true }
-                ]
-            }),
-            db.collection('users').countDocuments({})
-        ]);
+        if (userDeleted.deletedCount === 0) {
+            return res.status(404).json({ message: 'User not found' });
+        }
 
         return res.status(200).json({
-            totalResources,
-            totalUsers
+            message: 'User and all associated data deleted successfully',
+            deletedUser: user.name,
+            deletedResources: resourcesDeleted.deletedCount
         });
     }
+
+    console.log('Not a delete action, proceeding to switch statement');
+
+    let updateOperation: any = {};
+
+    switch (action) {
+        case 'ban':
+            updateOperation = { $set: { isBanned: true, canUpload: false } };
+            break;
+        case 'unban':
+            updateOperation = { $set: { isBanned: false, canUpload: true } };
+            break;
+        case 'restrict-upload':
+            // Legacy support, maps to restrict
+            updateOperation = { $set: { isRestricted: true, canUpload: false } };
+            break;
+        case 'allow-upload':
+            // Legacy support, maps to unrestrict
+            updateOperation = { $set: { isRestricted: false, canUpload: true } };
+            break;
+        case 'restrict':
+            updateOperation = { $set: { isRestricted: true, canUpload: false } };
+            break;
+        case 'unrestrict':
+            updateOperation = { $set: { isRestricted: false, canUpload: true } };
+            break;
+        case 'trust':
+            updateOperation = { $set: { isTrusted: true } };
+            break;
+        case 'untrust':
+            updateOperation = { $set: { isTrusted: false } };
+            break;
+        case 'assign-role':
+            if (!role) return res.status(400).json({ message: 'Role is required' });
+            updateOperation = { $set: { role: role } };
+            break;
+        default:
+            return res.status(400).json({ message: 'Invalid user action' });
+    }
+
+    const result = await db.collection('users').findOneAndUpdate(
+        { _id: new ObjectId(userId) },
+        updateOperation,
+        { returnDocument: 'after', projection: { password: 0 } }
+    );
+
+    if (!result) {
+        return res.status(404).json({ message: 'User not found' });
+    }
+
+    return res.status(200).json({ message: `User ${action} successful`, user: result });
+}
+
+async function handleGetStats(res: VercelResponse) {
+    const db = await getDb();
+
+    // Count total approved resources and active users in parallel
+    const [totalResources, totalUsers] = await Promise.all([
+        db.collection('resources').countDocuments({
+            $or: [
+                { status: 'approved' },
+                { status: 'public' }, // Assuming 'isPublic' might correspond to a status or field check
+                { isPublic: true }
+            ]
+        }),
+        db.collection('users').countDocuments({})
+    ]);
+
+    return res.status(200).json({
+        totalResources,
+        totalUsers
+    });
+}
