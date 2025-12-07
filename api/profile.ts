@@ -126,7 +126,11 @@ async function handleUpdateProfile(req: VercelRequest, userId: string, res: Verc
             .single();
 
         if (error || !result) {
-            return res.status(404).json({ message: 'User not found or update failed' });
+            return res.status(500).json({
+                message: 'Update failed',
+                details: error ? error.message : 'No result returned',
+                hint: error ? error.details : undefined
+            });
         }
 
         return res.status(200).json({
