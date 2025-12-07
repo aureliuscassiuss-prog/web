@@ -387,7 +387,17 @@ async function handleUpdateStructure(body: any, res: VercelResponse) {
         else if (structureAction === 'remove-subject') {
             await db.collection('academic_structure').updateOne(
                 { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId, 'programs.years.courses.semesters.id': semesterId } as any,
-                { $pull: { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects': { $in: [value] } } } as any,
+                // Match either the string value OR an object with matching name property
+                {
+                    $pull: {
+                        'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects': {
+                            $or: [
+                                { $eq: value },
+                                { name: value }
+                            ]
+                        }
+                    }
+                } as any,
                 { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }] }
             );
         }
@@ -446,9 +456,19 @@ async function handleUpdateStructure(body: any, res: VercelResponse) {
         else if (structureAction === 'remove-unit') {
             const { subjectName } = body;
 
+            // Similarly match string or object for unit removal (in case units get properties later, though currently they are usually strings, but let's be safe + they might be objects if we add video arrays to them! YES they do become objects when videos are added)
             await db.collection('academic_structure').updateOne(
                 { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId, 'programs.years.courses.semesters.id': semesterId } as any,
-                { $pull: { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units': value } } as any,
+                {
+                    $pull: {
+                        'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units': {
+                            $or: [
+                                { $eq: value },
+                                { name: value }
+                            ]
+                        }
+                    }
+                } as any,
                 { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }, { 's.name': subjectName }] }
             );
         }
