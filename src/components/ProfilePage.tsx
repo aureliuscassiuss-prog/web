@@ -490,7 +490,7 @@ export default function ProfilePage() {
                                 placeholder="Select Year"
                                 isOpen={activeField === 'year'}
                                 onToggle={() => toggleField('year')}
-                                onChange={(val) => setFormData({ ...formData, year: parseInt(val), branch: '', semester: '' })}
+                                onChange={(val) => setFormData({ ...formData, year: val, branch: '', semester: '' })}
                                 options={years.map((y: any) => ({ label: y.name, value: y.id }))}
                             />
                         </UnifiedField>
