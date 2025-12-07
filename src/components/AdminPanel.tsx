@@ -95,6 +95,8 @@ export default function AdminPanel() {
     const [pendingResources, setPendingResources] = useState<PendingResource[]>([])
     const [users, setUsers] = useState<UserData[]>([])
     const [structure, setStructure] = useState<{ programs: Program[] }>({ programs: [] })
+    const [unsavedChanges, setUnsavedChanges] = useState<string[]>([])
+    const [editingId, setEditingId] = useState<string | null>(null)
 
     // Loading State
     const [isLoading, setIsLoading] = useState(false)
@@ -225,6 +227,12 @@ export default function AdminPanel() {
         if (type === 'unit' && !selectedSubjectName) return alert('Please select a subject first.')
         if (type === 'video' && !selectedUnitName) return alert('Please select a unit first.')
 
+        // Input Validation
+        if ((type === 'semester' || type === 'unit') && !/^\d+$/.test(value)) {
+            showToast('Only numerical values allowed for this field', 'error')
+            return
+        }
+
         setIsSubmitting(true)
         const payload: any = { action: 'structure', value }
 
@@ -307,10 +315,43 @@ export default function AdminPanel() {
     }
 
 
+    const handleRename = async (type: string, id: string, newName: string) => {
+        if (!newName.trim()) return
+        if ((type === 'semester' || type === 'unit') && !/^\d+$/.test(newName)) {
+            showToast('Only numerical values allowed', 'error')
+            return
+        }
+
+        try {
+            await fetch('/api/admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({
+                    action: 'structure',
+                    structureAction: 'rename',
+                    type,
+                    id,
+                    newName,
+                    programId: selectedProgramId,
+                    yearId: selectedYearId,
+                    courseId: selectedCourseId,
+                    semesterId: selectedSemesterId,
+                    subjectName: selectedSubjectName,
+                    unitName: selectedUnitName
+                })
+            });
+            showToast('Renamed successfully')
+            setEditingId(null)
+            fetchStructure()
+        } catch (error) {
+            console.error('Rename failed:', error)
+            showToast('Rename failed', 'error')
+        }
+    }
+
     const handleReorder = async (type: string, newOrder: any[]) => {
         // Optimistic update
         const newStructure = JSON.parse(JSON.stringify(structure));
-        let targetArray = null;
 
         if (type === 'program') {
             newStructure.programs = newOrder;
@@ -352,8 +393,13 @@ export default function AdminPanel() {
         }
 
         setStructure(newStructure);
-        setIsReordering(true)
+        if (!unsavedChanges.includes(type)) {
+            setUnsavedChanges(prev => [...prev, type])
+        }
+    };
 
+    const handleSaveOrder = async (type: string, items: any[]) => {
+        setIsReordering(true)
         try {
             await fetch('/api/admin', {
                 method: 'POST',
@@ -361,8 +407,8 @@ export default function AdminPanel() {
                 body: JSON.stringify({
                     action: 'structure',
                     structureAction: 'reorder',
-                    type,
-                    newOrder,
+                    type: type,
+                    newOrder: items,
                     programId: selectedProgramId,
                     yearId: selectedYearId,
                     courseId: selectedCourseId,
@@ -371,16 +417,15 @@ export default function AdminPanel() {
                     unitName: selectedUnitName
                 })
             });
-            showToast('Order saved')
+            setUnsavedChanges(prev => prev.filter(t => t !== type))
+            showToast('Order saved');
         } catch (error) {
             console.error('Reorder failed:', error);
-            showToast('Failed to save order', 'error')
-            // Revert on failure (reload from server)
-            fetchStructure();
+            showToast('Failed to save order', 'error');
         } finally {
             setIsReordering(false)
         }
-    };
+    }
 
     // --- Derived State for Structure ---
     const programs = structure.programs || []
@@ -464,13 +509,13 @@ export default function AdminPanel() {
                             {activeTab === 'users' && <motion.div key="users" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}><UsersView users={users} processingId={processingId} onAction={handleUserAction} /></motion.div>}
                             {activeTab === 'structure' && <motion.div key="structure" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}>
                                 <div className="grid grid-cols-1 md:flex md:gap-6 md:overflow-x-auto md:pb-8 gap-6">
-                                    <StructureCard title="Programs" step="01" items={programs.map(p => ({ id: p.id, name: p.name, original: p }))} value={newProgram} setValue={setNewProgram} onAdd={() => handleStructureAdd('program', newProgram)} onRemove={(id: string) => handleStructureRemove('program', id)} activeId={selectedProgramId} onSelect={setSelectedProgramId} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('program', newOrder.map(i => i.original))} />
-                                    <StructureCard title="Years" step="02" items={years.map(y => ({ id: y.id, name: y.name, original: y }))} value={newYear} setValue={setNewYear} onAdd={() => handleStructureAdd('year', newYear)} onRemove={(id: string) => handleStructureRemove('year', id)} activeId={selectedYearId} onSelect={setSelectedYearId} disabled={!selectedProgramId} parentName={selectedProgram?.name} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('year', newOrder.map(i => i.original))} />
-                                    <StructureCard title="Branches" step="03" items={courses.map(c => ({ id: c.id, name: c.name, original: c }))} value={newBranch} setValue={setNewBranch} onAdd={() => handleStructureAdd('course', newBranch)} onRemove={(id: string) => handleStructureRemove('course', id)} activeId={selectedCourseId} onSelect={setSelectedCourseId} disabled={!selectedYearId} parentName={selectedYear?.name} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('course', newOrder.map(i => i.original))} />
-                                    <StructureCard title="Semesters" step="04" items={semesters.map(s => ({ id: s.id, name: s.name, original: s }))} value={newSemester} setValue={handleSemesterChange} onAdd={() => handleStructureAdd('semester', newSemester)} onRemove={(id: string) => handleStructureRemove('semester', id)} activeId={selectedSemesterId} onSelect={setSelectedSemesterId} disabled={!selectedCourseId} parentName={selectedCourse?.name} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('semester', newOrder.map(i => i.original))} />
-                                    <StructureCard title="Subjects" step="05" items={subjects.map(s => ({ id: typeof s === 'string' ? s : s.name, name: typeof s === 'string' ? s : s.name, original: s }))} value={newSubject} setValue={setNewSubject} onAdd={() => handleStructureAdd('subject', newSubject)} onRemove={(id: string) => handleStructureRemove('subject', id)} activeId={selectedSubjectName} onSelect={setSelectedSubjectName} disabled={!selectedSemesterId} parentName={selectedSemester?.name} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('subject', newOrder.map(i => i.original))} />
-                                    <StructureCard title="Units" step="06" items={units.map((u: any) => ({ id: u.name, name: u.name, original: u }))} value={newUnit} setValue={handleUnitChange} onAdd={() => handleStructureAdd('unit', newUnit)} onRemove={(id: string) => handleStructureRemove('unit', id)} activeId={selectedUnitName} onSelect={setSelectedUnitName} disabled={!selectedSubjectName} parentName={selectedSubjectName} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('unit', newOrder.map(i => i.original))} />
-                                    <StructureCard title="Videos" step="07" items={videos.map((v: any) => ({ id: v.id, name: v.title, original: v }))} value={newVideoTitle} setValue={setNewVideoTitle} extraInput={{ value: newVideoUrl, setValue: setNewVideoUrl, placeholder: "YouTube URL..." }} onAdd={() => handleStructureAdd('video', newVideoTitle)} onRemove={(id: string) => handleStructureRemove('video', id)} disabled={!selectedUnitName} parentName={selectedUnitName} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('video', newOrder.map(i => i.original))} />
+                                    <StructureCard title="Programs" step="01" items={programs.map(p => ({ id: p.id, name: p.name, original: p }))} value={newProgram} setValue={setNewProgram} onAdd={() => handleStructureAdd('program', newProgram)} onRemove={(id: string) => handleStructureRemove('program', id)} activeId={selectedProgramId} onSelect={setSelectedProgramId} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('program', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('program')} onSave={(items: any[]) => handleSaveOrder('program', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('program', id, name)} />
+                                    <StructureCard title="Years" step="02" items={years.map(y => ({ id: y.id, name: y.name, original: y }))} value={newYear} setValue={setNewYear} onAdd={() => handleStructureAdd('year', newYear)} onRemove={(id: string) => handleStructureRemove('year', id)} activeId={selectedYearId} onSelect={setSelectedYearId} disabled={!selectedProgramId} parentName={selectedProgram?.name} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('year', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('year')} onSave={(items: any[]) => handleSaveOrder('year', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('year', id, name)} />
+                                    <StructureCard title="Branches" step="03" items={courses.map(c => ({ id: c.id, name: c.name, original: c }))} value={newBranch} setValue={setNewBranch} onAdd={() => handleStructureAdd('course', newBranch)} onRemove={(id: string) => handleStructureRemove('course', id)} activeId={selectedCourseId} onSelect={setSelectedCourseId} disabled={!selectedYearId} parentName={selectedYear?.name} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('course', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('course')} onSave={(items: any[]) => handleSaveOrder('course', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('course', id, name)} />
+                                    <StructureCard title="Semesters" step="04" items={semesters.map(s => ({ id: s.id, name: s.name, original: s }))} value={newSemester} setValue={handleSemesterChange} onAdd={() => handleStructureAdd('semester', newSemester)} onRemove={(id: string) => handleStructureRemove('semester', id)} activeId={selectedSemesterId} onSelect={setSelectedSemesterId} disabled={!selectedCourseId} parentName={selectedCourse?.name} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('semester', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('semester')} onSave={(items: any[]) => handleSaveOrder('semester', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('semester', id, name)} />
+                                    <StructureCard title="Subjects" step="05" items={subjects.map(s => ({ id: typeof s === 'string' ? s : s.name, name: typeof s === 'string' ? s : s.name, original: s }))} value={newSubject} setValue={setNewSubject} onAdd={() => handleStructureAdd('subject', newSubject)} onRemove={(id: string) => handleStructureRemove('subject', id)} activeId={selectedSubjectName} onSelect={setSelectedSubjectName} disabled={!selectedSemesterId} parentName={selectedSemester?.name} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('subject', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('subject')} onSave={(items: any[]) => handleSaveOrder('subject', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('subject', id, name)} />
+                                    <StructureCard title="Units" step="06" items={units.map((u: any) => ({ id: u.name, name: u.name, original: u }))} value={newUnit} setValue={handleUnitChange} onAdd={() => handleStructureAdd('unit', newUnit)} onRemove={(id: string) => handleStructureRemove('unit', id)} activeId={selectedUnitName} onSelect={setSelectedUnitName} disabled={!selectedSubjectName} parentName={selectedSubjectName} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('unit', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('unit')} onSave={(items: any[]) => handleSaveOrder('unit', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('unit', id, name)} />
+                                    <StructureCard title="Videos" step="07" items={videos.map((v: any) => ({ id: v.id, name: v.title, original: v }))} value={newVideoTitle} setValue={setNewVideoTitle} extraInput={{ value: newVideoUrl, setValue: setNewVideoUrl, placeholder: "YouTube URL..." }} onAdd={() => handleStructureAdd('video', newVideoTitle)} onRemove={(id: string) => handleStructureRemove('video', id)} disabled={!selectedUnitName} parentName={selectedUnitName} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('video', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('video')} onSave={(items: any[]) => handleSaveOrder('video', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('video', id, name)} />
                                 </div>
                             </motion.div>}
                         </>
@@ -518,8 +563,13 @@ function TabButton({ active, onClick, icon, label, count }: any) {
     )
 }
 
-function StructureItem({ item, activeId, onSelect, disabled, onRemove, removingId }: any) {
+function StructureItem({ item, activeId, onSelect, disabled, onRemove, removingId, isEditing, onEditStart, onRename }: any) {
     const controls = useDragControls()
+    const [editValue, setEditValue] = useState(item.name)
+
+    useEffect(() => {
+        if (isEditing) setEditValue(item.name)
+    }, [isEditing, item.name])
 
     return (
         <Reorder.Item
@@ -530,7 +580,7 @@ function StructureItem({ item, activeId, onSelect, disabled, onRemove, removingI
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             className={`group flex items-center justify-between p-2 rounded-lg text-sm transition-colors ${activeId === item.id ? 'bg-black text-white dark:bg-white dark:text-black' : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'}`}
-            onClick={() => !disabled && onSelect && onSelect(item.id)}
+            onClick={() => !disabled && !isEditing && onSelect && onSelect(item.id)}
         >
             <div className="flex items-center gap-2 flex-1 min-w-0">
                 <div
@@ -539,24 +589,52 @@ function StructureItem({ item, activeId, onSelect, disabled, onRemove, removingI
                 >
                     <GripVertical size={14} className={`opacity-40 group-hover:opacity-100 ${activeId === item.id ? 'text-gray-400' : 'text-gray-400'}`} />
                 </div>
-                <span className="truncate flex-1">{item.name}</span>
-            </div>
-            <button
-                onClick={(e) => { e.stopPropagation(); onRemove(item.id) }}
-                className={`p-1 rounded transition-opacity ${removingId === item.id
-                    ? 'opacity-100'
-                    : `opacity-0 group-hover:opacity-100 ${activeId === item.id ? 'hover:bg-gray-800 dark:hover:bg-gray-200' : 'hover:bg-red-100 text-red-500'}`
-                    }`}
-                disabled={!!removingId}
-            >
-                {removingId === item.id ? (
-                    <div className="animate-spin">
-                        <TyreLoader size={14} />
+                {isEditing ? (
+                    <div className="flex items-center gap-2 flex-1" onClick={(e) => e.stopPropagation()}>
+                        <input
+                            type="text"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            className="flex-1 bg-white dark:bg-black border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 text-sm text-black dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            autoFocus
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') onRename(editValue)
+                                if (e.key === 'Escape') onEditStart(null)
+                            }}
+                        />
+                        <button onClick={() => onRename(editValue)} className="p-1 hover:bg-green-100 text-green-600 rounded"><Check size={14} /></button>
+                        <button onClick={() => onEditStart(null)} className="p-1 hover:bg-red-100 text-red-500 rounded"><X size={14} /></button>
                     </div>
                 ) : (
-                    <Trash2 size={14} />
+                    <span className="truncate flex-1">{item.name}</span>
                 )}
-            </button>
+            </div>
+            {!isEditing && (
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onEditStart(item.id) }}
+                        className={`p-1 rounded transition-opacity opacity-0 group-hover:opacity-100 ${activeId === item.id ? 'hover:bg-gray-800 dark:hover:bg-gray-200' : 'hover:bg-blue-50 text-blue-500'}`}
+                    >
+                        <Settings size={14} />
+                    </button>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onRemove(item.id) }}
+                        className={`p-1 rounded transition-opacity ${removingId === item.id
+                            ? 'opacity-100'
+                            : `opacity-0 group-hover:opacity-100 ${activeId === item.id ? 'hover:bg-gray-800 dark:hover:bg-gray-200' : 'hover:bg-red-100 text-red-500'}`
+                            }`}
+                        disabled={!!removingId}
+                    >
+                        {removingId === item.id ? (
+                            <div className="animate-spin">
+                                <TyreLoader size={14} />
+                            </div>
+                        ) : (
+                            <Trash2 size={14} />
+                        )}
+                    </button>
+                </div>
+            )}
         </Reorder.Item>
     )
 }
