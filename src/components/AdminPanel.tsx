@@ -509,40 +509,38 @@ function StructureCard({ title, step, items, value, setValue, extraInput, onAdd,
     ) : (
         onReorder ? (
             <Reorder.Group axis="y" values={items} onReorder={onReorder} className="space-y-1">
-                <AnimatePresence initial={false}>
-                    {items.map((item: any) => (
-                        <Reorder.Item
-                            key={item.id}
-                            value={item}
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className={`group flex items-center justify-between p-2 rounded-lg cursor-grab active:cursor-grabbing text-sm transition-colors ${activeId === item.id ? 'bg-black text-white dark:bg-white dark:text-black' : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'}`}
-                            onClick={() => !disabled && onSelect && onSelect(item.id)}
+                {items.map((item: any) => (
+                    <Reorder.Item
+                        key={item.id}
+                        value={item}
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className={`group flex items-center justify-between p-2 rounded-lg cursor-grab active:cursor-grabbing text-sm transition-colors ${activeId === item.id ? 'bg-black text-white dark:bg-white dark:text-black' : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'}`}
+                        onClick={() => !disabled && onSelect && onSelect(item.id)}
+                    >
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <GripVertical size={12} className={`opacity-0 group-hover:opacity-100 ${activeId === item.id ? 'text-gray-400' : 'text-gray-400'}`} />
+                            <span className="truncate flex-1">{item.name}</span>
+                        </div>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onRemove(item.id) }}
+                            className={`p-1 rounded transition-opacity ${removingId === item.id
+                                ? 'opacity-100'
+                                : `opacity-0 group-hover:opacity-100 ${activeId === item.id ? 'hover:bg-gray-800 dark:hover:bg-gray-200' : 'hover:bg-red-100 text-red-500'}`
+                                }`}
+                            disabled={!!removingId}
                         >
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <GripVertical size={12} className={`opacity-0 group-hover:opacity-100 ${activeId === item.id ? 'text-gray-400' : 'text-gray-400'}`} />
-                                <span className="truncate flex-1">{item.name}</span>
-                            </div>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onRemove(item.id) }}
-                                className={`p-1 rounded transition-opacity ${removingId === item.id
-                                    ? 'opacity-100'
-                                    : `opacity-0 group-hover:opacity-100 ${activeId === item.id ? 'hover:bg-gray-800 dark:hover:bg-gray-200' : 'hover:bg-red-100 text-red-500'}`
-                                    }`}
-                                disabled={!!removingId}
-                            >
-                                {removingId === item.id ? (
-                                    <div className="animate-spin">
-                                        <TyreLoader size={14} />
-                                    </div>
-                                ) : (
-                                    <Trash2 size={14} />
-                                )}
-                            </button>
-                        </Reorder.Item>
-                    ))}
-                </AnimatePresence>
+                            {removingId === item.id ? (
+                                <div className="animate-spin">
+                                    <TyreLoader size={14} />
+                                </div>
+                            ) : (
+                                <Trash2 size={14} />
+                            )}
+                        </button>
+                    </Reorder.Item>
+                ))}
             </Reorder.Group>
         ) : (
             <div className="space-y-1">
