@@ -100,7 +100,6 @@ export default function AdminPanel() {
 
     // Loading State
     const [isLoading, setIsLoading] = useState(false)
-    const [isSubmitting, setIsSubmitting] = useState(false)
     const [processingId, setProcessingId] = useState<string | null>(null)
     const [removingId, setRemovingId] = useState<string | null>(null)
     const [renamingId, setRenamingId] = useState<string | null>(null)
@@ -223,54 +222,111 @@ export default function AdminPanel() {
         } catch (err) { console.error(err); showToast('Action failed', 'error') } finally { setProcessingId(null) }
     }
 
-    const handleStructureAdd = async (type: 'program' | 'year' | 'semester' | 'course' | 'subject' | 'unit' | 'video', value: string) => {
+    const handleStructureAdd = (type: 'program' | 'year' | 'semester' | 'course' | 'subject' | 'unit' | 'video', value: string) => {
         if (!value.trim()) return
         if (type === 'unit' && !selectedSubjectName) return alert('Please select a subject first.')
         if (type === 'video' && !selectedUnitName) return alert('Please select a unit first.')
+        if (type === 'video' && !newVideoUrl.trim()) return
 
-        setIsSubmitting(true)
-        const payload: any = { action: 'structure', value }
+        const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        const newItem: any = { id: tempId, name: value }
 
-        if (type === 'program') payload.structureAction = 'add-program'
-        else if (type === 'year') { payload.structureAction = 'add-year'; payload.programId = selectedProgramId }
-        else if (type === 'course') { payload.structureAction = 'add-course'; payload.programId = selectedProgramId; payload.yearId = selectedYearId }
-        else if (type === 'semester') { payload.structureAction = 'add-semester'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.courseId = selectedCourseId }
-        else if (type === 'subject') { payload.structureAction = 'add-subject'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.courseId = selectedCourseId; payload.semesterId = selectedSemesterId }
-        else if (type === 'unit') { payload.structureAction = 'add-unit'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.courseId = selectedCourseId; payload.semesterId = selectedSemesterId; payload.subjectName = selectedSubjectName }
-        else if (type === 'video') {
-            payload.structureAction = 'add-video'
-            payload.programId = selectedProgramId
-            payload.yearId = selectedYearId
-            payload.courseId = selectedCourseId
-            payload.semesterId = selectedSemesterId
-            payload.subjectName = selectedSubjectName
-            payload.unitName = selectedUnitName
-            payload.videoTitle = value
-            payload.videoUrl = newVideoUrl
+        if (type === 'video') {
+            newItem.title = value
+            newItem.url = newVideoUrl
+            delete newItem.name
         }
 
-        try {
-            const res = await fetch('/api/admin', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(payload)
-            })
-            if (res.ok) {
-                const data = await res.json()
-                setStructure(data)
-                if (type === 'program') setNewProgram('')
-                if (type === 'year') setNewYear('')
-                if (type === 'semester') setNewSemester('')
-                if (type === 'course') setNewBranch('')
-                if (type === 'subject') setNewSubject('')
-                if (type === 'unit') setNewUnit('')
-                if (type === 'video') { setNewVideoTitle(''); setNewVideoUrl('') }
-                showToast(`${type} added successfully`)
-            } else {
-                const errorData = await res.json()
-                showToast(errorData.message || 'Failed to add item', 'error')
+        const newStructure = JSON.parse(JSON.stringify(structure))
+        let targetArray: any[] | null = null
+
+        if (type === 'program') {
+            if (!newStructure.programs) newStructure.programs = []
+            targetArray = newStructure.programs
+        } else if (type === 'year') {
+            const p = newStructure.programs?.find((p: any) => p.id === selectedProgramId)
+            if (p) {
+                if (!p.years) p.years = []
+                targetArray = p.years
             }
-        } catch (err) { console.error(err); showToast('Failed to add item', 'error') } finally { setTimeout(() => setIsSubmitting(false), 500) }
+        } else if (type === 'course') {
+            const p = newStructure.programs?.find((p: any) => p.id === selectedProgramId)
+            const y = p?.years?.find((y: any) => y.id === selectedYearId)
+            if (y) {
+                if (!y.courses) y.courses = []
+                targetArray = y.courses
+            }
+        } else if (type === 'semester') {
+            const p = newStructure.programs?.find((p: any) => p.id === selectedProgramId)
+            const y = p?.years?.find((y: any) => y.id === selectedYearId)
+            const c = y?.courses?.find((c: any) => c.id === selectedCourseId)
+            if (c) {
+                if (!c.semesters) c.semesters = []
+                targetArray = c.semesters
+            }
+        } else if (type === 'subject') {
+            const p = newStructure.programs?.find((p: any) => p.id === selectedProgramId)
+            const y = p?.years?.find((y: any) => y.id === selectedYearId)
+            const c = y?.courses?.find((c: any) => c.id === selectedCourseId)
+            const s = c?.semesters?.find((s: any) => s.id === selectedSemesterId)
+            if (s) {
+                if (!s.subjects) s.subjects = []
+                targetArray = s.subjects
+            }
+        } else if (type === 'unit') {
+            const p = newStructure.programs?.find((p: any) => p.id === selectedProgramId)
+            const y = p?.years?.find((y: any) => y.id === selectedYearId)
+            const c = y?.courses?.find((c: any) => c.id === selectedCourseId)
+            const s = c?.semesters?.find((s: any) => s.id === selectedSemesterId)
+            const sub = s?.subjects?.find((sub: any) => (typeof sub === 'string' ? sub : sub.name) === selectedSubjectName)
+            if (sub) {
+                if (typeof sub === 'string') {
+                    // Convert string subject to object structure in local state if needed, but easier to just find the index and replace?
+                    // Or just assume backend handles it? 
+                    // Frontend 'subjects' array has mixed types? 
+                    // Actually existing code handles string vs object. 
+                    // But here we are adding a unit TO a subject. 
+                    // If subject is string, we cannot add unit property to it.
+                    // We must convert it to object first locally.
+                    const subIndex = s.subjects.indexOf(sub)
+                    const newSubObj = { name: sub, units: [] }
+                    s.subjects[subIndex] = newSubObj
+                    targetArray = newSubObj.units
+                } else {
+                    if (!sub.units) sub.units = []
+                    targetArray = sub.units
+                }
+            }
+        } else if (type === 'video') {
+            const p = newStructure.programs?.find((p: any) => p.id === selectedProgramId)
+            const y = p?.years?.find((y: any) => y.id === selectedYearId)
+            const c = y?.courses?.find((c: any) => c.id === selectedCourseId)
+            const s = c?.semesters?.find((s: any) => s.id === selectedSemesterId)
+            const sub = s?.subjects?.find((sub: any) => (typeof sub === 'string' ? sub : sub.name) === selectedSubjectName)
+            const u = sub?.units?.find((u: any) => u.name === selectedUnitName)
+            if (u) {
+                if (!u.videos) u.videos = []
+                targetArray = u.videos
+            }
+        }
+
+        if (targetArray) {
+            targetArray.push(newItem)
+            setStructure(newStructure)
+
+            // Clear inputs
+            if (type === 'program') setNewProgram('')
+            if (type === 'year') setNewYear('')
+            if (type === 'semester') setNewSemester('')
+            if (type === 'course') setNewBranch('')
+            if (type === 'subject') setNewSubject('')
+            if (type === 'unit') setNewUnit('')
+            if (type === 'video') { setNewVideoTitle(''); setNewVideoUrl('') }
+
+            if (!unsavedChanges.includes(type)) {
+                setUnsavedChanges(prev => [...prev, type])
+            }
+        }
     }
 
     const handleStructureRemove = async (type: 'program' | 'year' | 'semester' | 'course' | 'subject' | 'unit' | 'video', value: string) => {
@@ -393,14 +449,81 @@ export default function AdminPanel() {
     const handleSaveOrder = async (type: string, items: any[]) => {
         setIsReordering(true)
         try {
-            await fetch('/api/admin', {
+            // 1. Identify and create new items
+            const newItems = items.filter(i => i.id && i.id.toString().startsWith('temp_'))
+
+            for (const item of newItems) {
+                const payload: any = { action: 'structure', value: item.name || item.title } // Items have name or title (video)
+
+                if (type === 'program') payload.structureAction = 'add-program'
+                else if (type === 'year') { payload.structureAction = 'add-year'; payload.programId = selectedProgramId }
+                else if (type === 'course') { payload.structureAction = 'add-course'; payload.programId = selectedProgramId; payload.yearId = selectedYearId }
+                else if (type === 'semester') { payload.structureAction = 'add-semester'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.courseId = selectedCourseId }
+                else if (type === 'subject') { payload.structureAction = 'add-subject'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.courseId = selectedCourseId; payload.semesterId = selectedSemesterId }
+                else if (type === 'unit') { payload.structureAction = 'add-unit'; payload.programId = selectedProgramId; payload.yearId = selectedYearId; payload.courseId = selectedCourseId; payload.semesterId = selectedSemesterId; payload.subjectName = selectedSubjectName }
+                else if (type === 'video') {
+                    payload.structureAction = 'add-video'
+                    payload.programId = selectedProgramId
+                    payload.yearId = selectedYearId
+                    payload.courseId = selectedCourseId
+                    payload.semesterId = selectedSemesterId
+                    payload.subjectName = selectedSubjectName
+                    payload.unitName = selectedUnitName
+                    payload.videoTitle = item.title
+                    payload.videoUrl = item.url
+                }
+
+                await fetch('/api/admin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify(payload)
+                })
+            }
+
+            // 2. Fetch updated structure to get real IDs
+            const res = await fetch('/api/admin?action=structure', { headers: { 'Authorization': `Bearer ${token}` } })
+            const updatedStructure = await res.json()
+
+            // 3. Map the UI order to real IDs
+            // We need to traverse the updated structure to find the items at the current level
+            let serverItems: any[] = []
+            if (type === 'program') serverItems = updatedStructure.programs || []
+            else if (type === 'year') serverItems = updatedStructure.programs?.find((p: any) => p.id === selectedProgramId)?.years || []
+            else if (type === 'course') serverItems = updatedStructure.programs?.find((p: any) => p.id === selectedProgramId)?.years?.find((y: any) => y.id === selectedYearId)?.courses || []
+            else if (type === 'semester') serverItems = updatedStructure.programs?.find((p: any) => p.id === selectedProgramId)?.years?.find((y: any) => y.id === selectedYearId)?.courses?.find((c: any) => c.id === selectedCourseId)?.semesters || []
+            else if (type === 'subject') serverItems = updatedStructure.programs?.find((p: any) => p.id === selectedProgramId)?.years?.find((y: any) => y.id === selectedYearId)?.courses?.find((c: any) => c.id === selectedCourseId)?.semesters?.find((s: any) => s.id === selectedSemesterId)?.subjects || []
+            else if (type === 'unit') {
+                const sub = updatedStructure.programs?.find((p: any) => p.id === selectedProgramId)?.years?.find((y: any) => y.id === selectedYearId)?.courses?.find((c: any) => c.id === selectedCourseId)?.semesters?.find((s: any) => s.id === selectedSemesterId)?.subjects?.find((s: any) => (typeof s === 'string' ? s : s.name) === selectedSubjectName)
+                serverItems = (typeof sub === 'string' ? [] : sub?.units) || []
+            } else if (type === 'video') {
+                const sub = updatedStructure.programs?.find((p: any) => p.id === selectedProgramId)?.years?.find((y: any) => y.id === selectedYearId)?.courses?.find((c: any) => c.id === selectedCourseId)?.semesters?.find((s: any) => s.id === selectedSemesterId)?.subjects?.find((s: any) => (typeof s === 'string' ? s : s.name) === selectedSubjectName)
+                const u = (typeof sub === 'string' ? null : sub?.units?.find((u: any) => u.name === selectedUnitName))
+                serverItems = u?.videos || []
+            }
+
+            // Construct reorder payload
+            const reorderedItems = items.map(uiItem => {
+                if (uiItem.id && uiItem.id.toString().startsWith('temp_')) {
+                    // Find the server item that matches this temp item
+                    const match = serverItems.find((sip: any) => {
+                        if (type === 'video') return sip.title === uiItem.title && sip.url === uiItem.url
+                        const name = typeof sip === 'string' ? sip : sip.name
+                        return name === uiItem.name
+                    })
+                    return match || uiItem // Fallback (shouldn't happen if add succeeded)
+                }
+                return uiItem
+            })
+
+            // 4. Send Reorder Request
+            const reorderRes = await fetch('/api/admin', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({
                     action: 'structure',
                     structureAction: 'reorder',
                     type: type,
-                    newOrder: items,
+                    newOrder: reorderedItems,
                     programId: selectedProgramId,
                     yearId: selectedYearId,
                     courseId: selectedCourseId,
@@ -409,11 +532,21 @@ export default function AdminPanel() {
                     unitName: selectedUnitName
                 })
             });
-            setUnsavedChanges(prev => prev.filter(t => t !== type))
-            showToast('Order saved');
+
+            if (reorderRes.ok) {
+                const data = await reorderRes.json()
+                setStructure(data) // Update with final structure
+                setUnsavedChanges(prev => prev.filter(t => t !== type))
+                showToast('Changes saved successfully')
+            } else {
+                throw new Error('Reorder failed')
+            }
+
         } catch (error) {
-            console.error('Reorder failed:', error);
-            showToast('Failed to save order', 'error');
+            console.error('Save failed:', error);
+            showToast('Failed to save changes', 'error');
+            // If failed, we should probably fetch structure to reset state to server truth
+            fetchStructure()
         } finally {
             setIsReordering(false)
         }
@@ -501,13 +634,13 @@ export default function AdminPanel() {
                             {activeTab === 'users' && <motion.div key="users" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}><UsersView users={users} processingId={processingId} onAction={handleUserAction} /></motion.div>}
                             {activeTab === 'structure' && <motion.div key="structure" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}>
                                 <div className="grid grid-cols-1 md:flex md:gap-6 md:overflow-x-auto md:pb-8 gap-6">
-                                    <StructureCard title="Programs" step="01" items={programs.map(p => ({ id: p.id, name: p.name, original: p }))} value={newProgram} setValue={setNewProgram} onAdd={() => handleStructureAdd('program', newProgram)} onRemove={(id: string) => handleStructureRemove('program', id)} activeId={selectedProgramId} onSelect={setSelectedProgramId} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('program', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('program')} onSave={(items: any[]) => handleSaveOrder('program', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('program', id, name)} renamingId={renamingId} />
-                                    <StructureCard title="Years" step="02" items={years.map(y => ({ id: y.id, name: y.name, original: y }))} value={newYear} setValue={setNewYear} onAdd={() => handleStructureAdd('year', newYear)} onRemove={(id: string) => handleStructureRemove('year', id)} activeId={selectedYearId} onSelect={setSelectedYearId} disabled={!selectedProgramId} parentName={selectedProgram?.name} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('year', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('year')} onSave={(items: any[]) => handleSaveOrder('year', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('year', id, name)} renamingId={renamingId} />
-                                    <StructureCard title="Branches" step="03" items={courses.map(c => ({ id: c.id, name: c.name, original: c }))} value={newBranch} setValue={setNewBranch} onAdd={() => handleStructureAdd('course', newBranch)} onRemove={(id: string) => handleStructureRemove('course', id)} activeId={selectedCourseId} onSelect={setSelectedCourseId} disabled={!selectedYearId} parentName={selectedYear?.name} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('course', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('course')} onSave={(items: any[]) => handleSaveOrder('course', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('course', id, name)} renamingId={renamingId} />
-                                    <StructureCard title="Semesters" step="04" items={semesters.map(s => ({ id: s.id, name: s.name, original: s }))} value={newSemester} setValue={handleSemesterChange} onAdd={() => handleStructureAdd('semester', newSemester)} onRemove={(id: string) => handleStructureRemove('semester', id)} activeId={selectedSemesterId} onSelect={setSelectedSemesterId} disabled={!selectedCourseId} parentName={selectedCourse?.name} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('semester', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('semester')} onSave={(items: any[]) => handleSaveOrder('semester', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('semester', id, name)} renamingId={renamingId} />
-                                    <StructureCard title="Subjects" step="05" items={subjects.map(s => ({ id: typeof s === 'string' ? s : s.name, name: typeof s === 'string' ? s : s.name, original: s }))} value={newSubject} setValue={setNewSubject} onAdd={() => handleStructureAdd('subject', newSubject)} onRemove={(id: string) => handleStructureRemove('subject', id)} activeId={selectedSubjectName} onSelect={setSelectedSubjectName} disabled={!selectedSemesterId} parentName={selectedSemester?.name} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('subject', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('subject')} onSave={(items: any[]) => handleSaveOrder('subject', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('subject', id, name)} renamingId={renamingId} />
-                                    <StructureCard title="Units" step="06" items={units.map((u: any) => ({ id: u.name, name: u.name, original: u }))} value={newUnit} setValue={handleUnitChange} onAdd={() => handleStructureAdd('unit', newUnit)} onRemove={(id: string) => handleStructureRemove('unit', id)} activeId={selectedUnitName} onSelect={setSelectedUnitName} disabled={!selectedSubjectName} parentName={selectedSubjectName} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('unit', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('unit')} onSave={(items: any[]) => handleSaveOrder('unit', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('unit', id, name)} renamingId={renamingId} />
-                                    <StructureCard title="Videos" step="07" items={videos.map((v: any) => ({ id: v.id, name: v.title, original: v }))} value={newVideoTitle} setValue={setNewVideoTitle} extraInput={{ value: newVideoUrl, setValue: setNewVideoUrl, placeholder: "YouTube URL..." }} onAdd={() => handleStructureAdd('video', newVideoTitle)} onRemove={(id: string) => handleStructureRemove('video', id)} disabled={!selectedUnitName} parentName={selectedUnitName} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('video', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('video')} onSave={(items: any[]) => handleSaveOrder('video', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('video', id, name)} renamingId={renamingId} />
+                                    <StructureCard title="Programs" step="01" items={programs.map(p => ({ id: p.id, name: p.name, original: p }))} value={newProgram} setValue={setNewProgram} onAdd={() => handleStructureAdd('program', newProgram)} onRemove={(id: string) => handleStructureRemove('program', id)} activeId={selectedProgramId} onSelect={setSelectedProgramId} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('program', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('program')} onSave={(items: any[]) => handleSaveOrder('program', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('program', id, name)} renamingId={renamingId} />
+                                    <StructureCard title="Years" step="02" items={years.map(y => ({ id: y.id, name: y.name, original: y }))} value={newYear} setValue={setNewYear} onAdd={() => handleStructureAdd('year', newYear)} onRemove={(id: string) => handleStructureRemove('year', id)} activeId={selectedYearId} onSelect={setSelectedYearId} disabled={!selectedProgramId} parentName={selectedProgram?.name} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('year', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('year')} onSave={(items: any[]) => handleSaveOrder('year', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('year', id, name)} renamingId={renamingId} />
+                                    <StructureCard title="Branches" step="03" items={courses.map(c => ({ id: c.id, name: c.name, original: c }))} value={newBranch} setValue={setNewBranch} onAdd={() => handleStructureAdd('course', newBranch)} onRemove={(id: string) => handleStructureRemove('course', id)} activeId={selectedCourseId} onSelect={setSelectedCourseId} disabled={!selectedYearId} parentName={selectedYear?.name} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('course', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('course')} onSave={(items: any[]) => handleSaveOrder('course', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('course', id, name)} renamingId={renamingId} />
+                                    <StructureCard title="Semesters" step="04" items={semesters.map(s => ({ id: s.id, name: s.name, original: s }))} value={newSemester} setValue={handleSemesterChange} onAdd={() => handleStructureAdd('semester', newSemester)} onRemove={(id: string) => handleStructureRemove('semester', id)} activeId={selectedSemesterId} onSelect={setSelectedSemesterId} disabled={!selectedCourseId} parentName={selectedCourse?.name} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('semester', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('semester')} onSave={(items: any[]) => handleSaveOrder('semester', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('semester', id, name)} renamingId={renamingId} />
+                                    <StructureCard title="Subjects" step="05" items={subjects.map(s => ({ id: typeof s === 'string' ? s : s.name, name: typeof s === 'string' ? s : s.name, original: s }))} value={newSubject} setValue={setNewSubject} onAdd={() => handleStructureAdd('subject', newSubject)} onRemove={(id: string) => handleStructureRemove('subject', id)} activeId={selectedSubjectName} onSelect={setSelectedSubjectName} disabled={!selectedSemesterId} parentName={selectedSemester?.name} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('subject', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('subject')} onSave={(items: any[]) => handleSaveOrder('subject', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('subject', id, name)} renamingId={renamingId} />
+                                    <StructureCard title="Units" step="06" items={units.map((u: any) => ({ id: u.name, name: u.name, original: u }))} value={newUnit} setValue={handleUnitChange} onAdd={() => handleStructureAdd('unit', newUnit)} onRemove={(id: string) => handleStructureRemove('unit', id)} activeId={selectedUnitName} onSelect={setSelectedUnitName} disabled={!selectedSubjectName} parentName={selectedSubjectName} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('unit', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('unit')} onSave={(items: any[]) => handleSaveOrder('unit', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('unit', id, name)} renamingId={renamingId} />
+                                    <StructureCard title="Videos" step="07" items={videos.map((v: any) => ({ id: v.id, name: v.title, original: v }))} value={newVideoTitle} setValue={setNewVideoTitle} extraInput={{ value: newVideoUrl, setValue: setNewVideoUrl, placeholder: "YouTube URL..." }} onAdd={() => handleStructureAdd('video', newVideoTitle)} onRemove={(id: string) => handleStructureRemove('video', id)} disabled={!selectedUnitName} parentName={selectedUnitName} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('video', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('video')} onSave={(items: any[]) => handleSaveOrder('video', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('video', id, name)} renamingId={renamingId} />
                                 </div>
                             </motion.div>}
                         </>
