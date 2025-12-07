@@ -311,8 +311,20 @@ export default function AdminPanel() {
         }
 
         if (targetArray) {
+            // DUPLICATE CHECK
+            const isDuplicate = targetArray.some((existingItem: any) => {
+                const existingName = (existingItem.name || existingItem.title || (typeof existingItem === 'string' ? existingItem : '')).trim().toLowerCase()
+                const newName = (newItem.name || newItem.title || '').trim().toLowerCase()
+                return existingName === newName
+            })
+
+            if (isDuplicate) {
+                showToast('Item with this name already exists', 'error')
+                return // Abort addition
+            }
+
             targetArray.push(newItem)
-            setStructure(newStructure)
+            setStructure(newStructure) // Optimistic update
 
             // Clear inputs
             if (type === 'program') setNewProgram('')
@@ -332,6 +344,59 @@ export default function AdminPanel() {
     const handleStructureRemove = async (type: 'program' | 'year' | 'semester' | 'course' | 'subject' | 'unit' | 'video', value: string) => {
         if (!confirm(`Delete "${value}" ? This cannot be undone.`)) return
 
+        // 1. Optimistic Update
+        const previousStructure = JSON.parse(JSON.stringify(structure))
+        const optimisticStructure = JSON.parse(JSON.stringify(structure))
+
+        // Helper to remove item from array
+        const removeFromList = (list: any[], idOrName: string) => {
+            const idx = list.findIndex((i: any) => (i.id === idOrName) || (i.name === idOrName) || (typeof i === 'string' && i === idOrName) || (i.id && i.id.toString() === idOrName.toString()))
+            if (idx > -1) list.splice(idx, 1)
+        }
+
+        // Logic to find list and remove item (duplicated from add logic logic reversed basically)
+        // Check type and find the list in optimisticStructure
+        if (type === 'program') {
+            if (optimisticStructure.programs) removeFromList(optimisticStructure.programs, value)
+        } else if (type === 'year') {
+            const p = optimisticStructure.programs?.find((p: any) => p.id === selectedProgramId)
+            if (p?.years) removeFromList(p.years, value)
+        } else if (type === 'course') {
+            const p = optimisticStructure.programs?.find((p: any) => p.id === selectedProgramId)
+            const y = p?.years?.find((y: any) => y.id === selectedYearId)
+            if (y?.courses) removeFromList(y.courses, value)
+        } else if (type === 'semester') {
+            const p = optimisticStructure.programs?.find((p: any) => p.id === selectedProgramId)
+            const y = p?.years?.find((y: any) => y.id === selectedYearId)
+            const c = y?.courses?.find((c: any) => c.id === selectedCourseId)
+            if (c?.semesters) removeFromList(c.semesters, value)
+        } else if (type === 'subject') {
+            const p = optimisticStructure.programs?.find((p: any) => p.id === selectedProgramId)
+            const y = p?.years?.find((y: any) => y.id === selectedYearId)
+            const c = y?.courses?.find((c: any) => c.id === selectedCourseId)
+            const s = c?.semesters?.find((s: any) => s.id === selectedSemesterId)
+            if (s?.subjects) removeFromList(s.subjects, value)
+        } else if (type === 'unit') {
+            const p = optimisticStructure.programs?.find((p: any) => p.id === selectedProgramId)
+            const y = p?.years?.find((y: any) => y.id === selectedYearId)
+            const c = y?.courses?.find((c: any) => c.id === selectedCourseId)
+            const s = c?.semesters?.find((s: any) => s.id === selectedSemesterId)
+            const sub = s?.subjects?.find((sub: any) => (typeof sub === 'string' ? sub : sub.name) === selectedSubjectName)
+            // Handle string vs object subject
+            if (typeof sub === 'object' && sub.units) removeFromList(sub.units, value)
+        } else if (type === 'video') {
+            const p = optimisticStructure.programs?.find((p: any) => p.id === selectedProgramId)
+            const y = p?.years?.find((y: any) => y.id === selectedYearId)
+            const c = y?.courses?.find((c: any) => c.id === selectedCourseId)
+            const s = c?.semesters?.find((s: any) => s.id === selectedSemesterId)
+            const sub = s?.subjects?.find((sub: any) => (typeof sub === 'string' ? sub : sub.name) === selectedSubjectName)
+            const u = sub?.units?.find((u: any) => u.name === selectedUnitName)
+            if (u?.videos) removeFromList(u.videos, value)
+        }
+
+        setStructure(optimisticStructure)
+
+        // 2. Network Request
         setRemovingId(value)
         const payload: any = { action: 'structure', value }
         if (type === 'program') { payload.structureAction = 'remove-program'; payload.programId = value }
@@ -359,17 +424,90 @@ export default function AdminPanel() {
             })
             if (res.ok) {
                 const data = await res.json()
+                // Update with server data to be sure, OR just keep optimistic if we trust it.
+                // Replacing with server data is safer for consistency but might cause a "jump" if server state is slightly different.
+                // For "very fast" feel, we might skip setStructure(data) if we are confident.
+                // But let's sync to be safe. The jump should be minimal if state matches.
                 setStructure(data)
                 showToast(`${type} removed successfully`)
+            } else {
+                throw new Error('Server returned error')
             }
-        } catch (err) { console.error(err); showToast('Failed to remove item', 'error') } finally { setTimeout(() => setRemovingId(null), 500) }
+        } catch (err) {
+            console.error(err);
+            setStructure(previousStructure) // Revert on failure
+            showToast('Failed to remove item', 'error')
+        } finally { setTimeout(() => setRemovingId(null), 500) }
     }
 
 
     const handleRename = async (type: string, id: string, newName: string) => {
         if (!newName.trim()) return
 
+        // 1. Optimistic Update
+        const previousStructure = JSON.parse(JSON.stringify(structure))
+        const optimisticStructure = JSON.parse(JSON.stringify(structure))
+
+        const renameInList = (list: any[], targetId: string) => {
+            const item = list.find((i: any) => (i.id === targetId) || (typeof i === 'string' && i === targetId))
+            if (item) {
+                if (typeof item === 'string') {
+                    // String items (subjects/units) are trickier because they might be objects in local state if modified?
+                    // Assuming they are objects if we have an ID? 
+                    // Wait, handleRename passes 'id' which IS the name for subject/unit if string.
+                    const idx = list.indexOf(item)
+                    list[idx] = newName // For string items, just replace string
+                } else {
+                    item.name = newName // For object items, update name property
+                }
+            }
+        }
+
+        // Apply rename locally
+        if (type === 'program') {
+            if (optimisticStructure.programs) renameInList(optimisticStructure.programs, id)
+        } else if (type === 'year') {
+            const p = optimisticStructure.programs?.find((p: any) => p.id === selectedProgramId)
+            if (p?.years) renameInList(p.years, id)
+        } else if (type === 'course') {
+            const p = optimisticStructure.programs?.find((p: any) => p.id === selectedProgramId)
+            const y = p?.years?.find((y: any) => y.id === selectedYearId)
+            if (y?.courses) renameInList(y.courses, id)
+        } else if (type === 'semester') {
+            const p = optimisticStructure.programs?.find((p: any) => p.id === selectedProgramId)
+            const y = p?.years?.find((y: any) => y.id === selectedYearId)
+            const c = y?.courses?.find((c: any) => c.id === selectedCourseId)
+            if (c?.semesters) renameInList(c.semesters, id)
+        } else if (type === 'subject') {
+            const p = optimisticStructure.programs?.find((p: any) => p.id === selectedProgramId)
+            const y = p?.years?.find((y: any) => y.id === selectedYearId)
+            const c = y?.courses?.find((c: any) => c.id === selectedCourseId)
+            const s = c?.semesters?.find((s: any) => s.id === selectedSemesterId)
+            if (s?.subjects) renameInList(s.subjects, id)
+        } else if (type === 'unit') {
+            const p = optimisticStructure.programs?.find((p: any) => p.id === selectedProgramId)
+            const y = p?.years?.find((y: any) => y.id === selectedYearId)
+            const c = y?.courses?.find((c: any) => c.id === selectedCourseId)
+            const s = c?.semesters?.find((s: any) => s.id === selectedSemesterId)
+            const sub = s?.subjects?.find((sub: any) => (typeof sub === 'string' ? sub : sub.name) === selectedSubjectName)
+            if (typeof sub === 'object' && sub.units) renameInList(sub.units, id)
+        } else if (type === 'video') {
+            const p = optimisticStructure.programs?.find((p: any) => p.id === selectedProgramId)
+            const y = p?.years?.find((y: any) => y.id === selectedYearId)
+            const c = y?.courses?.find((c: any) => c.id === selectedCourseId)
+            const s = c?.semesters?.find((s: any) => s.id === selectedSemesterId)
+            const sub = s?.subjects?.find((sub: any) => (typeof sub === 'string' ? sub : sub.name) === selectedSubjectName)
+            const u = sub?.units?.find((u: any) => u.name === selectedUnitName)
+            if (u?.videos) {
+                const v = u.videos.find((v: any) => v.id === id)
+                if (v) v.title = newName // Videos use title
+            }
+        }
+
+        setStructure(optimisticStructure)
+        setEditingId(null) // Exit edit mode immediately
         setRenamingId(id)
+
         try {
             await fetch('/api/admin', {
                 method: 'POST',
@@ -389,11 +527,13 @@ export default function AdminPanel() {
                 })
             });
             showToast('Renamed successfully')
-            setEditingId(null)
-            fetchStructure()
+            fetchStructure() // Sync final state
         } catch (error) {
             console.error('Rename failed:', error)
+            setStructure(previousStructure) // Revert
             showToast('Rename failed', 'error')
+        } finally {
+            setRenamingId(null)
         }
     }
 
