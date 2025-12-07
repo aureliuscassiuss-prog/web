@@ -257,6 +257,8 @@ export default function ProfilePage() {
                 try {
                     const errorData = await response.json();
                     errorMessage = errorData.message || errorMessage;
+                    if (errorData.details) errorMessage += `: ${errorData.details}`;
+                    if (errorData.hint) errorMessage += ` (${errorData.hint})`;
                 } catch (e) {
                     // If JSON parse fails, try to get text
                     const textError = await response.text();
