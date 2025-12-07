@@ -130,7 +130,7 @@ export default function AdminPanel() {
     const [newVideoUrl, setNewVideoUrl] = useState('')
 
     // Reorder Loading State
-    const [isReordering, setIsReordering] = useState(false)
+    const [savingType, setSavingType] = useState<string | null>(null)
 
     // Helper for Semester Auto-text
     const handleSemesterChange = (val: string) => {
@@ -447,7 +447,7 @@ export default function AdminPanel() {
     };
 
     const handleSaveOrder = async (type: string, items: any[]) => {
-        setIsReordering(true)
+        setSavingType(type)
         try {
             // 1. Identify and create new items
             const newItems = items.filter(i => i.id && i.id.toString().startsWith('temp_'))
@@ -548,8 +548,14 @@ export default function AdminPanel() {
             // If failed, we should probably fetch structure to reset state to server truth
             fetchStructure()
         } finally {
-            setIsReordering(false)
+            setSavingType(null)
         }
+    }
+
+    const handleCancel = async (type: string) => {
+        setUnsavedChanges(prev => prev.filter(t => t !== type))
+        await fetchStructure()
+        showToast('Changes reverted')
     }
 
     // --- Derived State for Structure ---
@@ -634,13 +640,13 @@ export default function AdminPanel() {
                             {activeTab === 'users' && <motion.div key="users" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}><UsersView users={users} processingId={processingId} onAction={handleUserAction} /></motion.div>}
                             {activeTab === 'structure' && <motion.div key="structure" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}>
                                 <div className="grid grid-cols-1 md:flex md:gap-6 md:overflow-x-auto md:pb-8 gap-6">
-                                    <StructureCard title="Programs" step="01" items={programs.map(p => ({ id: p.id, name: p.name, original: p }))} value={newProgram} setValue={setNewProgram} onAdd={() => handleStructureAdd('program', newProgram)} onRemove={(id: string) => handleStructureRemove('program', id)} activeId={selectedProgramId} onSelect={setSelectedProgramId} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('program', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('program')} onSave={(items: any[]) => handleSaveOrder('program', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('program', id, name)} renamingId={renamingId} />
-                                    <StructureCard title="Years" step="02" items={years.map(y => ({ id: y.id, name: y.name, original: y }))} value={newYear} setValue={setNewYear} onAdd={() => handleStructureAdd('year', newYear)} onRemove={(id: string) => handleStructureRemove('year', id)} activeId={selectedYearId} onSelect={setSelectedYearId} disabled={!selectedProgramId} parentName={selectedProgram?.name} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('year', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('year')} onSave={(items: any[]) => handleSaveOrder('year', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('year', id, name)} renamingId={renamingId} />
-                                    <StructureCard title="Branches" step="03" items={courses.map(c => ({ id: c.id, name: c.name, original: c }))} value={newBranch} setValue={setNewBranch} onAdd={() => handleStructureAdd('course', newBranch)} onRemove={(id: string) => handleStructureRemove('course', id)} activeId={selectedCourseId} onSelect={setSelectedCourseId} disabled={!selectedYearId} parentName={selectedYear?.name} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('course', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('course')} onSave={(items: any[]) => handleSaveOrder('course', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('course', id, name)} renamingId={renamingId} />
-                                    <StructureCard title="Semesters" step="04" items={semesters.map(s => ({ id: s.id, name: s.name, original: s }))} value={newSemester} setValue={handleSemesterChange} onAdd={() => handleStructureAdd('semester', newSemester)} onRemove={(id: string) => handleStructureRemove('semester', id)} activeId={selectedSemesterId} onSelect={setSelectedSemesterId} disabled={!selectedCourseId} parentName={selectedCourse?.name} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('semester', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('semester')} onSave={(items: any[]) => handleSaveOrder('semester', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('semester', id, name)} renamingId={renamingId} />
-                                    <StructureCard title="Subjects" step="05" items={subjects.map(s => ({ id: typeof s === 'string' ? s : s.name, name: typeof s === 'string' ? s : s.name, original: s }))} value={newSubject} setValue={setNewSubject} onAdd={() => handleStructureAdd('subject', newSubject)} onRemove={(id: string) => handleStructureRemove('subject', id)} activeId={selectedSubjectName} onSelect={setSelectedSubjectName} disabled={!selectedSemesterId} parentName={selectedSemester?.name} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('subject', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('subject')} onSave={(items: any[]) => handleSaveOrder('subject', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('subject', id, name)} renamingId={renamingId} />
-                                    <StructureCard title="Units" step="06" items={units.map((u: any) => ({ id: u.name, name: u.name, original: u }))} value={newUnit} setValue={handleUnitChange} onAdd={() => handleStructureAdd('unit', newUnit)} onRemove={(id: string) => handleStructureRemove('unit', id)} activeId={selectedUnitName} onSelect={setSelectedUnitName} disabled={!selectedSubjectName} parentName={selectedSubjectName} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('unit', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('unit')} onSave={(items: any[]) => handleSaveOrder('unit', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('unit', id, name)} renamingId={renamingId} />
-                                    <StructureCard title="Videos" step="07" items={videos.map((v: any) => ({ id: v.id, name: v.title, original: v }))} value={newVideoTitle} setValue={setNewVideoTitle} extraInput={{ value: newVideoUrl, setValue: setNewVideoUrl, placeholder: "YouTube URL..." }} onAdd={() => handleStructureAdd('video', newVideoTitle)} onRemove={(id: string) => handleStructureRemove('video', id)} disabled={!selectedUnitName} parentName={selectedUnitName} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('video', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('video')} onSave={(items: any[]) => handleSaveOrder('video', items.map(i => i.original))} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('video', id, name)} renamingId={renamingId} />
+                                    <StructureCard title="Programs" step="01" items={programs.map(p => ({ id: p.id, name: p.name, original: p }))} value={newProgram} setValue={setNewProgram} onAdd={() => handleStructureAdd('program', newProgram)} onRemove={(id: string) => handleStructureRemove('program', id)} activeId={selectedProgramId} onSelect={setSelectedProgramId} removingId={removingId} isSaving={savingType === 'program'} onReorder={(newOrder: any[]) => handleReorder('program', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('program')} onSave={(items: any[]) => handleSaveOrder('program', items.map(i => i.original))} onCancel={() => handleCancel('program')} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('program', id, name)} renamingId={renamingId} />
+                                    <StructureCard title="Years" step="02" items={years.map(y => ({ id: y.id, name: y.name, original: y }))} value={newYear} setValue={setNewYear} onAdd={() => handleStructureAdd('year', newYear)} onRemove={(id: string) => handleStructureRemove('year', id)} activeId={selectedYearId} onSelect={setSelectedYearId} disabled={!selectedProgramId} parentName={selectedProgram?.name} removingId={removingId} isSaving={savingType === 'year'} onReorder={(newOrder: any[]) => handleReorder('year', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('year')} onSave={(items: any[]) => handleSaveOrder('year', items.map(i => i.original))} onCancel={() => handleCancel('year')} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('year', id, name)} renamingId={renamingId} />
+                                    <StructureCard title="Branches" step="03" items={courses.map(c => ({ id: c.id, name: c.name, original: c }))} value={newBranch} setValue={setNewBranch} onAdd={() => handleStructureAdd('course', newBranch)} onRemove={(id: string) => handleStructureRemove('course', id)} activeId={selectedCourseId} onSelect={setSelectedCourseId} disabled={!selectedYearId} parentName={selectedYear?.name} removingId={removingId} isSaving={savingType === 'course'} onReorder={(newOrder: any[]) => handleReorder('course', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('course')} onSave={(items: any[]) => handleSaveOrder('course', items.map(i => i.original))} onCancel={() => handleCancel('course')} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('course', id, name)} renamingId={renamingId} />
+                                    <StructureCard title="Semesters" step="04" items={semesters.map(s => ({ id: s.id, name: s.name, original: s }))} value={newSemester} setValue={handleSemesterChange} onAdd={() => handleStructureAdd('semester', newSemester)} onRemove={(id: string) => handleStructureRemove('semester', id)} activeId={selectedSemesterId} onSelect={setSelectedSemesterId} disabled={!selectedCourseId} parentName={selectedCourse?.name} removingId={removingId} isSaving={savingType === 'semester'} onReorder={(newOrder: any[]) => handleReorder('semester', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('semester')} onSave={(items: any[]) => handleSaveOrder('semester', items.map(i => i.original))} onCancel={() => handleCancel('semester')} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('semester', id, name)} renamingId={renamingId} />
+                                    <StructureCard title="Subjects" step="05" items={subjects.map(s => ({ id: typeof s === 'string' ? s : s.name, name: typeof s === 'string' ? s : s.name, original: s }))} value={newSubject} setValue={setNewSubject} onAdd={() => handleStructureAdd('subject', newSubject)} onRemove={(id: string) => handleStructureRemove('subject', id)} activeId={selectedSubjectName} onSelect={setSelectedSubjectName} disabled={!selectedSemesterId} parentName={selectedSemester?.name} removingId={removingId} isSaving={savingType === 'subject'} onReorder={(newOrder: any[]) => handleReorder('subject', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('subject')} onSave={(items: any[]) => handleSaveOrder('subject', items.map(i => i.original))} onCancel={() => handleCancel('subject')} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('subject', id, name)} renamingId={renamingId} />
+                                    <StructureCard title="Units" step="06" items={units.map((u: any) => ({ id: u.name, name: u.name, original: u }))} value={newUnit} setValue={handleUnitChange} onAdd={() => handleStructureAdd('unit', newUnit)} onRemove={(id: string) => handleStructureRemove('unit', id)} activeId={selectedUnitName} onSelect={setSelectedUnitName} disabled={!selectedSubjectName} parentName={selectedSubjectName} removingId={removingId} isSaving={savingType === 'unit'} onReorder={(newOrder: any[]) => handleReorder('unit', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('unit')} onSave={(items: any[]) => handleSaveOrder('unit', items.map(i => i.original))} onCancel={() => handleCancel('unit')} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('unit', id, name)} renamingId={renamingId} />
+                                    <StructureCard title="Videos" step="07" items={videos.map((v: any) => ({ id: v.id, name: v.title, original: v }))} value={newVideoTitle} setValue={setNewVideoTitle} extraInput={{ value: newVideoUrl, setValue: setNewVideoUrl, placeholder: "YouTube URL..." }} onAdd={() => handleStructureAdd('video', newVideoTitle)} onRemove={(id: string) => handleStructureRemove('video', id)} disabled={!selectedUnitName} parentName={selectedUnitName} removingId={removingId} isSaving={savingType === 'video'} onReorder={(newOrder: any[]) => handleReorder('video', newOrder.map(i => i.original))} hasUnsavedChanges={unsavedChanges.includes('video')} onSave={(items: any[]) => handleSaveOrder('video', items.map(i => i.original))} onCancel={() => handleCancel('video')} editingId={editingId} onEditStart={setEditingId} onRename={(id: string, name: string) => handleRename('video', id, name)} renamingId={renamingId} />
                                 </div>
                             </motion.div>}
                         </>
@@ -780,7 +786,7 @@ function StructureItem({ item, activeId, onSelect, disabled, onRemove, removingI
     )
 }
 
-function StructureCard({ title, step, items, value, setValue, extraInput, onAdd, onRemove, activeId, onSelect, disabled, parentName, isLoading, removingId, isReordering, onReorder, hasUnsavedChanges, onSave, editingId, onEditStart, onRename, renamingId }: any) {
+function StructureCard({ title, step, items, value, setValue, extraInput, onAdd, onRemove, activeId, onSelect, disabled, parentName, removingId, isSaving, onReorder, hasUnsavedChanges, onSave, onCancel, editingId, onEditStart, onRename, renamingId }: any) {
     // If onReorder is provided, use Reorder.Group
     // We need local state for immediate feedback if we want smooth drag, but items prop usually comes from parent state.
     // Framer motion Reorder works best when controlling the state directly.
@@ -795,7 +801,7 @@ function StructureCard({ title, step, items, value, setValue, extraInput, onAdd,
     ) : (
         onReorder ? (
             <div className="relative">
-                {isReordering && (
+                {isSaving && (
                     <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/50 dark:bg-black/50 backdrop-blur-sm rounded-lg">
                         <TyreLoader size={20} />
                     </div>
@@ -868,24 +874,32 @@ function StructureCard({ title, step, items, value, setValue, extraInput, onAdd,
                 {content}
             </div>
             <div className="flex-none p-3 border-t border-gray-100 dark:border-gray-800 space-y-2">
-                {hasUnsavedChanges ? (
-                    <button
-                        onClick={() => onSave(items)}
-                        className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                    >
-                        <Save size={16} /> Save Order
-                    </button>
-                ) : (
-                    <>
-                        {extraInput && <input type="text" value={extraInput.value} onChange={(e) => extraInput.setValue(e.target.value)} disabled={disabled} placeholder={extraInput.placeholder} className="w-full bg-gray-50 dark:bg-gray-800 border-0 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-black dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed" />}
-                        <div className="flex gap-2">
-                            <input type="text" value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !disabled && onAdd()} disabled={disabled} placeholder={`Add ${title}...`} className="flex-1 min-w-0 bg-gray-50 dark:bg-gray-800 border-0 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-black dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed" />
-                            <button onClick={onAdd} disabled={disabled || !value.trim() || isLoading} className="flex-none p-2 rounded-md bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-9 flex items-center justify-center">
-                                {isLoading ? <div className="animate-spin"><TyreLoader size={16} /></div> : <Plus size={16} />}
-                            </button>
-                        </div>
-                    </>
+                {hasUnsavedChanges && (
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => onSave(items)}
+                            disabled={isSaving}
+                            className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-md text-xs font-medium transition-colors flex items-center justify-center gap-2"
+                        >
+                            <Save size={14} /> Save Order
+                        </button>
+                        <button
+                            onClick={onCancel}
+                            disabled={isSaving}
+                            className="flex-1 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 disabled:opacity-50 text-gray-700 dark:text-gray-300 rounded-md text-xs font-medium transition-colors flex items-center justify-center gap-2"
+                        >
+                            <X size={14} /> Cancel
+                        </button>
+                    </div>
                 )}
+
+                {extraInput && <input type="text" value={extraInput.value} onChange={(e) => extraInput.setValue(e.target.value)} disabled={disabled} placeholder={extraInput.placeholder} className="w-full bg-gray-50 dark:bg-gray-800 border-0 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-black dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed" />}
+                <div className="flex gap-2">
+                    <input type="text" value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !disabled && onAdd()} disabled={disabled} placeholder={`Add ${title}...`} className="flex-1 min-w-0 bg-gray-50 dark:bg-gray-800 border-0 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-black dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed" />
+                    <button onClick={onAdd} disabled={disabled || !value.trim() || isSaving} className="flex-none p-2 rounded-md bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-9 flex items-center justify-center">
+                        <Plus size={16} />
+                    </button>
+                </div>
             </div>
         </div>
     )
