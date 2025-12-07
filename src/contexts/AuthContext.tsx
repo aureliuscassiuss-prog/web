@@ -1,6 +1,4 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
-import { auth } from '../lib/firebase'
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth'
 
 interface User {
     id: string
@@ -135,16 +133,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }
 
-    const googleLogin = async () => {
+    const googleLogin = async (accessToken: string) => {
         try {
-            const provider = new GoogleAuthProvider()
-            const result = await signInWithPopup(auth, provider)
-            const idToken = await result.user.getIdToken()
-
             const response = await fetch('/api/auth', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'firebase-login', token: idToken })
+                body: JSON.stringify({ action: 'google-login', access_token: accessToken })
             })
 
             if (!response.ok) {
