@@ -1,82 +1,96 @@
-res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+import jwt from 'jsonwebtoken';
 
-if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-}
+dotenv.config();
 
-if (!process.env.JWT_SECRET) {
-    return res.status(500).json({ message: 'Server misconfiguration' });
-}
+const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseKey || 'placeholder');
 
-try {
-    const { action } = req.query;
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-    // Public GET
-    if (req.method === 'GET') {
-        if (action === 'structure') return await handleGetStructure(res);
-        if (action === 'stats') return await handleGetStats(res);
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
     }
 
-    // Auth
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ message: 'Unauthorized' });
+    if (!process.env.JWT_SECRET) {
+        return res.status(500).json({ message: 'Server misconfiguration' });
     }
-    const token = authHeader.split(' ')[1];
-    const decoded: any = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Fetch User to check role
-    const { data: user, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('_id', decoded.userId)
-        .single();
+    try {
+        const { action } = req.query;
 
-    if (userError || !user) return res.status(403).json({ message: 'Forbidden' });
-
-    const hasPermission = (requiredRoles: string[]) => requiredRoles.includes(user.role);
-
-    // --- AUTH REQUESTS ---
-    if (req.method === 'GET') {
-        if (action === 'pending') {
-            if (!hasPermission(['admin', 'semi-admin', 'content-reviewer'])) return res.status(403).json({ message: 'Forbidden' });
-            return await handleGetPending(res);
-        } else if (action === 'structure') {
-            if (!hasPermission(['admin', 'semi-admin', 'structure-manager'])) return res.status(403).json({ message: 'Forbidden' });
-            return await handleGetStructure(res);
-        } else if (action === 'users') {
-            if (!hasPermission(['admin', 'semi-admin'])) return res.status(403).json({ message: 'Forbidden' });
-            return await handleGetUsers(res);
+        // Public GET
+        if (req.method === 'GET') {
+            if (action === 'structure') return await handleGetStructure(res);
+            if (action === 'stats') return await handleGetStats(res);
         }
-        return res.status(400).json({ message: 'Invalid action' });
-    }
-    else if (req.method === 'POST') {
-        let body = req.body;
-        if (typeof body === 'string') {
-            try { body = JSON.parse(body); } catch (e) { }
-        }
-        const { action: bodyAction, userAction } = body;
 
-        if (userAction) {
-            if (!hasPermission(['admin'])) return res.status(403).json({ message: 'Forbidden' });
-            return await handleUserAction(body, res);
-        } else if (bodyAction === 'approve' || bodyAction === 'reject') {
-            if (!hasPermission(['admin', 'semi-admin', 'content-reviewer'])) return res.status(403).json({ message: 'Forbidden' });
-            return await handleResourceAction(body, res);
-        } else if (bodyAction === 'structure') {
-            if (!hasPermission(['admin', 'structure-manager'])) return res.status(403).json({ message: 'Forbidden' });
-            return await handleUpdateStructure(body, res);
-        } else {
+        // Auth
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+        const token = authHeader.split(' ')[1];
+        const decoded: any = jwt.verify(token, process.env.JWT_SECRET);
+
+        // Fetch User to check role
+        const { data: user, error: userError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('_id', decoded.userId)
+            .single();
+
+        if (userError || !user) return res.status(403).json({ message: 'Forbidden' });
+
+        const hasPermission = (requiredRoles: string[]) => requiredRoles.includes(user.role);
+
+        // --- AUTH REQUESTS ---
+        if (req.method === 'GET') {
+            if (action === 'pending') {
+                if (!hasPermission(['admin', 'semi-admin', 'content-reviewer'])) return res.status(403).json({ message: 'Forbidden' });
+                return await handleGetPending(res);
+            } else if (action === 'structure') {
+                if (!hasPermission(['admin', 'semi-admin', 'structure-manager'])) return res.status(403).json({ message: 'Forbidden' });
+                return await handleGetStructure(res);
+            } else if (action === 'users') {
+                if (!hasPermission(['admin', 'semi-admin'])) return res.status(403).json({ message: 'Forbidden' });
+                return await handleGetUsers(res);
+            }
             return res.status(400).json({ message: 'Invalid action' });
         }
-    }
+        else if (req.method === 'POST') {
+            let body = req.body;
+            if (typeof body === 'string') {
+                try { body = JSON.parse(body); } catch (e) { }
+            }
+            const { action: bodyAction, userAction } = body;
 
-    return res.status(405).json({ message: 'Method not allowed' });
-} catch (error) {
-    console.error('Admin API Error:', error);
-    return res.status(500).json({ message: 'Server error', error: String(error) });
-}
+            if (userAction) {
+                if (!hasPermission(['admin'])) return res.status(403).json({ message: 'Forbidden' });
+                return await handleUserAction(body, res);
+            } else if (bodyAction === 'approve' || bodyAction === 'reject') {
+                if (!hasPermission(['admin', 'semi-admin', 'content-reviewer'])) return res.status(403).json({ message: 'Forbidden' });
+                return await handleResourceAction(body, res);
+            } else if (bodyAction === 'structure') {
+                if (!hasPermission(['admin', 'structure-manager'])) return res.status(403).json({ message: 'Forbidden' });
+                return await handleUpdateStructure(body, res);
+            } else {
+                return res.status(400).json({ message: 'Invalid action' });
+            }
+        }
+
+        return res.status(405).json({ message: 'Method not allowed' });
+    } catch (error) {
+        console.error('Admin API Error:', error);
+        return res.status(500).json({ message: 'Server error', error: String(error) });
+    }
 }
 
 async function handleGetPending(res: VercelResponse) {
