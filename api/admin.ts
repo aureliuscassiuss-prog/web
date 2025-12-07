@@ -485,140 +485,139 @@ async function handleUpdateStructure(body: any, res: VercelResponse) {
                 }
             );
         }
-    }
         else if (structureAction === 'rename') {
-        const { type, id, newName, subjectName, unitName } = body;
-        const structure = await db.collection('academic_structure').findOne({ _id: 'main' } as any);
-        const targetId = id; // Renaming relies on ID matching (or name for sub/unit)
+            const { type, id, newName, subjectName, unitName } = body;
+            const structure = await db.collection('academic_structure').findOne({ _id: 'main' } as any);
+            const targetId = id; // Renaming relies on ID matching (or name for sub/unit)
 
-        console.log('Renaming:', { type, targetId, newName });
+            console.log('Renaming:', { type, targetId, newName });
 
-        let updateQuery = {};
-        let arrayFilters = [];
+            let updateQuery = {};
+            let arrayFilters = [];
 
-        if (type === 'program') {
-            updateQuery = { 'programs.$[p].name': newName };
-            arrayFilters = [{ 'p.id': targetId }];
-        } else if (type === 'year') {
-            updateQuery = { 'programs.$[p].years.$[y].name': newName };
-            arrayFilters = [{ 'p.id': programId }, { 'y.id': targetId }];
-        } else if (type === 'course') {
-            updateQuery = { 'programs.$[p].years.$[y].courses.$[c].name': newName };
-            arrayFilters = [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': targetId }];
-        } else if (type === 'semester') {
-            updateQuery = { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].name': newName };
-            arrayFilters = [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': targetId }];
-        } else if (type === 'subject') {
-            // Subject rename is tricky because it might be a string or object.
-            // WE ONLY SUPPORT OBJECTS for robust renaming, or simple string replacement.
-            // Assuming object structure for consistency or complex update.
-            updateQuery = { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].name': newName }; // If object
-            // If it's a string, we might need a different approach, but let's assume objects for "editable" items as per new structure?
-            // Actually, the frontend maps strings to objects.
-            // Let's try to match by name (since subject ID is name often).
-            // If the stored item is a string, we need to locate it by value and replace it.
-            // MongoDB doesn't easily support "replace string in array if match".
-            // So, we will assume we are modifying the object form or we have to pull and push.
-            // For now, let's assume we match by name.
-            const originalName = subjectName;
-            // We'll stick to object update. If it fails (because it's a string), we might need migration.
-            // But wait, the StructureCard uses "id" as name for strings.
-            // Let's rely on arrayFilters matching the "name" property if object, or the value if string?
-            // Actually, $set on a scalar array element is supported.
-            // But we can't easily distinguish.
-            // SIMPLIFICATION: Only support renaming if it's an object OR accept mixed.
-            // We will try updating the 'name' field. If it's a string, this op does nothing.
-            // To support string renaming, we need a separate logic found by value.
+            if (type === 'program') {
+                updateQuery = { 'programs.$[p].name': newName };
+                arrayFilters = [{ 'p.id': targetId }];
+            } else if (type === 'year') {
+                updateQuery = { 'programs.$[p].years.$[y].name': newName };
+                arrayFilters = [{ 'p.id': programId }, { 'y.id': targetId }];
+            } else if (type === 'course') {
+                updateQuery = { 'programs.$[p].years.$[y].courses.$[c].name': newName };
+                arrayFilters = [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': targetId }];
+            } else if (type === 'semester') {
+                updateQuery = { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].name': newName };
+                arrayFilters = [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': targetId }];
+            } else if (type === 'subject') {
+                // Subject rename is tricky because it might be a string or object.
+                // WE ONLY SUPPORT OBJECTS for robust renaming, or simple string replacement.
+                // Assuming object structure for consistency or complex update.
+                updateQuery = { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].name': newName }; // If object
+                // If it's a string, we might need a different approach, but let's assume objects for "editable" items as per new structure?
+                // Actually, the frontend maps strings to objects.
+                // Let's try to match by name (since subject ID is name often).
+                // If the stored item is a string, we need to locate it by value and replace it.
+                // MongoDB doesn't easily support "replace string in array if match".
+                // So, we will assume we are modifying the object form or we have to pull and push.
+                // For now, let's assume we match by name.
+                const originalName = subjectName;
+                // We'll stick to object update. If it fails (because it's a string), we might need migration.
+                // But wait, the StructureCard uses "id" as name for strings.
+                // Let's rely on arrayFilters matching the "name" property if object, or the value if string?
+                // Actually, $set on a scalar array element is supported.
+                // But we can't easily distinguish.
+                // SIMPLIFICATION: Only support renaming if it's an object OR accept mixed.
+                // We will try updating the 'name' field. If it's a string, this op does nothing.
+                // To support string renaming, we need a separate logic found by value.
 
-            // For this implementation, let's assume we target the object path 'name'.
-            updateQuery = { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].name': newName };
-            arrayFilters = [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }, { 's.name': originalName }];
-        } else if (type === 'unit') {
-            updateQuery = { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units.$[u].name': newName };
-            arrayFilters = [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }, { 's.name': subjectName }, { 'u.name': unitName }];
-        } else if (type === 'video') {
-            updateQuery = { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units.$[u].videos.$[v].title': newName };
-            arrayFilters = [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }, { 's.name': subjectName }, { 'u.name': unitName }, { 'v.id': targetId }];
+                // For this implementation, let's assume we target the object path 'name'.
+                updateQuery = { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].name': newName };
+                arrayFilters = [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }, { 's.name': originalName }];
+            } else if (type === 'unit') {
+                updateQuery = { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units.$[u].name': newName };
+                arrayFilters = [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }, { 's.name': subjectName }, { 'u.name': unitName }];
+            } else if (type === 'video') {
+                updateQuery = { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units.$[u].videos.$[v].title': newName };
+                arrayFilters = [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }, { 's.name': subjectName }, { 'u.name': unitName }, { 'v.id': targetId }];
+            }
+
+            if (Object.keys(updateQuery).length > 0) {
+                await db.collection('academic_structure').updateOne(
+                    { _id: 'main' } as any,
+                    { $set: updateQuery } as any,
+                    { arrayFilters }
+                );
+            }
         }
+        else if (structureAction === 'reorder') {
+            const { type, newOrder, subjectName, unitName } = body;
 
-        if (Object.keys(updateQuery).length > 0) {
+            // To safely reorder, it's often easiest to fetch, update in memory, and set back the specific path.
+            // Using arrayFilters for replacement is possible but complex for deep nesting.
+            // Given the document size is likely manageable, fetching 'main' is acceptable.
+
+            const structure = await db.collection('academic_structure').findOne({ _id: 'main' } as any);
+            if (!structure) throw new Error('Structure not found');
+
+            let target: any = structure;
+            let path = '';
+
+            if (type === 'program') {
+                target.programs = newOrder;
+                path = 'programs';
+            } else if (type === 'year') {
+                const p = target.programs.find((p: any) => p.id === programId);
+                if (p) p.years = newOrder;
+                path = 'programs'; // We update the whole programs array to be safe or use positional operator if we were using updateOne logic strictly
+            } else if (type === 'course') {
+                const p = target.programs.find((p: any) => p.id === programId);
+                const y = p?.years.find((y: any) => y.id === yearId);
+                if (y) y.courses = newOrder;
+                path = 'programs';
+            } else if (type === 'semester') {
+                const p = target.programs.find((p: any) => p.id === programId);
+                const y = p?.years.find((y: any) => y.id === yearId);
+                const c = y?.courses.find((c: any) => c.id === courseId);
+                if (c) c.semesters = newOrder;
+                path = 'programs';
+            } else if (type === 'subject') {
+                const p = target.programs.find((p: any) => p.id === programId);
+                const y = p?.years.find((y: any) => y.id === yearId);
+                const c = y?.courses.find((c: any) => c.id === courseId);
+                const s = c?.semesters.find((s: any) => s.id === semesterId);
+                if (s) s.subjects = newOrder;
+                path = 'programs';
+            } else if (type === 'unit') {
+                const p = target.programs.find((p: any) => p.id === programId);
+                const y = p?.years.find((y: any) => y.id === yearId);
+                const c = y?.courses.find((c: any) => c.id === courseId);
+                const s = c?.semesters.find((s: any) => s.id === semesterId);
+                const sub = s?.subjects.find((sub: any) => (typeof sub === 'string' ? sub : sub.name) === subjectName);
+                if (sub && typeof sub !== 'string') sub.units = newOrder;
+                path = 'programs';
+            } else if (type === 'video') {
+                const p = target.programs.find((p: any) => p.id === programId);
+                const y = p?.years.find((y: any) => y.id === yearId);
+                const c = y?.courses.find((c: any) => c.id === courseId);
+                const s = c?.semesters.find((s: any) => s.id === semesterId);
+                const sub = s?.subjects.find((sub: any) => (typeof sub === 'string' ? sub : sub.name) === subjectName);
+                const u = sub?.units?.find((u: any) => u.name === unitName);
+                if (u) u.videos = newOrder;
+                path = 'programs';
+            }
+
+            // Save the updated structure (replacing the programs array is safest for nested integrity)
             await db.collection('academic_structure').updateOne(
                 { _id: 'main' } as any,
-                { $set: updateQuery } as any,
-                { arrayFilters }
+                { $set: { programs: target.programs } } as any
             );
         }
+
+        const updatedStructure = await db.collection('academic_structure').findOne({ _id: 'main' } as any);
+        return res.status(200).json(updatedStructure);
+    } catch (error) {
+        console.error('Structure Update Error:', error);
+        return res.status(500).json({ message: 'Failed to update structure', error: String(error) });
     }
-    else if (structureAction === 'reorder') {
-        const { type, newOrder, subjectName, unitName } = body;
-
-        // To safely reorder, it's often easiest to fetch, update in memory, and set back the specific path.
-        // Using arrayFilters for replacement is possible but complex for deep nesting.
-        // Given the document size is likely manageable, fetching 'main' is acceptable.
-
-        const structure = await db.collection('academic_structure').findOne({ _id: 'main' } as any);
-        if (!structure) throw new Error('Structure not found');
-
-        let target: any = structure;
-        let path = '';
-
-        if (type === 'program') {
-            target.programs = newOrder;
-            path = 'programs';
-        } else if (type === 'year') {
-            const p = target.programs.find((p: any) => p.id === programId);
-            if (p) p.years = newOrder;
-            path = 'programs'; // We update the whole programs array to be safe or use positional operator if we were using updateOne logic strictly
-        } else if (type === 'course') {
-            const p = target.programs.find((p: any) => p.id === programId);
-            const y = p?.years.find((y: any) => y.id === yearId);
-            if (y) y.courses = newOrder;
-            path = 'programs';
-        } else if (type === 'semester') {
-            const p = target.programs.find((p: any) => p.id === programId);
-            const y = p?.years.find((y: any) => y.id === yearId);
-            const c = y?.courses.find((c: any) => c.id === courseId);
-            if (c) c.semesters = newOrder;
-            path = 'programs';
-        } else if (type === 'subject') {
-            const p = target.programs.find((p: any) => p.id === programId);
-            const y = p?.years.find((y: any) => y.id === yearId);
-            const c = y?.courses.find((c: any) => c.id === courseId);
-            const s = c?.semesters.find((s: any) => s.id === semesterId);
-            if (s) s.subjects = newOrder;
-            path = 'programs';
-        } else if (type === 'unit') {
-            const p = target.programs.find((p: any) => p.id === programId);
-            const y = p?.years.find((y: any) => y.id === yearId);
-            const c = y?.courses.find((c: any) => c.id === courseId);
-            const s = c?.semesters.find((s: any) => s.id === semesterId);
-            const sub = s?.subjects.find((sub: any) => (typeof sub === 'string' ? sub : sub.name) === subjectName);
-            if (sub && typeof sub !== 'string') sub.units = newOrder;
-            path = 'programs';
-        } else if (type === 'video') {
-            const p = target.programs.find((p: any) => p.id === programId);
-            const y = p?.years.find((y: any) => y.id === yearId);
-            const c = y?.courses.find((c: any) => c.id === courseId);
-            const s = c?.semesters.find((s: any) => s.id === semesterId);
-            const sub = s?.subjects.find((sub: any) => (typeof sub === 'string' ? sub : sub.name) === subjectName);
-            const u = sub?.units?.find((u: any) => u.name === unitName);
-            if (u) u.videos = newOrder;
-            path = 'programs';
-        }
-
-        // Save the updated structure (replacing the programs array is safest for nested integrity)
-        await db.collection('academic_structure').updateOne(
-            { _id: 'main' } as any,
-            { $set: { programs: target.programs } } as any
-        );
-    }
-
-    const updatedStructure = await db.collection('academic_structure').findOne({ _id: 'main' } as any);
-    return res.status(200).json(updatedStructure);
-} catch (error) {
-    console.error('Structure Update Error:', error);
-    return res.status(500).json({ message: 'Failed to update structure', error: String(error) });
-}
 }
 
 async function handleGetUsers(res: VercelResponse) {
