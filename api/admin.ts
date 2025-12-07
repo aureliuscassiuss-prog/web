@@ -411,53 +411,54 @@ async function handleUpdateStructure(body: any, res: VercelResponse) {
         else if (structureAction === 'add-unit') {
             const { subjectName } = body;
 
-            // Strategy: 
-            // 1. Try to push to an existing subject object.
-            // 2. If that fails (matched 0), try to promote a string subject to an object.
-            // 3. If that fails (matched 0), it means the string was promoted by another request => Retry step 1.
-
-            const scopeFilter = { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId, 'programs.years.courses.semesters.id': semesterId };
-            const arrayFiltersObj = [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }, { 's.name': subjectName }];
-
-            // Step 1: Try Push (assumes Object)
-            let result = await db.collection('academic_structure').updateOne(
-                scopeFilter as any,
-                { $push: { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units': value } } as any,
-                { arrayFilters: arrayFiltersObj }
+            // First, get the current subject to check if it's a string or object
+            const structure = await db.collection('academic_structure').findOne({ _id: 'main' } as any);
+            const program = structure?.programs?.find((p: any) => p.id === programId);
+            const year = program?.years?.find((y: any) => y.id === yearId);
+            const course = year?.courses?.find((c: any) => c.id === courseId);
+            const semester = course?.semesters?.find((s: any) => s.id === semesterId);
+            const subject = semester?.subjects?.find((s: any) =>
+                (typeof s === 'string' ? s : s.name).trim() === subjectName.trim()
             );
 
-            if (result.matchedCount === 0) {
-                // Step 2: Try Promote (assumes String)
-                // Note: We use the exact string value match for 's' here
-                console.log('[Add Unit] Object push failed, trying promotion for subject:', subjectName);
+            console.log('add-unit debug:', { programId, yearId, courseId, semesterId, subjectName, foundSubject: subject });
+
+            if (!subject) {
+                return res.status(404).json({ message: 'Subject not found' });
+            }
+
+            let result;
+            if (typeof subject === 'string') {
+                // Convert string subject to object with units array
                 result = await db.collection('academic_structure').updateOne(
-                    scopeFilter as any,
+                    { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId, 'programs.years.courses.semesters.id': semesterId } as any,
                     {
                         $set: {
                             'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s]': {
-                                name: subjectName,
+                                name: subject,
                                 units: [value]
                             }
                         }
                     } as any,
-                    { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }, { 's': subjectName }] }
+                    { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }, { 's': subject }] }
                 );
+            } else {
+                // Subject is already an object, just push the unit
+                console.log('Subject is object, pushing unit. Subject name:', subject.name);
+                const filters = [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }, { 's.name': subject.name }];
+                console.log('Array filters:', JSON.stringify(filters));
 
-                if (result.matchedCount === 0) {
-                    // Step 3: Retry Push (Concurrently promoted?)
-                    console.log('[Add Unit] Promotion failed, retrying object push for:', subjectName);
-                    result = await db.collection('academic_structure').updateOne(
-                        scopeFilter as any,
-                        { $push: { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units': value } } as any,
-                        { arrayFilters: arrayFiltersObj }
-                    );
-                }
+                result = await db.collection('academic_structure').updateOne(
+                    { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId, 'programs.years.courses.semesters.id': semesterId } as any,
+                    { $push: { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units': value } } as any,
+                    { arrayFilters: filters }
+                );
             }
-
-            console.log('[Add Unit] Final Result:', { matched: result.matchedCount, modified: result.modifiedCount });
-            if (result.matchedCount === 0) {
-                return res.status(404).json({ message: 'Subject not found or concurrent update failed' });
-            }
+            console.log('add-unit update result:', {
+                matchedCount: result.matchedCount,
+                modifiedCount: result.modifiedCount,
+                acknowledged: result.acknowledged
+            });
         }
         else if (structureAction === 'remove-unit') {
             const { subjectName } = body;
@@ -488,71 +489,59 @@ async function handleUpdateStructure(body: any, res: VercelResponse) {
         else if (structureAction === 'add-video') {
             const { subjectName, unitName, videoTitle, videoUrl } = body;
 
+            // 1. Convert unit string to object if necessary
+            await db.collection('academic_structure').updateOne(
+                {
+                    _id: 'main',
+                    'programs.id': programId,
+                    'programs.years.id': yearId,
+                    'programs.years.courses.id': courseId,
+                    'programs.years.courses.semesters.id': semesterId,
+                    'programs.years.courses.semesters.subjects.name': subjectName,
+                    'programs.years.courses.semesters.subjects.units': unitName // Matches string unit
+                } as any,
+                {
+                    $set: {
+                        'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units.$[u]': {
+                            name: unitName,
+                            videos: []
+                        }
+                    }
+                } as any,
+                {
+                    arrayFilters: [
+                        { 'p.id': programId },
+                        { 'y.id': yearId },
+                        { 'c.id': courseId },
+                        { 'sem.id': semesterId },
+                        { 's.name': subjectName },
+                        { 'u': unitName } // Matches the string value
+                    ]
+                }
+            );
+
+            // 2. Add the video
             const newVideo = {
                 id: Date.now().toString(),
                 title: videoTitle,
                 url: videoUrl,
-                watched: false
+                watched: false // Default state for user progress (though this should be user-specific ideally)
             };
 
-            const scopeFilter = {
-                _id: 'main',
-                'programs.id': programId,
-                'programs.years.id': yearId,
-                'programs.years.courses.id': courseId,
-                'programs.years.courses.semesters.id': semesterId,
-                'programs.years.courses.semesters.subjects.name': subjectName // Subject must be object here as it has units
-            };
-
-            // arrayFilters for object-match
-            const arrayFiltersObj = [
-                { 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId },
-                { 's.name': subjectName }, { 'u.name': unitName }
-            ];
-
-            // 1. Try Push (assumes Unit is Object)
-            let result = await db.collection('academic_structure').updateOne(
-                scopeFilter as any,
+            await db.collection('academic_structure').updateOne(
+                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId, 'programs.years.courses.semesters.id': semesterId } as any,
                 { $push: { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units.$[u].videos': newVideo } } as any,
-                { arrayFilters: arrayFiltersObj }
-            );
-
-            if (result.matchedCount === 0) {
-                // 2. Try Promote (assumes Unit is String)
-                console.log('[Add Video] Object push failed, trying promotion for unit:', unitName);
-                result = await db.collection('academic_structure').updateOne(
-                    scopeFilter as any,
-                    {
-                        $set: {
-                            'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units.$[u]': {
-                                name: unitName,
-                                videos: [newVideo]
-                            }
-                        }
-                    } as any,
-                    {
-                        arrayFilters: [
-                            { 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId },
-                            { 's.name': subjectName }, { 'u': unitName } // Match string unit
-                        ]
-                    }
-                );
-
-                if (result.matchedCount === 0) {
-                    // 3. Retry Push (Concurrently promoted?)
-                    console.log('[Add Video] Promotion failed, retrying object push for:', unitName);
-                    result = await db.collection('academic_structure').updateOne(
-                        scopeFilter as any,
-                        { $push: { 'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects.$[s].units.$[u].videos': newVideo } } as any,
-                        { arrayFilters: arrayFiltersObj }
-                    );
+                {
+                    arrayFilters: [
+                        { 'p.id': programId },
+                        { 'y.id': yearId },
+                        { 'c.id': courseId },
+                        { 'sem.id': semesterId },
+                        { 's.name': subjectName },
+                        { 'u.name': unitName } // Matches the object name
+                    ]
                 }
-            }
-
-            console.log('[Add Video] Final Result:', { matched: result.matchedCount, modified: result.modifiedCount });
-            if (result.matchedCount === 0) {
-                return res.status(404).json({ message: 'Unit not found or concurrent update failed' });
-            }
+            );
         }
         else if (structureAction === 'remove-video') {
             const { subjectName, unitName, videoId } = body;
