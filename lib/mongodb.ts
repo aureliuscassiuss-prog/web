@@ -1,3 +1,4 @@
+
 import { MongoClient, Db } from 'mongodb';
 
 const uri: string = process.env.MONGODB_URI || '';
@@ -7,7 +8,7 @@ if (!uri) {
 }
 
 const options = {
-    maxPoolSize: 5, // Increased from 1 to avoid blocking concurrent requests in same container
+    maxPoolSize: 5,
     minPoolSize: 0,
     serverSelectionTimeoutMS: 15000,
     socketTimeoutMS: 45000,
@@ -26,8 +27,17 @@ declare global {
 
 // Always use global cached connection
 if (!global._mongoClientPromise) {
+    console.error('[MongoDB] Init: Creating new client...');
     client = new MongoClient(uri, options);
-    global._mongoClientPromise = client.connect();
+    global._mongoClientPromise = client.connect()
+        .then(c => {
+            console.error('[MongoDB] Init: Connection established');
+            return c;
+        })
+        .catch(err => {
+            console.error('[MongoDB] Init: Connection failed:', err);
+            throw err;
+        });
 }
 clientPromise = global._mongoClientPromise;
 
@@ -35,22 +45,22 @@ async function getDb(): Promise<Db> {
     try {
         // Ensure we have a promise to await
         if (!global._mongoClientPromise) {
-            console.log('[MongoDB] Connecting to new client...');
+            console.error('[MongoDB] Retry: Connecting to new client...');
             client = new MongoClient(uri, options);
             global._mongoClientPromise = client.connect()
                 .then(c => {
-                    console.log('[MongoDB] New connection established');
+                    console.error('[MongoDB] Retry: Connection established');
                     return c;
                 })
                 .catch(err => {
-                    console.error('[MongoDB] Connection failed:', err);
+                    console.error('[MongoDB] Retry: Connection failed:', err);
                     throw err;
                 });
         }
 
-        console.log('[MongoDB] Awaiting connection promise...');
+        console.error('[MongoDB] getDb: Awaiting connection promise...');
         const client = await global._mongoClientPromise;
-        console.log('[MongoDB] Client ready. returning db.');
+        console.error('[MongoDB] getDb: Client ready. returning db.');
         return client.db('uninotes');
     } catch (error) {
         console.error('[MongoDB] Error in getDb:', error);
