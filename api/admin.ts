@@ -257,6 +257,48 @@ async function handleUpdateStructure(body: any, res: VercelResponse) {
 
     const db = await getDb();
 
+    // Idempotency / Duplicate Check
+    if (structureAction && structureAction.startsWith('add-')) {
+        const structure = await db.collection('academic_structure').findOne({ _id: 'main' }) as any;
+        if (structure) {
+            let exists = false;
+            // Helper to safe navigation
+            const p = structure.programs?.find((p: any) => p.id === programId);
+            const y = p?.years?.find((y: any) => y.id === yearId);
+            const c = y?.courses?.find((c: any) => c.id === courseId);
+            const sem = c?.semesters?.find((s: any) => s.id === semesterId);
+            const sub = sem?.subjects?.find((s: any) => (typeof s === 'string' ? s : s.name) === (body.subjectName || value)); // add-subject uses value, add-unit uses subjectName
+
+            if (structureAction === 'add-program') {
+                exists = structure.programs?.some((p: any) => p.name === value);
+            } else if (structureAction === 'add-year') {
+                exists = p?.years?.some((y: any) => y.id === value);
+            } else if (structureAction === 'add-course') {
+                exists = y?.courses?.some((c: any) => c.name === value);
+            } else if (structureAction === 'add-semester') {
+                exists = c?.semesters?.some((s: any) => s.name === value);
+            } else if (structureAction === 'add-subject') {
+                exists = sem?.subjects?.some((s: any) => (typeof s === 'string' ? s : s.name) === value);
+            } else if (structureAction === 'add-unit') {
+                // unit is added to 'sub'
+                if (sub) {
+                    if (typeof sub === 'string') exists = false; // logic in main block converts string to object, so essentially "doesn't exist as container yet" but actually if it's string, we can't have units yet.
+                    else exists = sub.units?.some((u: any) => u.name === value);
+                }
+            } else if (structureAction === 'add-video') {
+                // video added to unit.
+                const { unitName, videoTitle, videoUrl } = body;
+                const u = sub?.units?.find((u: any) => u.name === unitName);
+                exists = u?.videos?.some((v: any) => v.title === videoTitle && v.url === videoUrl);
+            }
+
+            if (exists) {
+                console.log(`[Idempotency] Item already exists: ${structureAction} - ${value || body.videoTitle}`);
+                return res.status(200).json(structure);
+            }
+        }
+    }
+
     try {
         if (structureAction === 'add-program') {
             const newProgram = {
