@@ -385,21 +385,28 @@ async function handleUpdateStructure(body: any, res: VercelResponse) {
             );
         }
         else if (structureAction === 'remove-subject') {
-            await db.collection('academic_structure').updateOne(
-                { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId, 'programs.years.courses.semesters.id': semesterId } as any,
-                // Match either the string value OR an object with matching name property
-                {
-                    $pull: {
-                        'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects': {
-                            $or: [
-                                { $eq: value },
-                                { name: value }
-                            ]
+            console.log(`[Remove Subject] Programs: ${programId}, Y: ${yearId}, C: ${courseId}, Sem: ${semesterId}, Val: ${value}`);
+            try {
+                const result = await db.collection('academic_structure').updateOne(
+                    { _id: 'main', 'programs.id': programId, 'programs.years.id': yearId, 'programs.years.courses.id': courseId, 'programs.years.courses.semesters.id': semesterId } as any,
+                    // Match either the string value OR an object with matching name property
+                    {
+                        $pull: {
+                            'programs.$[p].years.$[y].courses.$[c].semesters.$[sem].subjects': {
+                                $or: [
+                                    { $eq: value },
+                                    { name: value }
+                                ]
+                            }
                         }
-                    }
-                } as any,
-                { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }] }
-            );
+                    } as any,
+                    { arrayFilters: [{ 'p.id': programId }, { 'y.id': yearId }, { 'c.id': courseId }, { 'sem.id': semesterId }] }
+                );
+                console.log('[Remove Subject] Result:', result);
+            } catch (err) {
+                console.error('[Remove Subject] Error:', err);
+                throw err;
+            }
         }
         else if (structureAction === 'add-unit') {
             const { subjectName } = body;

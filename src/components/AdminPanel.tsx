@@ -424,19 +424,16 @@ export default function AdminPanel() {
             })
             if (res.ok) {
                 const data = await res.json()
-                // Update with server data to be sure, OR just keep optimistic if we trust it.
-                // Replacing with server data is safer for consistency but might cause a "jump" if server state is slightly different.
-                // For "very fast" feel, we might skip setStructure(data) if we are confident.
-                // But let's sync to be safe. The jump should be minimal if state matches.
-                setStructure(data)
+                setStructure(data) // Sync with server data
                 showToast(`${type} removed successfully`)
             } else {
-                throw new Error('Server returned error')
+                const errData = await res.json().catch(() => ({}))
+                throw new Error(errData.message || 'Server returned error')
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
             setStructure(previousStructure) // Revert on failure
-            showToast('Failed to remove item', 'error')
+            showToast(err.message || 'Failed to remove item', 'error')
         } finally { setTimeout(() => setRemovingId(null), 500) }
     }
 
