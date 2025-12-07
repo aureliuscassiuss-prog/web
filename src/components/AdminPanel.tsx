@@ -676,12 +676,13 @@ export default function AdminPanel() {
                 setUnsavedChanges(prev => prev.filter(t => t !== type))
                 showToast('Changes saved successfully')
             } else {
-                throw new Error('Reorder failed')
+                const errData = await reorderRes.json().catch(() => ({}))
+                throw new Error(errData.error || errData.message || 'Reorder failed')
             }
 
-        } catch (error) {
+        } catch (error: any) {
             console.error('Save failed:', error);
-            showToast('Failed to save changes', 'error');
+            showToast(error.message || 'Failed to save changes', 'error');
             // If failed, we should probably fetch structure to reset state to server truth
             fetchStructure()
         } finally {
