@@ -251,7 +251,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
                 ...formData,
                 course: formData.program, // Map program -> course
                 branch: formData.course,  // Map course -> branch
-                yearNum: parseInt(formData.year) || 0, // Extract number if needed
+                yearNum: formData.year, // Send as string ID (schema expects text now)
                 examYear: formData.resourceType === 'pyq' ? formData.examYear : undefined // Only send for PYQs
             }
 

@@ -389,7 +389,7 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
                             view="resources"
                             filters={{
                                 branch: selections.course, // Maps to API requirement
-                                year: parseInt(selections.year || '0'), // Maps to API requirement
+                                year: selections.year, // Maps to API requirement
                                 semester: selections.semester,
                                 subject: selections.subject,
                                 course: selections.program, // Maps to API requirement

@@ -100,12 +100,7 @@ async function handleUpdateProfile(req: VercelRequest, userId: string, res: Verc
         allowed.forEach(key => {
             const val = getValue(key);
             if (val !== undefined) {
-                if (key === 'year' || key === 'semester') {
-                    const num = parseInt(val as string);
-                    if (!isNaN(num)) updateFields[key] = num;
-                } else {
-                    updateFields[key] = val;
-                }
+                updateFields[key] = val;
             }
         });
 
