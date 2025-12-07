@@ -621,8 +621,8 @@ export default function AdminPanel() {
             }
 
             // 2. Fetch updated structure to get real IDs
-            const res = await fetch('/api/admin?action=structure', { headers: { 'Authorization': `Bearer ${token}` } })
-            const updatedStructure = await res.json()
+            const updatedStructure = await fetchStructure()
+            if (!updatedStructure) throw new Error('Failed to fetch updated structure')
 
             // 3. Map the UI order to real IDs
             // We need to traverse the updated structure to find the items at the current level
