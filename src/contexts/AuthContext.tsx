@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const login = async (email: string, password: string) => {
         try {
-            const response = await fetch('http://localhost:3000/api/auth?action=login', {
+            const response = await fetch('/api/auth?action=login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
@@ -85,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const register = async (name: string, email: string, password: string) => {
         try {
-            const response = await fetch('http://localhost:3000/api/auth?action=register', {
+            const response = await fetch('/api/auth?action=register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, email, password })
@@ -112,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const verifyOtp = async (email: string, otp: string) => {
         try {
-            const response = await fetch('http://localhost:3000/api/auth?action=verify-otp', {
+            const response = await fetch('/api/auth?action=verify-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, otp })
@@ -136,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const googleLogin = async (accessToken: string) => {
         try {
-            const response = await fetch('http://localhost:3000/api/auth?action=google', {
+            const response = await fetch('/api/auth?action=google', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ token: accessToken })
@@ -179,7 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const forgotPassword = async (email: string) => {
-        const response = await fetch('http://localhost:3000/api/auth?action=forgot-password', {
+        const response = await fetch('/api/auth?action=forgot-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email })
@@ -201,7 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const resetPassword = async (email: string, otp: string, newPassword: string) => {
-        const response = await fetch('http://localhost:3000/api/auth?action=reset-password', {
+        const response = await fetch('/api/auth?action=reset-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, otp, newPassword })
