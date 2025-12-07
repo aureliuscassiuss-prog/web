@@ -55,27 +55,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const login = async (email: string, password: string) => {
         try {
-            // 1. Firebase Login
-            const userCredential = await signInWithEmailAndPassword(auth, email, password)
-            const firebaseUser = userCredential.user
-            const idToken = await firebaseUser.getIdToken()
-
-            // 2. Sync with Backend to get App Token & User Data
             const response = await fetch('/api/auth', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'firebase-login', token: idToken })
+                body: JSON.stringify({ action: 'login', email, password })
             })
 
             if (!response.ok) {
                 const text = await response.text()
-                let errorMessage = 'Backend sync failed'
+                let errorMessage = 'Login failed'
                 try {
                     const error = JSON.parse(text)
                     errorMessage = error.message || error.error || errorMessage
                 } catch (e) {
-                    console.error('Non-JSON error response:', text)
-                    errorMessage = `Server Error (${response.status}): Check console for details`
+                    errorMessage = `Server Error (${response.status})`
                 }
                 throw new Error(errorMessage)
             }
@@ -93,41 +86,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const register = async (name: string, email: string, password: string) => {
         try {
-            // 1. Firebase Register
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-            const firebaseUser = userCredential.user
-            const idToken = await firebaseUser.getIdToken()
-
-            // 2. Sync with Backend (Create User)
             const response = await fetch('/api/auth', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'firebase-login',
-                    token: idToken,
-                    userData: { name } // Pass extra data
-                })
+                body: JSON.stringify({ action: 'register', name, email, password })
             })
 
             if (!response.ok) {
                 const text = await response.text()
-                let errorMessage = 'Registration sync failed'
+                let errorMessage = 'Registration failed'
                 try {
                     const error = JSON.parse(text)
                     errorMessage = error.message || error.error || errorMessage
                 } catch (e) {
-                    console.error('Non-JSON error response:', text)
-                    errorMessage = `Server Error (${response.status}): Check console for details`
+                    errorMessage = `Server Error (${response.status})`
                 }
                 throw new Error(errorMessage)
             }
 
-            const data = await response.json()
-            setToken(data.token)
-            setUser(data.user)
-            localStorage.setItem('token', data.token)
-            localStorage.setItem('user', JSON.stringify(data.user))
-            return data
+            return await response.json()
         } catch (error: any) {
             console.error('Registration error:', error)
             throw new Error(error.message || 'Registration failed')
@@ -135,9 +112,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const verifyOtp = async (email: string, otp: string) => {
-        // Firebase handles email verification differently (sendEmailVerification)
-        // For now, we might skip this or implement Firebase's email verification
-        throw new Error('OTP verification is deprecated in favor of Firebase Auth')
+        try {
+            const response = await fetch('/api/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'verify-otp', email, otp })
+            })
+
+            if (!response.ok) {
+                const error = await response.json()
+                throw new Error(error.message || 'Verification failed')
+            }
+
+            const data = await response.json()
+            setToken(data.token)
+            setUser(data.user)
+            localStorage.setItem('token', data.token)
+            localStorage.setItem('user', JSON.stringify(data.user))
+        } catch (error: any) {
+            console.error('OTP Verification error:', error)
+            throw new Error(error.message || 'Verification failed')
+        }
     }
 
     const googleLogin = async () => {
