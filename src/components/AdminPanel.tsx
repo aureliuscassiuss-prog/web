@@ -6,6 +6,7 @@ import {
     Ban, ExternalLink, ChevronRight, Search, GripVertical
 } from 'lucide-react'
 import TyreLoader from './TyreLoader'
+import Toast from './Toast'
 import { useAuth } from '../contexts/AuthContext'
 
 // --- Types ---
@@ -101,6 +102,13 @@ export default function AdminPanel() {
     const [processingId, setProcessingId] = useState<string | null>(null)
     const [removingId, setRemovingId] = useState<string | null>(null)
 
+    // Toast State
+    const [toast, setToast] = useState<{ show: boolean, message: string, type: 'success' | 'error' }>({ show: false, message: '', type: 'success' })
+    const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+        setToast({ show: true, message, type })
+        setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000)
+    }
+
     // Structure Selection State
     const [selectedProgramId, setSelectedProgramId] = useState<string>('')
     const [selectedYearId, setSelectedYearId] = useState<string>('')
@@ -118,6 +126,9 @@ export default function AdminPanel() {
     const [newUnit, setNewUnit] = useState('')
     const [newVideoTitle, setNewVideoTitle] = useState('')
     const [newVideoUrl, setNewVideoUrl] = useState('')
+
+    // Reorder Loading State
+    const [isReordering, setIsReordering] = useState(false)
 
     // Helper for Semester Auto-text
     const handleSemesterChange = (val: string) => {
@@ -182,8 +193,11 @@ export default function AdminPanel() {
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ action, resourceId })
             })
-            if (res.ok) setPendingResources(prev => prev.filter(r => r._id !== resourceId))
-        } catch (err) { console.error(err) } finally { setProcessingId(null) }
+            if (res.ok) {
+                setPendingResources(prev => prev.filter(r => r._id !== resourceId))
+                showToast(`Resource ${action}ed successfully`)
+            }
+        } catch (err) { console.error(err); showToast('Action failed', 'error') } finally { setProcessingId(null) }
     }
 
     const handleUserAction = async (userId: string, action: string, role?: string) => {
@@ -201,8 +215,9 @@ export default function AdminPanel() {
             if (res.ok) {
                 if (action === 'delete') setUsers(prev => prev.filter(u => u._id !== userId))
                 else fetchUsers()
+                showToast(`User ${action} successful`)
             }
-        } catch (err) { console.error(err) } finally { setProcessingId(null) }
+        } catch (err) { console.error(err); showToast('Action failed', 'error') } finally { setProcessingId(null) }
     }
 
     const handleStructureAdd = async (type: 'program' | 'year' | 'semester' | 'course' | 'subject' | 'unit' | 'video', value: string) => {
@@ -247,11 +262,12 @@ export default function AdminPanel() {
                 if (type === 'subject') setNewSubject('')
                 if (type === 'unit') setNewUnit('')
                 if (type === 'video') { setNewVideoTitle(''); setNewVideoUrl('') }
+                showToast(`${type} added successfully`)
             } else {
                 const errorData = await res.json()
-                alert(errorData.message || 'Failed to add item')
+                showToast(errorData.message || 'Failed to add item', 'error')
             }
-        } catch (err) { console.error(err); alert('Failed to add item') } finally { setTimeout(() => setIsSubmitting(false), 500) }
+        } catch (err) { console.error(err); showToast('Failed to add item', 'error') } finally { setTimeout(() => setIsSubmitting(false), 500) }
     }
 
     const handleStructureRemove = async (type: 'program' | 'year' | 'semester' | 'course' | 'subject' | 'unit' | 'video', value: string) => {
@@ -285,8 +301,9 @@ export default function AdminPanel() {
             if (res.ok) {
                 const data = await res.json()
                 setStructure(data)
+                showToast(`${type} removed successfully`)
             }
-        } catch (err) { console.error(err) } finally { setTimeout(() => setRemovingId(null), 500) }
+        } catch (err) { console.error(err); showToast('Failed to remove item', 'error') } finally { setTimeout(() => setRemovingId(null), 500) }
     }
 
 
@@ -335,6 +352,7 @@ export default function AdminPanel() {
         }
 
         setStructure(newStructure);
+        setIsReordering(true)
 
         try {
             await fetch('/api/admin', {
@@ -353,10 +371,14 @@ export default function AdminPanel() {
                     unitName: selectedUnitName
                 })
             });
+            showToast('Order saved')
         } catch (error) {
             console.error('Reorder failed:', error);
+            showToast('Failed to save order', 'error')
             // Revert on failure (reload from server)
             fetchStructure();
+        } finally {
+            setIsReordering(false)
         }
     };
 
@@ -380,6 +402,7 @@ export default function AdminPanel() {
 
     return (
         <div className="min-h-screen bg-white dark:bg-black text-gray-900 dark:text-gray-100 font-sans">
+            <Toast show={toast.show} message={toast.message} type={toast.type} />
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
                     <div>
@@ -441,13 +464,13 @@ export default function AdminPanel() {
                             {activeTab === 'users' && <motion.div key="users" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}><UsersView users={users} processingId={processingId} onAction={handleUserAction} /></motion.div>}
                             {activeTab === 'structure' && <motion.div key="structure" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}>
                                 <div className="grid grid-cols-1 md:flex md:gap-6 md:overflow-x-auto md:pb-8 gap-6">
-                                    <StructureCard title="Programs" step="01" items={programs.map(p => ({ id: p.id, name: p.name, original: p }))} value={newProgram} setValue={setNewProgram} onAdd={() => handleStructureAdd('program', newProgram)} onRemove={(id: string) => handleStructureRemove('program', id)} activeId={selectedProgramId} onSelect={setSelectedProgramId} isLoading={isSubmitting} removingId={removingId} onReorder={(newOrder: any[]) => handleReorder('program', newOrder.map(i => i.original))} />
-                                    <StructureCard title="Years" step="02" items={years.map(y => ({ id: y.id, name: y.name, original: y }))} value={newYear} setValue={setNewYear} onAdd={() => handleStructureAdd('year', newYear)} onRemove={(id: string) => handleStructureRemove('year', id)} activeId={selectedYearId} onSelect={setSelectedYearId} disabled={!selectedProgramId} parentName={selectedProgram?.name} isLoading={isSubmitting} removingId={removingId} onReorder={(newOrder: any[]) => handleReorder('year', newOrder.map(i => i.original))} />
-                                    <StructureCard title="Branches" step="03" items={courses.map(c => ({ id: c.id, name: c.name, original: c }))} value={newBranch} setValue={setNewBranch} onAdd={() => handleStructureAdd('course', newBranch)} onRemove={(id: string) => handleStructureRemove('course', id)} activeId={selectedCourseId} onSelect={setSelectedCourseId} disabled={!selectedYearId} parentName={selectedYear?.name} isLoading={isSubmitting} removingId={removingId} onReorder={(newOrder: any[]) => handleReorder('course', newOrder.map(i => i.original))} />
-                                    <StructureCard title="Semesters" step="04" items={semesters.map(s => ({ id: s.id, name: s.name, original: s }))} value={newSemester} setValue={handleSemesterChange} onAdd={() => handleStructureAdd('semester', newSemester)} onRemove={(id: string) => handleStructureRemove('semester', id)} activeId={selectedSemesterId} onSelect={setSelectedSemesterId} disabled={!selectedCourseId} parentName={selectedCourse?.name} isLoading={isSubmitting} removingId={removingId} onReorder={(newOrder: any[]) => handleReorder('semester', newOrder.map(i => i.original))} />
-                                    <StructureCard title="Subjects" step="05" items={subjects.map(s => ({ id: typeof s === 'string' ? s : s.name, name: typeof s === 'string' ? s : s.name, original: s }))} value={newSubject} setValue={setNewSubject} onAdd={() => handleStructureAdd('subject', newSubject)} onRemove={(id: string) => handleStructureRemove('subject', id)} activeId={selectedSubjectName} onSelect={setSelectedSubjectName} disabled={!selectedSemesterId} parentName={selectedSemester?.name} isLoading={isSubmitting} removingId={removingId} onReorder={(newOrder: any[]) => handleReorder('subject', newOrder.map(i => i.original))} />
-                                    <StructureCard title="Units" step="06" items={units.map((u: any) => ({ id: u.name, name: u.name, original: u }))} value={newUnit} setValue={handleUnitChange} onAdd={() => handleStructureAdd('unit', newUnit)} onRemove={(id: string) => handleStructureRemove('unit', id)} activeId={selectedUnitName} onSelect={setSelectedUnitName} disabled={!selectedSubjectName} parentName={selectedSubjectName} isLoading={isSubmitting} removingId={removingId} onReorder={(newOrder: any[]) => handleReorder('unit', newOrder.map(i => i.original))} />
-                                    <StructureCard title="Videos" step="07" items={videos.map((v: any) => ({ id: v.id, name: v.title, original: v }))} value={newVideoTitle} setValue={setNewVideoTitle} extraInput={{ value: newVideoUrl, setValue: setNewVideoUrl, placeholder: "YouTube URL..." }} onAdd={() => handleStructureAdd('video', newVideoTitle)} onRemove={(id: string) => handleStructureRemove('video', id)} disabled={!selectedUnitName} parentName={selectedUnitName} isLoading={isSubmitting} removingId={removingId} onReorder={(newOrder: any[]) => handleReorder('video', newOrder.map(i => i.original))} />
+                                    <StructureCard title="Programs" step="01" items={programs.map(p => ({ id: p.id, name: p.name, original: p }))} value={newProgram} setValue={setNewProgram} onAdd={() => handleStructureAdd('program', newProgram)} onRemove={(id: string) => handleStructureRemove('program', id)} activeId={selectedProgramId} onSelect={setSelectedProgramId} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('program', newOrder.map(i => i.original))} />
+                                    <StructureCard title="Years" step="02" items={years.map(y => ({ id: y.id, name: y.name, original: y }))} value={newYear} setValue={setNewYear} onAdd={() => handleStructureAdd('year', newYear)} onRemove={(id: string) => handleStructureRemove('year', id)} activeId={selectedYearId} onSelect={setSelectedYearId} disabled={!selectedProgramId} parentName={selectedProgram?.name} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('year', newOrder.map(i => i.original))} />
+                                    <StructureCard title="Branches" step="03" items={courses.map(c => ({ id: c.id, name: c.name, original: c }))} value={newBranch} setValue={setNewBranch} onAdd={() => handleStructureAdd('course', newBranch)} onRemove={(id: string) => handleStructureRemove('course', id)} activeId={selectedCourseId} onSelect={setSelectedCourseId} disabled={!selectedYearId} parentName={selectedYear?.name} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('course', newOrder.map(i => i.original))} />
+                                    <StructureCard title="Semesters" step="04" items={semesters.map(s => ({ id: s.id, name: s.name, original: s }))} value={newSemester} setValue={handleSemesterChange} onAdd={() => handleStructureAdd('semester', newSemester)} onRemove={(id: string) => handleStructureRemove('semester', id)} activeId={selectedSemesterId} onSelect={setSelectedSemesterId} disabled={!selectedCourseId} parentName={selectedCourse?.name} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('semester', newOrder.map(i => i.original))} />
+                                    <StructureCard title="Subjects" step="05" items={subjects.map(s => ({ id: typeof s === 'string' ? s : s.name, name: typeof s === 'string' ? s : s.name, original: s }))} value={newSubject} setValue={setNewSubject} onAdd={() => handleStructureAdd('subject', newSubject)} onRemove={(id: string) => handleStructureRemove('subject', id)} activeId={selectedSubjectName} onSelect={setSelectedSubjectName} disabled={!selectedSemesterId} parentName={selectedSemester?.name} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('subject', newOrder.map(i => i.original))} />
+                                    <StructureCard title="Units" step="06" items={units.map((u: any) => ({ id: u.name, name: u.name, original: u }))} value={newUnit} setValue={handleUnitChange} onAdd={() => handleStructureAdd('unit', newUnit)} onRemove={(id: string) => handleStructureRemove('unit', id)} activeId={selectedUnitName} onSelect={setSelectedUnitName} disabled={!selectedSubjectName} parentName={selectedSubjectName} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('unit', newOrder.map(i => i.original))} />
+                                    <StructureCard title="Videos" step="07" items={videos.map((v: any) => ({ id: v.id, name: v.title, original: v }))} value={newVideoTitle} setValue={setNewVideoTitle} extraInput={{ value: newVideoUrl, setValue: setNewVideoUrl, placeholder: "YouTube URL..." }} onAdd={() => handleStructureAdd('video', newVideoTitle)} onRemove={(id: string) => handleStructureRemove('video', id)} disabled={!selectedUnitName} parentName={selectedUnitName} isLoading={isSubmitting} removingId={removingId} isReordering={isReordering} onReorder={(newOrder: any[]) => handleReorder('video', newOrder.map(i => i.original))} />
                                 </div>
                             </motion.div>}
                         </>
@@ -495,7 +518,7 @@ function TabButton({ active, onClick, icon, label, count }: any) {
     )
 }
 
-function StructureCard({ title, step, items, value, setValue, extraInput, onAdd, onRemove, activeId, onSelect, disabled, parentName, isLoading, removingId, onReorder }: any) {
+function StructureCard({ title, step, items, value, setValue, extraInput, onAdd, onRemove, activeId, onSelect, disabled, parentName, isLoading, removingId, isReordering, onReorder }: any) {
     // If onReorder is provided, use Reorder.Group
     // We need local state for immediate feedback if we want smooth drag, but items prop usually comes from parent state.
     // Framer motion Reorder works best when controlling the state directly.
@@ -509,40 +532,47 @@ function StructureCard({ title, step, items, value, setValue, extraInput, onAdd,
         </div>
     ) : (
         onReorder ? (
-            <Reorder.Group axis="y" values={items} onReorder={onReorder} className="space-y-1">
-                {items.map((item: any) => (
-                    <Reorder.Item
-                        key={item.id}
-                        value={item}
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className={`group flex items-center justify-between p-2 rounded-lg cursor-grab active:cursor-grabbing text-sm transition-colors ${activeId === item.id ? 'bg-black text-white dark:bg-white dark:text-black' : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'}`}
-                        onClick={() => !disabled && onSelect && onSelect(item.id)}
-                    >
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <GripVertical size={12} className={`opacity-0 group-hover:opacity-100 ${activeId === item.id ? 'text-gray-400' : 'text-gray-400'}`} />
-                            <span className="truncate flex-1">{item.name}</span>
-                        </div>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onRemove(item.id) }}
-                            className={`p-1 rounded transition-opacity ${removingId === item.id
-                                ? 'opacity-100'
-                                : `opacity-0 group-hover:opacity-100 ${activeId === item.id ? 'hover:bg-gray-800 dark:hover:bg-gray-200' : 'hover:bg-red-100 text-red-500'}`
-                                }`}
-                            disabled={!!removingId}
+            <div className="relative">
+                {isReordering && (
+                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/50 dark:bg-black/50 backdrop-blur-sm rounded-lg">
+                        <TyreLoader size={20} />
+                    </div>
+                )}
+                <Reorder.Group axis="y" values={items} onReorder={onReorder} className="space-y-1">
+                    {items.map((item: any) => (
+                        <Reorder.Item
+                            key={item.id}
+                            value={item}
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className={`group flex items-center justify-between p-2 rounded-lg cursor-grab active:cursor-grabbing text-sm transition-colors ${activeId === item.id ? 'bg-black text-white dark:bg-white dark:text-black' : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'}`}
+                            onClick={() => !disabled && onSelect && onSelect(item.id)}
                         >
-                            {removingId === item.id ? (
-                                <div className="animate-spin">
-                                    <TyreLoader size={14} />
-                                </div>
-                            ) : (
-                                <Trash2 size={14} />
-                            )}
-                        </button>
-                    </Reorder.Item>
-                ))}
-            </Reorder.Group>
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <GripVertical size={12} className={`opacity-0 group-hover:opacity-100 ${activeId === item.id ? 'text-gray-400' : 'text-gray-400'}`} />
+                                <span className="truncate flex-1">{item.name}</span>
+                            </div>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onRemove(item.id) }}
+                                className={`p-1 rounded transition-opacity ${removingId === item.id
+                                    ? 'opacity-100'
+                                    : `opacity-0 group-hover:opacity-100 ${activeId === item.id ? 'hover:bg-gray-800 dark:hover:bg-gray-200' : 'hover:bg-red-100 text-red-500'}`
+                                    }`}
+                                disabled={!!removingId}
+                            >
+                                {removingId === item.id ? (
+                                    <div className="animate-spin">
+                                        <TyreLoader size={14} />
+                                    </div>
+                                ) : (
+                                    <Trash2 size={14} />
+                                )}
+                            </button>
+                        </Reorder.Item>
+                    ))}
+                </Reorder.Group>
+            </div>
         ) : (
             <div className="space-y-1">
                 <AnimatePresence initial={false}>
