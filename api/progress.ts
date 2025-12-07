@@ -1,4 +1,19 @@
-return jwt.verify(authHeader.substring(7), process.env.JWT_SECRET!) as { userId: string };
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+import jwt from 'jsonwebtoken';
+
+dotenv.config();
+
+const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseKey || 'placeholder');
+
+function verifyToken(req: VercelRequest) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+    try {
+        return jwt.verify(authHeader.substring(7), process.env.JWT_SECRET!) as { userId: string };
     } catch (e) { return null; }
 }
 
