@@ -181,9 +181,19 @@ export default function AdminPanel() {
     }
 
     const fetchStructure = async () => {
-        const res = await fetch('/api/admin?action=structure', { headers: { 'Authorization': `Bearer ${token}` } })
-        const data = await res.json()
-        if (res.ok) setStructure(data)
+        try {
+            const res = await fetch('/api/admin?action=structure', { headers: { 'Authorization': `Bearer ${token}` } })
+            if (res.ok) {
+                const data = await res.json()
+                setStructure(data)
+                return data
+            }
+            console.error('Fetch structure failed:', res.status, res.statusText)
+            return null
+        } catch (error) {
+            console.error('Fetch structure error:', error)
+            return null
+        }
     }
 
     // --- Actions ---

@@ -166,45 +166,50 @@ async function handleGetPending(res: VercelResponse) {
 }
 
 async function handleGetStructure(res: VercelResponse) {
-    const db = await getDb();
-    const structure = await db.collection('academic_structure').findOne({ _id: 'main' } as any);
+    try {
+        const db = await getDb();
+        const structure = await db.collection('academic_structure').findOne({ _id: 'main' } as any);
 
-    if (!structure) {
-        // Initialize with default hierarchical structure
-        const defaultStructure: any = {
-            _id: 'main',
-            programs: [
-                {
-                    id: 'btech',
-                    name: 'B.Tech',
-                    years: [
-                        {
-                            id: '1',
-                            name: '1st Year',
-                            courses: [
-                                {
-                                    id: 'cse',
-                                    name: 'Computer Science',
-                                    semesters: [
-                                        {
-                                            id: 'sem1',
-                                            name: 'Semester 1',
-                                            subjects: ['Data Structures', 'Algorithms', 'Programming']
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ]
-        };
+        if (!structure) {
+            // Initialize with default hierarchical structure
+            const defaultStructure: any = {
+                _id: 'main',
+                programs: [
+                    {
+                        id: 'btech',
+                        name: 'B.Tech',
+                        years: [
+                            {
+                                id: '1',
+                                name: '1st Year',
+                                courses: [
+                                    {
+                                        id: 'cse',
+                                        name: 'Computer Science',
+                                        semesters: [
+                                            {
+                                                id: 'sem1',
+                                                name: 'Semester 1',
+                                                subjects: ['Data Structures', 'Algorithms', 'Programming']
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            };
 
-        await db.collection('academic_structure').insertOne(defaultStructure);
-        return res.status(200).json(defaultStructure);
+            await db.collection('academic_structure').insertOne(defaultStructure);
+            return res.status(200).json(defaultStructure);
+        }
+
+        return res.status(200).json(structure);
+    } catch (error) {
+        console.error('Get Structure Error:', error);
+        return res.status(500).json({ message: 'Failed to fetch structure', error: String(error) });
     }
-
-    return res.status(200).json(structure);
 }
 
 async function handleResourceAction(body: any, res: VercelResponse) {
