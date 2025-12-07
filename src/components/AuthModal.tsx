@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { X, Mail, Lock, User, ArrowRight } from 'lucide-react'
 import TyreLoader from './TyreLoader'
 import { useAuth } from '../contexts/AuthContext'
+import { useGoogleLogin } from '@react-oauth/google'
 
 
 interface AuthModalProps {
@@ -31,6 +32,11 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess, initialVie
     })
 
     const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+
+    const loginWithGoogle = useGoogleLogin({
+        onSuccess: (codeResponse) => handleGoogleSuccess(codeResponse.access_token),
+        onError: (error) => setError('Google login failed: ' + error)
+    });
 
     if (!isOpen) return null
 
@@ -458,18 +464,7 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess, initialVie
                             {/* Social Login - Google Only */}
                             {/* Social Login - Google Only */}
                             <button
-                                onClick={() => {
-                                    setIsLoading(true);
-                                    authGoogleLogin()
-                                        .then(() => {
-                                            onClose();
-                                            if (onSignupSuccess) onSignupSuccess();
-                                        })
-                                        .catch((err: any) => {
-                                            setError(err.message || 'Google login failed');
-                                            setIsLoading(false);
-                                        });
-                                }}
+                                onClick={() => loginWithGoogle()}
                                 className="btn btn-outline w-full h-9 md:h-10 text-xs md:text-sm flex items-center justify-center gap-2"
                                 type="button"
                                 disabled={isLoading}
