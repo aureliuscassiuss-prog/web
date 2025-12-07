@@ -360,7 +360,7 @@ export default function ProfilePage() {
                                 <Pencil size={12} /> Edit Profile
                             </button>
                         ) : (
-                            <div className="flex gap-2 animate-in fade-in zoom-in duration-200">
+                            <div className="flex gap-2 animate-in fade-in duration-200">
                                 <button onClick={handleCancel} className="px-3 py-1.5 bg-black/40 text-white rounded-lg text-xs font-medium hover:bg-black/50 backdrop-blur-md transition-colors">Cancel</button>
                                 <button onClick={handleSave} disabled={isSaving} className="px-3 py-1.5 bg-white text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-50 shadow-lg flex items-center gap-2 disabled:opacity-70 transition-all hover:scale-105 active:scale-95">
                                     {isSaving ? (

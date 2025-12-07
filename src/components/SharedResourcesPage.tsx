@@ -70,7 +70,7 @@ export default function SharedResourcesPage() {
         return (
             <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-gray-50 dark:bg-black font-sans overflow-hidden touch-none">
                 <div className="relative mb-6">
-                    <div className="absolute inset-0 bg-blue-500/20 blur-3xl rounded-full scale-150" />
+                    <div className="absolute inset-0 bg-blue-500/20 blur-3xl rounded-full" />
                     <div className="relative w-28 h-28 sm:w-32 sm:h-32">
                         <div className="absolute inset-0 rounded-full border-[6px] border-t-blue-600 border-r-transparent border-b-purple-600 border-l-transparent animate-spin" />
                         <div className="absolute inset-3 bg-white dark:bg-gray-900 rounded-full flex items-center justify-center shadow-inner">

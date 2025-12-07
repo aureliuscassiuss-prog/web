@@ -62,7 +62,7 @@ export default function ProfileBanner({ user, children }: ProfileBannerProps) {
                 {timeOfDay === 'evening' && (
                     <>
                         <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-900/20 via-transparent to-transparent" />
-                        <div className="absolute top-12 right-40 w-1.5 h-1.5 bg-white rounded-full animate-ping" />
+                        <div className="absolute top-12 right-40 w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                         <div className="absolute top-24 right-16 w-1 h-1 bg-white rounded-full animate-pulse" />
                         <div className="absolute top-6 right-64 w-1 h-1 bg-white rounded-full" />
                         <Moon className="absolute top-8 right-8 w-20 h-20 text-indigo-300/30 -rotate-12 drop-shadow-lg" />
