@@ -6,7 +6,7 @@ import nodemailer from 'nodemailer';
 import * as fs from 'fs';
 
 // --- CONFIGURATION ---
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-dev-secret-do-not-use-in-prod';
 const ADMIN_EMAIL = 'trilliontip@gmail.com';
 
 // Configure Nodemailer Transporter for Brevo

@@ -1,12 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase } from '../lib/supabase.js';
-import jwt from 'jsonwebtoken';
-
-function verifyToken(req: VercelRequest): { userId: string } | null {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
-    try {
-        return jwt.verify(authHeader.substring(7), process.env.JWT_SECRET!) as { userId: string };
+return jwt.verify(authHeader.substring(7), process.env.JWT_SECRET!) as { userId: string };
     } catch (e) { return null; }
 }
 

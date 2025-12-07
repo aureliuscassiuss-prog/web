@@ -1,12 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase } from '../lib/supabase.js';
-import jwt from 'jsonwebtoken';
-import formidable from 'formidable';
-import fs from 'fs';
-
-export const config = {
-    api: {
-        bodyParser: false,
+bodyParser: false,
     },
 };
 

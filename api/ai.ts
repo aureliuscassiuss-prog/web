@@ -1,10 +1,3 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase } from '../lib/supabase.js';
-import { Groq } from 'groq-sdk';
-import jwt from 'jsonwebtoken';
-
-const groq = new Groq({
-    apiKey: process.env.GROQ_API_KEY || process.env.VITE_GROQ_API_KEY
 });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
