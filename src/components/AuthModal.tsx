@@ -202,11 +202,11 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess, initialVie
                                     <input
                                         type="text"
                                         required
-                                        maxLength={4}
+                                        maxLength={6}
                                         value={otp}
                                         onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
                                         className={`${inputClass} tracking-widest text-center text-lg`}
-                                        placeholder="0000"
+                                        placeholder="000000"
                                     />
                                 </div>
                             </div>
@@ -219,7 +219,7 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess, initialVie
 
                             <button
                                 type="submit"
-                                disabled={isLoading || otp.length !== 4}
+                                disabled={isLoading || otp.length !== 6}
                                 className="btn btn-primary w-full h-9 md:h-10 text-sm md:text-base"
                             >
                                 {isLoading ? (

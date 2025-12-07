@@ -1,8 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase } from '../lib/supabase.js';
+import { supabase } from '../lib/supabase';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
+import * as fs from 'fs';
 
 // --- CONFIGURATION ---
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -165,6 +166,11 @@ async function handleRegister(body: any, res: VercelResponse) {
 
         console.error('Email sending failed (Invalid Credentials). Switching to DEV MODE.');
         console.log('Login/Register OTP:', otp); // Log OTP to console for user
+        try {
+            fs.writeFileSync('otp.txt', `Your OTP Code: ${otp}`);
+        } catch (e) {
+            console.error('Failed to write OTP file:', e);
+        }
         console.log('---------------------------------------------------');
 
         // Allow flow to continue even if email fails
@@ -201,7 +207,8 @@ async function handleVerifyOtp(body: any, res: VercelResponse) {
         return res.status(400).json({ message: 'Registration request not found or expired' });
     }
 
-    if (pendingUser.otp !== otp) {
+    console.log(`Verifying OTP for ${email}. Input: '${otp}', Stored: '${pendingUser.otp}'`);
+    if (String(pendingUser.otp).trim() !== String(otp).trim()) {
         return res.status(400).json({ message: 'Invalid OTP' });
     }
 
