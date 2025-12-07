@@ -1,3 +1,17 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+import jwt from 'jsonwebtoken';
+import Groq from 'groq-sdk';
+
+dotenv.config();
+
+const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseKey || 'placeholder');
+
+const groq = new Groq({
+    apiKey: process.env.GROQ_API_KEY || process.env.VITE_GROQ_API_KEY
 });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
