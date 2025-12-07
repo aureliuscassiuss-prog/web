@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence, Reorder, useDragControls } from 'framer-motion'
 import {
     Check, X, Clock, AlertCircle, Shield,
-    User, Plus, Trash2, Settings, Layers,
+    User, Plus, Trash2, Settings, Layers, Save,
     Ban, ExternalLink, ChevronRight, Search, GripVertical
 } from 'lucide-react'
 import TyreLoader from './TyreLoader'
@@ -639,7 +639,7 @@ function StructureItem({ item, activeId, onSelect, disabled, onRemove, removingI
     )
 }
 
-function StructureCard({ title, step, items, value, setValue, extraInput, onAdd, onRemove, activeId, onSelect, disabled, parentName, isLoading, removingId, isReordering, onReorder }: any) {
+function StructureCard({ title, step, items, value, setValue, extraInput, onAdd, onRemove, activeId, onSelect, disabled, parentName, isLoading, removingId, isReordering, onReorder, hasUnsavedChanges, onSave, editingId, onEditStart, onRename }: any) {
     // If onReorder is provided, use Reorder.Group
     // We need local state for immediate feedback if we want smooth drag, but items prop usually comes from parent state.
     // Framer motion Reorder works best when controlling the state directly.
@@ -669,6 +669,9 @@ function StructureCard({ title, step, items, value, setValue, extraInput, onAdd,
                             disabled={disabled}
                             onRemove={onRemove}
                             removingId={removingId}
+                            isEditing={editingId === item.id}
+                            onEditStart={onEditStart}
+                            onRename={(newName: string) => onRename && onRename(item.id, newName)}
                         />
                     ))}
                 </Reorder.Group>
@@ -723,13 +726,24 @@ function StructureCard({ title, step, items, value, setValue, extraInput, onAdd,
                 {content}
             </div>
             <div className="flex-none p-3 border-t border-gray-100 dark:border-gray-800 space-y-2">
-                {extraInput && <input type="text" value={extraInput.value} onChange={(e) => extraInput.setValue(e.target.value)} disabled={disabled} placeholder={extraInput.placeholder} className="w-full bg-gray-50 dark:bg-gray-800 border-0 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-black dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed" />}
-                <div className="flex gap-2">
-                    <input type="text" value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !disabled && onAdd()} disabled={disabled} placeholder={`Add ${title}...`} className="flex-1 min-w-0 bg-gray-50 dark:bg-gray-800 border-0 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-black dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed" />
-                    <button onClick={onAdd} disabled={disabled || !value.trim() || isLoading} className="flex-none p-2 rounded-md bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-9 flex items-center justify-center">
-                        {isLoading ? <div className="animate-spin"><TyreLoader size={16} /></div> : <Plus size={16} />}
+                {hasUnsavedChanges ? (
+                    <button
+                        onClick={() => onSave(items)}
+                        className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                        <Save size={16} /> Save Order
                     </button>
-                </div>
+                ) : (
+                    <>
+                        {extraInput && <input type="text" value={extraInput.value} onChange={(e) => extraInput.setValue(e.target.value)} disabled={disabled} placeholder={extraInput.placeholder} className="w-full bg-gray-50 dark:bg-gray-800 border-0 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-black dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed" />}
+                        <div className="flex gap-2">
+                            <input type="text" value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !disabled && onAdd()} disabled={disabled} placeholder={`Add ${title}...`} className="flex-1 min-w-0 bg-gray-50 dark:bg-gray-800 border-0 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-black dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed" />
+                            <button onClick={onAdd} disabled={disabled || !value.trim() || isLoading} className="flex-none p-2 rounded-md bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-9 flex items-center justify-center">
+                                {isLoading ? <div className="animate-spin"><TyreLoader size={16} /></div> : <Plus size={16} />}
+                            </button>
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     )
