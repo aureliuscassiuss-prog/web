@@ -485,6 +485,69 @@ async function handleUpdateStructure(body: any, res: VercelResponse) {
                 }
             );
         }
+        else if (structureAction === 'reorder') {
+            const { type, newOrder, subjectName, unitName } = body;
+
+            // To safely reorder, it's often easiest to fetch, update in memory, and set back the specific path.
+            // Using arrayFilters for replacement is possible but complex for deep nesting.
+            // Given the document size is likely manageable, fetching 'main' is acceptable.
+
+            const structure = await db.collection('academic_structure').findOne({ _id: 'main' } as any);
+            if (!structure) throw new Error('Structure not found');
+
+            let target: any = structure;
+            let path = '';
+
+            if (type === 'program') {
+                target.programs = newOrder;
+                path = 'programs';
+            } else if (type === 'year') {
+                const p = target.programs.find((p: any) => p.id === programId);
+                if (p) p.years = newOrder;
+                path = 'programs'; // We update the whole programs array to be safe or use positional operator if we were using updateOne logic strictly
+            } else if (type === 'course') {
+                const p = target.programs.find((p: any) => p.id === programId);
+                const y = p?.years.find((y: any) => y.id === yearId);
+                if (y) y.courses = newOrder;
+                path = 'programs';
+            } else if (type === 'semester') {
+                const p = target.programs.find((p: any) => p.id === programId);
+                const y = p?.years.find((y: any) => y.id === yearId);
+                const c = y?.courses.find((c: any) => c.id === courseId);
+                if (c) c.semesters = newOrder;
+                path = 'programs';
+            } else if (type === 'subject') {
+                const p = target.programs.find((p: any) => p.id === programId);
+                const y = p?.years.find((y: any) => y.id === yearId);
+                const c = y?.courses.find((c: any) => c.id === courseId);
+                const s = c?.semesters.find((s: any) => s.id === semesterId);
+                if (s) s.subjects = newOrder;
+                path = 'programs';
+            } else if (type === 'unit') {
+                const p = target.programs.find((p: any) => p.id === programId);
+                const y = p?.years.find((y: any) => y.id === yearId);
+                const c = y?.courses.find((c: any) => c.id === courseId);
+                const s = c?.semesters.find((s: any) => s.id === semesterId);
+                const sub = s?.subjects.find((sub: any) => (typeof sub === 'string' ? sub : sub.name) === subjectName);
+                if (sub && typeof sub !== 'string') sub.units = newOrder;
+                path = 'programs';
+            } else if (type === 'video') {
+                const p = target.programs.find((p: any) => p.id === programId);
+                const y = p?.years.find((y: any) => y.id === yearId);
+                const c = y?.courses.find((c: any) => c.id === courseId);
+                const s = c?.semesters.find((s: any) => s.id === semesterId);
+                const sub = s?.subjects.find((sub: any) => (typeof sub === 'string' ? sub : sub.name) === subjectName);
+                const u = sub?.units?.find((u: any) => u.name === unitName);
+                if (u) u.videos = newOrder;
+                path = 'programs';
+            }
+
+            // Save the updated structure (replacing the programs array is safest for nested integrity)
+            await db.collection('academic_structure').updateOne(
+                { _id: 'main' } as any,
+                { $set: { programs: target.programs } } as any
+            );
+        }
 
         const updatedStructure = await db.collection('academic_structure').findOne({ _id: 'main' } as any);
         return res.status(200).json(updatedStructure);
