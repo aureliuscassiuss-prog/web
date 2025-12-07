@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence, Reorder } from 'framer-motion'
+import { motion, AnimatePresence, Reorder, useDragControls } from 'framer-motion'
 import {
     Check, X, Clock, AlertCircle, Shield,
     User, Plus, Trash2, Settings, Layers,
@@ -518,6 +518,49 @@ function TabButton({ active, onClick, icon, label, count }: any) {
     )
 }
 
+function StructureItem({ item, activeId, onSelect, disabled, onRemove, removingId }: any) {
+    const controls = useDragControls()
+
+    return (
+        <Reorder.Item
+            value={item}
+            dragListener={false}
+            dragControls={controls}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className={`group flex items-center justify-between p-2 rounded-lg text-sm transition-colors ${activeId === item.id ? 'bg-black text-white dark:bg-white dark:text-black' : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'}`}
+            onClick={() => !disabled && onSelect && onSelect(item.id)}
+        >
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+                <div
+                    onPointerDown={(e) => controls.start(e)}
+                    className="cursor-grab active:cursor-grabbing touch-none p-1 -ml-1"
+                >
+                    <GripVertical size={14} className={`opacity-40 group-hover:opacity-100 ${activeId === item.id ? 'text-gray-400' : 'text-gray-400'}`} />
+                </div>
+                <span className="truncate flex-1">{item.name}</span>
+            </div>
+            <button
+                onClick={(e) => { e.stopPropagation(); onRemove(item.id) }}
+                className={`p-1 rounded transition-opacity ${removingId === item.id
+                    ? 'opacity-100'
+                    : `opacity-0 group-hover:opacity-100 ${activeId === item.id ? 'hover:bg-gray-800 dark:hover:bg-gray-200' : 'hover:bg-red-100 text-red-500'}`
+                    }`}
+                disabled={!!removingId}
+            >
+                {removingId === item.id ? (
+                    <div className="animate-spin">
+                        <TyreLoader size={14} />
+                    </div>
+                ) : (
+                    <Trash2 size={14} />
+                )}
+            </button>
+        </Reorder.Item>
+    )
+}
+
 function StructureCard({ title, step, items, value, setValue, extraInput, onAdd, onRemove, activeId, onSelect, disabled, parentName, isLoading, removingId, isReordering, onReorder }: any) {
     // If onReorder is provided, use Reorder.Group
     // We need local state for immediate feedback if we want smooth drag, but items prop usually comes from parent state.
@@ -540,36 +583,15 @@ function StructureCard({ title, step, items, value, setValue, extraInput, onAdd,
                 )}
                 <Reorder.Group axis="y" values={items} onReorder={onReorder} className="space-y-1">
                     {items.map((item: any) => (
-                        <Reorder.Item
+                        <StructureItem
                             key={item.id}
-                            value={item}
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className={`group flex items-center justify-between p-2 rounded-lg cursor-grab active:cursor-grabbing text-sm transition-colors ${activeId === item.id ? 'bg-black text-white dark:bg-white dark:text-black' : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'}`}
-                            onClick={() => !disabled && onSelect && onSelect(item.id)}
-                        >
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <GripVertical size={12} className={`opacity-0 group-hover:opacity-100 ${activeId === item.id ? 'text-gray-400' : 'text-gray-400'}`} />
-                                <span className="truncate flex-1">{item.name}</span>
-                            </div>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onRemove(item.id) }}
-                                className={`p-1 rounded transition-opacity ${removingId === item.id
-                                    ? 'opacity-100'
-                                    : `opacity-0 group-hover:opacity-100 ${activeId === item.id ? 'hover:bg-gray-800 dark:hover:bg-gray-200' : 'hover:bg-red-100 text-red-500'}`
-                                    }`}
-                                disabled={!!removingId}
-                            >
-                                {removingId === item.id ? (
-                                    <div className="animate-spin">
-                                        <TyreLoader size={14} />
-                                    </div>
-                                ) : (
-                                    <Trash2 size={14} />
-                                )}
-                            </button>
-                        </Reorder.Item>
+                            item={item}
+                            activeId={activeId}
+                            onSelect={onSelect}
+                            disabled={disabled}
+                            onRemove={onRemove}
+                            removingId={removingId}
+                        />
                     ))}
                 </Reorder.Group>
             </div>
