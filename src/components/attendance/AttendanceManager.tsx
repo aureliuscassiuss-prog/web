@@ -19,7 +19,7 @@ import {
 } from 'lucide-react'
 import TyreLoader from '../TyreLoader'
 import { useAuth } from '../../contexts/AuthContext'
-import { Subject, AttendanceLog, Schedule } from '../../types/attendance'
+import type { Subject, AttendanceLog, Schedule } from '../../types/attendance'
 
 // --- Utility Components ---
 function TabButton({ active, onClick, icon, label }: any) {

@@ -16,6 +16,7 @@ interface User {
     role?: 'user' | 'admin' | 'semi-admin' | 'content-reviewer' | 'structure-manager'
     isBanned?: boolean
     canUpload?: boolean
+    isTrusted?: boolean
 }
 
 interface AuthContextType {
@@ -53,10 +54,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const login = async (email: string, password: string) => {
         try {
-            const response = await fetch('/api/auth', {
+            const response = await fetch('http://localhost:3000/api/auth?action=login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'login', email, password })
+                body: JSON.stringify({ email, password })
             })
 
             if (!response.ok) {
@@ -84,10 +85,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const register = async (name: string, email: string, password: string) => {
         try {
-            const response = await fetch('/api/auth', {
+            const response = await fetch('http://localhost:3000/api/auth?action=register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'register', name, email, password })
+                body: JSON.stringify({ name, email, password })
             })
 
             if (!response.ok) {
@@ -111,10 +112,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const verifyOtp = async (email: string, otp: string) => {
         try {
-            const response = await fetch('/api/auth', {
+            const response = await fetch('http://localhost:3000/api/auth?action=verify-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'verify-otp', email, otp })
+                body: JSON.stringify({ email, otp })
             })
 
             if (!response.ok) {
@@ -135,10 +136,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const googleLogin = async (accessToken: string) => {
         try {
-            const response = await fetch('/api/auth', {
+            const response = await fetch('http://localhost:3000/api/auth?action=google', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'google', token: accessToken })
+                body: JSON.stringify({ token: accessToken })
             })
 
             if (!response.ok) {
@@ -178,10 +179,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const forgotPassword = async (email: string) => {
-        const response = await fetch('/api/auth', {
+        const response = await fetch('http://localhost:3000/api/auth?action=forgot-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'forgot-password', email })
+            body: JSON.stringify({ email })
         })
 
         if (!response.ok) {
@@ -200,10 +201,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const resetPassword = async (email: string, otp: string, newPassword: string) => {
-        const response = await fetch('/api/auth', {
+        const response = await fetch('http://localhost:3000/api/auth?action=reset-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'reset-password', email, otp, newPassword })
+            body: JSON.stringify({ email, otp, newPassword })
         })
 
         if (!response.ok) {
