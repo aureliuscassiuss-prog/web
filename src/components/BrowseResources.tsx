@@ -241,7 +241,7 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
 
                 {/* STEP 1: Program */}
                 {step === 1 && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full animate-in zoom-in-95 duration-300">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
                         {programs.map((prog: any) => (
                             <SelectionCard
                                 key={prog.id}
@@ -256,7 +256,7 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
 
                 {/* STEP 2: Year */}
                 {step === 2 && (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-full animate-in zoom-in-95 duration-300">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
                         {years.map((year: any) => (
                             <SelectionCard
                                 key={year.id}
@@ -272,7 +272,7 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
 
                 {/* STEP 3: Course/Branch */}
                 {step === 3 && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full animate-in zoom-in-95 duration-300">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
                         {courses.map((c: any) => (
                             <SelectionCard
                                 key={c.id}
@@ -287,7 +287,7 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
 
                 {/* STEP 4: Semester */}
                 {step === 4 && (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-full animate-in zoom-in-95 duration-300">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
                         {semesters.map((sem: any) => (
                             <SelectionCard
                                 key={sem.id}
@@ -344,7 +344,7 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
                 {step === 7 && (
                     <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in duration-500">
                         <div className="relative mb-8 flex justify-center">
-                            <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full transform scale-150"></div>
+                            <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full"></div>
                             <TyreLoader size={80} className="relative z-10" />
                         </div>
                         <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{loadingText}</h3>
