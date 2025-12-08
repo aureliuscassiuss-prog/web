@@ -605,7 +605,19 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
                             {/* Submit Button */}
                             <button
                                 type="submit"
-                                disabled={isUploading || !formData.driveLink || (formData.resourceType === 'pyq' && !formData.examYear)}
+                                disabled={
+                                    isUploading ||
+                                    !formData.title ||
+                                    !formData.description ||
+                                    !formData.program ||
+                                    !formData.year ||
+                                    !formData.course ||
+                                    !formData.semester ||
+                                    !formData.subject ||
+                                    !formData.resourceType ||
+                                    !formData.driveLink ||
+                                    (formData.resourceType === 'pyq' && !formData.examYear)
+                                }
                                 className="w-full bg-black dark:bg-white text-white dark:text-black py-4 rounded-xl font-bold hover:shadow-lg hover:shadow-black/20 dark:hover:shadow-white/10 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
                             >
                                 {isUploading ? (
