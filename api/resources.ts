@@ -241,7 +241,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             if (insertError) {
                 console.error('Upload Error:', insertError);
-                return res.status(500).json({ message: 'Upload failed' });
+                return res.status(500).json({ message: 'Upload failed', details: insertError });
             }
 
             // Update Reputation
