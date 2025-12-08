@@ -248,6 +248,8 @@ export default function ProfilePage() {
         // Use fuzzy match to find the program even if ID case/format differs slightly
         const progId = findMatchingValue(formData.course, programs.map((p: any) => ({ label: p.name, value: p.id })));
         const prog = programs.find((p: any) => p.id === progId);
+
+        console.log("Memo Years:", { storedCourse: formData.course, resolvedProgId: progId, yearsFound: prog?.years?.length });
         return prog?.years || [];
     }, [formData.course, programs]);
 
@@ -256,12 +258,16 @@ export default function ProfilePage() {
         // Use centralized fuzzy Match:
         const yearId = findMatchingValue(formData.year, years.map((y: any) => ({ label: y.name, value: y.id })));
         const yr = years.find((y: any) => y.id === yearId);
+
+        console.log("Memo Courses:", { storedYear: formData.year, resolvedYearId: yearId, coursesFound: yr?.courses?.length, availableYears: years });
         return yr?.courses || [];
     }, [formData.year, years]);
 
     const semesters = useMemo(() => {
         const branchId = findMatchingValue(formData.branch, courses.map((c: any) => ({ label: c.name, value: c.id })));
         const branch = courses.find((c: any) => c.id === branchId);
+
+        console.log("Memo Semesters:", { storedBranch: formData.branch, resolvedBranchId: branchId, semestersFound: branch?.semesters?.length });
         return branch?.semesters || [];
     }, [formData.branch, courses]);
 
