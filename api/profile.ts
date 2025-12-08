@@ -68,7 +68,11 @@ async function handleGetUploads(userId: string, res: VercelResponse) {
         userLiked: resource.likedBy?.includes(userId) || false,
         userDisliked: resource.dislikedBy?.includes(userId) || false,
         userSaved: resource.savedBy?.includes(userId) || false,
-        userFlagged: resource.flaggedBy?.includes(userId) || false
+        userFlagged: resource.flaggedBy?.includes(userId) || false,
+        likes: (resource.likedBy || []).length,
+        dislikes: (resource.dislikedBy || []).length,
+        downloads: resource.downloads || 0,
+        flags: (resource.flaggedBy || []).length
     }));
 
     return res.status(200).json({ uploads: uploadsWithStatus });
