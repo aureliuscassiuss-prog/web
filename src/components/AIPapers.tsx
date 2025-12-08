@@ -292,25 +292,37 @@ export default function AIPapers() {
             const data = await res.json()
 
             // Parse AI response (it might be a string JSON or object)
+            // Parse AI response (it might be a string JSON or object)
             let paperData
             try {
-                paperData = typeof data.answer === 'string' ? JSON.parse(data.answer) : data.answer
-            } catch (e) {
-                // Fallback if AI returns markdown code block
-                const match = data.answer.match(/```json\n([\s\S]*)\n```/)
-                if (match) {
-                    paperData = JSON.parse(match[1])
-                } else if (data.answer.includes('{') && data.answer.includes('}')) {
-                    // Try loose JSON parsing if simple JSON.parse fails
-                    try {
-                        const jsonStr = data.answer.slice(data.answer.indexOf('{'), data.answer.lastIndexOf('}') + 1)
-                        paperData = JSON.parse(jsonStr)
-                    } catch (err) {
-                        throw new Error('Failed to parse AI response structure')
+                if (typeof data.answer === 'object') {
+                    paperData = data.answer
+                } else if (typeof data.answer === 'string') {
+                    const cleaned = data.answer.trim()
+
+                    // 1. Try extracting from code block (support json, JSON, or no language)
+                    const codeBlockMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/i)
+                    if (codeBlockMatch) {
+                        paperData = JSON.parse(codeBlockMatch[1])
                     }
-                } else {
-                    throw new Error('Failed to parse AI response')
+                    // 2. Try direct parsing
+                    else if (cleaned.startsWith('{') && cleaned.endsWith('}')) {
+                        paperData = JSON.parse(cleaned)
+                    }
+                    // 3. Fallback: Find first '{' and last '}'
+                    else {
+                        const start = cleaned.indexOf('{')
+                        const end = cleaned.lastIndexOf('}')
+                        if (start !== -1 && end !== -1) {
+                            paperData = JSON.parse(cleaned.substring(start, end + 1))
+                        } else {
+                            throw new Error('No JSON structure found')
+                        }
+                    }
                 }
+            } catch (e) {
+                console.error('JSON Parse Error:', e)
+                throw new Error('Failed to parse the examination paper structure. Please try again.')
             }
 
             // Map AI data to the specific keys expected by the PDF generator

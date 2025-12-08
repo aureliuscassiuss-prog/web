@@ -434,11 +434,20 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
     const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
 
     // AI Chat States
+    // AI Chat States
     const [chatInput, setChatInput] = useState('')
     const [chatMessages, setChatMessages] = useState<Message[]>([
         { role: 'assistant', content: "Hi! I'm your AI tutor. I can help you with concepts, solve problems, or explain topics. What are we studying today?" }
     ])
     const [isAiLoading, setIsAiLoading] = useState(false)
+    const isSendingRef = useRef(false)
+
+    // Scroll to bottom on new messages
+    useEffect(() => {
+        if (activeTab === 'ai') {
+            chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+        }
+    }, [chatMessages, isAiLoading, activeTab, view])
 
 
     // AI Paper Generation States
@@ -462,10 +471,14 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
 
     // --- AI HANDLERS ---
     const handleSendMessage = async () => {
-        if (!chatInput.trim() || isAiLoading) return
+        // Prevent double sending with Ref + State check
+        if (!chatInput.trim() || isAiLoading || isSendingRef.current) return
+
         const userMessage = chatInput.trim()
-        setChatInput('')
+
+        isSendingRef.current = true
         setIsAiLoading(true)
+        setChatInput('')
 
         const newMessages: Message[] = [...chatMessages, { role: 'user', content: userMessage }]
         setChatMessages(newMessages)
@@ -495,6 +508,10 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
             setChatMessages([...newMessages, { role: 'assistant', content: "Connection error. Please try again later." }])
         } finally {
             setIsAiLoading(false)
+            // Small delay to prevent immediate re-submission if user is mashing Enter
+            setTimeout(() => {
+                isSendingRef.current = false
+            }, 500)
         }
     }
 
@@ -1233,7 +1250,7 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                                             ? 'bg-blue-600 text-white rounded-tr-none'
                                             : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-700 rounded-tl-none'
                                         }`}>
-                                        {message.role === 'assistant' ? (<ReactMarkdown className="prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-pre:my-1 prose-pre:bg-gray-800 prose-pre:text-gray-100 prose-code:text-xs prose-strong:text-inherit">{message.content}</ReactMarkdown>) : (<p className="whitespace-pre-wrap">{message.content}</p>)}
+                                        {message.role === 'assistant' ? (<div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-pre:my-1 prose-pre:bg-gray-800 prose-pre:text-gray-100 prose-code:text-xs prose-strong:text-inherit"><ReactMarkdown>{message.content}</ReactMarkdown></div>) : (<p className="whitespace-pre-wrap">{message.content}</p>)}
                                     </div>
                                 </div>
 
