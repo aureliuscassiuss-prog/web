@@ -267,7 +267,9 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
             const data = await response.json()
 
             if (!response.ok) {
-                throw new Error(data.message || 'Failed to upload resource')
+                // Show tech details if available
+                const detailMsg = data.details ? (data.details.message || JSON.stringify(data.details)) : '';
+                throw new Error((data.message || 'Failed to upload resource') + (detailMsg ? `: ${detailMsg}` : ''))
             }
 
             // Success
