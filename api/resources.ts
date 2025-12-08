@@ -2,12 +2,93 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
+import nodemailer from 'nodemailer';
 
 dotenv.config();
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseKey || 'placeholder');
+
+// Email transporter setup
+const transporter = nodemailer.createTransport({
+    host: 'smtp-relay.brevo.com',
+    port: 587,
+    secure: false,
+    auth: {
+        user: process.env.BREVO_USER,
+        pass: process.env.BREVO_PASS
+    }
+});
+
+// Helper function to send email notifications
+async function sendUploadNotification(uploaderName: string, uploaderAvatar: string, resourceTitle: string, resourceId: string, resourceType: string) {
+    const adminEmail = process.env.ADMIN_EMAIL || 'abhishekgarg2705@gmail.com'; // Default to your email
+    const approvalLink = `https://extrovert.site/admin?action=approve&resourceId=${resourceId}`;
+
+    const emailHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }
+                .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                .content { background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                .uploader-info { display: flex; align-items: center; margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 8px; }
+                .avatar { width: 60px; height: 60px; border-radius: 50%; margin-right: 15px; object-fit: cover; }
+                .resource-details { margin: 20px 0; padding: 15px; background: #e8f4f8; border-left: 4px solid #667eea; }
+                .btn { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 20px; }
+                .btn:hover { background: #764ba2; }
+                .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🎓 New Resource Uploaded!</h1>
+                </div>
+                <div class="content">
+                    <div class="uploader-info">
+                        <img src="${uploaderAvatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(uploaderName)}" alt="${uploaderName}" class="avatar">
+                        <div>
+                            <h3 style="margin: 0;">${uploaderName}</h3>
+                            <p style="margin: 5px 0 0 0; color: #666;">Uploaded a new ${resourceType}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="resource-details">
+                        <h3 style="margin-top: 0;">📄 ${resourceTitle}</h3>
+                        <p><strong>Type:</strong> ${resourceType.toUpperCase()}</p>
+                        <p><strong>Resource ID:</strong> ${resourceId}</p>
+                    </div>
+                    
+                    <p>A new resource has been uploaded and is pending your review. Please click the button below to approve or review this resource.</p>
+                    
+                    <a href="${approvalLink}" class="btn">🎯 Approve Now</a>
+                    
+                    <div class="footer">
+                        <p>This is an automated notification from UniNotes.<br>You're receiving this because you're an admin.</p>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+
+    try {
+        await transporter.sendMail({
+            from: '"UniNotes Admin" <noreply@uninotes.com>',
+            to: adminEmail,
+            subject: `📚 New Upload: ${resourceTitle} by ${uploaderName}`,
+            html: emailHtml
+        });
+        console.log('Upload notification sent to admin');
+    } catch (error) {
+        console.error('Failed to send upload notification:', error);
+        // Don't throw - we don't want email failure to block upload
+    }
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Content-Type', 'application/json');
@@ -260,6 +341,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 .from('users')
                 .update({ reputation: (user.reputation || 0) + 10 })
                 .eq('_id', userId);
+
+            // Send email notification to admin about new upload
+            // Don't await - run in background to avoid delaying response
+            sendUploadNotification(
+                user.name || 'Anonymous',
+                user.avatar || '',
+                title,
+                inserted._id,
+                resourceType
+            ).catch(err => console.error('Email notification error:', err));
 
             return res.status(201).json({
                 message: 'Resource uploaded successfully',
