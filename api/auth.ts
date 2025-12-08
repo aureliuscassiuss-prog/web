@@ -197,7 +197,7 @@ async function handleRegister(body: any, res: VercelResponse) {
 }
 
 async function handleVerifyOtp(body: any, res: VercelResponse) {
-    const { email, otp } = body;
+    const { email, otp, year, semester } = body;
 
     if (!email || !otp) {
         return res.status(400).json({ message: 'Email and OTP are required' });
@@ -233,9 +233,9 @@ async function handleVerifyOtp(body: any, res: VercelResponse) {
             reputation: 0,
             avatar: avatar,
             gender: pendingUser.gender || 'male',
-            semester: 1,
+            semester: semester || 1, // Use provided semester
             college: 'Medicaps University', // Default
-            year: 1,
+            year: year || 1, // Use provided year
             isBanned: false,
             isRestricted: false,
             isTrusted: false

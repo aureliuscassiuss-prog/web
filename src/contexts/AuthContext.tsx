@@ -24,7 +24,7 @@ interface AuthContextType {
     token: string | null
     login: (email: string, password: string) => Promise<void>
     register: (name: string, email: string, password: string) => Promise<any>
-    verifyOtp: (email: string, otp: string) => Promise<void>
+    verifyOtp: (email: string, otp: string, extraData?: { year?: number, semester?: number }) => Promise<void>
     forgotPassword: (email: string) => Promise<any>
     resetPassword: (email: string, otp: string, newPassword: string) => Promise<void>
     googleLogin: (credential: string) => Promise<void>
@@ -110,12 +110,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }
 
-    const verifyOtp = async (email: string, otp: string) => {
+    const verifyOtp = async (email: string, otp: string, extraData?: { year?: number, semester?: number }) => {
         try {
             const response = await fetch('/api/auth?action=verify-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, otp })
+                body: JSON.stringify({ email, otp, ...extraData })
             })
 
             if (!response.ok) {

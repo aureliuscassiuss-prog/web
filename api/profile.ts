@@ -105,7 +105,13 @@ async function handleUpdateProfile(req: VercelRequest, userId: string, res: Verc
                     const numStr = String(val).replace(/\D/g, '');
                     const num = parseInt(numStr);
                     if (!isNaN(num) && numStr.length > 0) {
-                        updateFields[key] = num;
+                        // DB Safety: Postgres Integer max is ~2.14 billion.
+                        if (num > 2147483647) {
+                            console.warn(`Rejected out-of-range integer for ${key}: ${num}`);
+                            // Do not update field if out of range, prevent 500
+                        } else {
+                            updateFields[key] = num;
+                        }
                     } else {
                         // Fallback: try parsing direct value if it's already a number
                         const directNum = parseInt(val as string);
