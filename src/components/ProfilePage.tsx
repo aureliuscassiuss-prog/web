@@ -147,7 +147,7 @@ const findMatchingValue = (dbValue: any, options: { label: string, value: string
 
     const strDbValue = String(dbValue).trim().toLowerCase();
 
-    // 1. Exact / Normalized String Match
+    // 1. Exact / Normalized String Match (Value)
     const exact = options.find(opt => String(opt.value).trim().toLowerCase() === strDbValue);
     if (exact) return exact.value;
 
@@ -155,12 +155,21 @@ const findMatchingValue = (dbValue: any, options: { label: string, value: string
     // Extract digits: "1st Year" -> 1, "Sem-3" -> 3
     const numDbVal = parseInt(strDbValue.replace(/\D/g, ''));
     if (!isNaN(numDbVal)) {
-        const fuzzy = options.find(opt => {
+        // First try matching VALUE (if ID is "1", "year_1", etc.)
+        const fuzzyValue = options.find(opt => {
             const optValStr = String(opt.value).trim().toLowerCase();
             const optNum = parseInt(optValStr.replace(/\D/g, ''));
             return optNum === numDbVal;
         });
-        if (fuzzy) return fuzzy.value;
+        if (fuzzyValue) return fuzzyValue.value;
+
+        // Fallback: Match LABEL (if ID is UUID, match "1st" -> 1)
+        const fuzzyLabel = options.find(opt => {
+            const optLblStr = String(opt.label).trim().toLowerCase();
+            const optNum = parseInt(optLblStr.replace(/\D/g, ''));
+            return optNum === numDbVal;
+        });
+        if (fuzzyLabel) return fuzzyLabel.value;
     }
 
     return dbValue;
