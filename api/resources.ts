@@ -150,13 +150,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 // Flatten avatar from join
                 const avatar = resource.uploaderRel?.avatar;
 
+                // Calculate counts from arrays
+                const likedBy = resource.likedBy || [];
+                const dislikedBy = resource.dislikedBy || [];
+                const savedBy = resource.savedBy || [];
+                const flaggedBy = resource.flaggedBy || [];
+
                 return {
                     ...resource,
                     uploaderAvatar: avatar,
-                    userLiked: userId && resource.likedBy ? resource.likedBy.includes(userId) : false,
-                    userDisliked: userId && resource.dislikedBy ? resource.dislikedBy.includes(userId) : false,
-                    userSaved: userId && resource.savedBy ? resource.savedBy.includes(userId) : false,
-                    userFlagged: userId && resource.flaggedBy ? resource.flaggedBy.includes(userId) : false
+                    // Counts
+                    likes: likedBy.length,
+                    dislikes: dislikedBy.length,
+                    flags: flaggedBy.length,
+                    downloads: resource.downloads || 0,
+                    // User-specific states
+                    userLiked: userId && likedBy.includes(userId),
+                    userDisliked: userId && dislikedBy.includes(userId),
+                    userSaved: userId && savedBy.includes(userId),
+                    userFlagged: userId && flaggedBy.includes(userId)
                 };
             });
 

@@ -104,12 +104,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 resources = resData || [];
             }
 
-            // Map data
-            const mappedResources = resources.map((r: any) => ({
-                ...r,
-                uploaderAvatar: r.uploaderRel?.avatar,
-                // Add current user interactions if needed (omitted for brevity but can be added similarly to other endpoints)
-            }));
+            // Map data with counts and user states
+            let viewerUserId: string | null = null;
+            try {
+                const token = req.headers.authorization?.replace('Bearer ', '');
+                if (token && process.env.JWT_SECRET) {
+                    const decoded = jwt.verify(token, process.env.JWT_SECRET) as { userId: string };
+                    viewerUserId = decoded.userId;
+                }
+            } catch (e) { }
+
+            const mappedResources = resources.map((r: any) => {
+                const likedBy = r.likedBy || [];
+                const dislikedBy = r.dislikedBy || [];
+                const savedBy = r.savedBy || [];
+                const flaggedBy = r.flaggedBy || [];
+
+                return {
+                    ...r,
+                    uploaderAvatar: r.uploaderRel?.avatar,
+                    // Counts
+                    likes: likedBy.length,
+                    dislikes: dislikedBy.length,
+                    flags: flaggedBy.length,
+                    downloads: r.downloads || 0,
+                    // User-specific states
+                    userLiked: viewerUserId && likedBy.includes(viewerUserId),
+                    userDisliked: viewerUserId && dislikedBy.includes(viewerUserId),
+                    userSaved: viewerUserId && savedBy.includes(viewerUserId),
+                    userFlagged: viewerUserId && flaggedBy.includes(viewerUserId)
+                };
+            });
 
             return res.status(200).json({
                 user: {
