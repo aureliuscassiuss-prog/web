@@ -268,19 +268,30 @@ export default function ProfilePage() {
                 return;
             }
 
+            console.log("Saving Profile Data:", formData); // DEBUG MATCHING
+
             // Create FormData for file upload
             const formDataToSend = new FormData();
+
+            // Explicitly ensure values
+            const cleanYear = formData.year ? String(formData.year) : '1';
+            const cleanSemester = formData.semester ? String(formData.semester) : '';
 
             // Add all form fields
             formDataToSend.append('name', formData.name);
             formDataToSend.append('email', formData.email);
             formDataToSend.append('phone', formData.phone);
-            formDataToSend.append('semester', formData.semester.toString());
+            formDataToSend.append('semester', cleanSemester);
             formDataToSend.append('college', formData.college);
             formDataToSend.append('course', formData.course);
             formDataToSend.append('branch', formData.branch);
-            formDataToSend.append('year', formData.year.toString());
+            formDataToSend.append('year', cleanYear);
             formDataToSend.append('gender', formData.gender);
+
+            console.log("FormData Entries:");
+            for (let [key, value] of formDataToSend.entries()) {
+                console.log(`${key}: ${value}`);
+            }
 
             // Add avatar file if it exists
             if (avatarFile) {

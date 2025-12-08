@@ -143,10 +143,10 @@ export default function AdminPanel() {
 
     // Helper for Year Auto-text
     const handleYearChange = (val: string) => {
-        if (val === '1') setNewYear('1st Year')
-        else if (val === '2') setNewYear('2nd Year')
-        else if (val === '3') setNewYear('3rd Year')
-        else if (/^\d+$/.test(val)) setNewYear(`${val}th Year`)
+        if (val === '1') setNewYear('1st')
+        else if (val === '2') setNewYear('2nd')
+        else if (val === '3') setNewYear('3rd')
+        else if (/^\d+$/.test(val)) setNewYear(`${val}th`)
         else setNewYear(val)
     }
 
