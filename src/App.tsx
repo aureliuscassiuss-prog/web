@@ -48,11 +48,9 @@ function Layout({
   spotlight
 }: any) {
   const navigate = useNavigate()
-  const location = useLocation()
-  const isChatPage = location.pathname === '/ai-assistant'
 
   return (
-    <div className={`flex flex-col bg-white dark:bg-black text-gray-950 dark:text-gray-50 transition-colors duration-200 font-sans selection:bg-gray-900 selection:text-white dark:selection:bg-gray-100 dark:selection:text-black ${isChatPage ? 'h-[100dvh] overflow-hidden' : 'min-h-screen'}`}>
+    <div className="flex flex-col bg-white dark:bg-black text-gray-950 dark:text-gray-50 transition-colors duration-200 font-sans selection:bg-gray-900 selection:text-white dark:selection:bg-gray-100 dark:selection:text-black min-h-screen">
 
       {/* 1. Sticky Top Navigation (Glassmorphism) */}
       <Header
@@ -66,26 +64,24 @@ function Layout({
       <div className="flex flex-1 items-start gap-10 px-4 sm:px-6 md:px-8 pt-6 max-w-[1600px] mx-auto w-full">
 
         {/* 2. Sticky Left Sidebar (Hidden on Mobile) */}
-        {!isChatPage && (
-          <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-[240px] flex-col overflow-y-auto md:flex shrink-0">
-            <Sidebar
-              isMobileMenuOpen={isMobileMenuOpen}
-              onMobileMenuClose={() => setIsMobileMenuOpen(false)}
-              isDark={isDark}
-              toggleTheme={toggleTheme}
-              spotlight={spotlight}
-            />
-          </aside>
-        )}
+        <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-[240px] flex-col overflow-y-auto md:flex shrink-0">
+          <Sidebar
+            isMobileMenuOpen={isMobileMenuOpen}
+            onMobileMenuClose={() => setIsMobileMenuOpen(false)}
+            isDark={isDark}
+            toggleTheme={toggleTheme}
+            spotlight={spotlight}
+          />
+        </aside>
 
         {/* 3. Main Content Area */}
-        <main className={`flex-1 min-w-0 animate-fade-in ${isChatPage ? '' : 'pb-10'}`}>
+        <main className="flex-1 min-w-0 animate-fade-in pb-10">
           {children}
         </main>
       </div>
 
-      {/* Footer - HIdden on Chat Page */}
-      {!isChatPage && <Footer />}
+      {/* Footer */}
+      <Footer />
 
       {/* Mobile Sidebar Overlay */}
       {/* Mobile Sidebar Overlay */}
