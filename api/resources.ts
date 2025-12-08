@@ -88,9 +88,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 .limit(100);
 
             // Filtering
-            if (typeof type === 'string') query = query.eq('type', type);
-            if (typeof resourceType === 'string') query = query.eq('type', resourceType);
-            if (typeof examYear === 'string') query = query.eq('unit', examYear); // Patch: Map examYear query to unit column
+            if (typeof type === 'string') query = query.eq('resourceType', type);
+            if (typeof resourceType === 'string') query = query.eq('resourceType', resourceType);
+            if (typeof examYear === 'string') query = query.eq('examYear', examYear);
             if (typeof branch === 'string') query = query.eq('branch', branch);
             if (typeof course === 'string') query = query.eq('course', course);
             if (typeof semester === 'string') query = query.eq('semester', semester);
@@ -111,8 +111,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 }
             }
 
-            // Unit Filtering (partial match) - Only if not filtering by examYear (which uses unit column now)
-            if (typeof unit === 'string' && typeof examYear !== 'string') {
+            // Unit Filtering (partial match)
+            if (typeof unit === 'string') {
                 const numberOnly = unit.replace(/unit\s*/i, '');
                 // ilike %numberOnly
                 query = query.ilike('unit', `%${numberOnly}%`);
@@ -151,12 +151,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const avatar = resource.uploader && resource.uploader.avatar ? resource.uploader.avatar : null;
 
                 // Patch: If resource is PYQ, expose unit as examYear for frontend compatibility
-                const mappedExamYear = resource.type === 'pyq' ? resource.unit : null;
-
                 return {
                     ...resource,
-                    resourceType: resource.type, // Map DB 'type' back to API 'resourceType'
-                    examYear: mappedExamYear,
                     uploaderAvatar: avatar,
                     // Check array fields for user ID
                     userLiked: userId && resource.likedBy ? resource.likedBy.includes(userId) : false,
@@ -219,10 +215,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 year: String(parseInt(String(yearNum || year || '1').replace(/\D/g, '')) || '1'), // Sanitize: "1st Year" -> "1"
                 semester: semester || '',
                 subject,
-                unit: storedUnit,
-                type: resourceType, // Map resourceType to DB 'type' column
+                unit,
+                resourceType,
                 driveLink,
-                // examYear: resourceType === 'pyq' ? examYear : null, // Removed to fix PGRST204
+                examYear: resourceType === 'pyq' ? examYear : null,
                 status,
                 uploader: user.name || 'Anonymous',
                 uploaderId: userId,
