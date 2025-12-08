@@ -113,31 +113,45 @@ export default function SharedUnitPage() {
                     });
                 }
 
-                setUnits(parsedUnits);
-
                 // Auto-select logic
-                // 1. If targetUnitName is present, try to find that unit and play its first video
-                // 2. Otherwise play first video of first unit
-                let foundVideo = false;
+                // 1. If targetUnitName is present, we filter to ONLY show that unit (Isolation Mode)
+                // 2. Otherwise default to full subject view (Subject Mode)
 
                 if (targetUnitName) {
-                    const targetUnitIndex = parsedUnits.findIndex(u => u.name === targetUnitName);
-                    if (targetUnitIndex !== -1) {
-                        setExpandedUnitIndices(new Set([targetUnitIndex]));
-                        if (parsedUnits[targetUnitIndex].videos.length > 0) {
-                            setCurrentVideo(parsedUnits[targetUnitIndex].videos[0]);
-                            foundVideo = true;
+                    const targetUnit = parsedUnits.find(u => u.name === targetUnitName);
+                    if (targetUnit) {
+                        // ISOLATION MODE: Overwrite units to only contain the target
+                        setUnits([targetUnit]);
+
+                        // Auto-play first video of this unit
+                        setExpandedUnitIndices(new Set([0]));
+                        if (targetUnit.videos.length > 0) {
+                            setCurrentVideo(targetUnit.videos[0]);
+                        }
+                    } else {
+                        // Fallback: Unit not found, show everything
+                        setUnits(parsedUnits);
+                        if (parsedUnits.length > 0) {
+                            for (let i = 0; i < parsedUnits.length; i++) {
+                                if (parsedUnits[i].videos.length > 0) {
+                                    setCurrentVideo(parsedUnits[i].videos[0]);
+                                    setExpandedUnitIndices(new Set([i]));
+                                    break;
+                                }
+                            }
                         }
                     }
-                }
+                } else {
+                    // SUBJECT MODE: Show all units
+                    setUnits(parsedUnits);
 
-                if (!foundVideo && parsedUnits.length > 0) {
-                    // Find first unit with videos
-                    for (let i = 0; i < parsedUnits.length; i++) {
-                        if (parsedUnits[i].videos.length > 0) {
-                            setCurrentVideo(parsedUnits[i].videos[0]);
-                            setExpandedUnitIndices(prev => new Set(prev).add(i));
-                            break;
+                    if (parsedUnits.length > 0) {
+                        for (let i = 0; i < parsedUnits.length; i++) {
+                            if (parsedUnits[i].videos.length > 0) {
+                                setCurrentVideo(parsedUnits[i].videos[0]);
+                                setExpandedUnitIndices(new Set([i]));
+                                break;
+                            }
                         }
                     }
                 }
