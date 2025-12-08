@@ -181,6 +181,24 @@ export default function ProfilePage() {
         gender: user?.gender || 'male',
     });
 
+    // Fix: Sync local state when user loads or updates
+    useEffect(() => {
+        if (user && !isEditing) {
+            setFormData({
+                name: user.name || '',
+                email: user.email || '',
+                phone: user.phone || '',
+                semester: user.semester || '',
+                college: user.college || 'Medicaps University',
+                course: user.course || '',
+                branch: user.branch || '',
+                year: user.year || 1,
+                gender: user.gender || 'male',
+            });
+            setPreviewUrl(user.avatar || null);
+        }
+    }, [user, isEditing]);
+
     useEffect(() => {
         // Mock fetch
         fetch('/api/admin?action=structure')
