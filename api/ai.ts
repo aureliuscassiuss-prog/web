@@ -154,9 +154,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (type === 'generate-paper') {
             const { subject, program, year, branch } = req.body;
+            // Format year for better AI context (e.g. "1" -> "Year 1")
+            const formattedYear = /^\d+$/.test(String(year)) ? `Year ${year}` : year;
+
             messages.push({
                 role: 'user',
-                content: `Generate a realistic university question paper for: ${subject}, ${program}, ${year}, ${branch}. Return ONLY JSON.`
+                content: `Generate a realistic university question paper for: ${subject}, ${program}, ${formattedYear}, ${branch}. Return ONLY JSON.`
             });
         } else {
             messages.push({ role: 'user', content: question });
