@@ -302,19 +302,44 @@ export default function ProfilePage() {
             // Create FormData for file upload
             const formDataToSend = new FormData();
 
-            // Explicitly ensure values
-            const cleanYear = formData.year ? String(formData.year) : '1';
-            const cleanSemester = formData.semester ? String(formData.semester) : '';
+            // LOGIC FIX: User selects an ID (possibly UUID), but Backend needs INTEGER (1, 2, 3).
+            // We must find the Label (Name) of the selected item and parse the integer from THERE.
+
+            // 1. Resolve Year
+            let finalYear = '1';
+            const selectedYearObj = years.find((y: any) => y.id === formData.year || String(y.id) === String(formData.year));
+            if (selectedYearObj) {
+                // Parse "2nd" -> 2. "2nd Year" -> 2.
+                const parsed = parseInt(selectedYearObj.name.replace(/\D/g, ''));
+                if (!isNaN(parsed)) finalYear = String(parsed);
+            } else {
+                // Fallback: Try parsing the value itself if it's already a number
+                const parsedVal = parseInt(String(formData.year).replace(/\D/g, ''));
+                if (!isNaN(parsedVal)) finalYear = String(parsedVal);
+            }
+
+            // 2. Resolve Semester
+            let finalSemester = '';
+            const selectedSemObj = semesters.find((s: any) => s.id === formData.semester || String(s.id) === String(formData.semester));
+            if (selectedSemObj) {
+                const parsed = parseInt(selectedSemObj.name.replace(/\D/g, ''));
+                if (!isNaN(parsed)) finalSemester = String(parsed);
+            } else if (formData.semester) {
+                const parsedVal = parseInt(String(formData.semester).replace(/\D/g, ''));
+                if (!isNaN(parsedVal)) finalSemester = String(parsedVal);
+            }
+
+            console.log(`Resolved Payloads - Year: ${finalYear} (from ${formData.year}), Sem: ${finalSemester} (from ${formData.semester})`);
 
             // Add all form fields
             formDataToSend.append('name', formData.name);
             formDataToSend.append('email', formData.email);
             formDataToSend.append('phone', formData.phone);
-            formDataToSend.append('semester', cleanSemester);
+            formDataToSend.append('semester', finalSemester);
             formDataToSend.append('college', formData.college);
             formDataToSend.append('course', formData.course);
             formDataToSend.append('branch', formData.branch);
-            formDataToSend.append('year', cleanYear);
+            formDataToSend.append('year', finalYear);
             formDataToSend.append('gender', formData.gender);
 
             console.log("FormData Entries:");
