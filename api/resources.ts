@@ -28,7 +28,7 @@ async function sendUploadNotification(uploaderName: string, uploaderAvatar: stri
         const { data: adminUsers, error } = await supabase
             .from('users')
             .select('email, name')
-            .in('role', ['admin', 'semi-admin', 'content-reviewer', 'structure-manager']);
+            .in('role', ['admin', 'semi-admin', 'content-reviewer']);
 
         if (error || !adminUsers || adminUsers.length === 0) {
             console.error('No admin users found for notifications:', error);
@@ -82,23 +82,9 @@ async function sendUploadNotification(uploaderName: string, uploaderAvatar: stri
                             <p>This is an automated notification from UniNotes.<br>You're receiving this because you're an admin or content reviewer.</p>
                         </div>
                     </div>
-                </div>
-            </body>
-            </html>
-        `;
-
-        // Send email to all admin users
-        const emailPromises = adminUsers.map(admin =>
-            transporter.sendMail({
-                from: '"UniNotes Admin" <noreply@uninotes.com>',
-                to: admin.email,
-                subject: `📚 New Upload: ${resourceTitle} by ${uploaderName}`,
-                html: emailHtml
-            })
-        );
 
         await Promise.all(emailPromises);
-        console.log(`Upload notification sent to ${adminUsers.length} admin(s)/reviewer(s)`);
+        console.log(`Upload notification sent to ${ adminUsers.length } admin(s) / reviewer(s)`);
     } catch (error) {
         console.error('Failed to send upload notification:', error);
         // Don't throw - we don't want email failure to block upload
@@ -198,10 +184,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 if (!isNaN(yearNum)) {
                     // In supabase we stored 'year' as text column in schema script to be flexible
                     // But if we want to match multiple formats, we might need an OR
-                    // .or(`year.eq.${yearNum},year.eq.${yearStr},...`)
+                    // .or(`year.eq.${ yearNum }, year.eq.${ yearStr },...`)
                     // For simplicity, let's just try exact match first or check the schema type
                     // Schema says "year text". So we search for the string.
-                    query = query.or(`year.eq.${yearNum},year.eq.${yearStr},year.eq.${yearNum}${yearNum === 1 ? 'st' : yearNum === 2 ? 'nd' : yearNum === 3 ? 'rd' : 'th'} Year`);
+                    query = query.or(`year.eq.${ yearNum }, year.eq.${ yearStr }, year.eq.${ yearNum }${ yearNum === 1 ? 'st' : yearNum === 2 ? 'nd' : yearNum === 3 ? 'rd' : 'th' } Year`);
                 } else {
                     query = query.eq('year', yearStr);
                 }
@@ -211,7 +197,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (typeof unit === 'string') {
                 const numberOnly = unit.replace(/unit\s*/i, '');
                 // ilike %numberOnly
-                query = query.ilike('unit', `%${numberOnly}%`);
+                query = query.ilike('unit', `% ${ numberOnly }% `);
             }
 
             // Search (OR condition)
@@ -219,7 +205,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const s = search; // simplify
                 // ILIKE on title, description, subject, uploader
                 // Note: uploader is a column in resources (denormalized name)
-                query = query.or(`title.ilike.%${s}%,description.ilike.%${s}%,subject.ilike.%${s}%,uploader.ilike.%${s}%`);
+                query = query.or(`title.ilike.% ${ s }%, description.ilike.% ${ s }%, subject.ilike.% ${ s }%, uploader.ilike.% ${ s }% `);
             }
 
             // Execute
