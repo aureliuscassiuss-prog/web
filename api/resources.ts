@@ -83,7 +83,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             let query = supabase
                 .from('resources')
-                .select('*, uploader:users(avatar)') // Join with users to get avatar. requires FK
+                .select('*, uploaderRel:users(avatar)') // Join with users to get avatar. requires FK
                 .eq('status', 'approved')
                 .limit(100);
 
@@ -148,13 +148,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             const resourcesWithStates = (resources || []).map((resource: any) => {
                 // Flatten avatar from join
-                const avatar = resource.uploader && resource.uploader.avatar ? resource.uploader.avatar : null;
+                const avatar = resource.uploaderRel?.avatar;
 
-                // Patch: If resource is PYQ, expose unit as examYear for frontend compatibility
                 return {
                     ...resource,
                     uploaderAvatar: avatar,
-                    // Check array fields for user ID
                     userLiked: userId && resource.likedBy ? resource.likedBy.includes(userId) : false,
                     userDisliked: userId && resource.dislikedBy ? resource.dislikedBy.includes(userId) : false,
                     userSaved: userId && resource.savedBy ? resource.savedBy.includes(userId) : false,

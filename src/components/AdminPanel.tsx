@@ -1072,7 +1072,7 @@ function PendingView({ resources, processingId, onAction }: any) {
         </svg>
     )
 
-    if (resources.length === 0) {
+    if (!Array.isArray(resources) || resources.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-64 text-gray-400 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
                 <Check size={48} className="mb-4 opacity-20" />
@@ -1086,6 +1086,19 @@ function PendingView({ resources, processingId, onAction }: any) {
             {resources.map((resource: PendingResource) => {
                 const isExpanded = expandedRequestId === resource._id
                 const isProcessing = processingId === resource._id
+
+                // Safe date formatting to prevent crashes
+                let dateDisplay = 'Unknown Date'
+                try {
+                    if (resource.createdAt) {
+                        const date = new Date(resource.createdAt)
+                        if (!isNaN(date.getTime())) {
+                            dateDisplay = `${date.toLocaleDateString()} • ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                        }
+                    }
+                } catch (e) {
+                    console.error('Date parsing error', e)
+                }
 
                 return (
                     <motion.div
@@ -1158,7 +1171,7 @@ function PendingView({ resources, processingId, onAction }: any) {
                                         <div>
                                             <div className="text-sm font-bold text-gray-900 dark:text-white">{resource.uploaderName || 'Unknown User'}</div>
                                             <div className="text-[10px] text-gray-500 dark:text-gray-400">
-                                                {new Date(resource.createdAt).toLocaleDateString()} • {new Date(resource.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                {dateDisplay}
                                             </div>
                                         </div>
                                     </div>

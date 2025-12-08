@@ -97,7 +97,7 @@ async function handleGetPending(res: VercelResponse) {
     // Fetch pending resources with uploader info
     const { data: resources, error } = await supabase
         .from('resources')
-        .select('*, uploader:users(avatar)')
+        .select('*, uploader:users(name, avatar)')
         .eq('status', 'pending')
         .order('createdAt', { ascending: false });
 
@@ -108,7 +108,7 @@ async function handleGetPending(res: VercelResponse) {
 
     const formatted = resources.map((r: any) => ({
         ...r,
-        uploaderName: r.uploader || 'Unknown',
+        uploaderName: r.uploader?.name || 'Unknown',
         uploaderAvatar: r.uploader?.avatar,
         type: r.resourceType || 'Not specified'
     }));

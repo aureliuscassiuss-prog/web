@@ -190,6 +190,14 @@ export default function AttendanceManager() {
         </svg>
     )
 
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black">
+                <TyreLoader size={48} />
+            </div>
+        )
+    }
+
     return (
         <div className="min-h-screen bg-white dark:bg-black text-gray-900 dark:text-gray-100 font-sans">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
