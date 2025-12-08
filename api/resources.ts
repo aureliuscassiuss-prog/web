@@ -42,45 +42,51 @@ async function sendUploadNotification(uploaderName: string, uploaderAvatar: stri
             <html>
             <head>
                 <style>
-                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                    .container { max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }
-                    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-                    .content { background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-                    .uploader-info { display: flex; align-items: center; margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 8px; }
-                    .avatar { width: 60px; height: 60px; border-radius: 50%; margin-right: 15px; object-fit: cover; }
-                    .resource-details { margin: 20px 0; padding: 15px; background: #e8f4f8; border-left: 4px solid #667eea; }
-                    .btn { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 20px; }
-                    .btn:hover { background: #764ba2; }
-                    .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+                    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; }
+                    .header { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); padding: 32px; text-align: center; }
+                    .content { padding: 40px 32px; }
+                    .uploader-info { display: flex; align-items: center; margin-bottom: 24px; padding: 16px; background: #f3f4f6; border-radius: 8px; }
+                    .avatar { width: 50px; height: 50px; border-radius: 50%; margin-right: 16px; object-fit: cover; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+                    .resource-card { margin: 24px 0; padding: 20px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; border-left: 4px solid #6366f1; }
+                    .btn { display: inline-block; padding: 14px 32px; background: #4f46e5; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; text-align: center; font-size: 16px; margin-top: 24px; box-shadow: 0 4px 6px rgba(79, 70, 229, 0.25); }
+                    .btn:hover { background: #4338ca; }
+                    .footer { background-color: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 12px; }
                 </style>
             </head>
             <body>
                 <div class="container">
                     <div class="header">
-                        <h1>🎓 New Resource Uploaded!</h1>
+                        <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -1px;">UniNotes</h1>
+                        <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 16px;">New Resource Submission</p>
                     </div>
                     <div class="content">
                         <div class="uploader-info">
                             <img src="${uploaderAvatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(uploaderName)}" alt="${uploaderName}" class="avatar">
                             <div>
-                                <h3 style="margin: 0;">${uploaderName}</h3>
-                                <p style="margin: 5px 0 0 0; color: #666;">Uploaded a new ${resourceType}</p>
+                                <h3 style="margin: 0; color: #1f2937; font-size: 16px;">${uploaderName}</h3>
+                                <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 14px;">has uploaded a new resource</p>
                             </div>
                         </div>
                         
-                        <div class="resource-details">
-                            <h3 style="margin-top: 0;">📄 ${resourceTitle}</h3>
-                            <p><strong>Type:</strong> ${resourceType.toUpperCase()}</p>
-                            <p><strong>Resource ID:</strong> ${resourceId}</p>
+                        <div class="resource-card">
+                            <h3 style="margin: 0 0 12px 0; color: #111827; font-size: 18px;">📄 ${resourceTitle}</h3>
+                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; font-size: 14px; color: #4b5563;">
+                                <strong>Type:</strong> <span>${resourceType.toUpperCase()}</span>
+                                <strong>ID:</strong> <span style="font-family: monospace;">${resourceId}</span>
+                            </div>
                         </div>
                         
-                        <p>A new resource has been uploaded and is pending your review. Please click the button below to approve or review this resource.</p>
+                        <p style="color: #4b5563; margin-bottom: 24px;">This resource is pending review. Please verify the content guidelines before approving.</p>
                         
-                        <a href="${approvalLink}" class="btn">🎯 Approve Now</a>
-                        
-                        <div class="footer">
-                            <p>This is an automated notification from UniNotes.<br>You're receiving this because you're an admin or content reviewer.</p>
+                        <div style="text-align: center;">
+                            <a href="${approvalLink}" class="btn">Review & Approve</a>
                         </div>
+                    </div>
+                    
+                    <div class="footer">
+                        <p style="margin: 0;">&copy; ${new Date().getFullYear()} UniNotes Admin System</p>
+                        <p style="margin: 8px 0 0 0;">You received this because you are an admin or content reviewer.</p>
                     </div>
                 </div>
             </body>
