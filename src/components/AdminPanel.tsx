@@ -322,10 +322,19 @@ export default function AdminPanel() {
             const c = y?.courses?.find((c: any) => c.id === selectedCourseId)
             const s = c?.semesters?.find((s: any) => s.id === selectedSemesterId)
             const sub = s?.subjects?.find((sub: any) => (typeof sub === 'string' ? sub : sub.name) === selectedSubjectName)
-            const u = sub?.units?.find((u: any) => u.name === selectedUnitName)
-            if (u) {
-                if (!u.videos) u.videos = []
-                targetArray = u.videos
+
+            if (sub && typeof sub !== 'string' && sub.units) {
+                const uIndex = sub.units.findIndex((u: any) => (typeof u === 'string' ? u : u.name) === selectedUnitName)
+                if (uIndex !== -1) {
+                    let u = sub.units[uIndex]
+                    // Promote string unit to object if needed
+                    if (typeof u === 'string') {
+                        u = { name: u, videos: [] }
+                        sub.units[uIndex] = u
+                    }
+                    if (!u.videos) u.videos = []
+                    targetArray = u.videos
+                }
             }
         }
 
