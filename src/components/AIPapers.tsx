@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import {
     FileText,
@@ -177,6 +177,52 @@ export default function AIPapers() {
     const toggleDropdown = (id: string) => {
         setActiveDropdown(prev => prev === id ? null : id)
     }
+
+    // Auto-select based on User Profile
+    const autoSelectedRef = useRef(false)
+
+    useEffect(() => {
+        // Only auto-select if nothing is selected yet
+        if (!autoSelectedRef.current && user && structure.programs.length > 0 && !selectedProgramId) {
+            const program = structure.programs.find(p => p.id === user.course)
+            if (program) {
+                const year = program.years.find(y =>
+                    y.id === user.year?.toString() ||
+                    y.name === user.year?.toString() ||
+                    y.name.startsWith(user.year?.toString())
+                )
+                if (year) {
+                    const course = year.courses?.find(c =>
+                        c.id === user.branch ||
+                        c.name === user.branch
+                    )
+                    if (course) {
+                        const semester = course.semesters?.find(s =>
+                            s.id === user.semester?.toString() ||
+                            s.name === user.semester?.toString() ||
+                            s.name.includes(user.semester?.toString())
+                        )
+                        if (semester) {
+                            setSelectedProgramId(program.id)
+                            setSelectedYearId(year.id)
+                            setSelectedCourseId(course.id)
+                            setSelectedSemesterId(semester.id)
+                            autoSelectedRef.current = true
+                        } else {
+                            setSelectedProgramId(program.id)
+                            setSelectedYearId(year.id)
+                            setSelectedCourseId(course.id)
+                            autoSelectedRef.current = true
+                        }
+                    } else {
+                        setSelectedProgramId(program.id)
+                        setSelectedYearId(year.id)
+                        autoSelectedRef.current = true
+                    }
+                }
+            }
+        }
+    }, [user, structure, selectedProgramId])
 
     useEffect(() => {
         // Fetch structure
