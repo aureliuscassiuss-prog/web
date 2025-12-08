@@ -191,11 +191,10 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
             if (!response.ok) throw new Error('Failed to get AI response')
             const data = await response.json()
 
-            if (data.conversationHistory) {
-                setChatMessages(data.conversationHistory)
-            } else {
-                setChatMessages([...newMessages, { role: 'assistant', content: data.answer || "I'm sorry, I couldn't generate a response." }])
-            }
+            // Don't use conversationHistory from API - it causes duplicate messages
+            // We already added the user message, just append the AI response
+            const aiResponse = data.answer || "I'm sorry, I couldn't generate a response."
+            setChatMessages([...newMessages, { role: 'assistant', content: aiResponse }])
         } catch (error) {
             console.error('AI Error:', error)
             setChatMessages([...newMessages, { role: 'assistant', content: "Connection error. Please try again later." }])
