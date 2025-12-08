@@ -88,8 +88,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 .limit(100);
 
             // Filtering
-            if (typeof type === 'string') query = query.eq('resourceType', type);
-            if (typeof resourceType === 'string') query = query.eq('resourceType', resourceType);
+            if (typeof type === 'string') query = query.eq('type', type);
+            if (typeof resourceType === 'string') query = query.eq('type', resourceType);
             if (typeof examYear === 'string') query = query.eq('unit', examYear); // Patch: Map examYear query to unit column
             if (typeof branch === 'string') query = query.eq('branch', branch);
             if (typeof course === 'string') query = query.eq('course', course);
@@ -151,10 +151,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const avatar = resource.uploader && resource.uploader.avatar ? resource.uploader.avatar : null;
 
                 // Patch: If resource is PYQ, expose unit as examYear for frontend compatibility
-                const mappedExamYear = resource.resourceType === 'pyq' ? resource.unit : null;
+                const mappedExamYear = resource.type === 'pyq' ? resource.unit : null;
 
                 return {
                     ...resource,
+                    resourceType: resource.type, // Map DB 'type' back to API 'resourceType'
                     examYear: mappedExamYear,
                     uploaderAvatar: avatar,
                     // Check array fields for user ID
@@ -219,7 +220,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 semester: semester || '',
                 subject,
                 unit: storedUnit,
-                resourceType,
+                type: resourceType, // Map resourceType to DB 'type' column
                 driveLink,
                 // examYear: resourceType === 'pyq' ? examYear : null, // Removed to fix PGRST204
                 status,
