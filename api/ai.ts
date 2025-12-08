@@ -159,7 +159,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             messages.push({
                 role: 'user',
-                content: `Generate a realistic university question paper for: ${subject}, ${program}, ${formattedYear}, ${branch}. Return ONLY JSON.`
+                content: `Generate a university question paper with the following structure. Return ONLY valid JSON, no markdown, no code blocks:
+{
+  "courseCode": "course code here",
+  "sections": [
+    {
+      "name": "Section A - Multiple Choice Questions (MCQs)",
+      "questions": [
+        {
+          "text": "MCQ question 1",
+          "options": ["option A", "option B", "option C", "option D"]
+        }
+        // ... 8 more MCQs (9 total)
+      ]
+    },
+    {
+      "name": "Section B - Short/Long Answer Questions",
+      "questions": [
+        {"text": "Question 2(i)"},
+        {"text": "Question 2(ii)"},
+        {"text": "OR Question 2"},
+        {"text": "Question 3(i)"},
+        {"text": "Question 3(ii)"},
+        {"text": "OR Question 3"},
+        {"text": "Question 4(i)"},
+        {"text": "Question 4(ii)"},
+        {"text": "OR Question 4"},
+        {"text": "Question 5(i)"},
+        {"text": "Question 5(ii)"},
+        {"text": "OR Question 5"},
+        {"text": "Question 6(i)"},
+        {"text": "Question 6(ii)"},
+        {"text": "Question 6(iii)"}
+      ]
+    }
+  ]
+}
+Subject: ${subject}, Program: ${program}, Year: ${formattedYear}, Branch: ${branch}. ALL questions MUST have a "text" field with the actual question string.`
             });
         } else {
             messages.push({ role: 'user', content: question });
@@ -169,7 +205,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             messages,
             model: 'llama-3.3-70b-versatile',
             temperature: 0.7,
-            max_tokens: 1024
+            max_tokens: type === 'generate-paper' ? 2048 : 1024
         });
 
         const answer = chatCompletion.choices[0]?.message?.content || 'Error generating response';
