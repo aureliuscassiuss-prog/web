@@ -243,9 +243,9 @@ async function handleVerifyOtp(body: any, res: VercelResponse) {
             reputation: 0,
             avatar: avatar,
             gender: pendingUser.gender || 'male',
-            semester: semester || 1, // Use provided semester
+            semester: semester || null, // Allow null
             college: 'Medicaps University', // Default
-            year: year || 1, // Use provided year
+            year: year || null, // Allow null
             isBanned: false,
             isRestricted: false,
             isTrusted: false

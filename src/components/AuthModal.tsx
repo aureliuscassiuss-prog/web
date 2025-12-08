@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Mail, Lock, User, ArrowRight, Calendar, Hash } from 'lucide-react'
+import { X, Mail, Lock, User, ArrowRight } from 'lucide-react'
 import TyreLoader from './TyreLoader'
 import { useAuth } from '../contexts/AuthContext'
 import { useGoogleLogin } from '@react-oauth/google'
@@ -29,11 +29,9 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess, initialVie
         name: '',
         email: '',
         password: '',
-        year: '',
-        semester: ''
     })
 
-    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+
 
     const loginWithGoogle = useGoogleLogin({
         onSuccess: (codeResponse) => handleGoogleSuccess(codeResponse.access_token),
@@ -89,10 +87,7 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess, initialVie
         setError('')
 
         try {
-            await verifyOtp(formData.email, otp, {
-                year: parseInt(formData.year) || 1,
-                semester: parseInt(formData.semester) || 1
-            })
+            await verifyOtp(formData.email, otp)
             onClose()
             if (onSignupSuccess) onSignupSuccess()
         } catch (err: any) {
@@ -414,42 +409,7 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess, initialVie
                                 </div>
                             </div>
 
-                            {!isLogin && (
-                                <div className="grid grid-cols-2 gap-3 md:gap-4">
-                                    <div>
-                                        <label className={labelClass}>Year</label>
-                                        <div className={inputWrapperClass}>
-                                            <Calendar className={iconClass} />
-                                            <input
-                                                type="number"
-                                                required
-                                                min="1"
-                                                max="6"
-                                                value={formData.year}
-                                                onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                                                className={inputClass}
-                                                placeholder="1"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className={labelClass}>Semester</label>
-                                        <div className={inputWrapperClass}>
-                                            <Hash className={iconClass} />
-                                            <input
-                                                type="number"
-                                                required
-                                                min="1"
-                                                max="12"
-                                                value={formData.semester}
-                                                onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
-                                                className={inputClass}
-                                                placeholder="1"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+
 
                             {isLogin && (
                                 <div className="text-right">
