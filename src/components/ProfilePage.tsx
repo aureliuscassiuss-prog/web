@@ -141,19 +141,24 @@ const CustomSelect = ({
 };
 
 // Helper: Match DB value (e.g. 1) with Option Value (e.g. "1st Year")
+// Helper: Match DB value (e.g. 1) with Option Value (e.g. "1st Year")
 const findMatchingValue = (dbValue: any, options: { label: string, value: string | number }[]) => {
-    if (!dbValue) return '';
+    if (dbValue === undefined || dbValue === null || dbValue === '') return '';
 
-    // 1. Exact Match
-    const exact = options.find(opt => String(opt.value) === String(dbValue));
+    const strDbValue = String(dbValue).trim().toLowerCase();
+
+    // 1. Exact / Normalized String Match
+    const exact = options.find(opt => String(opt.value).trim().toLowerCase() === strDbValue);
     if (exact) return exact.value;
 
     // 2. Fuzzy Match (Integer check)
-    const numVal = parseInt(String(dbValue).replace(/\D/g, ''));
-    if (!isNaN(numVal)) {
+    // Extract digits: "1st Year" -> 1, "Sem-3" -> 3
+    const numDbVal = parseInt(strDbValue.replace(/\D/g, ''));
+    if (!isNaN(numDbVal)) {
         const fuzzy = options.find(opt => {
-            const optNum = parseInt(String(opt.value).replace(/\D/g, ''));
-            return optNum === numVal;
+            const optValStr = String(opt.value).trim().toLowerCase();
+            const optNum = parseInt(optValStr.replace(/\D/g, ''));
+            return optNum === numDbVal;
         });
         if (fuzzy) return fuzzy.value;
     }
@@ -231,33 +236,23 @@ export default function ProfilePage() {
     // Dropdowns data calculation
     const programs = structure?.programs || [];
     const years = useMemo(() => {
-        const prog = programs.find((p: any) => p.id === formData.course);
+        // Use fuzzy match to find the program even if ID case/format differs slightly
+        const progId = findMatchingValue(formData.course, programs.map((p: any) => ({ label: p.name, value: p.id })));
+        const prog = programs.find((p: any) => p.id === progId);
         return prog?.years || [];
     }, [formData.course, programs]);
 
     const courses = useMemo(() => {
         // ID Mismatch Fix: User has integer year (e.g. 1), Structure has string year (e.g. "1st Year")
-        // We need to find the year object that matches either exact ID or parsed integer ID
-        const targetYear = formData.year;
-
-        let yr = years.find((y: any) => y.id === targetYear.toString() || y.id === targetYear);
-
-        if (!yr) {
-            // Fuzzy match: Try to match by extracted number
-            const targetNum = parseInt(String(targetYear).replace(/\D/g, ''));
-            if (!isNaN(targetNum)) {
-                yr = years.find((y: any) => {
-                    const yNum = parseInt(String(y.id).replace(/\D/g, ''));
-                    return yNum === targetNum;
-                });
-            }
-        }
-
+        // Use centralized fuzzy Match:
+        const yearId = findMatchingValue(formData.year, years.map((y: any) => ({ label: y.name, value: y.id })));
+        const yr = years.find((y: any) => y.id === yearId);
         return yr?.courses || [];
     }, [formData.year, years]);
 
     const semesters = useMemo(() => {
-        const branch = courses.find((c: any) => c.id === formData.branch);
+        const branchId = findMatchingValue(formData.branch, courses.map((c: any) => ({ label: c.name, value: c.id })));
+        const branch = courses.find((c: any) => c.id === branchId);
         return branch?.semesters || [];
     }, [formData.branch, courses]);
 
