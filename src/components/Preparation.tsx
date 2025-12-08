@@ -112,7 +112,11 @@ export default function Preparation() {
         if (!autoSelectedRef.current && user && structure.programs.length > 0 && !selProgramId) {
             const program = structure.programs.find(p => p.id === user.course)
             if (program) {
-                const year = program.years.find(y => y.id === user.year?.toString())
+                const year = program.years.find(y =>
+                    y.id === user.year?.toString() ||
+                    y.name === user.year?.toString() ||
+                    y.name.startsWith(user.year?.toString())
+                )
                 if (year) {
                     const course = year.courses?.find(c => c.id === user.branch) // Branch/Course
                     if (course) {

@@ -37,15 +37,28 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
         if (!autoSelectedRef.current && user && structure && !selections.program) {
             const program = structure.programs.find((p: any) => p.id === user.course);
             if (program) {
-                const year = program.years.find((y: any) => y.id === user.year?.toString());
+                // Improved Matching Logic for Year
+                const year = program.years.find((y: any) =>
+                    y.id === user.year?.toString() ||
+                    y.name === user.year?.toString() ||
+                    y.name.startsWith(user.year?.toString())
+                );
+
                 if (year) {
                     // Try to auto-select branch/course if available in user profile
-                    // Note: user.branch might store the ID or name, need to check how it's stored.
-                    // Assuming user.branch stores ID based on ProfilePage logic.
-                    const course = year.courses?.find((c: any) => c.id === user.branch);
+                    const course = year.courses?.find((c: any) =>
+                        c.id === user.branch ||
+                        c.name === user.branch
+                    );
 
                     if (course) {
-                        const semester = course.semesters?.find((s: any) => s.id === user.semester?.toString());
+                        // Improved Matching Logic for Semester
+                        const semester = course.semesters?.find((s: any) =>
+                            s.id === user.semester?.toString() ||
+                            s.name === user.semester?.toString() ||
+                            s.name.includes(user.semester?.toString())
+                        );
+
                         if (semester) {
                             setSelections({
                                 program: program.id,
