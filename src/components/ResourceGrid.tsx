@@ -1,8 +1,8 @@
 import {
     Upload as UploadIcon, FileText, User,
     Trophy, Sparkles, FileQuestion, ArrowUp,
-    Copy, ThumbsUp, ThumbsDown, Trash2, Bot, Download,
-    Check, ChevronRight, Bookmark, Flag, AlertTriangle, X
+    Copy, ThumbsUp, ThumbsDown, Trash2, Bot,
+    Check, ChevronRight, AlertTriangle, X
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
@@ -12,6 +12,7 @@ import jsPDF from 'jspdf'
 // @ts-ignore
 import autoTable from 'jspdf-autotable'
 import TyreLoader from './TyreLoader'
+import ResourceCard from './ResourceCard'
 
 interface ResourceGridProps {
     view: 'resources' | 'leaderboard' | 'papers' | 'uploads'
@@ -54,316 +55,8 @@ const TabButton = ({ active, onClick, label, icon, isSpecial }: any) => (
     </button>
 )
 
-// --- UPDATED DESIGN: Grid Card ---
-const GridCard = ({ resource, onDelete, showStatus = false }: { resource: any, onDelete?: (id: string) => void, showStatus?: boolean }) => {
-    const { token } = useAuth();
-    // Initialize from resource data
-    const [isSaved, setIsSaved] = useState(resource.userSaved || false);
-    const [isReported, setIsReported] = useState(resource.userFlagged || false);
-    const [userVote, setUserVote] = useState<'like' | 'dislike' | null>(
-        resource.userLiked ? 'like' : resource.userDisliked ? 'dislike' : null
-    );
-    const [counts, setCounts] = useState({
-        likes: resource.likes || 0,
-        dislikes: resource.dislikes || 0,
-        downloads: resource.downloads || 0,
-        flags: resource.flags || 0
-    });
+// Internal GridCard removed in favor of shared ResourceCard component
 
-    const [isInteracting, setIsInteracting] = useState(false);
-
-    // Sync state ONLY when the resource itself changes (different resource)
-    // This ensures state updates after page refresh but doesn't interfere with optimistic updates
-    useEffect(() => {
-        setIsSaved(resource.userSaved || false);
-        setIsReported(resource.userFlagged || false);
-        setUserVote(resource.userLiked ? 'like' : resource.userDisliked ? 'dislike' : null);
-        setCounts({
-            likes: resource.likes || 0,
-            dislikes: resource.dislikes || 0,
-            downloads: resource.downloads || 0,
-            flags: resource.flags || 0
-        });
-    }, [resource]); // Re-run when resource object changes (including deep updates if ref fetched)
-
-
-    const handleInteraction = async (action: string, value: boolean) => {
-        if (!token) {
-            alert('Please sign in to interact with resources');
-            return false;
-        }
-
-        try {
-            const response = await fetch('/api/resource-interactions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    resourceId: resource._id,
-                    action,
-                    value
-                })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                // Update with server truth
-                setCounts({
-                    likes: data.resource.likes,
-                    dislikes: data.resource.dislikes,
-                    downloads: data.resource.downloads,
-                    flags: data.resource.flags
-                });
-                return true;
-            }
-            return false;
-        } catch (error) {
-            console.error('Interaction failed:', error);
-            return false;
-        }
-    };
-
-    const handleLike = async () => {
-        if (isInteracting) return;
-        setIsInteracting(true);
-
-        const previousVote = userVote;
-        const previousCounts = { ...counts };
-        const newValue = userVote !== 'like';
-
-        // Optimistic update
-        if (newValue) {
-            if (userVote === 'dislike') {
-                setCounts(prev => ({ ...prev, likes: prev.likes + 1, dislikes: prev.dislikes - 1 }));
-            } else {
-                setCounts(prev => ({ ...prev, likes: prev.likes + 1 }));
-            }
-            setUserVote('like');
-        } else {
-            setCounts(prev => ({ ...prev, likes: prev.likes - 1 }));
-            setUserVote(null);
-        }
-
-        const success = await handleInteraction('like', newValue);
-        if (!success) {
-            // Revert
-            setUserVote(previousVote);
-            setCounts(previousCounts);
-        }
-        setIsInteracting(false);
-    };
-
-    const handleDislike = async () => {
-        if (isInteracting) return;
-        setIsInteracting(true);
-
-        const previousVote = userVote;
-        const previousCounts = { ...counts };
-        const newValue = userVote !== 'dislike';
-
-        // Optimistic update
-        if (newValue) {
-            if (userVote === 'like') {
-                setCounts(prev => ({ ...prev, dislikes: prev.dislikes + 1, likes: prev.likes - 1 }));
-            } else {
-                setCounts(prev => ({ ...prev, dislikes: prev.dislikes + 1 }));
-            }
-            setUserVote('dislike');
-        } else {
-            setCounts(prev => ({ ...prev, dislikes: prev.dislikes - 1 }));
-            setUserVote(null);
-        }
-
-        const success = await handleInteraction('dislike', newValue);
-        if (!success) {
-            // Revert
-            setUserVote(previousVote);
-            setCounts(previousCounts);
-        }
-        setIsInteracting(false);
-    };
-
-    const handleSave = async () => {
-        if (isInteracting) return;
-        setIsInteracting(true);
-
-        const previousSaved = isSaved;
-        const newSavedState = !isSaved;
-        setIsSaved(newSavedState); // Optimistic
-
-        const success = await handleInteraction('save', newSavedState);
-        if (!success) {
-            setIsSaved(previousSaved);
-        }
-        setIsInteracting(false);
-    };
-
-    const handleFlag = async () => {
-        if (isInteracting || isReported) return;
-
-        if (confirm('Are you sure you want to flag this resource as risky? This action cannot be undone.')) {
-            setIsInteracting(true);
-            const previousReported = isReported;
-            const previousCounts = { ...counts };
-
-            setIsReported(true);
-            setCounts(prev => ({ ...prev, flags: prev.flags + 1 }));
-
-            const success = await handleInteraction('flag', true);
-            if (!success) {
-                setIsReported(previousReported);
-                setCounts(previousCounts);
-            }
-            setIsInteracting(false);
-        }
-    };
-
-    const handleDownload = async () => {
-        // Don't block download on interaction, just fire and forget mostly, but track count
-        setCounts(prev => ({ ...prev, downloads: prev.downloads + 1 }));
-        handleInteraction('download', true);
-    };
-
-    return (
-        <div className="group flex flex-col h-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-200">
-
-            {/* HEADER: Subject Name & Top Actions */}
-            <div className="flex items-start justify-between mb-3">
-                <div className="flex-1 mr-2 flex flex-wrap gap-2">
-                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-300">
-                        {resource.subject || 'General Resource'}
-                    </span>
-                    {showStatus && resource.status && (
-                        <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border ${resource.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' :
-                            resource.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800' :
-                                'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800'
-                            }`}>
-                            {resource.status}
-                        </span>
-                    )}
-                </div>
-                <div className="flex items-center gap-1">
-                    <button
-                        onClick={(e) => { e.preventDefault(); handleSave(); }}
-                        disabled={isInteracting}
-                        className={`p-1.5 rounded-lg transition-colors ${isSaved ? 'text-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-400 hover:text-blue-500 hover:bg-gray-50 dark:hover:bg-gray-800'} ${isInteracting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        title={isSaved ? "Saved" : "Save Resource"}
-                    >
-                        <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
-                    </button>
-                    <button
-                        onClick={(e) => { e.preventDefault(); handleFlag(); }}
-                        disabled={isInteracting || isReported}
-                        className={`p-1.5 rounded-lg transition-colors ${isReported ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'text-gray-400 hover:text-red-500 hover:bg-gray-50 dark:hover:bg-gray-800'} ${isInteracting || isReported ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        title="Flag as Risky"
-                    >
-                        <Flag className={`w-4 h-4 ${isReported ? 'fill-current' : ''}`} />
-                    </button>
-                    {onDelete && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onDelete(resource._id); }}
-                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                        >
-                            <Trash2 className="w-4 h-4" />
-                        </button>
-                    )}
-                </div>
-            </div>
-
-            {/* BODY: Title & Icon */}
-            <div className="flex items-start gap-3 mb-4 flex-1">
-                <a
-                    href={resource.driveLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={handleDownload}
-                    className="flex-shrink-0 mt-1 w-10 h-10 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center justify-center border border-gray-100 dark:border-gray-700 text-blue-500 group-hover:scale-105 transition-transform"
-                >
-                    <FileText className="w-5 h-5" />
-                </a>
-                <a
-                    href={resource.driveLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={handleDownload}
-                    className="block"
-                >
-                    <h3 className="text-sm font-bold text-gray-900 dark:text-white leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                        {resource.title}
-                    </h3>
-                    <p className="text-[10px] text-gray-400 mt-1">
-                        View file details &rarr;
-                    </p>
-                </a>
-            </div>
-
-            {/* ACTION BAR: Likes/Dislikes & Download */}
-            <div className="pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between mt-auto">
-
-                {/* Left: Voting */}
-                <div className="flex items-center gap-1 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-1">
-                    <button
-                        onClick={handleLike}
-                        disabled={isInteracting}
-                        className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors ${userVote === 'like' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'} ${isInteracting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                        <ThumbsUp className="w-3 h-3" />
-                        <span>{counts.likes}</span>
-                    </button>
-                    <div className="w-px h-3 bg-gray-200 dark:bg-gray-700"></div>
-                    <button
-                        onClick={handleDislike}
-                        disabled={isInteracting}
-                        className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors ${userVote === 'dislike' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'} ${isInteracting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                        <ThumbsDown className="w-3 h-3" />
-                        <span>{counts.dislikes}</span>
-                    </button>
-                    {counts.flags > 0 && (
-                        <>
-                            <div className="w-px h-3 bg-gray-200 dark:bg-gray-700"></div>
-                            <span className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-orange-600">
-                                <Flag className="w-3 h-3" />
-                                {counts.flags}
-                            </span>
-                        </>
-                    )}
-                </div>
-
-                {/* Right: Uploader & Download */}
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5">
-                        {resource.uploaderAvatar ? (
-                            <img src={resource.uploaderAvatar} alt="User" className="w-4 h-4 rounded-full object-cover" />
-                        ) : (
-                            <div className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                                <span className="text-[8px] font-bold text-gray-500">
-                                    {(resource.uploader || 'A').charAt(0).toUpperCase()}
-                                </span>
-                            </div>
-                        )}
-                        <span className="text-[10px] text-gray-500 dark:text-gray-400 max-w-[60px] truncate">
-                            {resource.uploader || 'Anon'}
-                        </span>
-                    </div>
-
-                    <a
-                        href={resource.driveLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={handleDownload}
-                        className="flex items-center gap-1 text-[10px] font-medium text-gray-500 bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded-md hover:text-blue-600 transition-colors"
-                    >
-                        <Download className="w-3 h-3" />
-                        {counts.downloads}
-                    </a>
-                </div>
-            </div>
-        </div>
-    );
-}
 
 const UploadsView = ({ uploads, onUploadRequest, onDelete }: any) => (
     <div className="animate-fade-in">
@@ -393,7 +86,7 @@ const UploadsView = ({ uploads, onUploadRequest, onDelete }: any) => (
                 </div>
             ) : (
                 uploads.map((upload: any) => (
-                    <GridCard key={upload._id} resource={upload} onDelete={onDelete} showStatus={true} />
+                    <ResourceCard key={upload._id} resource={upload} onDelete={onDelete} showStatus={true} />
                 ))
             )}
         </div>
@@ -1199,7 +892,7 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                                 // Grid Layout: 1 column mobile, 2 columns desktop
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in">
                                     {resources.map((resource) => (
-                                        <GridCard key={resource._id} resource={resource} />
+                                        <ResourceCard key={resource._id} resource={resource} />
                                     ))}
                                 </div>
                             )}

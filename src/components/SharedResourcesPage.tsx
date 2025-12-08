@@ -3,10 +3,9 @@ import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import AuthModal from './AuthModal';
 import {
-    Bookmark, FileText, Download,
-    ThumbsUp, ThumbsDown, Flag, Share2, User, LayoutGrid, ArrowRight,
-    Sun, Moon, CloudSun
+    Share2, User, LayoutGrid, FileText, Flag, Sun, Moon, CloudSun
 } from 'lucide-react';
+import ResourceCard from './ResourceCard';
 
 export default function SharedResourcesPage() {
     const { slug } = useParams();
@@ -201,9 +200,8 @@ export default function SharedResourcesPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
                         {data.resources.map((resource: any) => (
                             <div key={resource._id}>
-                                <SharedGridCard
+                                <ResourceCard
                                     resource={resource}
-                                    currentUserToken={token}
                                     onLoginRequest={() => setIsAuthModalOpen(true)}
                                 />
                             </div>
@@ -222,208 +220,4 @@ export default function SharedResourcesPage() {
     );
 }
 
-// --- Compact & Professional Grid Card ---
-const SharedGridCard = ({ resource, currentUserToken, onLoginRequest }: { resource: any, currentUserToken: string | null, onLoginRequest: () => void }) => {
-    // --- Interaction State ---
-    const [isSaved, setIsSaved] = useState(resource.userSaved || false);
-    const [isReported, setIsReported] = useState(resource.userFlagged || false);
-    const [userVote, setUserVote] = useState<'like' | 'dislike' | null>(
-        resource.userLiked ? 'like' : resource.userDisliked ? 'dislike' : null
-    );
-    const [counts, setCounts] = useState({
-        likes: resource.likes || 0,
-        downloads: resource.downloads || 0
-    });
-    const [isInteracting, setIsInteracting] = useState(false);
 
-    // Sync state if resource object changes
-    useEffect(() => {
-        setIsSaved(resource.userSaved || false);
-        setIsReported(resource.userFlagged || false);
-        setUserVote(resource.userLiked ? 'like' : resource.userDisliked ? 'dislike' : null);
-        setCounts({
-            likes: resource.likes || 0,
-            downloads: resource.downloads || 0
-        });
-    }, [resource]);
-
-    const handleInteraction = async (action: string, value: boolean) => {
-        if (!currentUserToken) {
-            onLoginRequest();
-            return;
-        }
-
-        try {
-            const response = await fetch('/api/resource-interactions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${currentUserToken}`
-                },
-                body: JSON.stringify({
-                    resourceId: resource._id,
-                    action,
-                    value
-                })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                setCounts({
-                    likes: data.resource.likes,
-                    downloads: data.resource.downloads
-                });
-            }
-        } catch (error) {
-            console.error('Interaction failed:', error);
-        }
-    };
-
-    const handleLike = () => {
-        if (isInteracting) return;
-        const newValue = userVote !== 'like';
-        setIsInteracting(true);
-
-        if (newValue) {
-            setCounts(prev => ({ ...prev, likes: prev.likes + 1 }));
-            setUserVote('like');
-        } else {
-            setCounts(prev => ({ ...prev, likes: prev.likes - 1 }));
-            setUserVote(null);
-        }
-        handleInteraction('like', newValue).finally(() => setIsInteracting(false));
-    };
-
-    const handleDislike = () => {
-        if (isInteracting) return;
-        const newValue = userVote !== 'dislike';
-        setIsInteracting(true);
-        setUserVote(newValue ? 'dislike' : null);
-        handleInteraction('dislike', newValue).finally(() => setIsInteracting(false));
-    };
-
-    const handleSave = () => {
-        if (isInteracting) return;
-        setIsInteracting(true);
-        setIsSaved(!isSaved);
-        handleInteraction('save', !isSaved).finally(() => setIsInteracting(false));
-    };
-
-    const handleFlag = () => {
-        if (isInteracting || isReported) return;
-        if (confirm('Flag this resource as inappropriate?')) {
-            setIsInteracting(true);
-            setIsReported(true);
-            handleInteraction('flag', true).finally(() => setIsInteracting(false));
-        }
-    };
-
-    const handleDownload = () => {
-        if (isInteracting) return;
-        setIsInteracting(true);
-        setCounts(prev => ({ ...prev, downloads: prev.downloads + 1 }));
-        handleInteraction('download', true).finally(() => setIsInteracting(false));
-    };
-
-    return (
-        <div className="group flex flex-col h-full bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 hover:shadow-xl hover:shadow-blue-900/5 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
-            {/* Top Section: Subject Tag & Actions */}
-            <div className="flex items-start justify-between mb-3 z-10 relative">
-                <div className="flex-1 mr-2">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
-                        {resource.subject || 'General'}
-                    </span>
-                </div>
-
-                {/* Actions (Save/Flag) */}
-                <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
-                    <button
-                        onClick={(e) => { e.preventDefault(); handleSave(); }}
-                        className={`p-1.5 rounded-lg transition-colors ${isSaved
-                            ? 'text-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                            : 'text-gray-400 hover:text-blue-500 hover:bg-gray-50 dark:hover:bg-gray-800'
-                            }`}
-                        title={isSaved ? "Unsave" : "Save"}
-                    >
-                        <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-current' : ''}`} />
-                    </button>
-                    <button
-                        onClick={(e) => { e.preventDefault(); handleFlag(); }}
-                        className={`p-1.5 rounded-lg transition-colors ${isReported
-                            ? 'text-red-500 bg-red-50 dark:bg-red-900/20'
-                            : 'text-gray-400 hover:text-red-500 hover:bg-gray-50 dark:hover:bg-gray-800'
-                            }`}
-                        title="Report"
-                    >
-                        <Flag className={`w-3.5 h-3.5 ${isReported ? 'fill-current' : ''}`} />
-                    </button>
-                </div>
-            </div>
-
-            {/* Main Content */}
-            <div className="flex items-start gap-4 mb-4 flex-1 z-10 relative">
-                <a
-                    href={resource.driveLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={handleDownload}
-                    className="flex-shrink-0 w-12 h-12 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center border border-gray-100 dark:border-gray-700 text-blue-500 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300 shadow-sm"
-                >
-                    <FileText className="w-6 h-6" />
-                </a>
-                <a
-                    href={resource.driveLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={handleDownload}
-                    className="block min-w-0 flex-1"
-                >
-                    <h3 className="text-sm font-bold text-gray-900 dark:text-white leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 mb-1">
-                        {resource.title}
-                    </h3>
-                    <div className="flex items-center text-[10px] text-gray-500 dark:text-gray-400 gap-2">
-                        <span>PDF</span>
-                        <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
-                        <span className="group-hover:translate-x-1 transition-transform inline-flex items-center">
-                            View File <ArrowRight className="w-2.5 h-2.5 ml-0.5" />
-                        </span>
-                    </div>
-                </a>
-            </div>
-
-            {/* FOOTER */}
-            <div className="mt-auto pt-3 border-t border-gray-50 dark:border-gray-800/50 flex items-center justify-between gap-2 z-10 relative">
-                {/* Voting */}
-                <div className="flex items-center gap-1">
-                    <button
-                        onClick={(e) => { e.stopPropagation(); handleLike(); }}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-colors ${userVote === 'like'
-                            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-                            : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'
-                            }`}
-                    >
-                        <ThumbsUp className={`w-3 h-3 ${userVote === 'like' ? 'fill-current' : ''}`} />
-                        <span>{counts.likes}</span>
-                    </button>
-                    <button
-                        onClick={(e) => { e.stopPropagation(); handleDislike(); }}
-                        className={`p-1 rounded-md transition-colors ${userVote === 'dislike'
-                            ? 'text-red-500 bg-red-50 dark:bg-red-900/20'
-                            : 'text-gray-400 hover:text-red-500 hover:bg-gray-50 dark:hover:bg-gray-800'
-                            }`}
-                    >
-                        <ThumbsDown className={`w-3 h-3 ${userVote === 'dislike' ? 'fill-current' : ''}`} />
-                    </button>
-                </div>
-
-                {/* Downloads & Uploader */}
-                <div className="flex items-center gap-3">
-                    <div className="text-[10px] font-medium text-gray-400 flex items-center gap-1">
-                        <Download className="w-3 h-3" />
-                        {counts.downloads}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
