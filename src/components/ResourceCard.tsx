@@ -46,7 +46,8 @@ export default function ResourceCard({
 
     const [isInteracting, setIsInteracting] = useState(false);
 
-    // Sync state if resource object changes (e.g. fresh fetch)
+    // Sync state ONLY on resource._id change, NOT on every prop change
+    // This prevents the useEffect from overriding user interactions
     useEffect(() => {
         setIsSaved(resource.userSaved || false);
         setIsReported(resource.userFlagged || false);
@@ -57,9 +58,9 @@ export default function ResourceCard({
             downloads: resource.downloads || 0,
             flags: resource.flags || 0
         });
-    }, [resource]);
+    }, [resource._id]); // Only trigger on _id change, not entire resource object
 
-    const handleInteraction = async (action: string, value: boolean) => {
+    const handleInteraction = async (action: string, value: boolean): Promise<boolean> => {
         if (!token) return false;
 
         try {
@@ -78,23 +79,28 @@ export default function ResourceCard({
 
             if (response.ok) {
                 const data = await response.json();
-                // Update with simplified data.resource structure if available, or fallback
                 const r = data.resource || data;
-                setCounts({
-                    likes: r.likes,
-                    dislikes: r.dislikes,
-                    downloads: r.downloads,
-                    flags: r.flags
-                });
+
+                // ONLY update counts if we have valid numbers from the server
+                if (typeof r.likes === 'number' && typeof r.dislikes === 'number' &&
+                    typeof r.downloads === 'number' && typeof r.flags === 'number') {
+                    setCounts({
+                        likes: r.likes,
+                        dislikes: r.dislikes,
+                        downloads: r.downloads,
+                        flags: r.flags
+                    });
+                }
                 return true;
             }
+            return false;
         } catch (error) {
             console.error('Interaction failed:', error);
+            return false;
         }
-        return false;
     };
 
-    const handleLike = () => {
+    const handleLike = async () => {
         if (!token) {
             if (onLoginRequest) onLoginRequest();
             return;
@@ -102,28 +108,37 @@ export default function ResourceCard({
         if (isInteracting) return;
 
         const newValue = userVote !== 'like';
-        setIsInteracting(true);
-
-        // Optimistic update
         const prevVote = userVote;
         const prevCounts = { ...counts };
 
+        // Apply optimistic update immediately
+        setIsInteracting(true);
         if (newValue) {
-            setCounts(prev => ({ ...prev, likes: prev.likes + 1, dislikes: prevVote === 'dislike' ? prev.dislikes - 1 : prev.dislikes }));
+            // Liking: add like, remove dislike if exists
+            const likeDelta = 1;
+            const dislikeDelta = prevVote === 'dislike' ? -1 : 0;
+            setCounts(prev => ({
+                ...prev,
+                likes: prev.likes + likeDelta,
+                dislikes: prev.dislikes + dislikeDelta
+            }));
             setUserVote('like');
         } else {
-            setCounts(prev => ({ ...prev, likes: prev.likes - 1 }));
+            // Unliking: remove like only
+            setCounts(prev => ({ ...prev, likes: Math.max(0, prev.likes - 1) }));
             setUserVote(null);
         }
 
-        handleInteraction('like', newValue).catch(() => {
+        const success = await handleInteraction('like', newValue);
+        if (!success) {
             // Revert on error
             setCounts(prevCounts);
             setUserVote(prevVote);
-        }).finally(() => setIsInteracting(false));
+        }
+        setIsInteracting(false);
     };
 
-    const handleDislike = () => {
+    const handleDislike = async () => {
         if (!token) {
             if (onLoginRequest) onLoginRequest();
             return;
@@ -131,46 +146,59 @@ export default function ResourceCard({
         if (isInteracting) return;
 
         const newValue = userVote !== 'dislike';
-        setIsInteracting(true);
-
         const prevVote = userVote;
         const prevCounts = { ...counts };
 
+        setIsInteracting(true);
         if (newValue) {
-            setCounts(prev => ({ ...prev, dislikes: prev.dislikes + 1, likes: prevVote === 'like' ? prev.likes - 1 : prev.likes }));
+            // Disliking: add dislike, remove like if exists
+            const dislikeDelta = 1;
+            const likeDelta = prevVote === 'like' ? -1 : 0;
+            setCounts(prev => ({
+                ...prev,
+                dislikes: prev.dislikes + dislikeDelta,
+                likes: prev.likes + likeDelta
+            }));
             setUserVote('dislike');
         } else {
-            setCounts(prev => ({ ...prev, dislikes: prev.dislikes - 1 }));
+            // Un-disliking: remove dislike only
+            setCounts(prev => ({ ...prev, dislikes: Math.max(0, prev.dislikes - 1) }));
             setUserVote(null);
         }
 
-        handleInteraction('dislike', newValue).catch(() => {
+        const success = await handleInteraction('dislike', newValue);
+        if (!success) {
             setCounts(prevCounts);
             setUserVote(prevVote);
-        }).finally(() => setIsInteracting(false));
+        }
+        setIsInteracting(false);
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!token) {
             if (onLoginRequest) onLoginRequest();
             return;
         }
         if (isInteracting) return;
-        setIsInteracting(true);
 
         const newSavedState = !isSaved;
+        const prevState = isSaved;
+
+        setIsInteracting(true);
         setIsSaved(newSavedState);
 
         if (!newSavedState && onUnsave) {
-            onUnsave(); // Notify parent specifically for SavedResources list removal
+            onUnsave(); // Notify parent
         }
 
-        handleInteraction('save', newSavedState).catch(() => {
-            setIsSaved(!newSavedState);
-        }).finally(() => setIsInteracting(false));
+        const success = await handleInteraction('save', newSavedState);
+        if (!success) {
+            setIsSaved(prevState);
+        }
+        setIsInteracting(false);
     };
 
-    const handleFlag = () => {
+    const handleFlag = async () => {
         if (!token) {
             if (onLoginRequest) onLoginRequest();
             return;
@@ -178,22 +206,37 @@ export default function ResourceCard({
         if (isInteracting || isReported) return;
 
         if (confirm('Flag this resource as inappropriate?')) {
+            const prevReported = isReported;
+            const prevCounts = { ...counts };
+
             setIsInteracting(true);
             setIsReported(true);
             setCounts(prev => ({ ...prev, flags: prev.flags + 1 }));
 
-            handleInteraction('flag', true).catch(() => {
-                setIsReported(false);
-                setCounts(prev => ({ ...prev, flags: prev.flags - 1 }));
-            }).finally(() => setIsInteracting(false));
+            const success = await handleInteraction('flag', true);
+            if (!success) {
+                setIsReported(prevReported);
+                setCounts(prevCounts);
+            }
+            setIsInteracting(false);
         }
     };
 
-    const handleDownload = () => {
+    const handleDownload = async () => {
         if (isInteracting) return;
+
+        const prevCounts = { ...counts };
+
         setIsInteracting(true);
+        // Optimistic increment
         setCounts(prev => ({ ...prev, downloads: prev.downloads + 1 }));
-        handleInteraction('download', true).finally(() => setIsInteracting(false));
+
+        const success = await handleInteraction('download', true);
+        if (!success) {
+            // Revert on failure
+            setCounts(prevCounts);
+        }
+        setIsInteracting(false);
     };
 
     return (
