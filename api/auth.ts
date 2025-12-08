@@ -36,7 +36,7 @@ function generateOtp() {
 async function sendEmail(to: string, subject: string, html: string) {
     try {
         const info = await transporter.sendMail({
-            from: '"Extrovert Community" <otp@extrovert.site>', // Sender address
+            from: '"Extrovert Community" <otp@trilliontip.com>', // Sender address
             to,
             subject,
             html

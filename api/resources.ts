@@ -96,7 +96,7 @@ async function sendUploadNotification(uploaderName: string, uploaderAvatar: stri
         // Send email to all admin users
         const emailPromises = adminUsers.map(admin =>
             transporter.sendMail({
-                from: '"Extrovert Admin" <resources@extrovert.site>',
+                from: '"Extrovert Admin" <resources@trilliontip.com>',
                 to: admin.email,
                 subject: `📚 New Upload: ${resourceTitle} by ${uploaderName}`,
                 html: emailHtml
