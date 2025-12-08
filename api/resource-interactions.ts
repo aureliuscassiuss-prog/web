@@ -152,7 +152,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (updateError) throw updateError;
 
-        return res.status(200).json({ message, ...dbUpdates, ...responseData });
+        return res.status(200).json({
+            message,
+            resource: {
+                ...dbUpdates,
+                ...responseData
+            }
+        });
 
     } catch (error) {
         console.error('Interaction Error:', error);
