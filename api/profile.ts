@@ -100,7 +100,20 @@ async function handleUpdateProfile(req: VercelRequest, userId: string, res: Verc
         allowed.forEach(key => {
             const val = getValue(key);
             if (val !== undefined) {
-                updateFields[key] = val;
+                if (key === 'year' || key === 'semester') {
+                    // Extract number from string (e.g., "1st Year" -> 1, "Sem-3" -> 3)
+                    const numStr = String(val).replace(/\D/g, '');
+                    const num = parseInt(numStr);
+                    if (!isNaN(num) && numStr.length > 0) {
+                        updateFields[key] = num;
+                    } else {
+                        // Fallback: try parsing direct value if it's already a number
+                        const directNum = parseInt(val as string);
+                        if (!isNaN(directNum)) updateFields[key] = directNum;
+                    }
+                } else {
+                    updateFields[key] = val;
+                }
             }
         });
 

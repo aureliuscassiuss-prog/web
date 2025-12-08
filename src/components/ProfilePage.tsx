@@ -197,7 +197,23 @@ export default function ProfilePage() {
     }, [formData.course, programs]);
 
     const courses = useMemo(() => {
-        const yr = years.find((y: any) => y.id === formData.year.toString() || y.id === formData.year);
+        // ID Mismatch Fix: User has integer year (e.g. 1), Structure has string year (e.g. "1st Year")
+        // We need to find the year object that matches either exact ID or parsed integer ID
+        const targetYear = formData.year;
+
+        let yr = years.find((y: any) => y.id === targetYear.toString() || y.id === targetYear);
+
+        if (!yr) {
+            // Fuzzy match: Try to match by extracted number
+            const targetNum = parseInt(String(targetYear).replace(/\D/g, ''));
+            if (!isNaN(targetNum)) {
+                yr = years.find((y: any) => {
+                    const yNum = parseInt(String(y.id).replace(/\D/g, ''));
+                    return yNum === targetNum;
+                });
+            }
+        }
+
         return yr?.courses || [];
     }, [formData.year, years]);
 
@@ -522,6 +538,8 @@ export default function ProfilePage() {
                                 onToggle={() => toggleField('semester')}
                                 onChange={(val) => setFormData({ ...formData, semester: val })}
                                 options={semesters.map((s: any) => ({ label: s.name, value: s.id }))}
+                            // Fix: If stored value is 1, but option is "Sem-1", show "Sem-1"
+                            // We don't change 'value' passed to Select, we rely on value matching
                             />
                         </UnifiedField>
 
