@@ -165,6 +165,7 @@ async function handleUpdateProfile(req: VercelRequest, userId: string, res: Verc
                 course: result.course,
                 year: result.year,
                 gender: result.gender,
+                role: result.role, // CRITICAL FIX: Return role so frontend context doesn't lose admin status
                 reputation: result.reputation || 0
             }
         });
