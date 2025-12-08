@@ -215,7 +215,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 description: description || '',
                 course: course || 'B.Tech',
                 branch,
-                year: yearNum ? String(yearNum) : (year ? String(year) : '1'), // Store as string to match schema text type
+                year: String(parseInt(String(yearNum || year || '1').replace(/\D/g, '')) || '1'), // Sanitize: "1st Year" -> "1"
                 semester: semester || '',
                 subject,
                 unit: storedUnit,
