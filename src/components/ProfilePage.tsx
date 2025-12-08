@@ -149,19 +149,29 @@ const findMatchingValue = (dbValue: any, options: { label: string, value: string
 
     // 1. Exact / Normalized String Match (Value)
     const exact = options.find(opt => String(opt.value).trim().toLowerCase() === strDbValue);
-    if (exact) return exact.value;
+    if (exact) {
+        // console.log(`[ExactMatch] Matched ${strDbValue} to ${exact.value}`);
+        return exact.value;
+    }
 
     // 2. Fuzzy Match (Integer check)
     // Extract digits: "1st Year" -> 1, "Sem-3" -> 3
     const numDbVal = parseInt(strDbValue.replace(/\D/g, ''));
-    if (!isNaN(numDbVal)) {
+
+    // SAFETY: Only fuzzy match if the number is plausible (e.g. < 100). 
+    // Prevents "temp_173..." (timestamp) from matching "1" if logic was flawed, 
+    // though strict equality check should usually handle it.
+    if (!isNaN(numDbVal) && numDbVal < 100) {
         // First try matching VALUE (if ID is "1", "year_1", etc.)
         const fuzzyValue = options.find(opt => {
             const optValStr = String(opt.value).trim().toLowerCase();
             const optNum = parseInt(optValStr.replace(/\D/g, ''));
             return optNum === numDbVal;
         });
-        if (fuzzyValue) return fuzzyValue.value;
+        if (fuzzyValue) {
+            console.log(`[FuzzyValue] Matched ${dbValue} (${numDbVal}) to ${fuzzyValue.value}`);
+            return fuzzyValue.value;
+        }
 
         // Fallback: Match LABEL (if ID is UUID, match "1st" -> 1)
         const fuzzyLabel = options.find(opt => {
@@ -169,9 +179,13 @@ const findMatchingValue = (dbValue: any, options: { label: string, value: string
             const optNum = parseInt(optLblStr.replace(/\D/g, ''));
             return optNum === numDbVal;
         });
-        if (fuzzyLabel) return fuzzyLabel.value;
+        if (fuzzyLabel) {
+            console.log(`[FuzzyLabel] Matched ${dbValue} (${numDbVal}) to ${fuzzyLabel.value} (Label: ${fuzzyLabel.label})`);
+            return fuzzyLabel.value;
+        }
     }
 
+    // console.log(`[NoMatch] Returning original: ${dbValue}`);
     return dbValue;
 };
 
