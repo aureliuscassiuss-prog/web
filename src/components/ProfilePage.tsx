@@ -140,6 +140,27 @@ const CustomSelect = ({
     );
 };
 
+// Helper: Match DB value (e.g. 1) with Option Value (e.g. "1st Year")
+const findMatchingValue = (dbValue: any, options: { label: string, value: string | number }[]) => {
+    if (!dbValue) return '';
+
+    // 1. Exact Match
+    const exact = options.find(opt => String(opt.value) === String(dbValue));
+    if (exact) return exact.value;
+
+    // 2. Fuzzy Match (Integer check)
+    const numVal = parseInt(String(dbValue).replace(/\D/g, ''));
+    if (!isNaN(numVal)) {
+        const fuzzy = options.find(opt => {
+            const optNum = parseInt(String(opt.value).replace(/\D/g, ''));
+            return optNum === numVal;
+        });
+        if (fuzzy) return fuzzy.value;
+    }
+
+    return dbValue;
+};
+
 export default function ProfilePage() {
     const { user, updateUser, logout } = useAuth();
     // const navigate = useNavigate(); // Removed unused
@@ -521,7 +542,7 @@ export default function ProfilePage() {
                         {/* Year - Expandable */}
                         <UnifiedField label="Year" icon={Calendar} isEditing={isEditing}>
                             <CustomSelect
-                                value={formData.year}
+                                value={findMatchingValue(formData.year, years.map((y: any) => ({ label: y.name, value: y.id })))}
                                 disabled={!isEditing || !formData.course}
                                 placeholder="Select Year"
                                 isOpen={activeField === 'year'}
@@ -535,7 +556,7 @@ export default function ProfilePage() {
                         <div className="md:col-span-2">
                             <UnifiedField label="Branch / Department" icon={Hash} isEditing={isEditing}>
                                 <CustomSelect
-                                    value={formData.branch}
+                                    value={findMatchingValue(formData.branch, courses.map((c: any) => ({ label: c.name, value: c.id })))}
                                     disabled={!isEditing || !formData.year}
                                     placeholder="Select Branch"
                                     isOpen={activeField === 'branch'}
@@ -549,7 +570,7 @@ export default function ProfilePage() {
                         {/* Semester - Expandable */}
                         <UnifiedField label="Current Semester" isEditing={isEditing} icon={null}>
                             <CustomSelect
-                                value={formData.semester}
+                                value={findMatchingValue(formData.semester, semesters.map((s: any) => ({ label: s.name, value: s.id })))}
                                 disabled={!isEditing || !formData.branch}
                                 placeholder="Select Semester"
                                 isOpen={activeField === 'semester'}
