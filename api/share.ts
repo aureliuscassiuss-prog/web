@@ -78,7 +78,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 if (sharedList.resources && sharedList.resources.length > 0) {
                     const { data: resData } = await supabase
                         .from('resources')
-                        .select('*, uploader:users(avatar)')
+                        .select('*, uploaderRel:users(avatar)')
                         .in('_id', sharedList.resources)
                         .eq('status', 'approved')
                         .order('createdAt', { ascending: false });
@@ -96,7 +96,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 // Fetch that user's saved resources
                 const { data: resData } = await supabase
                     .from('resources')
-                    .select('*, uploader:users(avatar)')
+                    .select('*, uploaderRel:users(avatar)')
                     .contains('savedBy', [owner._id]) // Check if owner ID is in savedBy array
                     .eq('status', 'approved')
                     .order('createdAt', { ascending: false });
@@ -107,7 +107,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             // Map data
             const mappedResources = resources.map((r: any) => ({
                 ...r,
-                uploaderAvatar: r.uploader?.avatar,
+                uploaderAvatar: r.uploaderRel?.avatar,
                 // Add current user interactions if needed (omitted for brevity but can be added similarly to other endpoints)
             }));
 
