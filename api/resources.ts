@@ -57,7 +57,7 @@ async function sendUploadNotification(uploaderName: string, uploaderAvatar: stri
             <body>
                 <div class="container">
                     <div class="header">
-                        <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -1px;">UniNotes</h1>
+                        <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -1px;">Extrovert Community</h1>
                         <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 16px;">New Resource Submission</p>
                     </div>
                     <div class="content">
@@ -85,7 +85,7 @@ async function sendUploadNotification(uploaderName: string, uploaderAvatar: stri
                     </div>
                     
                     <div class="footer">
-                        <p style="margin: 0;">&copy; ${new Date().getFullYear()} UniNotes Admin System</p>
+                        <p style="margin: 0;">&copy; ${new Date().getFullYear()} Extrovert Admin System</p>
                         <p style="margin: 8px 0 0 0;">You received this because you are an admin or content reviewer.</p>
                     </div>
                 </div>
@@ -96,7 +96,7 @@ async function sendUploadNotification(uploaderName: string, uploaderAvatar: stri
         // Send email to all admin users
         const emailPromises = adminUsers.map(admin =>
             transporter.sendMail({
-                from: '"UniNotes Admin" <otp@trilliontip.com>',
+                from: '"Extrovert Admin" <resources@extrovert.site>',
                 to: admin.email,
                 subject: `📚 New Upload: ${resourceTitle} by ${uploaderName}`,
                 html: emailHtml

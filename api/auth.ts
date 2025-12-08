@@ -36,7 +36,7 @@ function generateOtp() {
 async function sendEmail(to: string, subject: string, html: string) {
     try {
         const info = await transporter.sendMail({
-            from: '"UniNotes" <otp@trilliontip.com>', // Sender address
+            from: '"Extrovert Community" <otp@extrovert.site>', // Sender address
             to,
             subject,
             html
@@ -163,18 +163,18 @@ async function handleRegister(body: any, res: VercelResponse) {
             'Verify your UniNotes Account',
             `<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e5e7eb;">
                 <div style="background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); padding: 32px; text-align: center;">
-                    <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -1px;">UniNotes</h1>
+                    <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -1px;">Extrovert Community</h1>
                 </div>
                 <div style="padding: 40px 32px; text-align: center;">
                     <h2 style="color: #1f2937; margin-top: 0; font-size: 24px;">Verify Your Account</h2>
-                    <p style="color: #4b5563; font-size: 16px; line-height: 1.5; margin-bottom: 24px;">Welcome to UniNotes! Please use the verification code below to complete your registration:</p>
+                    <p style="color: #4b5563; font-size: 16px; line-height: 1.5; margin-bottom: 24px;">Welcome to Extrovert! Please use the verification code below to complete your registration:</p>
                     <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; display: inline-block; margin-bottom: 24px;">
                         <span style="font-family: monospace; font-size: 32px; font-weight: 700; color: #4f46e5; letter-spacing: 4px;">${otp}</span>
                     </div>
                     <p style="color: #6b7280; font-size: 14px;">This code will expire in 10 minutes.</p>
                 </div>
                 <div style="background-color: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e5e7eb;">
-                    <p style="color: #9ca3af; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} UniNotes. All rights reserved.</p>
+                    <p style="color: #9ca3af; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} Extrovert Community. All rights reserved.</p>
                 </div>
              </div>`
         );
@@ -422,7 +422,7 @@ async function handleForgotPassword(body: any, res: VercelResponse) {
             'Reset your UniNotes Password',
             `<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e5e7eb;">
                 <div style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); padding: 32px; text-align: center;">
-                    <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -1px;">UniNotes</h1>
+                    <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -1px;">Extrovert Community</h1>
                 </div>
                 <div style="padding: 40px 32px; text-align: center;">
                     <h2 style="color: #1f2937; margin-top: 0; font-size: 24px;">Password Reset</h2>
@@ -434,7 +434,7 @@ async function handleForgotPassword(body: any, res: VercelResponse) {
                     <p style="color: #9ca3af; font-size: 12px; margin-top: 20px;">If you didn't request a password reset, you can safely ignore this email.</p>
                 </div>
                 <div style="background-color: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e5e7eb;">
-                    <p style="color: #9ca3af; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} UniNotes. All rights reserved.</p>
+                    <p style="color: #9ca3af; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} Extrovert Community. All rights reserved.</p>
                 </div>
              </div>`
         );
