@@ -68,7 +68,7 @@ export default function SharedResourcesPage() {
     // --- Premium Loading State (Spinner) ---
     if (isLoading) {
         return (
-            <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gray-50 dark:bg-black font-sans overflow-hidden touch-none">
+            <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-gray-50 dark:bg-black font-sans overflow-hidden">
                 <div className="relative mb-6">
                     <div className="absolute inset-0 bg-blue-500/20 blur-3xl rounded-full" />
                     <div className="relative w-28 h-28 sm:w-32 sm:h-32">
