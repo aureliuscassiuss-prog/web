@@ -58,7 +58,7 @@ export default function ResourceCard({
             downloads: resource.downloads || 0,
             flags: resource.flags || 0
         });
-    }, [resource._id]); // Only trigger on _id change, not entire resource object
+    }, [resource._id, resource.userSaved, resource.userFlagged, resource.userLiked, resource.userDisliked, resource.likes, resource.dislikes, resource.downloads, resource.flags]);
 
     const handleInteraction = async (action: string, value: boolean): Promise<boolean> => {
         if (!token) return false;
