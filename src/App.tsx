@@ -48,6 +48,16 @@ function Layout({
   spotlight
 }: any) {
   const navigate = useNavigate()
+  const location = useLocation();
+  const isSharedPage = location.pathname.startsWith('/shared/') || location.pathname.startsWith('/share/');
+
+  if (isSharedPage) {
+    return (
+      <div className="bg-white dark:bg-black min-h-screen">
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col bg-white dark:bg-black text-gray-950 dark:text-gray-50 transition-colors duration-200 font-sans selection:bg-gray-900 selection:text-white dark:selection:bg-gray-100 dark:selection:text-black min-h-screen">
