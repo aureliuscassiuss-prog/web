@@ -44,32 +44,99 @@ function Layout({
   onAuthClick,
   user,
   isDark,
-  const { user, isLoading } = useAuth()
+  toggleTheme,
+  spotlight
+}: any) {
   const navigate = useNavigate()
-  const [hasShownModal, setHasShownModal] = useState(false)
 
-  useEffect(() => {
-  // Wait for auth state to load before checking authentication
-  if (!isLoading && !user && !hasShownModal) {
-    onAuthRequired()
-    setHasShownModal(true)
-    // Redirect to home after a brief delay to allow modal to show
-    setTimeout(() => {
-      navigate('/')
-    }, 100)
-  }
-}, [user, isLoading, hasShownModal, onAuthRequired, navigate])
+  return (
+    <div className="flex flex-col bg-white dark:bg-black text-gray-950 dark:text-gray-50 transition-colors duration-200 font-sans selection:bg-gray-900 selection:text-white dark:selection:bg-gray-100 dark:selection:text-black min-h-screen">
 
-// Show nothing while loading auth state
-if (isLoading) {
-  return null
-}
+      {/* 1. Sticky Top Navigation (Glassmorphism) */}
+      <Header
+        onUploadClick={onUploadClick}
+        onAuthClick={onAuthClick}
+        onProfileClick={() => navigate('/profile')}
+        onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        user={user}
+      />
 
-if (!user) {
-  return null // Don't render anything while redirecting
-}
+      <div className="flex flex-1 items-start gap-10 px-4 sm:px-6 md:px-8 pt-6 max-w-[1600px] mx-auto w-full">
 
-return <>{children}</>
+        {/* 2. Sticky Left Sidebar (Hidden on Mobile) */}
+        <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-[240px] flex-col overflow-y-auto md:flex shrink-0">
+          <Sidebar
+            isMobileMenuOpen={isMobileMenuOpen}
+            onMobileMenuClose={() => setIsMobileMenuOpen(false)}
+            isDark={isDark}
+            toggleTheme={toggleTheme}
+            spotlight={spotlight}
+          />
+        </aside>
+
+        {/* 3. Main Content Area */}
+        <main className="flex-1 min-w-0 animate-fade-in pb-10">
+          {children}
+        </main>
+      </div>
+
+      {/* Footer */}
+      <Footer />
+
+      {/* Mobile Sidebar Overlay */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              key="backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
+              onClick={() => setIsMobileMenuOpen(false)}
+            />
+
+            {/* Sidebar with slide animation */}
+            <motion.div
+              key="sidebar"
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-y-0 left-0 z-50 w-3/4 max-w-sm bg-white dark:bg-black shadow-2xl flex flex-col md:hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header with Logo and Close Button */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800">
+                <div className="flex items-center gap-2">
+                  <img src="/LOGO.png" alt="Extrovert Logo" className="w-6 h-6 rounded-md object-contain" />
+                  <span className="font-semibold text-base text-gray-900 dark:text-white">Extrovert</span>
+                </div>
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-1.5 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Sidebar Content */}
+              <div className="flex-1 overflow-y-auto">
+                <Sidebar
+                  isMobileMenuOpen={true}
+                  onMobileMenuClose={() => setIsMobileMenuOpen(false)}
+                  isDark={isDark}
+                  toggleTheme={toggleTheme}
+                  spotlight={spotlight}
+                />
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  )
 }
 
 // Protected Admin Route Component
