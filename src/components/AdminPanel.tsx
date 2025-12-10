@@ -849,18 +849,7 @@ export default function AdminPanel() {
                             icon={<Settings size={16} />}
                             label="Structure"
                         />
-                        <TabButton
-                            active={activeTab === 'requests'}
-                            onClick={() => {
-                                if (activeTab !== 'requests') {
-                                    setIsLoading(true)
-                                    setActiveTab('requests')
-                                }
-                            }}
-                            icon={<Shield size={16} />}
-                            label="Role Requests"
-                            count={roleRequests.length}
-                        />
+
                     </div>
                 </div>
                 {/* --- NAVIGATION TABS END --- */}
