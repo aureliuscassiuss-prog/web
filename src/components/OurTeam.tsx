@@ -85,11 +85,6 @@ const TeamCard = ({ member, index }: { member: TeamMember, index: number }) => (
                         <Github size={16} />
                     </a>
                 )}
-                {member.socials.linkedin && (
-                    <a href={member.socials.linkedin} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-blue-600 hover:text-white text-gray-600 dark:text-gray-400 transition-colors">
-                        <Linkedin size={16} />
-                    </a>
-                )}
             </div>
         </div>
     </motion.div>
@@ -99,7 +94,7 @@ export default function OurTeam() {
     // Logic Integration
     const { user, token } = useAuth()
     const [isLoading, setIsLoading] = useState(true)
-    const [teamData, setTeamData] = useState<any[]>([])
+    const [teamData, setTeamData] = useState<TeamMember[]>([])
     const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
 
@@ -109,10 +104,52 @@ export default function OurTeam() {
                 const res = await fetch('/api/admin?action=team')
                 if (res.ok) {
                     const data = await res.json()
-                    setTeamData(data.team || [])
+                    console.log('Fetched team data:', data.team) // For debugging
+                    const dbMembers: TeamMember[] = (data.team || []).map((u: any) => {
+                        let title = ''
+                        let bio = ''
+                        let highlight = false
+                        let displayRole = ''
+
+                        if (u.role === 'admin') {
+                            title = 'Founder & Visionary'
+                            bio = 'Building the future of student collaboration.'
+                            highlight = true
+                            displayRole = 'admin'
+                        } else if (u.role === 'semi-admin') {
+                            title = 'Operations & Community'
+                            bio = 'Ensuring smooth operations and community growth.'
+                            displayRole = 'semi-admin'
+                        } else if (u.role === 'content-reviewer') {
+                            title = 'Structure Manager'
+                            bio = 'Curating high-quality academic resources.'
+                            displayRole = 'content-reviewer'
+                        }
+
+                        return {
+                            name: u.name,
+                            role: displayRole, // internal role
+                            title: title, // display title
+                            image: u.avatar || `https://ui-avatars.com/api/?name=${u.name}&background=random`,
+                            bio: bio,
+                            highlight: highlight,
+                            socials: {
+                                // Placeholder socials as our DB might not have them yet
+                                github: u.github || '#',
+                                // linkedin: HIDDEN as per request
+                            }
+                        }
+                    })
+
+                    setTeamData(dbMembers)
                 }
-            } catch (e) { console.error(e) } finally { setIsLoading(false) }
+            } catch (error) {
+                console.error('Team fetch error:', error)
+            } finally {
+                setIsLoading(false)
+            }
         }
+
         fetchTeam()
     }, [])
 
@@ -133,18 +170,20 @@ export default function OurTeam() {
     // Display Founder fallback
     const displayFounder: TeamMember = founder ? {
         name: founder.name,
-        title: 'Founder & Visionary',
-        image: founder.avatar || `https://ui-avatars.com/api/?name=${founder.name}`,
-        bio: 'Building the future of student collaboration.',
-        socials: { linkedin: '#' },
-        highlight: true
+        title: founder.title,
+        image: founder.image,
+        bio: founder.bio,
+        socials: { github: founder.socials.github || '#' },
+        highlight: true,
+        role: founder.role
     } : {
         name: 'Trillion Tip',
         title: 'Founder & Visionary',
         image: 'https://github.com/trilliontip.png',
         bio: 'Leading the vision for a connected student ecosystem.',
-        socials: { linkedin: '#' },
-        highlight: true
+        socials: { github: '#' },
+        highlight: true,
+        role: 'admin'
     }
 
     const sections = [

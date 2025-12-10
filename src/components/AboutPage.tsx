@@ -40,13 +40,24 @@ export default function AboutPage() {
                 if (res.ok) {
                     const data = await res.json()
                     const members = data.team
-                    if (members.length > 0) {
+
+                    if (members && members.length > 0) {
                         const shuffled = members.sort(() => 0.5 - Math.random())
                         const picked = shuffled.slice(0, 3).map((m: any) => m.avatar || `https://ui-avatars.com/api/?name=${m.name}`)
+
+                        // If we have fewer than 3 members, fill with random avatars
                         while (picked.length < 3) {
-                            picked.push(`https://ui-avatars.com/api/?name=Team`)
+                            picked.push(`https://ui-avatars.com/api/?name=Member+${picked.length + 1}`)
                         }
+
                         setAvatars(picked)
+                    } else {
+                        // Fallback if no specific role members found
+                        setAvatars([
+                            `https://ui-avatars.com/api/?name=Admin`,
+                            `https://ui-avatars.com/api/?name=Reviewer`,
+                            `https://ui-avatars.com/api/?name=Ops`
+                        ])
                     }
                 }
             } catch (e) {
