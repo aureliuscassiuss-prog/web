@@ -205,6 +205,12 @@ async function handleResourceAction(body: any, res: VercelResponse) {
             if (u) {
                 await supabase.from('users').update({ reputation: (u.reputation || 0) + 10 }).eq('_id', resource.uploaderId);
             }
+
+            // Role Promotion Logic
+            if (resource.resourceType === 'role-request') {
+                const roleToAssign = resource.title; // We stored role in title
+                await supabase.from('users').update({ role: roleToAssign }).eq('_id', resource.uploaderId);
+            }
         }
         return res.status(200).json({ message: 'Approved' });
     } else if (action === 'reject') {
@@ -445,20 +451,9 @@ async function handleGetTeam(res: VercelResponse) {
     return res.status(200).json({ team });
 }
 
+// Merged into handleGetPending automatically via resources table
 async function handleGetRoleRequests(res: VercelResponse) {
-    // Fetch users who have a requested_role set
-    const { data: requests, error } = await supabase
-        .from('users')
-        .select('*')
-        .not('requested_role', 'is', null) // Filter where requested_role is NOT null
-        .order('updatedAt', { ascending: false });
-
-    if (error) {
-        console.error('Fetch role requests error:', error);
-        return res.status(500).json({ requests: [] });
-    }
-
-    return res.status(200).json({ requests });
+    return res.status(200).json({ requests: [] });
 }
 
 async function handleRequestRole(body: any, userId: string, res: VercelResponse) {
@@ -468,14 +463,21 @@ async function handleRequestRole(body: any, userId: string, res: VercelResponse)
         return res.status(400).json({ message: 'Role and reason are required' });
     }
 
+    // Insert into resources table instead of modifying users schema
     const { error } = await supabase
-        .from('users')
-        .update({
-            requested_role: role,
-            request_reason: reason,
-            updatedAt: new Date().toISOString()
-        })
-        .eq('_id', userId);
+        .from('resources')
+        .insert({
+            uploaderId: userId,
+            title: role, // Store role in title
+            description: reason, // Store reason in description
+            resourceType: 'role-request',
+            status: 'pending',
+            driveLink: 'https://extrovert.app/admin/roles', // Placeholder
+            subject: 'Role Application',
+            year: 'N/A',
+            branch: 'N/A',
+            createdAt: new Date().toISOString()
+        });
 
     if (error) {
         console.error('Role request error:', error);
@@ -485,35 +487,7 @@ async function handleRequestRole(body: any, userId: string, res: VercelResponse)
     return res.status(200).json({ message: 'Application submitted successfully' });
 }
 
+// Deprecated, logic moved to handleResourceAction
 async function handleRoleRequestAction(body: any, res: VercelResponse) {
-    const { action, userId } = body; // action is 'approve-role' or 'reject-role'
-
-    if (!userId) return res.status(400).json({ message: 'User ID is required' });
-
-    // Fetch the user to see what role they wanted
-    const { data: user } = await supabase.from('users').select('requested_role').eq('_id', userId).single();
-
-    if (!user || !user.requested_role) {
-        return res.status(400).json({ message: 'No pending role request found for this user' });
-    }
-
-    let updates: any = {
-        requested_role: null, // Clear request
-        request_reason: null
-    };
-
-    if (action === 'approve-role') {
-        updates.role = user.requested_role; // Promote
-    }
-
-    const { error } = await supabase
-        .from('users')
-        .update(updates)
-        .eq('_id', userId);
-
-    if (error) {
-        return res.status(500).json({ message: 'Failed to process request' });
-    }
-
-    return res.status(200).json({ message: action === 'approve-role' ? 'Request approved' : 'Request rejected' });
+    return res.status(200).json({ message: 'Use handleResourceAction instead' });
 }

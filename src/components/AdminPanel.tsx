@@ -104,8 +104,7 @@ export default function AdminPanel() {
     }, [activeTab])
     const [pendingResources, setPendingResources] = useState<PendingResource[]>([])
     const [users, setUsers] = useState<UserData[]>([])
-    const [roleRequests, setRoleRequests] = useState<UserData[]>([])
-    const [combinedFeed, setCombinedFeed] = useState<CombinedRequest[]>([])
+    // combined logic removed as multiple sources merged in DB
     const [structure, setStructure] = useState<{ programs: Program[] }>({ programs: [] })
     const [unsavedChanges, setUnsavedChanges] = useState<string[]>([])
     const [editingId, setEditingId] = useState<string | null>(null)
@@ -176,10 +175,7 @@ export default function AdminPanel() {
         const fetchData = async () => {
             setIsLoading(true)
             try {
-                if (activeTab === 'pending') {
-                    // Fetch both resources and requests
-                    await Promise.all([fetchPendingResources(), fetchRoleRequests()])
-                }
+                if (activeTab === 'pending') await fetchPendingResources()
                 else if (activeTab === 'users') await fetchUsers()
                 else if (activeTab === 'structure') await fetchStructure()
             } catch (err) {
@@ -192,27 +188,28 @@ export default function AdminPanel() {
     }, [activeTab])
 
     // Detect changes in pendingResources or roleRequests and re-combine
-    useEffect(() => {
-        if (activeTab === 'pending') {
-            const resourceItems: CombinedRequest[] = pendingResources.map(r => ({
-                type: 'resource',
-                data: r,
-                date: r.createdAt
-            }))
+    // This useEffect is no longer needed as role requests are now part of pendingResources
+    // useEffect(() => {
+    //     if (activeTab === 'pending') {
+    //         const resourceItems: CombinedRequest[] = pendingResources.map(r => ({
+    //             type: 'resource',
+    //             data: r,
+    //             date: r.createdAt
+    //         }))
 
-            const roleItems: CombinedRequest[] = roleRequests.map(u => ({
-                type: 'role',
-                data: u,
-                date: u.updatedAt || new Date().toISOString()
-            }))
+    //         const roleItems: CombinedRequest[] = roleRequests.map(u => ({
+    //             type: 'role',
+    //             data: u,
+    //             date: u.updatedAt || new Date().toISOString()
+    //         }))
 
-            const merged = [...resourceItems, ...roleItems].sort((a, b) =>
-                new Date(b.date).getTime() - new Date(a.date).getTime()
-            )
+    //         const merged = [...resourceItems, ...roleItems].sort((a, b) =>
+    //             new Date(b.date).getTime() - new Date(a.date).getTime()
+    //         )
 
-            setCombinedFeed(merged)
-        }
-    }, [pendingResources, roleRequests, activeTab])
+    //         setCombinedFeed(merged)
+    //     }
+    // }, [pendingResources, roleRequests, activeTab])
 
     // --- API Calls ---
     const fetchPendingResources = async () => {
@@ -243,11 +240,7 @@ export default function AdminPanel() {
         }
     }
 
-    const fetchRoleRequests = async () => {
-        const res = await fetch('/api/admin?action=role-requests', { headers: { 'Authorization': `Bearer ${token}` } })
-        const data = await res.json()
-        if (res.ok) setRoleRequests(data.requests || [])
-    }
+
 
     // --- Actions ---
     const handleResourceAction = async (resourceId: string, action: 'approve' | 'reject') => {
@@ -260,7 +253,7 @@ export default function AdminPanel() {
             })
             if (res.ok) {
                 setPendingResources(prev => prev.filter(r => r._id !== resourceId))
-                showToast(`Resource ${action}ed successfully`)
+                showToast(`Item ${action}ed successfully`)
             }
         } catch (err) { console.error(err); showToast('Action failed', 'error') } finally { setProcessingId(null) }
     }
@@ -285,20 +278,21 @@ export default function AdminPanel() {
         } catch (err) { console.error(err); showToast('Action failed', 'error') } finally { setProcessingId(null) }
     }
 
-    const handleRoleRequestAction = async (userId: string, action: 'approve-role' | 'reject-role') => {
-        setProcessingId(userId)
-        try {
-            const res = await fetch('/api/admin', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ action, userId })
-            })
-            if (res.ok) {
-                setRoleRequests(prev => prev.filter(r => r._id !== userId))
-                showToast(action === 'approve-role' ? 'Role Approved' : 'Request Rejected')
-            }
-        } catch (err) { console.error(err); showToast('Action failed', 'error') } finally { setProcessingId(null) }
-    }
+    // handleRoleRequestAction is no longer needed as it's merged into handleResourceAction
+    // const handleRoleRequestAction = async (userId: string, action: 'approve-role' | 'reject-role') => {
+    //     setProcessingId(userId)
+    //     try {
+    //         const res = await fetch('/api/admin', {
+    //             method: 'POST',
+    //             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    //             body: JSON.stringify({ action, userId })
+    //         })
+    //         if (res.ok) {
+    //             setRoleRequests(prev => prev.filter(r => r._id !== userId))
+    //             showToast(action === 'approve-role' ? 'Role Approved' : 'Request Rejected')
+    //         }
+    //     } catch (err) { console.error(err); showToast('Action failed', 'error') } finally { setProcessingId(null) }
+    // }
 
     const handleStructureAdd = (type: 'program' | 'year' | 'semester' | 'course' | 'subject' | 'unit' | 'video', value: string) => {
         if (!value.trim()) return
@@ -825,7 +819,7 @@ export default function AdminPanel() {
                             }}
                             icon={<Clock size={16} />}
                             label="Approvals"
-                            count={pendingResources.length + roleRequests.length}
+                            count={pendingResources.length}
                         />
                         <TabButton
                             active={activeTab === 'users'}
@@ -861,7 +855,7 @@ export default function AdminPanel() {
                         </div>
                     ) : (
                         <>
-                            {activeTab === 'pending' && <motion.div key="pending" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}><PendingView items={combinedFeed} processingId={processingId} onResourceAction={handleResourceAction} onRoleAction={handleRoleRequestAction} /></motion.div>}
+                            {activeTab === 'pending' && <motion.div key="pending" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}><PendingView resources={pendingResources} processingId={processingId} onAction={handleResourceAction} /></motion.div>}
                             {activeTab === 'users' && <motion.div key="users" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}><UsersView users={users} processingId={processingId} onAction={handleUserAction} /></motion.div>}
                             {activeTab === 'structure' && <motion.div key="structure" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}>
                                 <div className="grid grid-cols-1 md:flex md:gap-6 md:overflow-x-auto md:pb-8 gap-6">
@@ -1130,7 +1124,7 @@ function StructureCard({ title, step, items, value, setValue, extraInput, onAdd,
     )
 }
 
-function PendingView({ items, processingId, onResourceAction, onRoleAction }: { items: CombinedRequest[], processingId: string | null, onResourceAction: any, onRoleAction: any }) {
+function PendingView({ resources, processingId, onAction }: { resources: PendingResource[], processingId: string | null, onAction: any }) {
     const [expandedIds, setExpandedIds] = useState<string[]>([])
 
     const toggleExpand = (id: string) => {
@@ -1145,7 +1139,7 @@ function PendingView({ items, processingId, onResourceAction, onRoleAction }: { 
         </svg>
     )
 
-    if (!Array.isArray(items) || items.length === 0) {
+    if (!Array.isArray(resources) || resources.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-64 text-gray-400 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
                 <Check size={48} className="mb-4 opacity-20" />
@@ -1156,10 +1150,9 @@ function PendingView({ items, processingId, onResourceAction, onRoleAction }: { 
 
     return (
         <div className="space-y-2">
-            {items.map((item: CombinedRequest) => {
-                const combinedId = item.type === 'resource' ? (item.data as PendingResource)._id : (item.data as UserData)._id
-                const isExpanded = expandedIds.includes(combinedId)
-                const isProcessing = processingId === combinedId
+            {resources.map((resource: PendingResource) => {
+                const isExpanded = expandedIds.includes(resource._id)
+                const isProcessing = processingId === resource._id
 
                 // Helper to render date
                 const renderDate = (dateStr: string) => {
@@ -1172,37 +1165,39 @@ function PendingView({ items, processingId, onResourceAction, onRoleAction }: { 
                     return 'Unknown Date'
                 }
 
-                const dateDisplay = renderDate(item.date)
+                const dateDisplay = renderDate(resource.createdAt)
 
-                // --- ROLE REQUEST CARD ---
-                if (item.type === 'role') {
-                    const user = item.data as UserData
+                // --- ROLE REQUEST CARD (via Resource Type) ---
+                if (resource.resourceType === 'role-request') {
+                    // Extract info - in resources table, title is role, description is reason
+                    const requestingRole = resource.title
+                    const requestingReason = resource.description
                     return (
                         <motion.div
-                            key={combinedId}
+                            key={resource._id}
                             initial={false}
                             className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden relative"
                         >
                             <div className="absolute top-0 left-0 w-1 h-full bg-purple-500/50" /> {/* Indicator strip */}
 
                             <button
-                                onClick={() => toggleExpand(combinedId)}
+                                onClick={() => toggleExpand(resource._id)}
                                 className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left"
                             >
                                 <div className="h-9 w-9 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                                    {user.avatar ? (
-                                        <img src={user.avatar} alt={user.name} className="h-full w-full object-cover" />
+                                    {resource.uploaderAvatar ? (
+                                        <img src={resource.uploaderAvatar} alt={resource.uploaderName} className="h-full w-full object-cover" />
                                     ) : (
                                         <NeutralAvatar className="h-full w-full" />
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
-                                        <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">{user.name}</div>
+                                        <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">{resource.uploaderName}</div>
                                         <StatusBadge type="admin" label="Role Request" />
                                     </div>
                                     <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                        Wants to be: <span className="font-medium text-purple-600 dark:text-purple-400">{user.requested_role}</span>
+                                        Wants to be: <span className="font-medium text-purple-600 dark:text-purple-400">{requestingRole}</span>
                                     </div>
                                 </div>
 
@@ -1217,21 +1212,21 @@ function PendingView({ items, processingId, onResourceAction, onRoleAction }: { 
                                 transition={{ duration: 0.3 }}
                                 className="overflow-hidden"
                             >
-                                <div className="px-3 pb-3 pt-1 border-t border-gray-100 dark:border-gray-800 space-y-3 pl-7"> {/* Added left padding for nesting eff */}
+                                <div className="px-3 pb-3 pt-1 border-t border-gray-100 dark:border-gray-800 space-y-3 pl-7">
                                     <div>
                                         <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Reason for Applying</div>
-                                        <p className="text-sm text-gray-700 dark:text-gray-300 italic">"{user.request_reason || 'No reason provided.'}"</p>
+                                        <p className="text-sm text-gray-700 dark:text-gray-300 italic">"{requestingReason}"</p>
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
                                         <button
-                                            onClick={() => onRoleAction(combinedId, 'approve-role')}
+                                            onClick={() => onAction(resource._id, 'approve')}
                                             disabled={isProcessing}
                                             className="px-3 py-2 rounded-md text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800 flex items-center justify-center gap-2"
                                         >
                                             {isProcessing ? <TyreLoader size={14} /> : <Check size={14} />} Approve Role
                                         </button>
                                         <button
-                                            onClick={() => onRoleAction(combinedId, 'reject-role')}
+                                            onClick={() => onAction(resource._id, 'reject')}
                                             disabled={isProcessing}
                                             className="px-3 py-2 rounded-md text-xs font-medium bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 flex items-center justify-center gap-2"
                                         >
@@ -1244,16 +1239,15 @@ function PendingView({ items, processingId, onResourceAction, onRoleAction }: { 
                     )
                 }
 
-                // --- RESOURCE CARD ---
-                const resource = item.data as PendingResource
+                // --- REGULAR RESOURCE CARD ---
                 return (
                     <motion.div
-                        key={combinedId}
+                        key={resource._id}
                         initial={false}
                         className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden"
                     >
                         <button
-                            onClick={() => toggleExpand(combinedId)}
+                            onClick={() => toggleExpand(resource._id)}
                             className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left"
                         >
                             <div className="h-9 w-9 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
@@ -1298,10 +1292,10 @@ function PendingView({ items, processingId, onResourceAction, onRoleAction }: { 
                                         <a href={resource.driveLink} target="_blank" rel="noopener noreferrer" className="px-2 py-1.5 rounded-md text-xs font-medium flex items-center justify-center gap-1 bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800">
                                             <ExternalLink size={14} /> <span className="hidden sm:inline">Review</span>
                                         </a>
-                                        <button onClick={() => onResourceAction(combinedId, 'approve')} disabled={isProcessing} className="px-2 py-1.5 rounded-md text-xs font-medium flex items-center justify-center gap-1 bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
+                                        <button onClick={() => onAction(resource._id, 'approve')} disabled={isProcessing} className="px-2 py-1.5 rounded-md text-xs font-medium flex items-center justify-center gap-1 bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
                                             {isProcessing ? <TyreLoader size={14} /> : <Check size={14} />} <span className="hidden sm:inline">Approve</span>
                                         </button>
-                                        <button onClick={() => onResourceAction(combinedId, 'reject')} disabled={isProcessing} className="px-2 py-1.5 rounded-md text-xs font-medium flex items-center justify-center gap-1 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800">
+                                        <button onClick={() => onAction(resource._id, 'reject')} disabled={isProcessing} className="px-2 py-1.5 rounded-md text-xs font-medium flex items-center justify-center gap-1 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800">
                                             <X size={14} /> <span className="hidden sm:inline">Reject</span>
                                         </button>
                                     </div>
