@@ -62,6 +62,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             } else if (action === 'users') {
                 if (!hasPermission(['admin', 'semi-admin'])) return res.status(403).json({ message: 'Forbidden' });
                 return await handleGetUsers(res);
+            } else if (action === 'team') {
+                // Public endpoint to fetch team members
+                return await handleGetTeam(res);
+            } else if (action === 'role-requests') {
+                if (!hasPermission(['admin', 'semi-admin'])) return res.status(403).json({ message: 'Forbidden' });
+                return await handleGetRoleRequests(res);
             }
             return res.status(400).json({ message: 'Invalid action' });
         }
@@ -81,6 +87,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             } else if (bodyAction === 'structure') {
                 if (!hasPermission(['admin', 'structure-manager'])) return res.status(403).json({ message: 'Forbidden' });
                 return await handleUpdateStructure(body, res);
+            } else if (bodyAction === 'request-role') {
+                return await handleRequestRole(body, decoded.userId, res);
+            } else if (bodyAction === 'approve-role' || bodyAction === 'reject-role') {
+                if (!hasPermission(['admin'])) return res.status(403).json({ message: 'Forbidden' });
+                return await handleRoleRequestAction(body, res);
             } else {
                 return res.status(400).json({ message: 'Invalid action' });
             }
@@ -413,4 +424,95 @@ async function handleUpdateStructure(body: any, res: VercelResponse) {
     // 3. Save
     await supabase.from('academic_structure').update({ data: structure }).eq('_id', 'main');
     return res.status(200).json(structure);
+}
+
+// --- NEW HANDLERS FOR DYNAMIC TEAM & ROLES ---
+
+async function handleGetTeam(res: VercelResponse) {
+    // Fetch users with special roles
+    const { data: team, error } = await supabase
+        .from('users')
+        .select('name, role, avatar, email, gender') // Select only necessary fields
+        .in('role', ['admin', 'semi-admin', 'content-reviewer'])
+        .order('reputation', { ascending: false }); // Sort by rep or standard order
+
+    if (error) {
+        console.error('Fetch team error:', error);
+        return res.status(500).json({ team: [] });
+    }
+
+    return res.status(200).json({ team });
+}
+
+async function handleGetRoleRequests(res: VercelResponse) {
+    // Fetch users who have a requested_role set
+    const { data: requests, error } = await supabase
+        .from('users')
+        .select('*')
+        .not('requested_role', 'is', null) // Filter where requested_role is NOT null
+        .order('updatedAt', { ascending: false });
+
+    if (error) {
+        console.error('Fetch role requests error:', error);
+        return res.status(500).json({ requests: [] });
+    }
+
+    return res.status(200).json({ requests });
+}
+
+async function handleRequestRole(body: any, userId: string, res: VercelResponse) {
+    const { role, reason } = body;
+
+    if (!role || !reason) {
+        return res.status(400).json({ message: 'Role and reason are required' });
+    }
+
+    const { error } = await supabase
+        .from('users')
+        .update({
+            requested_role: role,
+            request_reason: reason,
+            updatedAt: new Date().toISOString()
+        })
+        .eq('_id', userId);
+
+    if (error) {
+        console.error('Role request error:', error);
+        return res.status(500).json({ message: 'Failed to submit request' });
+    }
+
+    return res.status(200).json({ message: 'Application submitted successfully' });
+}
+
+async function handleRoleRequestAction(body: any, res: VercelResponse) {
+    const { action, userId } = body; // action is 'approve-role' or 'reject-role'
+
+    if (!userId) return res.status(400).json({ message: 'User ID is required' });
+
+    // Fetch the user to see what role they wanted
+    const { data: user } = await supabase.from('users').select('requested_role').eq('_id', userId).single();
+
+    if (!user || !user.requested_role) {
+        return res.status(400).json({ message: 'No pending role request found for this user' });
+    }
+
+    let updates: any = {
+        requested_role: null, // Clear request
+        request_reason: null
+    };
+
+    if (action === 'approve-role') {
+        updates.role = user.requested_role; // Promote
+    }
+
+    const { error } = await supabase
+        .from('users')
+        .update(updates)
+        .eq('_id', userId);
+
+    if (error) {
+        return res.status(500).json({ message: 'Failed to process request' });
+    }
+
+    return res.status(200).json({ message: action === 'approve-role' ? 'Request approved' : 'Request rejected' });
 }

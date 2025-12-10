@@ -31,6 +31,7 @@ import TermsPage from './components/TermsPage'
 import SavedResources from './components/SavedResources'
 import SharedResourcesPage from './components/SharedResourcesPage'
 import SharedUnitPage from './components/SharedUnitPage';
+import OurTeam from './components/OurTeam';
 
 import SEO from './components/SEO'
 import AttendanceManager from './components/attendance/AttendanceManager'
@@ -440,6 +441,9 @@ function AppContent() {
 
           {/* About Route */}
           <Route path="/about" element={<AboutPage />} />
+
+          {/* Our Team Route */}
+          <Route path="/our-team" element={<OurTeam />} />
 
           {/* Contact Route */}
           <Route path="/contact" element={<ContactPage />} />

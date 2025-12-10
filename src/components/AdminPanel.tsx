@@ -82,9 +82,9 @@ export default function AdminPanel() {
     const { token } = useAuth()
 
     // Tabs & Data State
-    const [activeTab, setActiveTab] = useState<'pending' | 'users' | 'structure'>(() => {
+    const [activeTab, setActiveTab] = useState<'pending' | 'users' | 'structure' | 'requests'>(() => {
         if (typeof window !== 'undefined') {
-            return (localStorage.getItem('adminActiveTab') as 'pending' | 'users' | 'structure') || 'pending'
+            return (localStorage.getItem('adminActiveTab') as 'pending' | 'users' | 'structure' | 'requests') || 'pending'
         }
         return 'pending'
     })
@@ -94,6 +94,7 @@ export default function AdminPanel() {
     }, [activeTab])
     const [pendingResources, setPendingResources] = useState<PendingResource[]>([])
     const [users, setUsers] = useState<UserData[]>([])
+    const [roleRequests, setRoleRequests] = useState<UserData[]>([]) // Reusing UserData as it has requested_role
     const [structure, setStructure] = useState<{ programs: Program[] }>({ programs: [] })
     const [unsavedChanges, setUnsavedChanges] = useState<string[]>([])
     const [editingId, setEditingId] = useState<string | null>(null)
@@ -167,6 +168,7 @@ export default function AdminPanel() {
                 if (activeTab === 'pending') await fetchPendingResources()
                 else if (activeTab === 'users') await fetchUsers()
                 else if (activeTab === 'structure') await fetchStructure()
+                else if (activeTab === 'requests') await fetchRoleRequests()
             } catch (err) {
                 console.error("Data fetch error:", err)
             } finally {
@@ -205,6 +207,12 @@ export default function AdminPanel() {
         }
     }
 
+    const fetchRoleRequests = async () => {
+        const res = await fetch('/api/admin?action=role-requests', { headers: { 'Authorization': `Bearer ${token}` } })
+        const data = await res.json()
+        if (res.ok) setRoleRequests(data.requests || [])
+    }
+
     // --- Actions ---
     const handleResourceAction = async (resourceId: string, action: 'approve' | 'reject') => {
         setProcessingId(resourceId)
@@ -237,6 +245,21 @@ export default function AdminPanel() {
                 if (action === 'delete') setUsers(prev => prev.filter(u => u._id !== userId))
                 else fetchUsers()
                 showToast(`User ${action} successful`)
+            }
+        } catch (err) { console.error(err); showToast('Action failed', 'error') } finally { setProcessingId(null) }
+    }
+
+    const handleRoleRequestAction = async (userId: string, action: 'approve-role' | 'reject-role') => {
+        setProcessingId(userId)
+        try {
+            const res = await fetch('/api/admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ action, userId })
+            })
+            if (res.ok) {
+                setRoleRequests(prev => prev.filter(r => r._id !== userId))
+                showToast(action === 'approve-role' ? 'Role Approved' : 'Request Rejected')
             }
         } catch (err) { console.error(err); showToast('Action failed', 'error') } finally { setProcessingId(null) }
     }
@@ -789,6 +812,18 @@ export default function AdminPanel() {
                             }}
                             icon={<Settings size={16} />}
                             label="Structure"
+                        />
+                        <TabButton
+                            active={activeTab === 'requests'}
+                            onClick={() => {
+                                if (activeTab !== 'requests') {
+                                    setIsLoading(true)
+                                    setActiveTab('requests')
+                                }
+                            }}
+                            icon={<Shield size={16} />}
+                            label="Role Requests"
+                            count={roleRequests.length}
                         />
                     </div>
                 </div>
