@@ -149,11 +149,21 @@ export default function OurTeam() {
                             displayRole = 'content-reviewer'
                         }
 
+                        let image = u.avatar;
+
+                        // Fix for TrillionTip (Admin)
+                        if (u.email === 'trilliontip@gmail.com') {
+                            image = 'https://github.com/trilliontip.png';
+                        }
+
+                        // Robust url processing
+                        const processedImage = getAvatarUrl(image, u.name);
+
                         return {
                             name: u.name,
                             role: displayRole, // internal role
                             title: title, // display title
-                            image: getAvatarUrl(u.avatar, u.name),
+                            image: processedImage,
                             bio: bio,
                             highlight: highlight,
                             socials: {
