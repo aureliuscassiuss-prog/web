@@ -30,6 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (req.method === 'GET') {
             if (action === 'structure') return await handleGetStructure(res);
             if (action === 'stats') return await handleGetStats(res);
+            if (action === 'team') return await handleGetTeam(res);
         }
 
         // Auth
