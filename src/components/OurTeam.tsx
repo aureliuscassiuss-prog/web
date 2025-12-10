@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Linkedin, Mail, Twitter, Github, Globe, ArrowRight, Sparkles, UserPlus } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { Github, ArrowRight, Sparkles, UserPlus } from 'lucide-react'
 import RoleApplicationModal from './RoleApplicationModal'
 import { useAuth } from '../contexts/AuthContext'
 import AuthModal from './AuthModal'
@@ -115,7 +115,7 @@ const TeamCard = ({ member, index }: { member: TeamMember, index: number }) => {
 
 export default function OurTeam() {
     // Logic Integration
-    const { user, token } = useAuth()
+    const { user } = useAuth()
     const [isLoading, setIsLoading] = useState(true)
     const [teamData, setTeamData] = useState<TeamMember[]>([])
     const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
@@ -165,6 +165,21 @@ export default function OurTeam() {
                     })
 
                     setTeamData(dbMembers)
+
+                    // Preload images for instant display
+                    const imagePromises = dbMembers.map((m) => {
+                        return new Promise((resolve) => {
+                            const img = new Image();
+                            img.src = m.image;
+                            img.onload = resolve;
+                            img.onerror = resolve; // Don't block, just resolve
+                        });
+                    });
+
+                    // Wait for all images to load (or fail) before showing the UI
+                    // Add a timeout race so one stuck image doesn't block the entire page forever (max 2s)
+                    const timeoutPromise = new Promise(resolve => setTimeout(resolve, 2000));
+                    await Promise.race([Promise.all(imagePromises), timeoutPromise]);
                 }
             } catch (error) {
                 console.error('Team fetch error:', error)
