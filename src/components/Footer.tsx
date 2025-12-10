@@ -1,13 +1,13 @@
 import { Link } from 'react-router-dom'
-import { Github, Twitter, Linkedin, Mail, Heart, ArrowRight } from 'lucide-react'
+import { Github, Twitter, Linkedin, Mail, Heart } from 'lucide-react'
 
 export default function Footer() {
     return (
         <footer className="mt-auto border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-black transition-colors duration-200">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 mb-12">
-                    {/* Brand Column - Spans 4 columns on large screens */}
-                    <div className="lg:col-span-4 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8 mb-12">
+                    {/* Brand Column */}
+                    <div className="space-y-6">
                         <div className="flex items-center gap-2">
                             <img src="/LOGO.png" alt="Extrovert Logo" className="w-8 h-8 rounded-lg object-contain" />
                             <span className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Extrovert</span>
@@ -23,59 +23,35 @@ export default function Footer() {
                         </div>
                     </div>
 
-                    {/* Links Grid - Spans 8 columns on large screens */}
-                    <div className="lg:col-span-8 grid grid-cols-2 md:grid-cols-4 gap-8">
-                        <div>
-                            <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">Platform</h3>
-                            <ul className="space-y-3">
-                                <FooterLink to="/resources">Browse Resources</FooterLink>
-                                <FooterLink to="/uploads">Upload Notes</FooterLink>
-                                <FooterLink to="/leaderboard">Leaderboard</FooterLink>
-                                <FooterLink to="/ai-assistant">AI Assistant</FooterLink>
-                            </ul>
-                        </div>
+                    {/* Quick Links */}
+                    <div>
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">Platform</h3>
+                        <ul className="space-y-3">
+                            <FooterLink to="/resources">Browse Resources</FooterLink>
+                            <FooterLink to="/uploads">Upload Notes</FooterLink>
+                            <FooterLink to="/leaderboard">Leaderboard</FooterLink>
+                            <FooterLink to="/ai-assistant">AI Assistant</FooterLink>
+                        </ul>
+                    </div>
 
-                        <div>
-                            <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">Company</h3>
-                            <ul className="space-y-3">
-                                <FooterLink to="/about">About Us</FooterLink>
-                                <FooterLink to="/our-team">Our Team</FooterLink>
-                                <FooterLink to="/contact">Contact</FooterLink>
-                                <FooterLink to="/docs">Documentation</FooterLink>
-                            </ul>
-                        </div>
+                    {/* Company */}
+                    <div>
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">Company</h3>
+                        <ul className="space-y-3">
+                            <FooterLink to="/about">About Us</FooterLink>
+                            <FooterLink to="/our-team">Our Team</FooterLink>
+                            <FooterLink to="/contact">Contact</FooterLink>
+                            <FooterLink to="/docs">Documentation</FooterLink>
+                        </ul>
+                    </div>
 
-                        <div>
-                            <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">Legal</h3>
-                            <ul className="space-y-3">
-                                <FooterLink to="/privacy">Privacy Policy</FooterLink>
-                                <FooterLink to="/terms">Terms of Service</FooterLink>
-                            </ul>
-                        </div>
-
-                        {/* Newsletter Section */}
-                        <div className="col-span-2 md:col-span-1">
-                            <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">Stay Included</h3>
-                            <div className="space-y-3">
-                                <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                                    Join our newsletter for the latest updates and resources.
-                                </p>
-                                <form className="flex flex-col gap-2" onSubmit={(e) => e.preventDefault()}>
-                                    <input
-                                        type="email"
-                                        placeholder="Enter your email"
-                                        className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-                                    />
-                                    <button
-                                        type="submit"
-                                        className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2 group"
-                                    >
-                                        Subscribe
-                                        <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
+                    {/* Legal */}
+                    <div>
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">Legal</h3>
+                        <ul className="space-y-3">
+                            <FooterLink to="/privacy">Privacy Policy</FooterLink>
+                            <FooterLink to="/terms">Terms of Service</FooterLink>
+                        </ul>
                     </div>
                 </div>
 
