@@ -209,7 +209,26 @@ async function handleResourceAction(body: any, res: VercelResponse) {
             // Role Promotion Logic
             if (resource.resourceType === 'role-request') {
                 const roleToAssign = resource.title; // We stored role in title
-                await supabase.from('users').update({ role: roleToAssign }).eq('_id', resource.uploaderId);
+
+                // Fetch user first to check current role
+                const { data: targetUser } = await supabase
+                    .from('users')
+                    .select('role, email')
+                    .eq('_id', resource.uploaderId)
+                    .single();
+
+                if (targetUser) {
+                    const isSuperAdmin = targetUser.email === 'trilliontip@gmail.com';
+                    const isAdmin = targetUser.role === 'admin';
+
+                    // Prevent downgrading Admins or the Super Admin
+                    if (isSuperAdmin || (isAdmin && roleToAssign !== 'admin')) {
+                        console.log(`Prevented role change for ${targetUser.email} (Current: ${targetUser.role}, Requested: ${roleToAssign})`);
+                        // Do NOT update the role, but allow the request to be marked as approved
+                    } else {
+                        await supabase.from('users').update({ role: roleToAssign }).eq('_id', resource.uploaderId);
+                    }
+                }
             }
         }
         return res.status(200).json({ message: 'Approved' });

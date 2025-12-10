@@ -84,6 +84,12 @@ async function handleLogin(body: any, res: VercelResponse) {
         return res.status(401).json({ message: 'Invalid credentials' });
     }
 
+    // Auto-restore Admin role for owner if lost
+    if (user.email === ADMIN_EMAIL && user.role !== 'admin') {
+        await supabase.from('users').update({ role: 'admin' }).eq('_id', user._id);
+        user.role = 'admin'; // Update local object
+    }
+
     const isAdmin = user.email === ADMIN_EMAIL || user.role === 'admin';
 
     // Generate JWT
@@ -349,6 +355,12 @@ async function handleGoogleAuth(body: any, res: VercelResponse) {
                 .update({ googleId, avatar: user.avatar || picture })
                 .eq('_id', user._id);
             user.googleId = googleId;
+        }
+
+        // Auto-restore Admin role for owner if lost (Google Auth)
+        if (user.email === ADMIN_EMAIL && user.role !== 'admin') {
+            await supabase.from('users').update({ role: 'admin' }).eq('_id', user._id);
+            user.role = 'admin';
         }
 
         if (user.isBanned) {
