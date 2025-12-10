@@ -33,7 +33,8 @@ const getAvatarUrl = (avatar: string | null | undefined, name: string) => {
     if (!avatar || avatar === 'undefined' || avatar === 'null') {
         return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
     }
-    if (avatar.startsWith('http') || avatar.startsWith('/')) return avatar;
+    // Handle Base64 images (data URIs) and absolute URLs
+    if (avatar.startsWith('data:') || avatar.startsWith('http') || avatar.startsWith('/')) return avatar;
     return `/${avatar}`;
 }
 
