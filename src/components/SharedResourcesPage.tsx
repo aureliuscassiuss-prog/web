@@ -67,7 +67,7 @@ export default function SharedResourcesPage() {
 
     // --- Premium Loading State (Spinner) ---
     if (isLoading) {
-        return (
+        return createPortal(
             <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-gray-50 dark:bg-black font-sans overflow-hidden">
                 <div className="relative mb-6">
                     <div className="absolute inset-0 bg-blue-500/20 blur-3xl rounded-full" />
@@ -82,7 +82,8 @@ export default function SharedResourcesPage() {
                     <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Fetching resources...</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Please wait while we load the collection</p>
                 </div>
-            </div>
+            </div>,
+            document.body
         );
     }
 
