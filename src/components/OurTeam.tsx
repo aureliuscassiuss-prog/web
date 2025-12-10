@@ -1,12 +1,30 @@
-
 import { motion } from 'framer-motion'
-import { Linkedin, Mail, Twitter, Github } from 'lucide-react'
+import { Linkedin, Mail, Twitter, Github, Globe } from 'lucide-react'
 
-// Placeholder data - replace with actual team data later or via props
+// Enhanced Team Data
 const TEAM_MEMBERS = [
     {
+        role: "Founder & Visionary",
+        description: "The driving force behind the mission to democratize education.",
+        members: [
+            {
+                name: "Your Name", // Replace with actual founder name
+                title: "Founder & Lead Developer",
+                image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&q=80", // Placeholder
+                bio: "Passionate about building tools that help students succeed. Believes in open knowledge and community collaboration.",
+                socials: {
+                    linkedin: "#",
+                    twitter: "#",
+                    github: "#",
+                    website: "#"
+                },
+                highlight: true // Special styling flag
+            }
+        ]
+    },
+    {
         role: "Admins",
-        description: "Leading the vision and strategy of Extrovert.",
+        description: "Leading the strategic direction and platform stability.",
         members: [
             {
                 name: "Admin Name",
@@ -24,25 +42,24 @@ const TEAM_MEMBERS = [
                 name: "Co-Admin Name",
                 title: "Co-Administrator",
                 image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=400&fit=crop&q=80",
-                bio: "focusing on community growth and partnerships.",
+                bio: "Focusing on community growth, partnerships and outreach.",
                 socials: {
                     linkedin: "#",
                     twitter: "#",
-                    github: "#",
                     mail: "mailto:coadmin@example.com"
                 }
             }
         ]
     },
     {
-        role: "Semi Admins",
-        description: "Supporting operations and community management.",
+        role: "Operations & Community",
+        description: "Ensuring smooth daily operations and a vibrant community.",
         members: [
             {
                 name: "Semi-Admin One",
                 title: "Operations Lead",
                 image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop&q=80",
-                bio: "Ensuring smooth daily operations and user support.",
+                bio: "Managing day-to-day operations and student support queries.",
                 socials: {
                     linkedin: "#",
                     twitter: "#"
@@ -52,23 +69,22 @@ const TEAM_MEMBERS = [
                 name: "Semi-Admin Two",
                 title: "Community Manager",
                 image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&q=80",
-                bio: "Engaging with our student community and gathering feedback.",
+                bio: "Engaging with our student community and gathering continuous feedback.",
                 socials: {
                     linkedin: "#",
                     github: "#"
                 }
-
             }
         ]
     },
     {
-        role: "Content Managers",
+        role: "Content Reviewers",
         description: "Curating and verifying high-quality study resources.",
         members: [
             {
                 name: "Manager One",
                 title: "Content Lead",
-                image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&q=80",
+                image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&q=80",
                 bio: "Overseeing the quality and organization of study materials.",
                 socials: {
                     linkedin: "#",
@@ -77,7 +93,7 @@ const TEAM_MEMBERS = [
             },
             {
                 name: "Manager Two",
-                title: "Resource Verified",
+                title: "Resource Verifier",
                 image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop&q=80",
                 bio: "Verifying the accuracy and relevance of uploaded notes.",
                 socials: {
@@ -136,57 +152,7 @@ export default function OurTeam() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-center">
                             {section.members.map((member, index) => (
-                                <motion.div
-                                    key={member.name}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    whileInView={{ opacity: 1, y: 0 }}
-                                    viewport={{ once: true }}
-                                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                                    className="group relative bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800 hover:shadow-lg transition-all duration-300"
-                                >
-                                    <div className="aspect-square relative mb-6 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
-                                        <img
-                                            src={member.image}
-                                            alt={member.name}
-                                            className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
-                                        />
-                                    </div>
-                                    <div className="text-center">
-                                        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                                            {member.name}
-                                        </h3>
-                                        <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400 mb-2">
-                                            {member.title}
-                                        </p>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">
-                                            {member.bio}
-                                        </p>
-
-                                        {/* Social Links */}
-                                        <div className="flex items-center justify-center gap-4 opacity-0 transform translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
-                                            {member.socials.linkedin && (
-                                                <a href={member.socials.linkedin} className="text-gray-400 hover:text-[#0077b5] transition-colors">
-                                                    <Linkedin size={18} />
-                                                </a>
-                                            )}
-                                            {member.socials.github && (
-                                                <a href={member.socials.github} className="text-gray-400 hover:text-black dark:hover:text-white transition-colors">
-                                                    <Github size={18} />
-                                                </a>
-                                            )}
-                                            {member.socials.twitter && (
-                                                <a href={member.socials.twitter} className="text-gray-400 hover:text-[#1DA1F2] transition-colors">
-                                                    <Twitter size={18} />
-                                                </a>
-                                            )}
-                                            {member.socials.mail && (
-                                                <a href={member.socials.mail} className="text-gray-400 hover:text-red-500 transition-colors">
-                                                    <Mail size={18} />
-                                                </a>
-                                            )}
-                                        </div>
-                                    </div>
-                                </motion.div>
+                                <TeamCard key={member.name} member={member} index={index} />
                             ))}
                         </div>
                     </div>
@@ -230,5 +196,92 @@ export default function OurTeam() {
                 </motion.div>
             </div>
         </div>
+    )
+}
+
+interface TeamMember {
+    name: string;
+    title: string;
+    image: string;
+    bio: string;
+    socials: {
+        linkedin?: string;
+        twitter?: string;
+        github?: string;
+        website?: string;
+        mail?: string;
+    };
+    highlight?: boolean;
+}
+
+function TeamCard({ member, index }: { member: TeamMember, index: number }) {
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: index * 0.1 }}
+            className={`group relative bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all duration-300 ${member.highlight
+                    ? 'ring-2 ring-indigo-500/20 dark:ring-indigo-400/20'
+                    : 'ring-1 ring-gray-200 dark:ring-gray-800'
+                }`}
+        >
+            {/* Highlight Badge */}
+            {member.highlight && (
+                <div className="absolute top-0 right-0 mt-4 mr-4 px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-bold uppercase rounded-full tracking-wider">
+                    Founder
+                </div>
+            )}
+
+            <div className="aspect-square relative mb-6 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
+                <img
+                    src={member.image}
+                    alt={member.name}
+                    className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+                />
+            </div>
+
+            <div className="text-center space-y-2">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    {member.name}
+                </h3>
+                <p className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">
+                    {member.title}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed h-10">
+                    {member.bio}
+                </p>
+
+                {/* Social Links */}
+                <div className="flex items-center justify-center gap-4 pt-4">
+                    {member.socials.website && (
+                        <SocialIcon href={member.socials.website} icon={<Globe size={18} />} color="text-gray-400 hover:text-emerald-500" />
+                    )}
+                    {member.socials.linkedin && (
+                        <SocialIcon href={member.socials.linkedin} icon={<Linkedin size={18} />} color="text-gray-400 hover:text-[#0077b5]" />
+                    )}
+                    {member.socials.github && (
+                        <SocialIcon href={member.socials.github} icon={<Github size={18} />} color="text-gray-400 hover:text-black dark:hover:text-white" />
+                    )}
+                    {member.socials.twitter && (
+                        <SocialIcon href={member.socials.twitter} icon={<Twitter size={18} />} color="text-gray-400 hover:text-[#1DA1F2]" />
+                    )}
+                    {member.socials.mail && (
+                        <SocialIcon href={member.socials.mail} icon={<Mail size={18} />} color="text-gray-400 hover:text-red-500" />
+                    )}
+                </div>
+            </div>
+        </motion.div>
+    )
+}
+
+function SocialIcon({ href, icon, color }: { href: string, icon: React.ReactNode, color: string }) {
+    return (
+        <a
+            href={href}
+            className={`${color} transition-colors transform hover:scale-110 active:scale-95 duration-200`}
+        >
+            {icon}
+        </a>
     )
 }
