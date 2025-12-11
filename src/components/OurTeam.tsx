@@ -152,10 +152,7 @@ export default function OurTeam() {
 
                         let image = u.avatar;
 
-                        // Fix for TrillionTip (Admin)
-                        if (u.email === 'trilliontip@gmail.com') {
-                            image = 'https://github.com/trilliontip.png';
-                        }
+
 
                         // Robust url processing
                         const processedImage = getAvatarUrl(image, u.name);
@@ -228,7 +225,7 @@ export default function OurTeam() {
     } : {
         name: 'Trillion Tip',
         title: 'Founder & Visionary',
-        image: 'https://github.com/trilliontip.png',
+        image: '', // Will be handled by generic avatar
         bio: 'Leading the vision for a connected student ecosystem.',
         socials: { github: '#' },
         highlight: true,
