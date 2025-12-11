@@ -314,94 +314,9 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
     return (
         <div className="w-full max-w-4xl mx-auto min-h-[60vh] p-4 md:p-8">
 
-            {/* --- Advanced Search Bar --- */}
-            {step !== 8 && (
-                <div className="relative mb-12 z-20">
-                    <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                            <BookOpen className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
-                        </div>
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search subjects or units (e.g., 'Physics', 'Data Structures')..."
-                            className="block w-full pl-12 pr-4 py-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-base placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm group-hover:shadow-md"
-                        />
-                        {searchQuery && (
-                            <button
-                                onClick={() => setSearchQuery('')}
-                                className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                            >
-                                <FilterX className="h-4 w-4" />
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Search Results Dropdown/Overlay */}
-                    {searchQuery && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl shadow-2xl overflow-hidden max-h-[60vh] overflow-y-auto z-50 animate-in fade-in zoom-in-95 duration-200">
-                            {searchResults.length === 0 ? (
-                                <div className="p-8 text-center text-gray-500">
-                                    <p>No matches found for "{searchQuery}"</p>
-                                </div>
-                            ) : (
-                                <div className="p-2 space-y-4">
-                                    {/* Subjects Section */}
-                                    {groupedResults.subjects.length > 0 && (
-                                        <div>
-                                            <div className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-gray-400">Subjects</div>
-                                            {groupedResults.subjects.map((result, i) => (
-                                                <button
-                                                    key={i}
-                                                    onClick={() => handleSearchResultClick(result)}
-                                                    className="w-full text-left px-3 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors group"
-                                                >
-                                                    <div className="p-2 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
-                                                        <BookOpen className="h-5 w-5" />
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-semibold text-gray-900 dark:text-white">{result.title}</div>
-                                                        <div className="text-xs text-gray-500">{result.subtitle}</div>
-                                                    </div>
-                                                    <ArrowRight className="ml-auto h-4 w-4 text-gray-300 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-all" />
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* Units Section */}
-                                    {groupedResults.units.length > 0 && (
-                                        <div>
-                                            <div className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-gray-400">Units & Topics</div>
-                                            {groupedResults.units.map((result, i) => (
-                                                <button
-                                                    key={i}
-                                                    onClick={() => handleSearchResultClick(result)}
-                                                    className="w-full text-left px-3 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors group"
-                                                >
-                                                    <div className="p-2 rounded-md bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400">
-                                                        <Hash className="h-5 w-5" />
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-semibold text-gray-900 dark:text-white">{result.title}</div>
-                                                        <div className="text-xs text-gray-500">{result.subtitle}</div>
-                                                    </div>
-                                                    <ArrowRight className="ml-auto h-4 w-4 text-gray-300 group-hover:text-purple-500 opacity-0 group-hover:opacity-100 transition-all" />
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Header Area (Hidden while searching or on Results) */}
-            {step < 8 && !searchQuery && (
-                <div className="mb-10 animate-in fade-in slide-in-from-top-4 duration-500">
+            {/* Header Area */}
+            {(step === 1 || (step < 8 && !searchQuery)) && (
+                <div className="mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
                     <div className="flex items-center justify-between mb-6">
                         {step > 1 ? (
                             <button onClick={() => setStep(step - 1)}
@@ -426,6 +341,91 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
                             style={{ width: `${progress}%` }}
                         />
                     </div>
+                </div>
+            )}
+
+            {/* --- Advanced Search Bar (Step 1 Only) --- */}
+            {step === 1 && (
+                <div className="relative mb-10 z-30 w-full max-w-2xl mx-auto">
+                    <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <BookOpen className="h-4 w-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                        </div>
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search subjects..."
+                            className="block w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm group-hover:shadow-md"
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery('')}
+                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                            >
+                                <FilterX className="h-3 w-3" />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Search Results Dropdown */}
+                    {searchQuery && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl shadow-2xl overflow-hidden max-h-[60vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+                            {searchResults.length === 0 ? (
+                                <div className="p-8 text-center text-gray-500">
+                                    <p className="text-sm">No matches found</p>
+                                </div>
+                            ) : (
+                                <div className="p-2 space-y-4">
+                                    {/* Subjects Section */}
+                                    {groupedResults.subjects.length > 0 && (
+                                        <div>
+                                            <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400">Subjects</div>
+                                            {groupedResults.subjects.map((result, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => handleSearchResultClick(result)}
+                                                    className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors group"
+                                                >
+                                                    <div className="p-1.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+                                                        <BookOpen className="h-4 w-4" />
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-sm font-semibold text-gray-900 dark:text-white">{result.title}</div>
+                                                        <div className="text-[10px] text-gray-500">{result.subtitle}</div>
+                                                    </div>
+                                                    <ArrowRight className="ml-auto h-3 w-3 text-gray-300 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-all" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Units Section */}
+                                    {groupedResults.units.length > 0 && (
+                                        <div>
+                                            <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400">Units</div>
+                                            {groupedResults.units.map((result, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => handleSearchResultClick(result)}
+                                                    className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors group"
+                                                >
+                                                    <div className="p-1.5 rounded-md bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400">
+                                                        <Hash className="h-4 w-4" />
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-sm font-semibold text-gray-900 dark:text-white">{result.title}</div>
+                                                        <div className="text-[10px] text-gray-500">{result.subtitle}</div>
+                                                    </div>
+                                                    <ArrowRight className="ml-auto h-3 w-3 text-gray-300 group-hover:text-purple-500 opacity-0 group-hover:opacity-100 transition-all" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             )}
 
