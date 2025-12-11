@@ -21,8 +21,21 @@ export default function Footer() {
     }, []);
 
     const languages = [
+        // Top Priority
         { code: 'en', label: 'English' },
         { code: 'hi', label: 'हिंदी (Hindi)' },
+
+        // Indian Regional (Alphabetical or Popularity)
+        { code: 'bn', label: 'বাংলা (Bengali)' },
+        { code: 'mr', label: 'मराठी (Marathi)' },
+        { code: 'te', label: 'తెలుగు (Telugu)' },
+        { code: 'ta', label: 'தமிழ் (Tamil)' },
+        { code: 'gu', label: 'ગુજરાતી (Gujarati)' },
+        { code: 'kn', label: 'ಕನ್ನಡ (Kannada)' },
+        { code: 'ml', label: 'മലയാളം (Malayalam)' },
+        { code: 'pa', label: 'ਪੰਜਾਬੀ (Punjabi)' },
+
+        // Global
         { code: 'es', label: 'Español' },
         { code: 'fr', label: 'Français' },
         { code: 'de', label: 'Deutsch' },

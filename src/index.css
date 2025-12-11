@@ -232,12 +232,10 @@ body {
   position: static !important;
 }
 
-/* Hide the top banner frame */
 .skiptranslate {
   display: none !important;
 }
 
-/* Hide the popup tooltip */
 .goog-tooltip {
   display: none !important;
 }
@@ -251,13 +249,67 @@ body {
   box-shadow: none !important;
 }
 
-/* Hide specific modern Google Translate iframes and containers */
 iframe[class*="goog-te-banner"],
 iframe[id^=":"] {
   display: none !important;
 }
 
-/* Ensure no massive white space at top */
 .goog-te-banner-frame.skiptranslate {
+  display: none !important;
+}
+
+/* --- NEW AGGRESSIVE HIDING RULES --- */
+
+/* Hide the main gadget container completely */
+.goog-te-gadget {
+  font-size: 0 !important;
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  width: 0 !important;
+}
+
+/* Hide specific text nodes within the gadget */
+.goog-te-gadget span {
+  display: none !important;
+}
+
+.goog-te-gadget-simple {
+  display: none !important;
+}
+
+/* Hide the Google Logo specifically */
+.goog-logo-link {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+/* Hide the 'Powered by Google' text */
+.goog-te-gadget .VIpgJd-ZVi9od-aZ2wEe-wOHMyf {
+  display: none !important;
+}
+
+/* Hide any fixed position elements at bottom left that might be Google */
+div[style*="position: fixed"][style*="bottom: 0px"][style*="left: 0px"],
+div[style*="position: fixed"][style*="bottom: 0"][style*="left: 0"] {
+  display: none !important;
+  z-index: -9999 !important;
+}
+
+/* Hide loading indicators/spinners */
+.goog-te-spinner-pos,
+.goog-te-spinner,
+.goog-te-spinner-animation {
+  display: none !important;
+}
+
+/* Hide any iframes that might be injected at the bottom */
+iframe.goog-te-menu-frame {
+  display: none !important;
+}
+
+.goog-error-message {
   display: none !important;
 }

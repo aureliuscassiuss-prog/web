@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import jsCookie from 'js-cookie';
 
-type Language = 'en' | 'hi' | 'es' | 'fr' | 'de' | 'it' | 'zh-CN' | 'ja' | 'ru' | 'pt' | 'ar' | 'ko';
+// Added Indian languages: bn (Bengali), mr (Marathi), te (Telugu), ta (Tamil), gu (Gujarati), kn (Kannada), ml (Malayalam), pa (Punjabi)
+type Language = 'en' | 'hi' | 'bn' | 'mr' | 'te' | 'ta' | 'gu' | 'kn' | 'ml' | 'pa' | 'es' | 'fr' | 'de' | 'it' | 'zh-CN' | 'ja' | 'ru' | 'pt' | 'ar' | 'ko';
 
 interface LanguageContextType {
     language: Language;
@@ -16,12 +17,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         // Read Google Translate cookie
-        // Cookie format: /en/hi 
         const googleCookie = jsCookie.get('googtrans');
         if (googleCookie) {
             const langCode = googleCookie.split('/').pop();
+            // Simple validation to ensure it's a code we support
             if (langCode) {
-                // If it's a supported code, set it. Otherwise default to 'en'.
                 setLanguageState(langCode as Language);
             }
         }
@@ -29,10 +29,20 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
     const setLanguage = (lang: Language) => {
         setLanguageState(lang);
-        // Set Google Translate cookie
-        // Domain might be needed depending on environment, but usually root path works
-        jsCookie.set('googtrans', `/en/${lang}`, { path: '/' }); // For Google Translate
-        jsCookie.set('googtrans', `/en/${lang}`, { path: '/', domain: window.location.hostname }); // Extra redundancy
+
+        // If English (default), we want to clear the translation
+        if (lang === 'en') {
+            jsCookie.remove('googtrans', { path: '/' });
+            jsCookie.remove('googtrans', { path: '/', domain: window.location.hostname });
+            jsCookie.remove('googtrans', { path: '/', domain: '.' + window.location.hostname });
+        } else {
+            // For other languages, set the cookie
+            // We set it for multiple domain variations to ensure it "sticks"
+            const cookieValue = `/en/${lang}`;
+            jsCookie.set('googtrans', cookieValue, { path: '/' });
+            jsCookie.set('googtrans', cookieValue, { path: '/', domain: window.location.hostname });
+            jsCookie.set('googtrans', cookieValue, { path: '/', domain: '.' + window.location.hostname });
+        }
 
         // Force reload to apply Google Translate
         window.location.reload();
