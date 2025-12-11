@@ -90,6 +90,10 @@ app.all('/api/stats', jsonParser, adaptHandler(statsHandler));
 // 8. Attendance
 app.all('/api/attendance', jsonParser, adaptHandler(attendanceHandler));
 
+// 9. Translation Proxy
+import translateHandler from './api/translate.ts';
+app.all('/api/translate', jsonParser, adaptHandler(translateHandler));
+
 
 // Listen on 0.0.0.0 to be accessible from network
 app.listen(PORT, '0.0.0.0', () => {

@@ -1,75 +1,98 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import jsCookie from 'js-cookie';
 
-// Added Indian languages: bn (Bengali), mr (Marathi), te (Telugu), ta (Tamil), gu (Gujarati), kn (Kannada), ml (Malayalam), pa (Punjabi)
+// Extended Language Support
 type Language = 'en' | 'hi' | 'bn' | 'mr' | 'te' | 'ta' | 'gu' | 'kn' | 'ml' | 'pa' | 'es' | 'fr' | 'de' | 'it' | 'zh-CN' | 'ja' | 'ru' | 'pt' | 'ar' | 'ko';
 
 interface LanguageContextType {
     language: Language;
     setLanguage: (lang: Language) => void;
-    t: (key: string) => string;
+    t: (key: string, defaultText?: string) => string;
+    translateText: (text: string) => Promise<string>;
+    isTranslating: boolean;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
+// 1. Manual Dictionary (Professional, Instant, Zero Glitch)
+const translations: Partial<Record<Language, Record<string, string>>> = {
+    hi: {
+        'footer.about': 'बारे में',
+        'footer.team': 'टीम',
+        'footer.contact': 'संपर्क',
+        'footer.docs': 'दस्तावेज़',
+        'footer.privacy': 'गोपनीयता',
+        'footer.terms': 'शर्तें',
+        'footer.rights': 'एक्स्ट्रावर्ट',
+        'footer.love': 'छात्रों के लिए',
+        'nav.login': 'लॉग इन',
+        'nav.signup': 'साइन अप',
+        'nav.resources': 'संसाधन',
+        'nav.community': 'समुदाय',
+    },
+    // Add other manual translations here...
+};
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
     const [language, setLanguageState] = useState<Language>('en');
+    const [dynamicCache, setDynamicCache] = useState<Record<string, string>>({});
+    const [isTranslating, setIsTranslating] = useState(false);
 
     useEffect(() => {
-        // Read Google Translate cookie
-        const googleCookie = jsCookie.get('googtrans');
-        if (googleCookie) {
-            const langCode = googleCookie.split('/').pop();
-            // Simple validation to ensure it's a code we support
-            if (langCode) {
-                setLanguageState(langCode as Language);
-            }
-        }
+        const savedLang = jsCookie.get('app_language') as Language;
+        if (savedLang) setLanguageState(savedLang);
     }, []);
 
     const setLanguage = (lang: Language) => {
         setLanguageState(lang);
-
-        // If English (default), we want to clear the translation
-        if (lang === 'en') {
-            jsCookie.remove('googtrans', { path: '/' });
-            jsCookie.remove('googtrans', { path: '/', domain: window.location.hostname });
-            jsCookie.remove('googtrans', { path: '/', domain: '.' + window.location.hostname });
-        } else {
-            // For other languages, set the cookie
-            // We set it for multiple domain variations to ensure it "sticks"
-            const cookieValue = `/en/${lang}`;
-            jsCookie.set('googtrans', cookieValue, { path: '/' });
-            jsCookie.set('googtrans', cookieValue, { path: '/', domain: window.location.hostname });
-            jsCookie.set('googtrans', cookieValue, { path: '/', domain: '.' + window.location.hostname });
-        }
-
-        // Force reload to apply Google Translate
-        window.location.reload();
+        jsCookie.set('app_language', lang, { expires: 365 });
+        // Clear cache on language switch to avoid staleness? 
+        // Or keep it. Let's keep it but simple.
+        setDynamicCache({});
     };
 
-    // Legacy support for t() calls - now they just return the default English text
-    // Google Translate will handle the DOM text replacement
-    const t = (key: string) => {
-        const defaults: Record<string, string> = {
-            'footer.about': 'About',
-            'footer.team': 'Team',
-            'footer.contact': 'Contact',
-            'footer.docs': 'Docs',
-            'footer.privacy': 'Privacy',
-            'footer.terms': 'Terms',
-            'footer.rights': 'Extrovert',
-            'footer.love': 'for students',
-            'nav.login': 'Log In',
-            'nav.signup': 'Sign Up',
-            'nav.resources': 'Resources',
-            'nav.community': 'Community',
-        };
-        return defaults[key] || key;
+    // 2. Dynamic Translation API (The "Clean" Google Approach)
+    const translateText = async (text: string): Promise<string> => {
+        if (language === 'en') return text;
+        const cacheKey = `${language}:${text}`;
+
+        if (dynamicCache[cacheKey]) return dynamicCache[cacheKey];
+
+        try {
+            setIsTranslating(true);
+            const response = await fetch('/api/translate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, targetLang: language })
+            });
+            const data = await response.json();
+
+            if (data.translatedText) {
+                setDynamicCache(prev => ({ ...prev, [cacheKey]: data.translatedText }));
+                return data.translatedText;
+            }
+        } catch (error) {
+            console.error("Translation failed", error);
+        } finally {
+            setIsTranslating(false);
+        }
+        return text;
+    };
+
+    const t = (key: string, defaultText: string = '') => {
+        if (language === 'en') return defaultText || key;
+
+        // Check Manual Dictionary first
+        const manual = translations[language]?.[key];
+        if (manual) return manual;
+
+        // If no manual, return default for now 
+        // (Dynamic usage needs async handling in components)
+        return defaultText || key;
     };
 
     return (
-        <LanguageContext.Provider value={{ language, setLanguage, t }}>
+        <LanguageContext.Provider value={{ language, setLanguage, t, translateText, isTranslating }}>
             {children}
         </LanguageContext.Provider>
     );

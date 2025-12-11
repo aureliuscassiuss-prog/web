@@ -62,54 +62,7 @@
       opacity: 1;
     }
   </style>
-  <script type="text/javascript">
-    function googleTranslateElementInit() {
-      new google.translate.TranslateElement({
-        pageLanguage: 'en',
-        includedLanguages: 'en,hi,bn,mr,te,ta,gu,kn,ml,pa,es,fr,de,it,zh-CN,ja,ru,pt,ar,ko',
-        autoDisplay: false
-      }, 'google_translate_element');
-    }
-
-    // NUCLEAR OPTION: MutationObserver to remove Google's inserted elements
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.addedNodes.length) {
-          const classesToRemove = [
-            'goog-te-banner-frame',
-            'goog-te-spinner-pos',
-            'goog-te-spinner-animation',
-            'goog-logo-link',
-            'goog-te-gadget-icon',
-            'goog-te-spinner'
-          ];
-
-          classesToRemove.forEach(className => {
-            const elements = document.getElementsByClassName(className);
-            while (elements.length > 0) {
-              elements[0].parentNode.removeChild(elements[0]);
-            }
-          });
-
-          // Also remove specific IDs if they exist
-          const idsToRemove = [':1.container', 'goog-gt-tt'];
-          idsToRemove.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.remove();
-          });
-
-          // Force body top to 0 if google messes with it
-          if (document.body.style.top !== '0px') {
-            document.body.style.top = '0px';
-          }
-        }
-      });
-    });
-
-    observer.observe(document.documentElement, { childList: true, subtree: true });
-  </script>
-  <script type="text/javascript"
-    src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+</head>
 </head>
 
 <body>
