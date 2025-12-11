@@ -80,7 +80,7 @@ export default function Footer() {
                             </button>
 
                             {isLangMenuOpen && (
-                                <div className="absolute bottom-full right-0 md:left-1/2 md:-translate-x-1/2 mb-2 w-40 bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-xl overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-200">
+                                <div className="absolute bottom-full right-0 md:left-1/2 md:-translate-x-1/2 mb-2 w-40 bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-xl overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-200 notranslate">
                                     {languages.map((lang) => (
                                         <button
                                             key={lang.code}

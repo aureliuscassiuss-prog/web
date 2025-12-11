@@ -21,6 +21,9 @@ export function useAutoTranslation() {
                 // Do not translate inputs
                 if (['INPUT', 'TEXTAREA'].includes(parent.tagName)) return;
 
+                // Respect 'notranslate' class (standard convention)
+                if (parent.closest('.notranslate')) return;
+
                 try {
                     const translated = await translateText(originalText);
                     if (translated && translated !== originalText) {
