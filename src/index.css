@@ -229,8 +229,15 @@ img {
 
 body {
   top: 0 !important;
+  position: static !important;
 }
 
+/* Hide the top banner frame */
+.skiptranslate {
+  display: none !important;
+}
+
+/* Hide the popup tooltip */
 .goog-tooltip {
   display: none !important;
 }
@@ -242,4 +249,15 @@ body {
 .goog-text-highlight {
   background-color: transparent !important;
   box-shadow: none !important;
+}
+
+/* Hide specific modern Google Translate iframes and containers */
+iframe[class*="goog-te-banner"],
+iframe[id^=":"] {
+  display: none !important;
+}
+
+/* Ensure no massive white space at top */
+.goog-te-banner-frame.skiptranslate {
+  display: none !important;
 }

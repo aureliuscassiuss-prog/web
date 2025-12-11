@@ -25,6 +25,14 @@ export default function Footer() {
         { code: 'hi', label: 'हिंदी (Hindi)' },
         { code: 'es', label: 'Español' },
         { code: 'fr', label: 'Français' },
+        { code: 'de', label: 'Deutsch' },
+        { code: 'it', label: 'Italiano' },
+        { code: 'zh-CN', label: '中文 (Chinese)' },
+        { code: 'ja', label: '日本語 (Japanese)' },
+        { code: 'ru', label: 'Русский (Russian)' },
+        { code: 'pt', label: 'Português' },
+        { code: 'ar', label: 'العربية (Arabic)' },
+        { code: 'ko', label: '한국어 (Korean)' },
     ];
 
     return (

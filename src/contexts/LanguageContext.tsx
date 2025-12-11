@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import jsCookie from 'js-cookie';
 
-type Language = 'en' | 'hi' | 'es' | 'fr';
+type Language = 'en' | 'hi' | 'es' | 'fr' | 'de' | 'it' | 'zh-CN' | 'ja' | 'ru' | 'pt' | 'ar' | 'ko';
 
 interface LanguageContextType {
     language: Language;
@@ -20,7 +20,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         const googleCookie = jsCookie.get('googtrans');
         if (googleCookie) {
             const langCode = googleCookie.split('/').pop();
-            if (langCode && ['en', 'hi', 'es', 'fr'].includes(langCode)) {
+            if (langCode) {
+                // If it's a supported code, set it. Otherwise default to 'en'.
                 setLanguageState(langCode as Language);
             }
         }
