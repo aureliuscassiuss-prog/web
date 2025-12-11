@@ -6,11 +6,14 @@ import App from './App.tsx'
 const rootElement = document.getElementById('root')!;
 
 import { HelmetProvider } from 'react-helmet-async';
+import { LanguageProvider } from './contexts/LanguageContext';
 
 createRoot(rootElement).render(
   <StrictMode>
     <HelmetProvider>
-      <App />
+      <LanguageProvider>
+        <App />
+      </LanguageProvider>
     </HelmetProvider>
   </StrictMode>,
 )
