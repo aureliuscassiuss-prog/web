@@ -16,6 +16,20 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 // 1. Manual Dictionary (Professional, Instant, Zero Glitch)
 const translations: Partial<Record<Language, Record<string, string>>> = {
+    en: {
+        'footer.about': 'About',
+        'footer.team': 'Team',
+        'footer.contact': 'Contact',
+        'footer.docs': 'Docs',
+        'footer.privacy': 'Privacy',
+        'footer.terms': 'Terms',
+        'footer.rights': 'Extrovert',
+        'footer.love': 'for students',
+        'nav.login': 'Log In',
+        'nav.signup': 'Sign Up',
+        'nav.resources': 'Resources',
+        'nav.community': 'Community',
+    },
     hi: {
         'footer.about': 'बारे में',
         'footer.team': 'टीम',
@@ -46,20 +60,25 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     const setLanguage = (lang: Language) => {
         setLanguageState(lang);
         jsCookie.set('app_language', lang, { expires: 365 });
-        // Clear cache on language switch to avoid staleness? 
-        // Or keep it. Let's keep it but simple.
-        setDynamicCache({});
+        // We do NOT clear cache here, to avoid re-fetching if user switches back
     };
 
     // 2. Dynamic Translation API (The "Clean" Google Approach)
     const translateText = async (text: string): Promise<string> => {
+        // If English, return original
         if (language === 'en') return text;
+
         const cacheKey = `${language}:${text}`;
 
         if (dynamicCache[cacheKey]) return dynamicCache[cacheKey];
 
         try {
-            setIsTranslating(true);
+            // Simple debounce/queue could go here if needed, but for now direct fetch
+            // We set isTranslating only for initial large batches if we wanted, 
+            // but for individual calls it might cause flicker if we used a global spinner.
+            // Let's keep it false for background updates.
+            // setIsTranslating(true); 
+
             const response = await fetch('/api/translate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -74,21 +93,25 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         } catch (error) {
             console.error("Translation failed", error);
         } finally {
-            setIsTranslating(false);
+            // setIsTranslating(false);
         }
         return text;
     };
 
     const t = (key: string, defaultText: string = '') => {
-        if (language === 'en') return defaultText || key;
+        // Always try to find the translation in the current language
+        const translated = translations[language]?.[key];
+        if (translated) return translated;
 
-        // Check Manual Dictionary first
-        const manual = translations[language]?.[key];
-        if (manual) return manual;
+        // If not found, and we have a default text, return it
+        if (defaultText) return defaultText;
 
-        // If no manual, return default for now 
-        // (Dynamic usage needs async handling in components)
-        return defaultText || key;
+        // Fallback to English dictionary if available
+        const englishFallback = translations['en']?.[key];
+        if (englishFallback) return englishFallback;
+
+        // Last resort: return key
+        return key;
     };
 
     return (
