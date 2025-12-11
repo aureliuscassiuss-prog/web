@@ -9,31 +9,49 @@ interface HeroProps {
 }
 
 export default function Hero({ onGetStarted, user }: HeroProps) {
-    const [studentCount, setStudentCount] = useState(0)
-    const [recentStudents, setRecentStudents] = useState<any[]>([])
+    // State with Lazy Initializers for Instant Load from Cache
+    const [studentCount, setStudentCount] = useState(() => {
+        const cached = localStorage.getItem('hero_stats_count');
+        return cached ? parseInt(cached) : 2500; // Default to 2500+ immediately if no cache
+    });
+
+    const [recentStudents, setRecentStudents] = useState<any[]>(() => {
+        const cached = localStorage.getItem('hero_stats_users');
+        return cached ? JSON.parse(cached) : [];
+    });
 
     useEffect(() => {
-        // Fetch real student data
-        const fetchStudentData = async () => {
+        const fetchData = async () => {
             try {
-                const response = await fetch('/api/admin?action=stats')
-                if (response.ok) {
-                    const data = await response.json()
-                    setStudentCount(data.totalUsers || 0)
+                // Parallel fetching for speed
+                const [statsRes, leaderboardRes] = await Promise.all([
+                    fetch('/api/admin?action=stats'),
+                    fetch('/api/resources?action=leaderboard')
+                ]);
+
+                if (statsRes.ok) {
+                    const data = await statsRes.json();
+                    const count = data.totalUsers || 2500;
+                    setStudentCount(count);
+                    localStorage.setItem('hero_stats_count', count.toString());
                 }
 
-                // Fetch recent users for avatars
-                const leaderboardResponse = await fetch('/api/resources?action=leaderboard')
-                if (leaderboardResponse.ok) {
-                    const leaderboardData = await leaderboardResponse.json()
-                    setRecentStudents(leaderboardData.leaderboard?.slice(0, 4) || [])
+                if (leaderboardRes.ok) {
+                    const data = await leaderboardRes.json();
+                    const users = data.leaderboard?.slice(0, 4) || [];
+                    if (users.length > 0) {
+                        setRecentStudents(users);
+                        localStorage.setItem('hero_stats_users', JSON.stringify(users));
+                    }
                 }
             } catch (error) {
-                console.error('Failed to fetch student data:', error)
+                console.error('Hero data sync failed:', error);
             }
-        }
-        fetchStudentData()
-    }, [])
+        };
+
+        // Fire and forget - don't block UI
+        fetchData();
+    }, []);
 
     return (
         <section className="relative flex flex-col items-center justify-center pt-16 pb-24 px-4 text-center md:pt-32 md:pb-48 overflow-hidden bg-white dark:bg-[#030303] selection:bg-blue-500/30">
