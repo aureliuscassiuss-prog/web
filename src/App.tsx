@@ -189,8 +189,11 @@ function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+import { useAutoTranslation } from './hooks/useAutoTranslation';
+
 function AppContent() {
   const { user } = useAuth()
+  useAutoTranslation(); // Enable auto-translation for the entire app
 
   // --- PROTECTION: Prevent Context Menu (Right Click) ---
   useEffect(() => {
