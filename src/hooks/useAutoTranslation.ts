@@ -9,8 +9,12 @@ export function useAutoTranslation() {
     const { language, translateText } = useLanguage();
 
     useEffect(() => {
+        let isActive = true; // Prevents race conditions
+
         // Function to process a single node
         const processNode = async (node: Node) => {
+            if (!isActive) return; // Stop if unmounted/changed
+
             if (node.nodeType === Node.TEXT_NODE && node.nodeValue?.trim()) {
                 const currentText = node.nodeValue;
 
@@ -42,14 +46,14 @@ export function useAutoTranslation() {
                 // 3. Action based on Language
                 if (language === 'en') {
                     // Restore Original
-                    if (node.nodeValue !== original) {
+                    if (node.nodeValue !== original && isActive) {
                         node.nodeValue = original;
                     }
                 } else {
                     // Translate Original -> Target
                     try {
                         const translated = await translateText(original);
-                        if (translated && node.nodeValue !== translated) {
+                        if (translated && node.nodeValue !== translated && isActive) {
                             node.nodeValue = translated;
                         }
                     } catch (e) {
@@ -60,6 +64,7 @@ export function useAutoTranslation() {
         };
 
         const walk = (node: Node) => {
+            if (!isActive) return;
             processNode(node);
             node.childNodes.forEach(walk);
         };
@@ -69,6 +74,7 @@ export function useAutoTranslation() {
 
         // Observer for dynamic content
         const observer = new MutationObserver((mutations) => {
+            if (!isActive) return;
             mutations.forEach(mutation => {
                 mutation.addedNodes.forEach(walk);
                 // We also might want to watch for characterData changes, but that triggers infinite loops
@@ -78,6 +84,9 @@ export function useAutoTranslation() {
 
         observer.observe(document.body, { childList: true, subtree: true });
 
-        return () => observer.disconnect();
+        return () => {
+            isActive = false; // Cleanup: Cancel all pending updates
+            observer.disconnect();
+        };
     }, [language, translateText]);
 }
