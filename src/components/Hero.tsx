@@ -1,198 +1,156 @@
 import { ArrowRight, Sparkles, ChevronRight, Star, Users, Menu } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { getAvatarComponent } from '../data/premiumAvatars'
+
 
 interface HeroProps {
     onGetStarted?: () => void
     user?: any
 }
 
-export default function Hero({ onGetStarted, user }: HeroProps) {
-    // State with Lazy Initializers for Instant Load from Cache
-    const [studentCount, setStudentCount] = useState(() => {
-        const cached = localStorage.getItem('hero_stats_count');
-        return cached ? parseInt(cached) : 2500; // Default to 2500+ immediately if no cache
-    });
+// State with Lazy Initializers for Instant Load from Cache
+const [isLoading, setIsLoading] = useState(() => !localStorage.getItem('hero_stats_count'));
+const [studentCount, setStudentCount] = useState<number | null>(() => {
+    const cached = localStorage.getItem('hero_stats_count');
+    return cached ? parseInt(cached) : null;
+});
 
-    const [recentStudents, setRecentStudents] = useState<any[]>(() => {
-        const cached = localStorage.getItem('hero_stats_users');
-        return cached ? JSON.parse(cached) : [];
-    });
+const [recentStudents, setRecentStudents] = useState<any[]>(() => {
+    const cached = localStorage.getItem('hero_stats_users');
+    return cached ? JSON.parse(cached) : [];
+});
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                // Parallel fetching for speed
-                const [statsRes, leaderboardRes] = await Promise.all([
-                    fetch('/api/admin?action=stats'),
-                    fetch('/api/resources?action=leaderboard')
-                ]);
+useEffect(() => {
+    const fetchData = async () => {
+        try {
+            // Parallel fetching for speed
+            const [statsRes, leaderboardRes] = await Promise.all([
+                fetch('/api/admin?action=stats'),
+                fetch('/api/resources?action=leaderboard')
+            ]);
 
-                if (statsRes.ok) {
-                    const data = await statsRes.json();
-                    const count = data.totalUsers || 2500;
-                    setStudentCount(count);
-                    localStorage.setItem('hero_stats_count', count.toString());
-                }
-
-                if (leaderboardRes.ok) {
-                    const data = await leaderboardRes.json();
-                    const users = data.leaderboard?.slice(0, 4) || [];
-                    if (users.length > 0) {
-                        setRecentStudents(users);
-                        localStorage.setItem('hero_stats_users', JSON.stringify(users));
-                    }
-                }
-            } catch (error) {
-                console.error('Hero data sync failed:', error);
+            if (statsRes.ok) {
+                const data = await statsRes.json();
+                setStudentCount(data.totalUsers || 2500);
+                localStorage.setItem('hero_stats_count', (data.totalUsers || 2500).toString());
+            } else if (!studentCount) {
+                // Fallback if API fails and no cache
+                setStudentCount(2500);
             }
-        };
 
-        // Fire and forget - don't block UI
-        fetchData();
-    }, []);
+            if (leaderboardRes.ok) {
+                const data = await leaderboardRes.json();
+                const users = data.leaderboard?.slice(0, 4) || [];
+                if (users.length > 0) {
+                    setRecentStudents(users);
+                    localStorage.setItem('hero_stats_users', JSON.stringify(users));
+                }
+            }
+        } catch (error) {
+            console.error('Hero data sync failed:', error);
+            if (!studentCount) setStudentCount(2500);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-    return (
-        <section className="relative flex flex-col items-center justify-center pt-16 pb-24 px-4 text-center md:pt-32 md:pb-48 overflow-hidden bg-white dark:bg-[#030303] selection:bg-blue-500/30">
+    // Fire and forget - don't block UI
+    fetchData();
+}, []);
 
-            {/* --- Background Effects (Cleaned & Professional) --- */}
+// ... (rest of render)
 
-            {/* 1. Top Spotlight - Neutral Blue/White (No Pink) */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1200px] h-[500px] bg-blue-500/10 blur-[100px] rounded-full pointer-events-none opacity-40 dark:opacity-20" />
-
-            {/* 2. Subtle Grid - Softened, No Hard Borders */}
-            <div className="absolute inset-0 -z-10 h-full w-full bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none"></div>
-
-            {/* --- Main Content --- */}
-
-            {/* Announcement Badge */}
-            <div className="mb-8 animate-fade-in opacity-0 [animation-fill-mode:forwards]">
-                <div className="group relative inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/60 backdrop-blur-md px-4 py-1.5 text-xs md:text-sm font-medium text-gray-600 shadow-sm transition-all hover:bg-white hover:shadow-md hover:border-blue-200 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:border-white/20 cursor-default">
-                    <Sparkles className="h-3.5 w-3.5 text-blue-500" />
-                    <span>New: AI Tutor is now live</span>
-                    <ChevronRight className="h-3 w-3 text-gray-400 transition-transform group-hover:translate-x-0.5" />
-                </div>
-            </div>
-
-            {/* Headline */}
-            <h1 className="max-w-6xl text-5xl font-bold tracking-tighter text-gray-900 dark:text-white md:text-8xl animate-slide-up opacity-0 [animation-fill-mode:forwards] [animation-delay:0.1s]">
-                Learn together. <br className="hidden md:block" />
-                <span className="inline-block text-transparent bg-clip-text bg-gradient-to-b from-gray-700 to-gray-400 dark:from-white dark:to-gray-400">
-                    Excel together.
-                </span>
-            </h1>
-
-            {/* Subheading */}
-            <p className="mt-10 md:mt-12 max-w-2xl text-base md:text-xl text-gray-600 dark:text-gray-400 animate-slide-up opacity-0 [animation-fill-mode:forwards] [animation-delay:0.1s] leading-relaxed px-4">
-                The all-in-one academic platform for Medicaps University. Access premium notes, PYQs, and get instant guidance from your personal AI Tutor.
-            </p>
-
-            {/* Action Buttons */}
-            <div className="mt-8 md:mt-10 flex flex-col gap-3 md:gap-4 w-full sm:w-auto sm:flex-row animate-slide-up opacity-0 [animation-fill-mode:forwards] [animation-delay:0.15s]">
-                <button
-                    onClick={onGetStarted}
-                    className="relative h-12 px-8 rounded-full text-base font-medium text-white bg-black dark:bg-white dark:text-black shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 w-full sm:w-auto flex items-center justify-center overflow-hidden"
-                >
-                    <span className="relative flex items-center z-10">
-                        {user ? (
-                            <>
-                                Explore
-                                <Menu className="ml-2 h-4 w-4" />
-                            </>
+{/* Social Proof (Real Data) */ }
+<div className="mt-8 md:mt-10 flex flex-col md:flex-row items-center gap-4 animate-fade-in opacity-0 [animation-fill-mode:forwards] [animation-delay:0.2s]">
+    <div className="flex -space-x-3">
+        {isLoading ? (
+            // Skeleton Loading State
+            <>
+                {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="h-8 w-8 rounded-full border-2 border-white dark:border-black bg-gray-200 dark:bg-gray-800 animate-pulse" />
+                ))}
+            </>
+        ) : recentStudents.length > 0 ? (
+            <>
+                {recentStudents.map((student, i) => (
+                    <div key={i} className="h-8 w-8 rounded-full border-2 border-white dark:border-black overflow-hidden bg-gray-200 dark:bg-gray-800 relative group">
+                        {student.avatar ? (
+                            <img src={student.avatar} alt={student.name} className="w-full h-full object-cover" />
                         ) : (
-                            <>
-                                Get Started
-                                <ArrowRight className="ml-2 h-4 w-4" />
-                            </>
+                            <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-[9px] font-bold">
+                                {student.name?.[0] || 'U'}
+                            </div>
                         )}
-                    </span>
-                </button>
-                <Link
-                    to="/leaderboard"
-                    className="h-12 px-8 rounded-full text-base font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 bg-white/50 dark:bg-white/5 backdrop-blur-sm hover:bg-gray-50 dark:hover:bg-white/10 transition-all duration-200 w-full sm:w-auto flex items-center justify-center"
-                >
-                    View Leaderboard
-                </Link>
-            </div>
-
-            {/* Social Proof (Real Data) */}
-            <div className="mt-8 md:mt-10 flex flex-col md:flex-row items-center gap-4 animate-fade-in opacity-0 [animation-fill-mode:forwards] [animation-delay:0.2s]">
-                <div className="flex -space-x-3">
-                    {recentStudents.length > 0 ? (
-                        <>
-                            {recentStudents.map((student, i) => (
-                                <div key={i} className="h-8 w-8 rounded-full border-2 border-white dark:border-black overflow-hidden bg-gray-200 dark:bg-gray-800">
-                                    {student.avatar ? (
-                                        <img src={student.avatar} alt={student.name} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
-                                            {student.name?.[0] || 'U'}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </>
-                    ) : (
-                        <>
-                            {[1, 2, 3, 4].map((i) => (
-                                <div key={i} className="h-8 w-8 rounded-full border-2 border-white dark:border-black bg-gray-200 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
-                                    <Users className="h-4 w-4 text-gray-400" />
-                                </div>
-                            ))}
-                        </>
-                    )}
-                    <div className="h-8 min-w-[2rem] px-2 rounded-full border-2 border-white dark:border-black bg-gray-100 dark:bg-gray-900 flex items-center justify-center text-[10px] font-bold text-gray-600 dark:text-gray-400">
-                        {studentCount > 0 ? `${studentCount}+` : '2k+'}
                     </div>
-                </div>
-                <div className="flex items-center gap-1">
-                    <div className="flex text-yellow-500">
-                        {[1, 2, 3, 4, 5].map((i) => (
-                            <Star key={i} className="h-4 w-4 fill-current" />
-                        ))}
+                ))}
+            </>
+        ) : (
+            // Fallback Icons (only if loaded but empty)
+            <>
+                {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="h-8 w-8 rounded-full border-2 border-white dark:border-black bg-gray-200 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
+                        <Users className="h-4 w-4 text-gray-400" />
                     </div>
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">from students</span>
-                </div>
+                ))}
+            </>
+        )}
+
+        {/* Count Pill */}
+        <div className="h-8 min-w-[3rem] px-3 rounded-full border-2 border-white dark:border-black bg-gray-100 dark:bg-gray-900 flex items-center justify-center text-[10px] font-bold text-gray-600 dark:text-gray-400">
+            {isLoading ? (
+                <div className="h-2 w-8 bg-gray-300 dark:bg-gray-700 rounded-full animate-pulse" />
+            ) : (
+                <span>{studentCount ? `${studentCount}+` : '2k+'}</span>
+            )}
+        </div>
+    </div>
+    <div className="flex items-center gap-1">
+        <div className="flex text-yellow-500">
+            {[1, 2, 3, 4, 5].map((i) => (
+                <Star key={i} className="h-4 w-4 fill-current" />
+            ))}
+        </div>
+        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">from students</span>
+    </div>
+</div>
+
+{/* --- Visual / Video Section (Professional Glass) --- */ }
+<div className="relative mt-16 md:mt-20 w-full max-w-6xl animate-fade-in opacity-0 [animation-fill-mode:forwards] [animation-delay:0.25s] px-4">
+
+    {/* Clean Glow (No Pink) */}
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] h-[50%] bg-blue-500/20 blur-[90px] rounded-full -z-10"></div>
+
+    {/* Main Glass Container */}
+    <div className="relative rounded-2xl border border-gray-200/50 bg-white/40 p-2 dark:border-white/10 dark:bg-white/5 backdrop-blur-2xl shadow-2xl ring-1 ring-black/5 dark:ring-white/5">
+
+        {/* The Screen/Frame */}
+        <div className="aspect-[16/9] w-full overflow-hidden rounded-xl bg-gray-50 dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/5 relative flex items-center justify-center group">
+
+            {/* Video Background */}
+            <video
+                src="/1.mp4"
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="absolute inset-0 w-full h-full object-cover"
+            />
+
+            {/* Overlay Gradient for better text readability if needed, or just subtle polish */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
+        </div>
+    </div>
+
+    {/* Feature Pills (New Content Below Video) */}
+    <div className="mt-8 flex flex-wrap justify-center gap-x-8 gap-y-4 opacity-60">
+        {['Instant Notes', 'AI Tutoring', 'Past Year Papers', 'CGPA Calculator'].map((feature) => (
+            <div key={feature} className="flex items-center gap-2 text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">
+                <div className="h-1.5 w-1.5 rounded-full bg-blue-500/50"></div>
+                {feature}
             </div>
-
-            {/* --- Visual / Video Section (Professional Glass) --- */}
-            <div className="relative mt-16 md:mt-20 w-full max-w-6xl animate-fade-in opacity-0 [animation-fill-mode:forwards] [animation-delay:0.25s] px-4">
-
-                {/* Clean Glow (No Pink) */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] h-[50%] bg-blue-500/20 blur-[90px] rounded-full -z-10"></div>
-
-                {/* Main Glass Container */}
-                <div className="relative rounded-2xl border border-gray-200/50 bg-white/40 p-2 dark:border-white/10 dark:bg-white/5 backdrop-blur-2xl shadow-2xl ring-1 ring-black/5 dark:ring-white/5">
-
-                    {/* The Screen/Frame */}
-                    <div className="aspect-[16/9] w-full overflow-hidden rounded-xl bg-gray-50 dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/5 relative flex items-center justify-center group">
-
-                        {/* Video Background */}
-                        <video
-                            src="/1.mp4"
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                            className="absolute inset-0 w-full h-full object-cover"
-                        />
-
-                        {/* Overlay Gradient for better text readability if needed, or just subtle polish */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
-                    </div>
-                </div>
-
-                {/* Feature Pills (New Content Below Video) */}
-                <div className="mt-8 flex flex-wrap justify-center gap-x-8 gap-y-4 opacity-60">
-                    {['Instant Notes', 'AI Tutoring', 'Past Year Papers', 'CGPA Calculator'].map((feature) => (
-                        <div key={feature} className="flex items-center gap-2 text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">
-                            <div className="h-1.5 w-1.5 rounded-full bg-blue-500/50"></div>
-                            {feature}
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </section>
+        ))}
+    </div>
+</div>
+        </section >
     )
 }
