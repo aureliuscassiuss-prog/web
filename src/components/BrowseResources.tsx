@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useMemo, useRef } from 'react';
+import Fuse from 'fuse.js';
 import {
     ChevronLeft, BookOpen, GraduationCap,
     ArrowRight, Layers, Library,
@@ -28,6 +29,10 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
     const [loadingText, setLoadingText] = useState('Initializing...');
     const [structure, setStructure] = useState<any>(null);
     const [isLoadingStructure, setIsLoadingStructure] = useState(true);
+
+    // --- Search State ---
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<any[]>([]);
 
     // --- Auto-select based on User Profile ---
     const { user } = useAuth();
@@ -115,6 +120,81 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
         loadData();
     }, []);
 
+    // --- Search Index Creation (Memoized) ---
+    // We flatten the entire structure into a searchable list of Subjects and Units
+    const searchIndex = useMemo(() => {
+        if (!structure?.programs) return [];
+        const index: any[] = [];
+
+        structure.programs.forEach((prog: any) => {
+            prog.years.forEach((yr: any) => {
+                yr.courses.forEach((crs: any) => {
+                    crs.semesters.forEach((sem: any) => {
+                        sem.subjects.forEach((sub: any) => {
+                            const subName = typeof sub === 'string' ? sub : sub.name;
+                            const subObj = typeof sub === 'object' ? sub : { name: sub, units: [] };
+
+                            // Add Subject
+                            index.push({
+                                type: 'subject',
+                                title: subName,
+                                subtitle: `${prog.name} • ${sem.name}`,
+                                path: {
+                                    program: prog.id,
+                                    year: yr.id,
+                                    course: crs.id,
+                                    semester: sem.id,
+                                    subject: subName
+                                }
+                            });
+
+                            // Add Units
+                            if (subObj.units) {
+                                subObj.units.forEach((unit: any) => {
+                                    const unitName = typeof unit === 'string' ? unit : unit.name;
+                                    index.push({
+                                        type: 'unit', // We call it 'resource' in UI if preferred, but 'unit' technically
+                                        title: unitName,
+                                        subtitle: `${subName} • ${sem.name}`,
+                                        path: {
+                                            program: prog.id,
+                                            year: yr.id,
+                                            course: crs.id,
+                                            semester: sem.id,
+                                            subject: subName,
+                                            unit: unitName
+                                        }
+                                    });
+                                });
+                            }
+                        });
+                    });
+                });
+            });
+        });
+        return index;
+    }, [structure]);
+
+    // --- Fuse.js Setup ---
+    const fuse = useMemo(() => {
+        return new Fuse(searchIndex, {
+            keys: ['title'],
+            threshold: 0.4, // Fuzzy tolerance (0.0 = exact, 1.0 = match anything)
+            distance: 100,
+        });
+    }, [searchIndex]);
+
+    // --- Handle Search ---
+    useEffect(() => {
+        if (!searchQuery.trim()) {
+            setSearchResults([]);
+            return;
+        }
+        const results = fuse.search(searchQuery).map((r: any) => r.item);
+        setSearchResults(results);
+    }, [searchQuery, fuse]);
+
+
     // --- Loading Animation Logic ---
     useEffect(() => {
         if (step === 7) {
@@ -178,9 +258,17 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
         }
     };
 
+    // Direct Result Navigation from Search
+    const handleSearchResultClick = (result: any) => {
+        setSelections(result.path);
+        setSearchQuery(''); // Clear search logic on click
+        setStep(8); // Go to results directly
+    };
+
     const handleReset = () => {
         setSelections({});
         setStep(1);
+        setSearchQuery('');
         localStorage.removeItem('browseResourcesStep');
         localStorage.removeItem('browseResourcesSelections');
     };
@@ -207,6 +295,13 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
     const totalSteps = 6;
     const progress = Math.min(((step - 1) / totalSteps) * 100, 100);
 
+    // Group Search Results
+    const groupedResults = useMemo(() => {
+        const subjects = searchResults.filter(r => r.type === 'subject');
+        const units = searchResults.filter(r => r.type === 'unit');
+        return { subjects, units };
+    }, [searchResults]);
+
     if (isLoadingStructure) {
         return (
             <div className="flex h-[50vh] flex-col items-center justify-center gap-4 text-gray-500">
@@ -219,8 +314,93 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
     return (
         <div className="w-full max-w-4xl mx-auto min-h-[60vh] p-4 md:p-8">
 
-            {/* Header Area */}
-            {step < 8 && (
+            {/* --- Advanced Search Bar --- */}
+            {step !== 8 && (
+                <div className="relative mb-12 z-20">
+                    <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <BookOpen className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                        </div>
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search subjects or units (e.g., 'Physics', 'Data Structures')..."
+                            className="block w-full pl-12 pr-4 py-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-base placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm group-hover:shadow-md"
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery('')}
+                                className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                            >
+                                <FilterX className="h-4 w-4" />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Search Results Dropdown/Overlay */}
+                    {searchQuery && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl shadow-2xl overflow-hidden max-h-[60vh] overflow-y-auto z-50 animate-in fade-in zoom-in-95 duration-200">
+                            {searchResults.length === 0 ? (
+                                <div className="p-8 text-center text-gray-500">
+                                    <p>No matches found for "{searchQuery}"</p>
+                                </div>
+                            ) : (
+                                <div className="p-2 space-y-4">
+                                    {/* Subjects Section */}
+                                    {groupedResults.subjects.length > 0 && (
+                                        <div>
+                                            <div className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-gray-400">Subjects</div>
+                                            {groupedResults.subjects.map((result, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => handleSearchResultClick(result)}
+                                                    className="w-full text-left px-3 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors group"
+                                                >
+                                                    <div className="p-2 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+                                                        <BookOpen className="h-5 w-5" />
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-semibold text-gray-900 dark:text-white">{result.title}</div>
+                                                        <div className="text-xs text-gray-500">{result.subtitle}</div>
+                                                    </div>
+                                                    <ArrowRight className="ml-auto h-4 w-4 text-gray-300 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-all" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Units Section */}
+                                    {groupedResults.units.length > 0 && (
+                                        <div>
+                                            <div className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-gray-400">Units & Topics</div>
+                                            {groupedResults.units.map((result, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => handleSearchResultClick(result)}
+                                                    className="w-full text-left px-3 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors group"
+                                                >
+                                                    <div className="p-2 rounded-md bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400">
+                                                        <Hash className="h-5 w-5" />
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-semibold text-gray-900 dark:text-white">{result.title}</div>
+                                                        <div className="text-xs text-gray-500">{result.subtitle}</div>
+                                                    </div>
+                                                    <ArrowRight className="ml-auto h-4 w-4 text-gray-300 group-hover:text-purple-500 opacity-0 group-hover:opacity-100 transition-all" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Header Area (Hidden while searching or on Results) */}
+            {step < 8 && !searchQuery && (
                 <div className="mb-10 animate-in fade-in slide-in-from-top-4 duration-500">
                     <div className="flex items-center justify-between mb-6">
                         {step > 1 ? (
@@ -249,171 +429,173 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
                 </div>
             )}
 
-            {/* Main Content Area */}
-            <div className="flex flex-col items-center w-full">
+            {/* Main Content Area (Hidden while searching) */}
+            {!searchQuery && (
+                <div className="flex flex-col items-center w-full">
 
-                {/* STEP 1: Program */}
-                {step === 1 && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        {programs.map((prog: any) => (
-                            <SelectionCard
-                                key={prog.id}
-                                onClick={() => handleSelect('program', prog.id, 2)}
-                                title={prog.name}
-                                subtitle="Degree Program"
-                                icon={<Library className="h-6 w-6" />}
-                            />
-                        ))}
-                    </div>
-                )}
-
-                {/* STEP 2: Year */}
-                {step === 2 && (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        {years.map((year: any) => (
-                            <SelectionCard
-                                key={year.id}
-                                onClick={() => handleSelect('year', year.id, 3)}
-                                title={year.name}
-                                subtitle="Academic Year"
-                                icon={<GraduationCap className="h-6 w-6" />}
-                                centered
-                            />
-                        ))}
-                    </div>
-                )}
-
-                {/* STEP 3: Course/Branch */}
-                {step === 3 && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        {courses.map((c: any) => (
-                            <SelectionCard
-                                key={c.id}
-                                onClick={() => handleSelect('course', c.id, 4)}
-                                title={c.name}
-                                subtitle={`${c.semesters?.length || 0} Semesters`}
-                                icon={<Layers className="h-6 w-6" />}
-                            />
-                        ))}
-                    </div>
-                )}
-
-                {/* STEP 4: Semester */}
-                {step === 4 && (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        {semesters.map((sem: any) => (
-                            <SelectionCard
-                                key={sem.id}
-                                onClick={() => handleSelect('semester', sem.id, 5)}
-                                title={sem.name}
-                                subtitle="Semester"
-                                icon={<Calendar className="h-6 w-6" />}
-                                centered
-                            />
-                        ))}
-                    </div>
-                )}
-
-                {/* STEP 5: Subjects */}
-                {step === 5 && (
-                    <div className="w-full space-y-2 animate-in slide-in-from-right-8 duration-300">
-                        {subjects.map((sub: any) => (
-                            <ListItem
-                                key={typeof sub === 'string' ? sub : sub.name}
-                                onClick={() => handleSubjectSelect(sub)}
-                                title={typeof sub === 'string' ? sub : sub.name}
-                                icon={<BookOpen className="h-4 w-4" />}
-                            />
-                        ))}
-                    </div>
-                )}
-
-                {/* STEP 6: Units */}
-                {step === 6 && (
-                    <div className="w-full space-y-4 animate-in slide-in-from-right-8 duration-300">
-                        <div className="flex justify-between items-center px-1">
-                            <span className="text-xs text-gray-500 font-medium">Narrow down your search (Optional)</span>
-                            <button onClick={() => setStep(7)} className="text-xs font-medium text-black dark:text-white underline decoration-gray-300 hover:decoration-black transition-all">
-                                Skip Selection
-                            </button>
+                    {/* STEP 1: Program */}
+                    {step === 1 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            {programs.map((prog: any) => (
+                                <SelectionCard
+                                    key={prog.id}
+                                    onClick={() => handleSelect('program', prog.id, 2)}
+                                    title={prog.name}
+                                    subtitle="Degree Program"
+                                    icon={<Library className="h-6 w-6" />}
+                                />
+                            ))}
                         </div>
-                        <div className="space-y-2">
-                            {units.map((unit: any) => {
-                                const unitName = typeof unit === 'string' ? unit : unit.name;
-                                return (
-                                    <ListItem
-                                        key={unitName}
-                                        onClick={() => handleSelect('unit', unitName, 7)}
-                                        title={unitName}
-                                        icon={<Hash className="h-4 w-4" />}
-                                    />
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
+                    )}
 
-                {/* STEP 7: Loading */}
-                {step === 7 && (
-                    <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in duration-500">
-                        <div className="relative mb-8 flex justify-center">
-                            <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full"></div>
-                            <TyreLoader size={80} className="relative z-10" />
+                    {/* STEP 2: Year */}
+                    {step === 2 && (
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            {years.map((year: any) => (
+                                <SelectionCard
+                                    key={year.id}
+                                    onClick={() => handleSelect('year', year.id, 3)}
+                                    title={year.name}
+                                    subtitle="Academic Year"
+                                    icon={<GraduationCap className="h-6 w-6" />}
+                                    centered
+                                />
+                            ))}
                         </div>
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{loadingText}</h3>
-                        <p className="text-sm text-gray-500">Curating the best study materials for you.</p>
-                    </div>
-                )}
+                    )}
 
-                {/* STEP 8: Results */}
-                {step === 8 && (
-                    <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
-                        {/* Results Header */}
-                        <div className="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl p-6">
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                                <div>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <span className="flex h-2 w-2 rounded-full bg-green-500"></span>
-                                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Filtered Results</span>
-                                    </div>
-                                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-                                        {selections.subject}
-                                    </h2>
-                                    <div className="flex flex-wrap gap-2">
-                                        <BreadcrumbBadge label={currentProgram?.name} onClick={() => handleBreadcrumbClick(1)} />
-                                        <BreadcrumbBadge label={currentYear?.name} onClick={() => handleBreadcrumbClick(2)} />
-                                        <BreadcrumbBadge label={currentCourse?.name} onClick={() => handleBreadcrumbClick(3)} />
-                                        <BreadcrumbBadge label={currentSemester?.name} onClick={() => handleBreadcrumbClick(4)} />
-                                        {selections.unit && <BreadcrumbBadge label={selections.unit} active onClick={() => handleBreadcrumbClick(6)} />}
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={handleReset}
-                                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
-                                >
-                                    <FilterX className="h-4 w-4" />
-                                    Change Filters
+                    {/* STEP 3: Course/Branch */}
+                    {step === 3 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            {courses.map((c: any) => (
+                                <SelectionCard
+                                    key={c.id}
+                                    onClick={() => handleSelect('course', c.id, 4)}
+                                    title={c.name}
+                                    subtitle={`${c.semesters?.length || 0} Semesters`}
+                                    icon={<Layers className="h-6 w-6" />}
+                                />
+                            ))}
+                        </div>
+                    )}
+
+                    {/* STEP 4: Semester */}
+                    {step === 4 && (
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            {semesters.map((sem: any) => (
+                                <SelectionCard
+                                    key={sem.id}
+                                    onClick={() => handleSelect('semester', sem.id, 5)}
+                                    title={sem.name}
+                                    subtitle="Semester"
+                                    icon={<Calendar className="h-6 w-6" />}
+                                    centered
+                                />
+                            ))}
+                        </div>
+                    )}
+
+                    {/* STEP 5: Subjects */}
+                    {step === 5 && (
+                        <div className="w-full space-y-2 animate-in slide-in-from-right-8 duration-300">
+                            {subjects.map((sub: any) => (
+                                <ListItem
+                                    key={typeof sub === 'string' ? sub : sub.name}
+                                    onClick={() => handleSubjectSelect(sub)}
+                                    title={typeof sub === 'string' ? sub : sub.name}
+                                    icon={<BookOpen className="h-4 w-4" />}
+                                />
+                            ))}
+                        </div>
+                    )}
+
+                    {/* STEP 6: Units */}
+                    {step === 6 && (
+                        <div className="w-full space-y-4 animate-in slide-in-from-right-8 duration-300">
+                            <div className="flex justify-between items-center px-1">
+                                <span className="text-xs text-gray-500 font-medium">Narrow down your search (Optional)</span>
+                                <button onClick={() => setStep(7)} className="text-xs font-medium text-black dark:text-white underline decoration-gray-300 hover:decoration-black transition-all">
+                                    Skip Selection
                                 </button>
                             </div>
+                            <div className="space-y-2">
+                                {units.map((unit: any) => {
+                                    const unitName = typeof unit === 'string' ? unit : unit.name;
+                                    return (
+                                        <ListItem
+                                            key={unitName}
+                                            onClick={() => handleSelect('unit', unitName, 7)}
+                                            title={unitName}
+                                            icon={<Hash className="h-4 w-4" />}
+                                        />
+                                    );
+                                })}
+                            </div>
                         </div>
+                    )}
 
-                        {/* Grid Component */}
-                        <ResourceGrid
-                            view="resources"
-                            filters={{
-                                branch: selections.course, // Maps to API requirement
-                                year: selections.year, // Maps to API requirement
-                                semester: selections.semester,
-                                subject: selections.subject,
-                                course: selections.program, // Maps to API requirement
-                                unit: selections.unit
-                            }}
-                            searchQuery=""
-                            onUploadRequest={onUploadRequest}
-                        />
-                    </div>
-                )}
-            </div>
+                    {/* STEP 7: Loading */}
+                    {step === 7 && (
+                        <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in duration-500">
+                            <div className="relative mb-8 flex justify-center">
+                                <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full"></div>
+                                <TyreLoader size={80} className="relative z-10" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{loadingText}</h3>
+                            <p className="text-sm text-gray-500">Curating the best study materials for you.</p>
+                        </div>
+                    )}
+
+                    {/* STEP 8: Results */}
+                    {step === 8 && (
+                        <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
+                            {/* Results Header */}
+                            <div className="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl p-6">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className="flex h-2 w-2 rounded-full bg-green-500"></span>
+                                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Filtered Results</span>
+                                        </div>
+                                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+                                            {selections.subject}
+                                        </h2>
+                                        <div className="flex flex-wrap gap-2">
+                                            <BreadcrumbBadge label={currentProgram?.name} onClick={() => handleBreadcrumbClick(1)} />
+                                            <BreadcrumbBadge label={currentYear?.name} onClick={() => handleBreadcrumbClick(2)} />
+                                            <BreadcrumbBadge label={currentCourse?.name} onClick={() => handleBreadcrumbClick(3)} />
+                                            <BreadcrumbBadge label={currentSemester?.name} onClick={() => handleBreadcrumbClick(4)} />
+                                            {selections.unit && <BreadcrumbBadge label={selections.unit} active onClick={() => handleBreadcrumbClick(6)} />}
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={handleReset}
+                                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
+                                    >
+                                        <FilterX className="h-4 w-4" />
+                                        Change Filters
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Grid Component */}
+                            <ResourceGrid
+                                view="resources"
+                                filters={{
+                                    branch: selections.course, // Maps to API requirement
+                                    year: selections.year, // Maps to API requirement
+                                    semester: selections.semester,
+                                    subject: selections.subject,
+                                    course: selections.program, // Maps to API requirement
+                                    unit: selections.unit
+                                }}
+                                searchQuery=""
+                                onUploadRequest={onUploadRequest}
+                            />
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
