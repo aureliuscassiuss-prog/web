@@ -32,6 +32,7 @@ import SavedResources from './components/SavedResources'
 import SharedResourcesPage from './components/SharedResourcesPage'
 import SharedUnitPage from './components/SharedUnitPage';
 import OurTeam from './components/OurTeam';
+import PomodoroPage from './components/PomodoroPage';
 
 import SEO from './components/SEO'
 import AttendanceManager from './components/attendance/AttendanceManager'
@@ -332,6 +333,9 @@ function AppContent() {
 
           {/* CGPA Calculator Route (Public) */}
           <Route path="/cgpa-calculator" element={<CGPACalculator />} />
+
+          {/* Pomodoro Timer Route (Public) */}
+          <Route path="/pomodoro" element={<PomodoroPage />} />
 
           {/* Attendance Manager Route (Protected) */}
           <Route path="/attendance" element={

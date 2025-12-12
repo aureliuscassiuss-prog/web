@@ -14,7 +14,8 @@ import {
     FileText,
     Calculator,
     Bookmark,
-    CheckCircle2
+    CheckCircle2,
+    Timer
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -41,8 +42,21 @@ export default function Sidebar({ onMobileMenuClose, isDark, toggleTheme, spotli
         return 'Admin Panel';
     };
 
+    interface MenuItem {
+        path: string;
+        label: string;
+        icon: any;
+        id?: string;
+        badge?: string;
+    }
+
+    interface MenuGroup {
+        label: string;
+        items: MenuItem[];
+    }
+
     // Grouping items creates a better visual hierarchy
-    const menuGroups = [
+    const menuGroups: MenuGroup[] = [
         {
             label: "Platform",
             items: [
@@ -50,6 +64,7 @@ export default function Sidebar({ onMobileMenuClose, isDark, toggleTheme, spotli
                 { path: '/resources', label: 'Resources', icon: Library, id: 'browse-resources' },
                 { path: '/attendance', label: 'Attendance', icon: CheckCircle2 },
                 { path: '/cgpa-calculator', label: 'CGPA Calculator', icon: Calculator },
+                { path: '/pomodoro', label: 'Pomodoro Timer', icon: Timer, badge: 'New' },
                 { path: '/preparation', label: 'Preparation', icon: GraduationCap },
                 { path: '/ai-assistant', label: 'AI Assistant', icon: Bot, badge: 'New' },
                 { path: '/ai-papers', label: 'AI Papers', icon: FileText, badge: 'Beta' },
@@ -83,7 +98,7 @@ export default function Sidebar({ onMobileMenuClose, isDark, toggleTheme, spotli
 
                 {/* Scrollable Navigation Area (Original Content) */}
                 <div className="py-6 px-4 space-y-8">
-                    {menuGroups.map((group, groupIndex) => (
+                    {menuGroups.map((group) => (
                         <div
                             key={group.label}
                             className={`space-y-2 transition-opacity duration-300 ${spotlight ? 'opacity-30' : 'opacity-100'}`}
