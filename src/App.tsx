@@ -76,7 +76,7 @@ function Layout({
         </aside>
 
         {/* 3. Main Content Area */}
-        <main className="flex-1 min-w-0 animate-fade-in pb-10">
+        <main className="flex-1 min-w-0 animate-fade-in pb-24">
           {children}
         </main>
       </div>
