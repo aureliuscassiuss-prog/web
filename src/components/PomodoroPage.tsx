@@ -27,10 +27,41 @@ export default function PomodoroPage() {
         return saved ? JSON.parse(saved) : DEFAULT_CONFIG;
     });
 
-    const [mode, setMode] = useState<Mode>('study');
-    const [timeLeft, setTimeLeft] = useState(config.study.time);
-    const [isActive, setIsActive] = useState(false);
-    const [goals, setGoals] = useState<Goal[]>([]);
+    // Initialize state from localStorage
+    const [mode, setMode] = useState<Mode>(() => {
+        const savedState = localStorage.getItem('pomodoroState');
+        return savedState ? JSON.parse(savedState).mode : 'study';
+    });
+
+    const [goals, setGoals] = useState<Goal[]>(() => {
+        const savedGoals = localStorage.getItem('pomodoroGoals');
+        return savedGoals ? JSON.parse(savedGoals) : [];
+    });
+
+    const [timeLeft, setTimeLeft] = useState(() => {
+        const savedState = localStorage.getItem('pomodoroState');
+        if (savedState) {
+            const state = JSON.parse(savedState);
+            if (state.isActive && state.endTime) {
+                const remaining = Math.ceil((state.endTime - Date.now()) / 1000);
+                return remaining > 0 ? remaining : 0;
+            }
+            return state.timeLeft || DEFAULT_CONFIG.study.time;
+        }
+        return DEFAULT_CONFIG.study.time;
+    });
+
+    const [isActive, setIsActive] = useState(() => {
+        const savedState = localStorage.getItem('pomodoroState');
+        if (savedState) {
+            const state = JSON.parse(savedState);
+            if (state.isActive && state.endTime) {
+                return (state.endTime - Date.now()) > 0;
+            }
+        }
+        return false;
+    });
+
     const [newGoal, setNewGoal] = useState('');
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -40,27 +71,65 @@ export default function PomodoroPage() {
         break: config.break.time / 60
     });
 
-    // Dynamic Title Update
+    // Persist Goals
+    useEffect(() => {
+        localStorage.setItem('pomodoroGoals', JSON.stringify(goals));
+    }, [goals]);
+
+    // Save timer state function
+    const saveState = (active: boolean, m: Mode, time: number) => {
+        const state = {
+            mode: m,
+            isActive: active,
+            timeLeft: time,
+            endTime: active ? Date.now() + time * 1000 : null
+        };
+        localStorage.setItem('pomodoroState', JSON.stringify(state));
+    };
+
+    // Dynamic Title and Timer Logic
     useEffect(() => {
         document.title = `${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, '0')} - ${mode.charAt(0).toUpperCase() + mode.slice(1)}`;
-    }, [timeLeft, mode]);
 
-    // Timer Logic
-    useEffect(() => {
         let interval: NodeJS.Timeout | null = null;
         if (isActive && timeLeft > 0) {
-            interval = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
-        } else if (timeLeft === 0) {
+            // Need to ensure we're synced with the end time for accuracy
+            const savedState = localStorage.getItem('pomodoroState');
+            let endTime = savedState ? JSON.parse(savedState).endTime : null;
+
+            if (!endTime) {
+                // Should technically not happen if saveState is called correctly, but fallback:
+                endTime = Date.now() + timeLeft * 1000;
+                saveState(true, mode, timeLeft);
+            }
+
+            interval = setInterval(() => {
+                const now = Date.now();
+                const newTimeLeft = Math.max(0, Math.ceil((endTime - now) / 1000));
+
+                setTimeLeft(newTimeLeft);
+
+                if (newTimeLeft === 0) {
+                    setIsActive(false);
+                    saveState(false, mode, 0);
+                    // Play end sound
+                    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3');
+                    audio.play().catch(e => console.log('Timer end audio failed', e));
+                }
+            }, 1000);
+        } else if (timeLeft === 0 && isActive) {
             setIsActive(false);
-            // Optional: Play sound here
+            saveState(false, mode, 0);
         }
         return () => { if (interval) clearInterval(interval); };
-    }, [isActive, timeLeft]);
+    }, [isActive, timeLeft, mode]);
 
     const switchMode = (newMode: Mode) => {
         setIsActive(false);
         setMode(newMode);
-        setTimeLeft(config[newMode].time);
+        const newTime = config[newMode].time;
+        setTimeLeft(newTime);
+        saveState(false, newMode, newTime);
     };
 
     const updateConfig = () => {
@@ -72,15 +141,27 @@ export default function PomodoroPage() {
         };
         setConfig(newConfig);
         localStorage.setItem('pomodoroConfig', JSON.stringify(newConfig));
-        setTimeLeft(newConfig[mode].time);
+
+        // If updating current mode, reset timer to new time
+        if (!isActive) {
+            setTimeLeft(newConfig[mode].time);
+            saveState(false, mode, newConfig[mode].time);
+        }
+
         setIsSettingsOpen(false);
-        setIsActive(false);
     };
 
-    const toggleTimer = () => setIsActive(!isActive);
+    const toggleTimer = () => {
+        const newActive = !isActive;
+        setIsActive(newActive);
+        saveState(newActive, mode, timeLeft);
+    };
+
     const resetTimer = () => {
         setIsActive(false);
-        setTimeLeft(config[mode].time);
+        const newTime = config[mode].time;
+        setTimeLeft(newTime);
+        saveState(false, mode, newTime);
     };
 
     const addGoal = (e: React.FormEvent) => {
