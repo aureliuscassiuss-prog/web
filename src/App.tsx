@@ -35,6 +35,7 @@ import OurTeam from './components/OurTeam';
 
 import SEO from './components/SEO'
 import AttendanceManager from './components/attendance/AttendanceManager'
+import CookieBanner from './components/CookieBanner'
 
 
 function Layout({
@@ -499,6 +500,8 @@ function AppContent() {
       />
 
       <Toast message={toast.message} show={toast.show} />
+
+      {!user && <CookieBanner />}
     </BrowserRouter>
   )
 }
