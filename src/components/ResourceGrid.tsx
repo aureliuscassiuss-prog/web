@@ -155,7 +155,9 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
         if (filters?.semester) params.append('semester', filters.semester)
         if (filters?.subject) params.append('subject', filters.subject)
         if (filters?.course) params.append('course', filters.course)
-        if (filters?.unit) params.append('unit', filters.unit)
+        if (filters?.course) params.append('course', filters.course)
+        // EXCLUDE unit filter for PYQs so we see all papers for the subject/year
+        if (filters?.unit && type !== 'pyq') params.append('unit', filters.unit)
         if (type) params.append('type', type)
         // Add examYear if provided
         if (selectedPyqYear) params.append('examYear', selectedPyqYear);
