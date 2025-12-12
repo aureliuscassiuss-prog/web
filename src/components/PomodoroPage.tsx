@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, RotateCcw, CheckCircle, Plus, Trash2, Code, BookOpen, Coffee, X, Maximize, Minimize, Settings, Save } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import CoffeeBreak from './CoffeeBreak';
 
 type Mode = 'study' | 'coding' | 'break';
 
@@ -66,10 +67,22 @@ export default function PomodoroPage() {
     const [timeLeft, setTimeLeft] = useState(timerState.time);
     const [isActive, setIsActive] = useState(timerState.active);
 
-    const [goals, setGoals] = useState<Goal[]>(() => {
-        const savedGoals = localStorage.getItem('pomodoroGoals');
-        return savedGoals ? JSON.parse(savedGoals) : [];
+    // Initialize allGoals from localStorage; handle migration from old array if needed
+    const [allGoals, setAllGoals] = useState<Record<Mode, Goal[]>>(() => {
+        const saved = localStorage.getItem('pomodoroGoals');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            // Check if it's the old array format
+            if (Array.isArray(parsed)) {
+                return { study: parsed, coding: [], break: [] };
+            }
+            return parsed;
+        }
+        return { study: [], coding: [], break: [] };
     });
+
+    // Derived state for current goals (helper)
+    const currentGoals = allGoals[mode];
 
     const [newGoal, setNewGoal] = useState('');
     const [isFullscreen, setIsFullscreen] = useState(false);
@@ -81,8 +94,8 @@ export default function PomodoroPage() {
     });
 
     useEffect(() => {
-        localStorage.setItem('pomodoroGoals', JSON.stringify(goals));
-    }, [goals]);
+        localStorage.setItem('pomodoroGoals', JSON.stringify(allGoals));
+    }, [allGoals]);
 
     useEffect(() => {
         localStorage.setItem('pomodoroLastMode', mode);
@@ -177,28 +190,36 @@ export default function PomodoroPage() {
     const addGoal = (e: React.FormEvent) => {
         e.preventDefault();
         if (!newGoal.trim()) return;
-        setGoals([...goals, { id: Date.now().toString(), text: newGoal, completed: false }]);
+
+        const newGoalObj: Goal = { id: Date.now().toString(), text: newGoal, completed: false };
+        setAllGoals(prev => ({
+            ...prev,
+            [mode]: [...prev[mode], newGoalObj]
+        }));
         setNewGoal('');
     };
 
     const toggleGoal = (id: string) => {
-        setGoals(goals.map(g => {
-            if (g.id === id) {
-                const newCompleted = !g.completed;
-                if (newCompleted) {
-                    confetti({
-                        particleCount: 100,
-                        spread: 70,
-                        origin: { y: 0.6 },
-                        colors: mode === 'study' ? ['#3B82F6', '#10B981'] : ['#8B5CF6', '#F59E0B']
-                    });
-                    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3'); // Simple pop sound
-                    audio.volume = 0.5;
-                    audio.play().catch(e => console.log('Audio play failed', e));
+        setAllGoals(prev => ({
+            ...prev,
+            [mode]: prev[mode].map(g => {
+                if (g.id === id) {
+                    const newCompleted = !g.completed;
+                    if (newCompleted) {
+                        confetti({
+                            particleCount: 100,
+                            spread: 70,
+                            origin: { y: 0.6 },
+                            colors: mode === 'study' ? ['#3B82F6', '#10B981'] : ['#8B5CF6', '#F59E0B']
+                        });
+                        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3');
+                        audio.volume = 0.5;
+                        audio.play().catch(e => console.log('Audio play failed', e));
+                    }
+                    return { ...g, completed: newCompleted };
                 }
-                return { ...g, completed: newCompleted };
-            }
-            return g;
+                return g;
+            })
         }));
     };
 
@@ -215,7 +236,10 @@ export default function PomodoroPage() {
     };
 
     const deleteGoal = (id: string) => {
-        setGoals(goals.filter(g => g.id !== id));
+        setAllGoals(prev => ({
+            ...prev,
+            [mode]: prev[mode].filter(g => g.id !== id)
+        }));
     };
 
     const formatTime = (seconds: number) => {
@@ -353,103 +377,107 @@ export default function PomodoroPage() {
                     </div>
                 </div>
 
-                {/* Right Column: Goal Manager */}
+                {/* Right Column: Goal Manager OR Coffee Break */}
                 <div className="w-full max-w-md lg:h-[500px] flex flex-col">
-                    <div className="flex-1 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-gray-700/50 shadow-xl overflow-hidden flex flex-col">
+                    {mode === 'break' ? (
+                        <CoffeeBreak timeLeft={timeLeft} totalTime={config.break.time} />
+                    ) : (
+                        <div className="flex-1 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-gray-700/50 shadow-xl overflow-hidden flex flex-col">
 
-                        {/* Header */}
-                        <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-white/40 dark:bg-gray-800/40">
-                            <h2 className="text-xl font-bold flex items-center gap-2 text-gray-800 dark:text-gray-100">
-                                <CheckCircle className={config[mode].color} size={20} />
-                                Session Goals
-                                <span className="ml-auto text-xs font-normal text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full">
-                                    {goals.filter(g => g.completed).length}/{goals.length}
-                                </span>
-                            </h2>
-                        </div>
+                            {/* Header */}
+                            <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-white/40 dark:bg-gray-800/40">
+                                <h2 className="text-xl font-bold flex items-center gap-2 text-gray-800 dark:text-gray-100">
+                                    <CheckCircle className={config[mode].color} size={20} />
+                                    {mode === 'coding' ? 'Coding Tasks' : 'Study Goals'}
+                                    <span className="ml-auto text-xs font-normal text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full">
+                                        {currentGoals.filter(g => g.completed).length}/{currentGoals.length}
+                                    </span>
+                                </h2>
+                            </div>
 
-                        {/* Scrollable List */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
-                            <AnimatePresence mode='popLayout'>
-                                {goals.length === 0 && (
-                                    <motion.div
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        className="h-full flex flex-col items-center justify-center text-center text-gray-400 space-y-2 mt-8"
-                                    >
-                                        <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-2">
-                                            <Plus size={20} />
-                                        </div>
-                                        <p className="text-sm">No goals yet.</p>
-                                        <p className="text-xs">Add one below to start focusing.</p>
-                                    </motion.div>
-                                )}
+                            {/* Scrollable List */}
+                            <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+                                <AnimatePresence mode='popLayout'>
+                                    {currentGoals.length === 0 && (
+                                        <motion.div
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            className="h-full flex flex-col items-center justify-center text-center text-gray-400 space-y-2 mt-8"
+                                        >
+                                            <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-2">
+                                                <Plus size={20} />
+                                            </div>
+                                            <p className="text-sm">No tasks yet.</p>
+                                            <p className="text-xs">Add one below to start.</p>
+                                        </motion.div>
+                                    )}
 
-                                {goals.map((goal) => (
-                                    <motion.div
-                                        key={goal.id}
-                                        layout
-                                        initial={{ opacity: 0, y: 10, scale: 0.98 }}
-                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.95 }}
-                                        className={`group flex items-center gap-3 p-3.5 rounded-2xl border transition-all duration-200 ${goal.completed
-                                            ? 'bg-gray-50/50 dark:bg-gray-900/30 border-transparent opacity-75'
-                                            : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 shadow-sm hover:border-gray-300 dark:hover:border-gray-600'
-                                            }`}
-                                    >
-                                        <button
-                                            onClick={() => toggleGoal(goal.id)}
-                                            className={`flex-shrink-0 w-6 h-6 rounded-full border-[2px] flex items-center justify-center transition-all duration-200 ${goal.completed
-                                                ? `${config[mode].bg} border-transparent scale-110`
-                                                : 'border-gray-300 dark:border-gray-500 hover:border-gray-400 text-transparent'
+                                    {currentGoals.map((goal) => (
+                                        <motion.div
+                                            key={goal.id}
+                                            layout
+                                            initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.95 }}
+                                            className={`group flex items-center gap-3 p-3.5 rounded-2xl border transition-all duration-200 ${goal.completed
+                                                ? 'bg-gray-50/50 dark:bg-gray-900/30 border-transparent opacity-75'
+                                                : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 shadow-sm hover:border-gray-300 dark:hover:border-gray-600'
                                                 }`}
                                         >
-                                            <CheckCircle size={14} className="text-white" />
-                                        </button>
+                                            <button
+                                                onClick={() => toggleGoal(goal.id)}
+                                                className={`flex-shrink-0 w-6 h-6 rounded-full border-[2px] flex items-center justify-center transition-all duration-200 ${goal.completed
+                                                    ? `${config[mode].bg} border-transparent scale-110`
+                                                    : 'border-gray-300 dark:border-gray-500 hover:border-gray-400 text-transparent'
+                                                    }`}
+                                            >
+                                                <CheckCircle size={14} className="text-white" />
+                                            </button>
 
-                                        <span className={`flex-1 text-sm font-medium transition-all ${goal.completed ? 'text-gray-400 line-through' : 'text-gray-700 dark:text-gray-200'
-                                            }`}>
-                                            {goal.text}
-                                        </span>
+                                            <span className={`flex-1 text-sm font-medium transition-all ${goal.completed ? 'text-gray-400 line-through' : 'text-gray-700 dark:text-gray-200'
+                                                }`}>
+                                                {goal.text}
+                                            </span>
 
-                                        <button
-                                            onClick={() => deleteGoal(goal.id)}
-                                            className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
-                                            aria-label="Delete goal"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </motion.div>
-                                ))}
-                            </AnimatePresence>
+                                            <button
+                                                onClick={() => deleteGoal(goal.id)}
+                                                className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                                                aria-label="Delete goal"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </motion.div>
+                                    ))}
+                                </AnimatePresence>
+                            </div>
+
+                            {/* Input Area */}
+                            <div className="p-4 bg-white/40 dark:bg-gray-800/40 backdrop-blur-md border-t border-gray-100 dark:border-gray-800">
+                                <form onSubmit={addGoal} className="relative group">
+                                    <input
+                                        type="text"
+                                        value={newGoal}
+                                        onChange={(e) => setNewGoal(e.target.value)}
+                                        placeholder="Add a new task..."
+                                        className="w-full pl-4 pr-12 py-3.5 bg-gray-50 dark:bg-black/20 rounded-xl text-sm font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all border border-transparent focus:bg-white dark:focus:bg-gray-900"
+                                        style={{
+                                            ['--tw-ring-color' as any]: mode === 'study' ? '#3B82F6' : mode === 'coding' ? '#8B5CF6' : '#10B981'
+                                        }}
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={!newGoal.trim()}
+                                        className={`absolute right-2 top-2 bottom-2 aspect-square flex items-center justify-center rounded-lg text-white transition-all duration-200 ${newGoal.trim()
+                                            ? `${config[mode].bg} shadow-md hover:scale-105 active:scale-95`
+                                            : 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed'
+                                            }`}
+                                    >
+                                        <Plus size={18} />
+                                    </button>
+                                </form>
+                            </div>
                         </div>
-
-                        {/* Input Area */}
-                        <div className="p-4 bg-white/40 dark:bg-gray-800/40 backdrop-blur-md border-t border-gray-100 dark:border-gray-800">
-                            <form onSubmit={addGoal} className="relative group">
-                                <input
-                                    type="text"
-                                    value={newGoal}
-                                    onChange={(e) => setNewGoal(e.target.value)}
-                                    placeholder="Add a new task..."
-                                    className="w-full pl-4 pr-12 py-3.5 bg-gray-50 dark:bg-black/20 rounded-xl text-sm font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all border border-transparent focus:bg-white dark:focus:bg-gray-900"
-                                    style={{
-                                        ['--tw-ring-color' as any]: mode === 'study' ? '#3B82F6' : mode === 'coding' ? '#8B5CF6' : '#10B981'
-                                    }}
-                                />
-                                <button
-                                    type="submit"
-                                    disabled={!newGoal.trim()}
-                                    className={`absolute right-2 top-2 bottom-2 aspect-square flex items-center justify-center rounded-lg text-white transition-all duration-200 ${newGoal.trim()
-                                        ? `${config[mode].bg} shadow-md hover:scale-105 active:scale-95`
-                                        : 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed'
-                                        }`}
-                                >
-                                    <Plus size={18} />
-                                </button>
-                            </form>
-                        </div>
-                    </div>
+                    )}
                 </div>
             </main>
 
