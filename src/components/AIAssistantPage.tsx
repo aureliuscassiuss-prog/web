@@ -260,7 +260,7 @@ export default function AIAssistantPage() {
         <div
             className={`
                 flex flex-col bg-white dark:bg-[#050505] font-sans text-gray-900 dark:text-gray-100 overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm transition-all duration-200 ease-out
-                ${isMobile ? 'fixed top-16 bottom-0 inset-x-0 z-40 rounded-none border-x-0 border-b-0' : 'relative h-[calc(100vh-8.5rem)]'}
+                ${isMobile ? 'fixed top-16 bottom-0 inset-x-0 z-20 rounded-none border-x-0 border-b-0' : 'relative h-[calc(100vh-8.5rem)]'}
             `}
         >
             {/* Header Adjustment for Mobile (Hide local header if fixed? No, keep it) */}

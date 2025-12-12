@@ -49,7 +49,7 @@ export default function Footer() {
     ];
 
     return (
-        <footer className="mt-auto border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-zinc-950 relative z-40">
+        <footer className="mt-auto border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-zinc-950 relative z-10">
             <div className="max-w-7xl mx-auto px-4 py-6">
                 <div className="flex flex-col md:flex-row items-center justify-between gap-6">
 
