@@ -189,7 +189,8 @@ export default function AIAssistant() {
             })
 
             if (!response.ok) {
-                throw new Error('Failed to get AI response')
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.message || errData.details || 'Failed to get AI response');
             }
 
             const data = await response.json()
@@ -219,9 +220,9 @@ export default function AIAssistant() {
             }, typingSpeed);
 
             setConversationHistory(data.conversationHistory || [])
-        } catch (error) {
+        } catch (error: any) {
             setIsTyping(false);
-            setMessages(prev => [...prev, { id: Date.now().toString(), text: "Sorry, I encountered an error. Please try again later.", sender: 'bot' }])
+            setMessages(prev => [...prev, { id: Date.now().toString(), text: `Error: ${error.message || "Something went wrong."}`, sender: 'bot' }])
         }
     }
 

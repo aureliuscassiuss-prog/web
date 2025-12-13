@@ -214,7 +214,10 @@ export default function AIAssistantPage() {
                 })
             })
 
-            if (!response.ok) throw new Error('Failed to get AI response')
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.message || errData.details || 'Failed to get AI response');
+            }
             const data = await response.json()
 
             // Simulate typing effect
@@ -250,11 +253,11 @@ export default function AIAssistantPage() {
 
             setConversationHistory(data.conversationHistory || [])
 
-        } catch (error) {
+        } catch (error: any) {
             setIsTyping(false);
             setMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
-                text: "Sorry, I encountered an error. Please try again later.",
+                text: `Error: ${error.message || "Something went wrong."}`,
                 sender: 'bot',
                 feedback: null,
                 timestamp: new Date()

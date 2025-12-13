@@ -269,7 +269,11 @@ Subject: ${subject}, Program: ${program}, Year: ${formattedYear}, Branch: ${bran
         }
 
     } catch (error: any) {
-        console.error('AI Error:', error);
-        res.status(500).json({ message: error?.message || 'AI error' });
+        console.error('AI Error details:', error);
+        // Return more specific error for debugging
+        res.status(500).json({
+            message: error?.message || 'AI service error',
+            details: error?.response?.data || error?.toString()
+        });
     }
 }
