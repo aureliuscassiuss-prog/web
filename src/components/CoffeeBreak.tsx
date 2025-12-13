@@ -75,7 +75,7 @@ export default function CoffeeBreak({ timeLeft = 300, totalTime = 300 }: CoffeeB
 
                             {/* 1. Static Sand Noise (The grains themselves don't move, the mask moves) */}
                             <filter id="staticGrain">
-                                <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
+                                <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="1" stitchTiles="stitch" />
                                 <feColorMatrix type="saturate" values="0" />
                                 <feComponentTransfer>
                                     <feFuncA type="linear" slope="0.5" />
@@ -84,7 +84,7 @@ export default function CoffeeBreak({ timeLeft = 300, totalTime = 300 }: CoffeeB
 
                             {/* 2. Motion Stream Noise (Vertical blur for falling sand) */}
                             <filter id="fallingGrain" x="0%" y="0%" width="100%" height="100%">
-                                <feTurbulence type="fractalNoise" baseFrequency="0.05 0.8" numOctaves="2" />
+                                <feTurbulence type="fractalNoise" baseFrequency="0.05 0.8" numOctaves="1" />
                                 <feColorMatrix type="saturate" values="0" />
                             </filter>
 

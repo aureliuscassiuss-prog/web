@@ -106,21 +106,22 @@ export default function PomodoroPage() {
 
         // --- Timer Logic (Per Mode) ---
         let interval: NodeJS.Timeout | null = null;
+        let expectedEndTime: number | null = null;
 
-        // Ensure accurate end time reference
+        // Ensure accurate end time reference from storage or calculate it
         const currentSaved = getSavedState(mode);
-        let endTime = currentSaved?.endTime;
+        if (currentSaved?.isActive && currentSaved?.endTime) {
+            expectedEndTime = currentSaved.endTime;
+        } else if (isActive && timeLeft > 0) {
+            // First run or resumed without saved end time (rare)
+            expectedEndTime = Date.now() + timeLeft * 1000;
+            saveModeState(mode, true, timeLeft);
+        }
 
-        if (isActive && timeLeft > 0) {
-            // Auto-correction: If state says active but no endTime, fix it.
-            if (!endTime) {
-                endTime = Date.now() + timeLeft * 1000;
-                saveModeState(mode, true, timeLeft);
-            }
-
+        if (isActive && expectedEndTime) {
             interval = setInterval(() => {
                 const now = Date.now();
-                const newTimeLeft = Math.max(0, Math.ceil((endTime! - now) / 1000));
+                const newTimeLeft = Math.max(0, Math.ceil((expectedEndTime! - now) / 1000));
 
                 setTimeLeft(newTimeLeft);
 
@@ -130,8 +131,11 @@ export default function PomodoroPage() {
                     // Play end sound
                     const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3');
                     audio.play().catch(e => console.log('Timer end audio failed', e));
+                    if (interval) clearInterval(interval);
                 }
-            }, 1000);
+            }, 1000); // Check every second
+        } else if (!isActive && timeLeft !== 0) {
+            // Paused: nothing to do, interval is cleared.
         } else if (timeLeft === 0 && isActive) {
             // Cleanup if we entered holding 0
             setIsActive(false);
@@ -139,7 +143,7 @@ export default function PomodoroPage() {
         }
 
         return () => { if (interval) clearInterval(interval); };
-    }, [isActive, timeLeft, mode]); // Depend on Mode switch
+    }, [isActive, mode]); // Removed timeLeft to prevent re-renders breaking the interval
 
     const switchMode = (newMode: Mode) => {
         // Save CURRENT mode state before switching
