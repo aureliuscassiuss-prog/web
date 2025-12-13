@@ -16,7 +16,8 @@ import {
     Calculator,
     Bookmark,
     CheckCircle2,
-    Timer
+    Timer,
+    MessageCircle
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -80,6 +81,7 @@ export default function Sidebar({ onMobileMenuClose, isDark, toggleTheme, spotli
             label: "Social",
             items: [
                 { path: '/coffessions', label: 'Coffessions', icon: Coffee, badge: 'Hot' },
+                { path: '/chat', label: 'Community Chat', icon: MessageCircle, badge: 'Live' },
                 { path: '/leaderboard', label: 'Leaderboard', icon: BarChart3 },
             ]
         },

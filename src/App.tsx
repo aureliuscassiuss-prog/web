@@ -34,6 +34,7 @@ import SharedUnitPage from './components/SharedUnitPage';
 import OurTeam from './components/OurTeam';
 import PomodoroPage from './components/PomodoroPage';
 import CoffessionsPage from './components/CoffessionsPage';
+import CoffeeChat from './components/CoffeeChat';
 
 import SEO from './components/SEO'
 import AttendanceManager from './components/attendance/AttendanceManager'
@@ -411,6 +412,17 @@ function AppContent() {
                 description="Share your thoughts anonymously. Posts disappear in 48 hours."
               />
               <CoffessionsPage />
+            </>
+          } />
+
+          {/* CoffeeChat Route (Public/Protected) */}
+          <Route path="/chat" element={
+            <>
+              <SEO
+                title="Community Chat - Real-time Discussion"
+                description="Chat with other students in real-time. Discuss studies, events, or just hang out."
+              />
+              <CoffeeChat />
             </>
           } />
 
