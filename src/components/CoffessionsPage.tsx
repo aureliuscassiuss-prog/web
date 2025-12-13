@@ -81,6 +81,7 @@ export default function CoffessionsPage() {
 
     // Votes
     const [votes, setVotes] = useState<Record<string, 'like' | 'dislike'>>({});
+    const [isVoting, setIsVoting] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
         fetchCoffessions();
@@ -104,8 +105,13 @@ export default function CoffessionsPage() {
     };
 
     const handleVote = async (id: string, type: 'like' | 'dislike') => {
-        if (votes[id]) return;
+        // Prevent multiple clicks or voting if already voted
+        if (votes[id] || isVoting[id]) return;
 
+        // Mark as voting to prevent rapid clicks
+        setIsVoting(prev => ({ ...prev, [id]: true }));
+
+        // Optimistic update
         setCoffessions(prev => prev.map(c => {
             if (c.id === id) {
                 return {
@@ -117,12 +123,13 @@ export default function CoffessionsPage() {
             return c;
         }));
 
+        // Save vote state immediately
         const newVotes = { ...votes, [id]: type };
         setVotes(newVotes);
         localStorage.setItem('coffession_votes', JSON.stringify(newVotes));
 
         try {
-            await fetch(`/api/coffessions?action=vote`, {
+            const response = await fetch(`/api/coffessions?action=vote`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -130,8 +137,29 @@ export default function CoffessionsPage() {
                 },
                 body: JSON.stringify({ id, changes: { likes: type === 'like' ? 1 : 0, dislikes: type === 'dislike' ? 1 : 0 } })
             });
+
+            if (!response.ok) {
+                throw new Error('Vote failed');
+            }
         } catch (e) {
             console.error('Vote failed', e);
+            // Revert on error
+            setCoffessions(prev => prev.map(c => {
+                if (c.id === id) {
+                    return {
+                        ...c,
+                        likes: type === 'like' ? c.likes - 1 : c.likes,
+                        dislikes: type === 'dislike' ? c.dislikes - 1 : c.dislikes
+                    };
+                }
+                return c;
+            }));
+            const revertedVotes = { ...votes };
+            delete revertedVotes[id];
+            setVotes(revertedVotes);
+            localStorage.setItem('coffession_votes', JSON.stringify(revertedVotes));
+        } finally {
+            setIsVoting(prev => ({ ...prev, [id]: false }));
         }
     };
 
@@ -432,10 +460,18 @@ export default function CoffessionsPage() {
                                         const el = document.getElementById('share-card-node');
                                         if (el) {
                                             try {
+                                                // Wait for any pending renders/animations
+                                                await new Promise(resolve => setTimeout(resolve, 100));
+
                                                 const canvas = await html2canvas(el, {
                                                     scale: 2,
                                                     backgroundColor: null,
-                                                    logging: false
+                                                    logging: false,
+                                                    width: el.offsetWidth,
+                                                    height: el.offsetHeight,
+                                                    windowWidth: el.offsetWidth,
+                                                    windowHeight: el.offsetHeight,
+                                                    useCORS: true
                                                 });
                                                 const link = document.createElement('a');
                                                 link.download = `coffession-${shareData.id}.png`;
