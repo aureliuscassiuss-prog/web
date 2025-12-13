@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Coffee, Heart, ThumbsDown, Plus, Flame, Clock, X, Sparkles, Send, Check } from 'lucide-react';
+import { Coffee, Heart, ThumbsDown, Plus, Flame, Clock, X, Sparkles, Send, Check, Share2, Download } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 // Types
@@ -62,12 +62,17 @@ const itemVariants = {
     show: { opacity: 1, scale: 1 }
 };
 
+import html2canvas from 'html2canvas';
+
 export default function CoffessionsPage() {
     const { token } = useAuth();
     const [coffessions, setCoffessions] = useState<Coffession[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [sort, setSort] = useState<'new' | 'trending'>('new');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+    // Share State
+    const [shareData, setShareData] = useState<Coffession | null>(null);
 
     // Create Form
     const [newContent, setNewContent] = useState('');
@@ -234,9 +239,9 @@ export default function CoffessionsPage() {
             {/* --- Main Content Grid --- */}
             <main className="max-w-[1400px] mx-auto px-3 sm:px-6 py-6 sm:py-8">
                 {isLoading ? (
-                    <div className="columns-2 md:columns-3 xl:columns-4 gap-4 space-y-4">
+                    <div className="columns-1 min-[500px]:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
                         {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-                            <div key={i} className="h-48 bg-stone-200 dark:bg-stone-800 rounded-2xl animate-pulse break-inside-avoid" />
+                            <div key={i} className="h-40 sm:h-56 bg-stone-200 dark:bg-stone-800 rounded-2xl animate-pulse break-inside-avoid" />
                         ))}
                     </div>
                 ) : coffessions.length === 0 ? (
@@ -274,17 +279,27 @@ export default function CoffessionsPage() {
                                             ${theme.bg} ${theme.text} ${theme.border}
                                         `}
                                     >
-                                        {/* Card Header (Compact) */}
-                                        <div className="flex items-center gap-2.5 mb-3 opacity-90">
-                                            <div className={`w-8 h-8 rounded-full ${theme.accent} flex items-center justify-center shrink-0`}>
-                                                <Coffee size={14} strokeWidth={2.5} className="opacity-75" />
+                                        {/* Card Header (Compact) w/ Share */}
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-2.5 opacity-90">
+                                                <div className={`w-8 h-8 rounded-full ${theme.accent} flex items-center justify-center shrink-0`}>
+                                                    <Coffee size={14} strokeWidth={2.5} className="opacity-75" />
+                                                </div>
+                                                <div className="flex flex-col leading-none">
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">Anonymous</span>
+                                                    <span className={`text-[10px] font-medium ${theme.meta} mt-0.5`}>
+                                                        Just now
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div className="flex flex-col leading-none">
-                                                <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">Anonymous</span>
-                                                <span className={`text-[10px] font-medium ${theme.meta} mt-0.5`}>
-                                                    Just now
-                                                </span>
-                                            </div>
+                                            {/* Top Right Share Icon */}
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setShareData(post); }}
+                                                className={`p-2 rounded-full ${theme.accent} hover:brightness-95 transition-all opacity-0 group-hover:opacity-100`}
+                                                title="Create Story"
+                                            >
+                                                <Share2 size={14} />
+                                            </button>
                                         </div>
 
                                         {/* Content - Optimized for reading */}
@@ -343,6 +358,109 @@ export default function CoffessionsPage() {
             >
                 <Plus size={20} strokeWidth={3} />
             </motion.button>
+
+            {/* --- Share Modal (The Ticket) --- */}
+            <AnimatePresence>
+                {shareData && (
+                    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-stone-900/80 backdrop-blur-sm" onClick={() => setShareData(null)}>
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            onClick={e => e.stopPropagation()}
+                            className="flex flex-col gap-6 items-center w-full max-w-sm"
+                        >
+                            {/* The Capture Node - 9:16 Aspect Ratio */}
+                            <div
+                                id="share-card-node"
+                                className={`
+                                    w-full aspect-[9/16] relative overflow-hidden flex flex-col p-8
+                                    ${THEMES[shareData.theme].bg}
+                                    ${THEMES[shareData.theme].text}
+                                `}
+                            >
+                                {/* Background Graphics */}
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                                <div className="absolute bottom-0 left-0 w-64 h-64 bg-black/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+
+                                {/* Border/Frame */}
+                                <div className={`absolute inset-4 border-2 opacity-30 pointer-events-none ${THEMES[shareData.theme].border}`} />
+
+                                {/* Header */}
+                                <div className="relative z-10 pt-4 mb-auto">
+                                    <div className="flex items-center gap-3 mb-6 opacity-80">
+                                        <div className={`p-2 rounded-lg bg-black/5 dark:bg-white/10 backdrop-blur-md`}>
+                                            <Coffee size={24} />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-bold uppercase tracking-[0.2em] opacity-70">Extrovert.site</span>
+                                            <span className="text-xl font-black italic tracking-tighter">ANONYMOUS</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Content */}
+                                <div className="relative z-10 my-auto">
+                                    <Sparkles className="w-8 h-8 opacity-40 mb-4" />
+                                    <p className="text-3xl font-serif font-medium leading-normal tracking-wide">
+                                        "{shareData.content}"
+                                    </p>
+                                </div>
+
+                                {/* Footer Call to Action */}
+                                <div className="relative z-10 mt-auto pt-8">
+                                    <div className="border-t-2 border-current/20 pt-6 flex justify-between items-end">
+                                        <div>
+                                            <p className="text-[10px] uppercase font-bold tracking-widest opacity-60 mb-1">
+                                                Have a secret?
+                                            </p>
+                                            <p className="text-sm font-black">
+                                                Spill it on Extrovert
+                                            </p>
+                                        </div>
+                                        <div className="h-12 w-12 rounded-full border-2 border-current/30 flex items-center justify-center">
+                                            <div className="w-1.5 h-1.5 bg-current rounded-full" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex gap-3 w-full">
+                                <button
+                                    onClick={async () => {
+                                        const el = document.getElementById('share-card-node');
+                                        if (el) {
+                                            try {
+                                                const canvas = await html2canvas(el, {
+                                                    scale: 2,
+                                                    backgroundColor: null,
+                                                    logging: false
+                                                });
+                                                const link = document.createElement('a');
+                                                link.download = `coffession-${shareData.id}.png`;
+                                                link.href = canvas.toDataURL('image/png');
+                                                link.click();
+                                            } catch (err) {
+                                                console.error("Capture failed:", err);
+                                            }
+                                        }
+                                    }}
+                                    className="flex-1 bg-white text-black py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 hover:bg-stone-200 transition-colors shadow-xl"
+                                >
+                                    <Download size={20} /> Save Image
+                                </button>
+                                <button
+                                    onClick={() => setShareData(null)}
+                                    className="w-16 bg-white/10 text-white rounded-xl flex items-center justify-center hover:bg-white/20 transition-colors backdrop-blur-md"
+                                >
+                                    <X size={24} />
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {/* --- Create Modal (Responsive) --- */}
             <AnimatePresence>
