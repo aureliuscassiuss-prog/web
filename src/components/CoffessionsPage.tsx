@@ -387,40 +387,40 @@ export default function CoffessionsPage() {
                                 <div className={`absolute inset-4 border-2 opacity-30 pointer-events-none ${THEMES[shareData.theme].border}`} />
 
                                 {/* Header */}
-                                <div className="relative z-10 pt-4 mb-auto">
-                                    <div className="flex items-center gap-3 mb-6 opacity-80">
-                                        <div className={`p-2 rounded-lg bg-black/5 dark:bg-white/10 backdrop-blur-md`}>
-                                            <Coffee size={24} />
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-xs font-bold uppercase tracking-[0.2em] opacity-70">Extrovert.site</span>
-                                            <span className="text-xl font-black italic tracking-tighter">ANONYMOUS</span>
-                                        </div>
+                                <div className="relative z-10 pt-6 flex flex-col items-center text-center">
+                                    <div className={`p-3 rounded-2xl mb-4 shadow-xl ${THEMES[shareData.theme].accent} backdrop-blur-md bg-opacity-20`}>
+                                        <Coffee size={28} className="text-current" strokeWidth={2.5} />
                                     </div>
+                                    <h3 className="font-black text-[10px] tracking-[0.4em] uppercase opacity-50 mb-1">Extrovert.site</h3>
+                                    <h1 className="font-serif italic text-4xl font-black tracking-tight leading-none opacity-90">
+                                        Coffession
+                                    </h1>
                                 </div>
 
                                 {/* Content */}
-                                <div className="relative z-10 my-auto">
-                                    <Sparkles className="w-8 h-8 opacity-40 mb-4" />
-                                    <p className="text-3xl font-serif font-medium leading-normal tracking-wide">
-                                        "{shareData.content}"
+                                <div className="relative z-10 my-auto flex flex-col items-center text-center px-1">
+                                    <span className="text-7xl font-serif leading-none opacity-10 mb-2 font-black">"</span>
+                                    <p className="text-3xl sm:text-4xl font-serif font-medium leading-tight tracking-wide italic drop-shadow-sm">
+                                        {shareData.content}
                                     </p>
+                                    <span className="text-7xl font-serif leading-none opacity-10 mt-4 rotate-180 font-black">"</span>
                                 </div>
 
-                                {/* Footer Call to Action */}
-                                <div className="relative z-10 mt-auto pt-8">
-                                    <div className="border-t-2 border-current/20 pt-6 flex justify-between items-end">
-                                        <div>
-                                            <p className="text-[10px] uppercase font-bold tracking-widest opacity-60 mb-1">
-                                                Have a secret?
-                                            </p>
-                                            <p className="text-sm font-black">
-                                                Spill it on Extrovert
-                                            </p>
+                                {/* Footer / Badge */}
+                                <div className="relative z-10 pb-6 w-full">
+                                    <div className={`border-t border-current/20 pt-6 flex items-center justify-between`}>
+                                        <div className="flex flex-col text-left">
+                                            <span className="text-[9px] font-bold uppercase tracking-widest opacity-50">Posted by</span>
+                                            <span className="font-black text-sm uppercase tracking-wider">Anonymous</span>
                                         </div>
-                                        <div className="h-12 w-12 rounded-full border-2 border-current/30 flex items-center justify-center">
-                                            <div className="w-1.5 h-1.5 bg-current rounded-full" />
+
+                                        <div className={`px-4 py-1.5 rounded-full border border-current/20 flex items-center gap-2 ${THEMES[shareData.theme].accent} bg-opacity-10 backdrop-blur-sm`}>
+                                            <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                                            <span className="text-[9px] font-bold uppercase tracking-wider opacity-90">Secret #{Math.floor(Math.random() * 1000) + 2000}</span>
                                         </div>
+                                    </div>
+                                    <div className="mt-4 text-center">
+                                        <p className="text-[10px] font-mono lowercase opacity-30 tracking-widest">extrovert.site/coffessions</p>
                                     </div>
                                 </div>
                             </div>
