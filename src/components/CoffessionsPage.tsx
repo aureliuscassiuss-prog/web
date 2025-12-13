@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Coffee, Heart, ThumbsDown, Plus, Sparkles, Filter, Clock, Flame, X } from 'lucide-react';
+import { Coffee, Heart, ThumbsDown, Plus, Sparkles, Filter, Clock, Flame, X, Share2, Download, Instagram } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import html2canvas from 'html2canvas';
 
 // Types
 interface Coffession {
@@ -20,12 +21,22 @@ const THEME_STYLES = {
     cappuccino: 'bg-gradient-to-br from-[#fff8e1] to-[#ffecb3] text-[#5d4037] border-[#ffe082] shadow-yellow-900/5'
 };
 
+const THEME_LABELS = {
+    espresso: 'Espresso',
+    latte: 'Latte',
+    mocha: 'Mocha',
+    cappuccino: 'Cappuccino'
+}
+
 export default function CoffessionsPage() {
     const { token } = useAuth();
     const [coffessions, setCoffessions] = useState<Coffession[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [sort, setSort] = useState<'new' | 'trending'>('new');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+    // Share Modal State
+    const [shareData, setShareData] = useState<Coffession | null>(null);
 
     // Create Form State
     const [newContent, setNewContent] = useState('');
@@ -34,6 +45,9 @@ export default function CoffessionsPage() {
 
     // Votes Map
     const [votes, setVotes] = useState<Record<string, 'like' | 'dislike'>>({});
+
+    // Floating Hearts Animation State
+    const [hearts, setHearts] = useState<{ id: number; x: number; y: number }[]>([]);
 
     useEffect(() => {
         fetchCoffessions();
@@ -86,8 +100,44 @@ export default function CoffessionsPage() {
         }
     };
 
-    const handleVote = async (id: string, type: 'like' | 'dislike') => {
-        if (votes[id]) return;
+    const spawnHearts = (x: number, y: number) => {
+        const newHearts = Array.from({ length: 5 }).map((_, i) => ({
+            id: Date.now() + i,
+            x: x + (Math.random() - 0.5) * 50,
+            y: y + (Math.random() - 0.5) * 50
+        }));
+        setHearts(prev => [...prev, ...newHearts]);
+        setTimeout(() => {
+            setHearts(prev => prev.filter(h => !newHearts.find(nh => nh.id === h.id)));
+        }, 1000);
+    };
+
+    const handleVote = async (id: string, type: 'like' | 'dislike', e?: React.MouseEvent | React.TouchEvent) => {
+        const currentVote = votes[id];
+        let changes = { likes: 0, dislikes: 0 };
+        let newVoteState: 'like' | 'dislike' | undefined = type;
+
+        // Visual effects for like
+        if (type === 'like' && e) {
+            // If passing event for positioning, use it. Otherwise center logic handled elsewhere.
+            const clientX = 'clientX' in e ? e.clientX : (e as any).touches?.[0]?.clientX;
+            const clientY = 'clientY' in e ? e.clientY : (e as any).touches?.[0]?.clientY;
+            if (clientX && clientY) spawnHearts(clientX, clientY);
+        }
+
+        if (currentVote === type) {
+            // Toggle Off
+            newVoteState = undefined;
+            changes = type === 'like' ? { likes: -1, dislikes: 0 } : { likes: 0, dislikes: -1 };
+        } else if (currentVote) {
+            // Switch (e.g. Dislike -> Like)
+            changes = type === 'like'
+                ? { likes: 1, dislikes: -1 }
+                : { likes: -1, dislikes: 1 };
+        } else {
+            // New Vote
+            changes = type === 'like' ? { likes: 1, dislikes: 0 } : { likes: 0, dislikes: 1 };
+        }
 
         // Optimistic UI Update
         const previousCoffessions = [...coffessions];
@@ -95,14 +145,19 @@ export default function CoffessionsPage() {
             if (c.id === id) {
                 return {
                     ...c,
-                    likes: type === 'like' ? c.likes + 1 : c.likes,
-                    dislikes: type === 'dislike' ? c.dislikes + 1 : c.dislikes
+                    likes: Math.max(0, c.likes + changes.likes),
+                    dislikes: Math.max(0, c.dislikes + changes.dislikes)
                 };
             }
             return c;
         }));
 
-        const newVotes = { ...votes, [id]: type };
+        const newVotes = { ...votes };
+        if (newVoteState) {
+            newVotes[id] = newVoteState;
+        } else {
+            delete newVotes[id];
+        }
         setVotes(newVotes);
         localStorage.setItem('coffession_votes', JSON.stringify(newVotes));
 
@@ -113,22 +168,55 @@ export default function CoffessionsPage() {
                     'Content-Type': 'application/json',
                     'Authorization': token ? `Bearer ${token}` : ''
                 },
-                body: JSON.stringify({ id, type })
+                body: JSON.stringify({ id, changes })
             });
             if (!res.ok) throw new Error('Vote failed');
         } catch (e) {
             console.error(e);
             // Revert on failure
             setCoffessions(previousCoffessions);
+            // Revert votes state roughly (simplification)
             const revertedVotes = { ...votes };
-            delete revertedVotes[id];
+            if (currentVote) {
+                revertedVotes[id] = currentVote;
+            } else {
+                delete revertedVotes[id];
+            }
             setVotes(revertedVotes);
             localStorage.setItem('coffession_votes', JSON.stringify(revertedVotes));
         }
     };
 
+    // Double Tap Logic
+    const lastTap = useRef<Record<string, number>>({});
+    const handleCardClick = (id: string, e: React.MouseEvent | React.TouchEvent) => {
+        const now = Date.now();
+        const last = lastTap.current[id] || 0;
+        if (now - last < 300) {
+            handleVote(id, 'like', e);
+        }
+        lastTap.current[id] = now;
+    };
+
+
     return (
-        <div className="min-h-screen bg-[#fcf9f2] dark:bg-[#121212] font-sans selection:bg-amber-100 dark:selection:bg-amber-900 pb-20">
+        <div className="min-h-screen bg-[#fcf9f2] dark:bg-[#121212] font-sans selection:bg-amber-100 dark:selection:bg-amber-900 pb-20 relative overflow-x-hidden">
+            {/* Floating Hearts Overlay */}
+            <AnimatePresence>
+                {hearts.map(heart => (
+                    <motion.div
+                        key={heart.id}
+                        initial={{ opacity: 1, scale: 0, x: heart.x, y: heart.y }}
+                        animate={{ opacity: 0, scale: 2, y: heart.y - 100 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.8 }}
+                        className="fixed pointer-events-none z-[60] text-pink-500"
+                    >
+                        <Heart fill="currentColor" size={24} />
+                    </motion.div>
+                ))}
+            </AnimatePresence>
+
             {/* Header / Hero Section */}
             <div className="sticky top-0 z-40 bg-[#fcf9f2]/80 dark:bg-[#121212]/80 backdrop-blur-md border-b border-stone-200 dark:border-stone-800 transition-colors duration-300">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
@@ -207,8 +295,9 @@ export default function CoffessionsPage() {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.9 }}
+                                    onClick={(e) => handleCardClick(post.id, e)}
                                     className={`
-                                        relative p-6 rounded-[2rem] break-inside-avoid border shadow-sm hover:shadow-xl transition-all duration-300
+                                        relative p-6 rounded-[2rem] break-inside-avoid border shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer
                                         ${THEME_STYLES[post.theme] || THEME_STYLES.latte}
                                     `}
                                 >
@@ -220,28 +309,26 @@ export default function CoffessionsPage() {
                                             <div className="flex flex-col">
                                                 <span className="text-[10px] font-black uppercase tracking-widest">Anonymous</span>
                                                 <span className="text-[10px] font-medium opacity-70">
-                                                    {(() => {
-                                                        const d = new Date(post.created_at);
-                                                        const now = new Date();
-                                                        const diff = (now.getTime() - d.getTime()) / 1000 / 60 / 60; // hours
-                                                        if (diff < 1) return 'Just now';
-                                                        if (diff < 24) return `${Math.floor(diff)}h ago`;
-                                                        return `${Math.floor(diff / 24)}d ago`;
-                                                    })()}
+                                                    {new Date(post.created_at).toLocaleDateString()}
                                                 </span>
                                             </div>
                                         </div>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setShareData(post); }}
+                                            className="p-2 -mr-2 rounded-full hover:bg-black/5 transition-colors"
+                                        >
+                                            <Share2 size={16} />
+                                        </button>
                                     </div>
 
-                                    <p className="text-lg font-medium leading-relaxed mb-8 whitespace-pre-wrap font-serif tracking-wide">
+                                    <p className="text-lg font-medium leading-relaxed mb-8 whitespace-pre-wrap font-serif tracking-wide select-text">
                                         {post.content}
                                     </p>
 
                                     <div className="flex items-center justify-between pt-4 border-t border-black/5 dark:border-white/5">
                                         <div className="flex items-center gap-2">
                                             <button
-                                                onClick={() => handleVote(post.id, 'like')}
-                                                disabled={!!votes[post.id]}
+                                                onClick={(e) => { e.stopPropagation(); handleVote(post.id, 'like', e); }}
                                                 className={`
                                                     group flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all
                                                     ${votes[post.id] === 'like' ? 'bg-pink-500 text-white shadow-pink-500/30 shadow-lg' : 'hover:bg-black/5 dark:hover:bg-white/10'}
@@ -255,8 +342,7 @@ export default function CoffessionsPage() {
                                             </button>
 
                                             <button
-                                                onClick={() => handleVote(post.id, 'dislike')}
-                                                disabled={!!votes[post.id]}
+                                                onClick={(e) => { e.stopPropagation(); handleVote(post.id, 'dislike'); }}
                                                 className={`
                                                     group flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all
                                                     ${votes[post.id] === 'dislike' ? 'bg-stone-700 text-white shadow-lg' : 'hover:bg-black/5 dark:hover:bg-white/10'}
@@ -351,6 +437,78 @@ export default function CoffessionsPage() {
                                     className="w-full py-4 bg-stone-900 dark:bg-white text-white dark:text-stone-900 rounded-2xl font-black text-lg hover:shadow-xl hover:shadow-stone-900/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:transform-none"
                                 >
                                     {isPosting ? 'Brewing...' : 'Post It'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Share Modal */}
+            <AnimatePresence>
+                {shareData && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setShareData(null)}>
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-white dark:bg-stone-900 rounded-3xl overflow-hidden max-w-sm w-full"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div className="p-4 border-b border-stone-100 dark:border-stone-800 flex justify-between items-center">
+                                <h3 className="font-bold text-lg">Share to Story</h3>
+                                <button onClick={() => setShareData(null)}><X size={24} /></button>
+                            </div>
+
+                            {/* Instagram Story Preview Area - 9:16 Aspect Ratio */}
+                            <div className="p-6 flex justify-center bg-stone-100 dark:bg-stone-950">
+                                <div
+                                    id="share-card"
+                                    className={`
+                                        w-[280px] h-[497px] flex flex-col justify-between p-8 relative overflow-hidden shadow-2xl
+                                        ${THEME_STYLES[shareData.theme] || THEME_STYLES.latte}
+                                    `}
+                                >
+                                    {/* Deco Elements */}
+                                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-6 opacity-80">
+                                            <div className="w-8 h-8 rounded-full bg-black/10 dark:bg-white/10 flex items-center justify-center">
+                                                <span className="text-sm">☕</span>
+                                            </div>
+                                            <span className="font-black uppercase tracking-widest text-xs">Uninotes Coffessions</span>
+                                        </div>
+
+                                        <p className="text-2xl font-serif font-medium leading-relaxed">
+                                            "{shareData.content}"
+                                        </p>
+                                    </div>
+
+                                    <div className="text-center opacity-60">
+                                        <p className="text-xs uppercase font-bold tracking-[0.2em] mb-2">Create your own</p>
+                                        <div className="text-[10px] font-mono">uninotes.app/coffessions</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-4 flex gap-3">
+                                <button
+                                    onClick={() => {
+                                        // Simple hacky download logic for MVP
+                                        const el = document.getElementById('share-card');
+                                        if (el) {
+                                            html2canvas(el).then(canvas => {
+                                                const link = document.createElement('a');
+                                                link.download = `coffession-${shareData.id}.png`;
+                                                link.href = canvas.toDataURL();
+                                                link.click();
+                                            });
+                                        }
+                                    }}
+                                    className="flex-1 py-3 bg-gradient-to-r from-pink-500 to-violet-500 text-white font-bold rounded-xl flex items-center justify-center gap-2"
+                                >
+                                    <Download size={18} /> Download
                                 </button>
                             </div>
                         </motion.div>

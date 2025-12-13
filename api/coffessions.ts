@@ -80,30 +80,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // --- 3. POST /vote: Like/Dislike ---
         if (req.method === 'POST' && req.query.action === 'vote') {
-            const { id, type } = req.body; // type: 'like' | 'dislike'
+            const { id, changes } = req.body;
+            // changes: { likes?: number, dislikes?: number }
 
-            if (!id || !['like', 'dislike'].includes(type)) return res.status(400).json({ message: 'Invalid vote' });
+            if (!id || !changes) return res.status(400).json({ message: 'Invalid vote data' });
 
-            // In a real app, we'd check if user already voted in a separate 'coffession_votes' table.
-            // For this 'lite' version, we'll just increment the counter.
-            // Security Note: A user could spam likes if they spam requests. 
-            // We rely on the frontend local storage 'alreadyVoted' check for basic UX, avoiding complex table logic for now.
-
-            const rpcName = type === 'like' ? 'increment_likes' : 'increment_dislikes';
-
-            // If we don't have RPCs set up, we do a read-update-write (less safe concurrency but works for MVP)
-            const { data: current, error: fetchError } = await supabase.from('coffessions').select('likes, dislikes').eq('id', id).single();
+            // Fetch current counts
+            const { data: current, error: fetchError } = await supabase
+                .from('coffessions')
+                .select('likes, dislikes')
+                .eq('id', id)
+                .single();
 
             if (fetchError || !current) return res.status(404).json({ message: 'Post not found' });
 
-            const update = type === 'like'
-                ? { likes: (current.likes || 0) + 1 }
-                : { dislikes: (current.dislikes || 0) + 1 };
+            // Calculate new counts (ensure they don't go below 0)
+            const newLikes = Math.max(0, (current.likes || 0) + (changes.likes || 0));
+            const newDislikes = Math.max(0, (current.dislikes || 0) + (changes.dislikes || 0));
 
-            const { error: updateError } = await supabase.from('coffessions').update(update).eq('id', id);
+            const { error: updateError } = await supabase
+                .from('coffessions')
+                .update({ likes: newLikes, dislikes: newDislikes })
+                .eq('id', id);
 
             if (updateError) throw updateError;
-            return res.status(200).json({ success: true });
+            return res.status(200).json({ success: true, likes: newLikes, dislikes: newDislikes });
         }
 
         return res.status(405).json({ message: 'Method not allowed' });
