@@ -55,6 +55,7 @@ function Layout({
   const navigate = useNavigate()
   const location = useLocation()
   const isStanadalonePage = location.pathname === '/coffessions'
+  const isChatPage = location.pathname === '/chat'
 
   // Lock body scroll when mobile menu is open
   useEffect(() => {
@@ -80,7 +81,11 @@ function Layout({
         user={user}
       />
 
-      <div className={isStanadalonePage ? "w-full flex-1" : "flex flex-1 items-start gap-10 px-4 sm:px-6 md:px-8 pt-6 max-w-[1600px] mx-auto w-full"}>
+      <div className={
+        isStanadalonePage ? "w-full flex-1"
+          : isChatPage ? "flex flex-1 items-start w-full"
+            : "flex flex-1 items-start gap-10 px-4 sm:px-6 md:px-8 pt-6 max-w-[1600px] mx-auto w-full"
+      }>
 
         {/* 2. Sticky Left Sidebar (Hidden on Mobile) - Hidden on Standalone Pages */}
         {!isStanadalonePage && (
@@ -96,13 +101,13 @@ function Layout({
         )}
 
         {/* 3. Main Content Area */}
-        <main className={`flex-1 min-w-0 animate-fade-in ${isStanadalonePage ? '' : 'pb-24'}`}>
+        <main className={`flex-1 min-w-0 animate-fade-in ${(isStanadalonePage || isChatPage) ? '' : 'pb-24'}`}>
           {children}
         </main>
       </div>
 
       {/* Footer */}
-      <Footer />
+      {location.pathname !== '/chat' && <Footer />}
 
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>

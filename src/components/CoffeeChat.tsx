@@ -165,7 +165,7 @@ export default function CoffeeChat() {
     }
 
     return (
-        <div className="flex flex-col h-[calc(100vh-56px)] md:h-screen pt-14 md:pt-0 relative bg-white dark:bg-black">
+        <div className="flex flex-col h-[calc(100vh-80px)] md:h-screen pt-14 md:pt-0 relative bg-white dark:bg-black">
 
             {/* --- HEADER --- */}
             <header className="flex-none h-14 border-b border-gray-100 dark:border-white/10 px-4 flex items-center justify-between bg-white/80 dark:bg-black/80 backdrop-blur-md sticky top-0 z-10">
@@ -247,31 +247,36 @@ export default function CoffeeChat() {
                                 </div>
                             )
                         })}
-                        {/* Typing Indicator Bubble */}
+
+                        {/* Typing Indicator Bubbles (In-stream) */}
                         <AnimatePresence>
-                            {typingUsers.length > 0 && (
+                            {typingUsers.map((typingUser) => (
                                 <motion.div
+                                    key={`typing-${typingUser.user_id}`}
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: 10 }}
-                                    className="flex w-full justify-start mt-2"
+                                    className="flex w-full justify-start"
                                 >
-                                    <div className="flex gap-2 items-center">
-                                        <div className="h-6 w-6 shrink-0 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center">
-                                            <span className="flex gap-0.5">
-                                                <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></span>
-                                                <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce delay-75"></span>
-                                                <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce delay-150"></span>
-                                            </span>
+                                    <div className="flex gap-2 max-w-[85%] md:max-w-[70%] flex-row">
+                                        {/* Avatar Placeholder for Typing */}
+                                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold mt-1 overflow-hidden bg-gray-100 text-gray-400 dark:bg-white/10 dark:text-gray-500">
+                                            ...
                                         </div>
-                                        <span className="text-xs text-gray-400 italic">
-                                            {typingUsers.length === 1
-                                                ? `${typingUsers[0].user_name} is typing...`
-                                                : `${typingUsers.length} people typing...`}
-                                        </span>
+
+                                        <div className="flex flex-col gap-1 min-w-0">
+                                            <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 px-1">
+                                                {typingUser.user_name} is typing...
+                                            </span>
+                                            <div className="flex items-center gap-1 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl rounded-tl-sm px-3 py-2.5 h-[38px]">
+                                                <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"></span>
+                                                <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce delay-100"></span>
+                                                <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce delay-200"></span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </motion.div>
-                            )}
+                            ))}
                         </AnimatePresence>
                     </div>
                 )}
@@ -297,7 +302,6 @@ export default function CoffeeChat() {
                             onChange={(e) => {
                                 setNewMessage(e.target.value)
                                 handleTyping()
-                                // Auto-grow
                                 e.target.style.height = 'auto'
                                 e.target.style.height = `${e.target.scrollHeight}px`
                             }}
