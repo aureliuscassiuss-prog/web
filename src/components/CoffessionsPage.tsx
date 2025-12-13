@@ -14,11 +14,19 @@ interface Coffession {
     created_at: string;
 }
 
+// V2 Theme System - Cleaner, Premium, Less "Muddy"
 const THEME_STYLES = {
-    espresso: 'bg-gradient-to-br from-stone-900 to-stone-800 text-stone-100 border-stone-700/50 shadow-stone-900/20',
-    latte: 'bg-gradient-to-br from-[#fdfbf7] to-[#f3ebd3] text-[#5c4033] border-[#e6d0ac] shadow-orange-900/5',
-    mocha: 'bg-gradient-to-br from-[#4e342e] to-[#3e2723] text-[#efebe9] border-[#6d4c41] shadow-brown-900/20',
-    cappuccino: 'bg-gradient-to-br from-[#fff8e1] to-[#ffecb3] text-[#5d4037] border-[#ffe082] shadow-yellow-900/5'
+    espresso: 'bg-[#1a1a1a] text-white border-stone-800 shadow-xl shadow-black/20 selection:bg-stone-700',
+    latte: 'bg-white text-stone-900 border-stone-100 shadow-xl shadow-stone-200/50 selection:bg-amber-100',
+    mocha: 'bg-[#2d2424] text-[#e6e1e1] border-[#3d3232] shadow-xl shadow-black/20 selection:bg-[#4a3b3b]',
+    cappuccino: 'bg-[#fffbf2] text-[#4a3b3b] border-[#f0e6d2] shadow-xl shadow-orange-900/5 selection:bg-orange-100'
+};
+
+const ACCENT_COLORS = {
+    espresso: 'from-stone-700 to-stone-900',
+    latte: 'from-amber-400 to-orange-400',
+    mocha: 'from-amber-700 to-amber-900',
+    cappuccino: 'from-orange-300 to-amber-400'
 };
 
 const THEME_LABELS = {
@@ -47,7 +55,7 @@ export default function CoffessionsPage() {
     const [votes, setVotes] = useState<Record<string, 'like' | 'dislike'>>({});
 
     // Floating Hearts Animation State
-    const [hearts, setHearts] = useState<{ id: number; x: number; y: number }[]>([]);
+    const [hearts, setHearts] = useState<{ id: number; x: number; y: number; rotation: number }[]>([]);
 
     useEffect(() => {
         fetchCoffessions();
@@ -101,31 +109,41 @@ export default function CoffessionsPage() {
     };
 
     const spawnHearts = (x: number, y: number) => {
-        const newHearts = Array.from({ length: 5 }).map((_, i) => ({
+        // Create a burst of hearts
+        const newHearts = Array.from({ length: 8 }).map((_, i) => ({
             id: Date.now() + i,
-            x: x + (Math.random() - 0.5) * 50,
-            y: y + (Math.random() - 0.5) * 50
+            x: x, // Start EXACTLY at click
+            y: y,
+            rotation: Math.random() * 360 // Random initial rotation
         }));
         setHearts(prev => [...prev, ...newHearts]);
+
+        // Cleanup matches animation duration
         setTimeout(() => {
             setHearts(prev => prev.filter(h => !newHearts.find(nh => nh.id === h.id)));
-        }, 1000);
+        }, 1200);
     };
 
-    const handleVote = async (id: string, type: 'like' | 'dislike', e?: React.MouseEvent | React.TouchEvent) => {
+    const handleVote = async (id: string, type: 'like' | 'dislike', e?: React.MouseEvent | React.TouchEvent, isDoubleTap = false) => {
         const currentVote = votes[id];
         let changes = { likes: 0, dislikes: 0 };
         let newVoteState: 'like' | 'dislike' | undefined = type;
 
-        // Visual effects for like
+        // --- Visual Effects ---
         if (type === 'like' && e) {
-            // If passing event for positioning, use it. Otherwise center logic handled elsewhere.
             const clientX = 'clientX' in e ? e.clientX : (e as any).touches?.[0]?.clientX;
             const clientY = 'clientY' in e ? e.clientY : (e as any).touches?.[0]?.clientY;
             if (clientX && clientY) spawnHearts(clientX, clientY);
         }
 
-        if (currentVote === type) {
+        // --- Logic Fix: Double Tap ALWAYS likes, never toggles off ---
+        if (isDoubleTap && currentVote === 'like') {
+            // Already liked, just play animation (already triggered above) and return
+            return;
+        }
+
+        // --- Standard Logic ---
+        if (currentVote === type && !isDoubleTap) { // Only toggle off if not a double tap
             // Toggle Off
             newVoteState = undefined;
             changes = type === 'like' ? { likes: -1, dislikes: 0 } : { likes: 0, dislikes: -1 };
@@ -193,32 +211,42 @@ export default function CoffessionsPage() {
         const now = Date.now();
         const last = lastTap.current[id] || 0;
         if (now - last < 300) {
-            handleVote(id, 'like', e);
+            handleVote(id, 'like', e, true); // Pass isDoubleTap = true
         }
         lastTap.current[id] = now;
     };
 
 
     return (
-        <div className="min-h-screen bg-[#fcf9f2] dark:bg-[#121212] font-sans selection:bg-amber-100 dark:selection:bg-amber-900 pb-20 relative overflow-x-hidden">
-            {/* Floating Hearts Overlay */}
+        <div className="min-h-screen bg-[#fcf9f2] dark:bg-[#0a0a0a] font-sans selection:bg-amber-100 dark:selection:bg-amber-900 pb-20 relative overflow-x-hidden">
+            {/* 3D Realistic Hearts Overlay */}
             <AnimatePresence>
                 {hearts.map(heart => (
                     <motion.div
                         key={heart.id}
-                        initial={{ opacity: 1, scale: 0, x: heart.x, y: heart.y }}
-                        animate={{ opacity: 0, scale: 2, y: heart.y - 100 }}
+                        initial={{ opacity: 1, scale: 0, x: heart.x, y: heart.y, rotate: heart.rotation }}
+                        animate={{
+                            opacity: 0,
+                            scale: 2.5,
+                            x: heart.x + (Math.random() - 0.5) * 150, // Burst outward X
+                            y: heart.y - 200, // Float up Y
+                            rotate: heart.rotation + (Math.random() - 0.5) * 90
+                        }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.8 }}
-                        className="fixed pointer-events-none z-[60] text-pink-500"
+                        transition={{ duration: 1, ease: "easeOut" }}
+                        className="fixed pointer-events-none z-[9999]"
+                        style={{ marginLeft: '-24px', marginTop: '-24px' }} // Center anchor
                     >
-                        <Heart fill="currentColor" size={24} />
+                        {/* Realistic Heart: Drop shadow + color */}
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" className="drop-shadow-xl" style={{ filter: 'drop-shadow(0px 10px 10px rgba(220, 20, 60, 0.4))' }}>
+                            <path d="M19.5 5.5C21.433 7.433 21.433 10.567 19.5 12.5L12 20L4.5 12.5C2.567 10.567 2.567 7.433 4.5 5.5C6.433 3.567 9.567 3.567 11.5 5.5L12 6L12.5 5.5C14.433 3.567 17.567 3.567 19.5 5.5Z" fill="#ff2e4d" stroke="#d61f3d" strokeWidth="1" />
+                        </svg>
                     </motion.div>
                 ))}
             </AnimatePresence>
 
             {/* Header / Hero Section */}
-            <div className="sticky top-0 z-40 bg-[#fcf9f2]/80 dark:bg-[#121212]/80 backdrop-blur-md border-b border-stone-200 dark:border-stone-800 transition-colors duration-300">
+            <div className="sticky top-0 z-40 bg-[#fcf9f2]/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-stone-200 dark:border-stone-800 transition-colors duration-300">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-3" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
                         <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl shadow-lg shadow-amber-500/20">
@@ -258,7 +286,7 @@ export default function CoffessionsPage() {
 
                         <button
                             onClick={() => setIsCreateModalOpen(true)}
-                            className="bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl font-bold flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-stone-900/10 dark:shadow-white/5"
+                            className="bg-stone-900 dark:bg-white text-white dark:text-stone-900 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl font-bold flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-stone-900/10 dark:shadow-white/5"
                         >
                             <Plus size={18} strokeWidth={3} />
                             <span className="hidden sm:inline">Spill It</span>
@@ -297,32 +325,36 @@ export default function CoffessionsPage() {
                                     exit={{ opacity: 0, scale: 0.9 }}
                                     onClick={(e) => handleCardClick(post.id, e)}
                                     className={`
-                                        relative p-6 rounded-[2rem] break-inside-avoid border shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer
+                                        relative p-6 rounded-[2rem] break-inside-avoid border transition-all duration-300 cursor-pointer overflow-hidden group
                                         ${THEME_STYLES[post.theme] || THEME_STYLES.latte}
+                                        hover:shadow-2xl hover:-translate-y-1
                                     `}
                                 >
-                                    <div className="flex items-center justify-between mb-4 opacity-80">
+                                    {/* Accent Bar */}
+                                    <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r opacity-80 ${ACCENT_COLORS[post.theme] || 'from-stone-400 to-stone-500'}`} />
+
+                                    <div className="flex items-center justify-between mb-4 opacity-80 mt-2">
                                         <div className="flex items-center gap-2">
                                             <div className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center backdrop-blur-sm">
                                                 <span className="text-sm">☕</span>
                                             </div>
                                             <div className="flex flex-col">
-                                                <span className="text-[10px] font-black uppercase tracking-widest">Anonymous</span>
-                                                <span className="text-[10px] font-medium opacity-70">
+                                                <span className="text-[10px] font-black uppercase tracking-widest opacity-90">Anonymous</span>
+                                                <span className="text-[10px] font-medium opacity-60">
                                                     {new Date(post.created_at).toLocaleDateString()}
                                                 </span>
                                             </div>
                                         </div>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); setShareData(post); }}
-                                            className="p-2 -mr-2 rounded-full hover:bg-black/5 transition-colors"
+                                            className="p-2 -mr-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors opacity-0 group-hover:opacity-100"
                                         >
                                             <Share2 size={16} />
                                         </button>
                                     </div>
 
-                                    <p className="text-lg font-medium leading-relaxed mb-8 whitespace-pre-wrap font-serif tracking-wide select-text">
-                                        {post.content}
+                                    <p className="text-lg font-medium leading-relaxed mb-8 whitespace-pre-wrap tracking-wide select-text">
+                                        "{post.content}"
                                     </p>
 
                                     <div className="flex items-center justify-between pt-4 border-t border-black/5 dark:border-white/5">
@@ -447,68 +479,87 @@ export default function CoffessionsPage() {
             {/* Share Modal */}
             <AnimatePresence>
                 {shareData && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setShareData(null)}>
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md" onClick={() => setShareData(null)}>
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-white dark:bg-stone-900 rounded-3xl overflow-hidden max-w-sm w-full"
+                            className="bg-transparent max-w-sm w-full"
                             onClick={e => e.stopPropagation()}
                         >
-                            <div className="p-4 border-b border-stone-100 dark:border-stone-800 flex justify-between items-center">
-                                <h3 className="font-bold text-lg">Share to Story</h3>
-                                <button onClick={() => setShareData(null)}><X size={24} /></button>
-                            </div>
-
-                            {/* Instagram Story Preview Area - 9:16 Aspect Ratio */}
-                            <div className="p-6 flex justify-center bg-stone-100 dark:bg-stone-950">
+                            {/* Instagram Story Preview Area */}
+                            <div className="flex justify-center mb-6">
                                 <div
                                     id="share-card"
-                                    className={`
-                                        w-[280px] h-[497px] flex flex-col justify-between p-8 relative overflow-hidden shadow-2xl
-                                        ${THEME_STYLES[shareData.theme] || THEME_STYLES.latte}
-                                    `}
+                                    className="w-[320px] h-[568px] flex flex-col justify-between p-10 relative overflow-hidden shadow-2xl rounded-[32px]"
+                                    style={{
+                                        // Dynamic Premium Backgrounds based on Theme
+                                        background: shareData.theme === 'espresso'
+                                            ? 'linear-gradient(135deg, #1c1917 0%, #000000 100%)'
+                                            : shareData.theme === 'latte'
+                                                ? 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)'
+                                                : shareData.theme === 'mocha'
+                                                    ? 'linear-gradient(135deg, #451a03 0%, #2a1205 100%)'
+                                                    : 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)',
+                                        color: shareData.theme === 'latte' || shareData.theme === 'cappuccino' ? '#451a03' : '#ffffff'
+                                    }}
                                 >
-                                    {/* Deco Elements */}
-                                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                                    {/* Background Pattern */}
+                                    <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] mix-blend-overlay"></div>
+                                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+                                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-black/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
 
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-6 opacity-80">
-                                            <div className="w-8 h-8 rounded-full bg-black/10 dark:bg-white/10 flex items-center justify-center">
-                                                <span className="text-sm">☕</span>
+                                    <div className="relative z-10">
+                                        <div className="flex items-center gap-3 mb-8 opacity-90">
+                                            <div className="w-10 h-10 rounded-full bg-current flex items-center justify-center bg-opacity-10 backdrop-blur-md border border-white/20">
+                                                <Coffee size={18} />
                                             </div>
-                                            <span className="font-black uppercase tracking-widest text-xs">Uninotes Coffessions</span>
+                                            <div>
+                                                <div className="font-black uppercase tracking-[0.2em] text-[10px]">Uninotes</div>
+                                                <div className="font-serif italic opacity-70">Coffessions</div>
+                                            </div>
                                         </div>
 
-                                        <p className="text-2xl font-serif font-medium leading-relaxed">
-                                            "{shareData.content}"
-                                        </p>
+                                        <div className="relative">
+                                            <span className="absolute -top-6 -left-4 text-6xl font-serif opacity-20">"</span>
+                                            <p className="text-3xl font-bold leading-tight tracking-tight relative z-10">
+                                                {shareData.content}
+                                            </p>
+                                        </div>
                                     </div>
 
-                                    <div className="text-center opacity-60">
-                                        <p className="text-xs uppercase font-bold tracking-[0.2em] mb-2">Create your own</p>
-                                        <div className="text-[10px] font-mono">uninotes.app/coffessions</div>
+                                    <div className="relative z-10 text-center space-y-4">
+                                        <div className="w-full h-px bg-current opacity-20"></div>
+                                        <div className="flex flex-col items-center gap-1 opacity-70">
+                                            <span className="text-[10px] uppercase tracking-widest font-bold">Spilled anonymously on</span>
+                                            <span className="font-bold">uninotes.app</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="p-4 flex gap-3">
+                            <div className="flex gap-3 justify-center">
+                                <button
+                                    onClick={() => setShareData(null)}
+                                    className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                                >
+                                    <X size={20} />
+                                </button>
                                 <button
                                     onClick={() => {
-                                        // Simple hacky download logic for MVP
                                         const el = document.getElementById('share-card');
                                         if (el) {
-                                            html2canvas(el).then(canvas => {
+                                            html2canvas(el, { scale: 3, useCORS: true }).then(canvas => {
                                                 const link = document.createElement('a');
-                                                link.download = `coffession-${shareData.id}.png`;
-                                                link.href = canvas.toDataURL();
+                                                link.download = `coffession-story-${shareData.id}.png`;
+                                                link.href = canvas.toDataURL('image/png', 1.0);
                                                 link.click();
                                             });
                                         }
                                     }}
-                                    className="flex-1 py-3 bg-gradient-to-r from-pink-500 to-violet-500 text-white font-bold rounded-xl flex items-center justify-center gap-2"
+                                    className="flex-1 max-w-[200px] h-12 bg-white text-black font-bold rounded-full flex items-center justify-center gap-2 hover:scale-105 transition-transform"
                                 >
-                                    <Download size={18} /> Download
+                                    <Download size={18} /> Save Image
                                 </button>
                             </div>
                         </motion.div>
