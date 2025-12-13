@@ -15,7 +15,9 @@ import {
     RefreshCw,
     ChevronDown,
     ChevronUp,
-    Download
+    Download,
+    ChevronLeft,
+    ChevronRight
 } from 'lucide-react'
 import TyreLoader from '../TyreLoader'
 import { useAuth } from '../../contexts/AuthContext'
@@ -289,7 +291,7 @@ function OverviewTab({ subjects }: { subjects: Subject[] }) {
     if (subjects.length === 0) return <EmptyState message="No subjects added yet. Go to 'Manage Subjects' to get started." />
 
     return (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {subjects.map(subject => <SubjectCard key={subject.id} subject={subject} />)}
         </div>
     )
@@ -307,29 +309,80 @@ function SubjectCard({ subject }: { subject: Subject }) {
     const classesToAttend = Math.ceil(((subject.minimumAttendance / 100) * subject.totalClasses - subject.attendedClasses) / (1 - (subject.minimumAttendance / 100)))
     const classesCanMiss = Math.floor((subject.attendedClasses - (subject.minimumAttendance / 100) * subject.totalClasses) / (subject.minimumAttendance / 100))
 
+    // Circular Progress Props
+    const radius = 18;
+    const circumference = 2 * Math.PI * radius;
+    const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
     return (
         <motion.div
             layout
-            className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={`relative bg-white dark:bg-gray-900 rounded-2xl border transition-all duration-300 overflow-hidden group ${isExpanded ? 'border-blue-500/30 shadow-lg ring-1 ring-blue-500/30 col-span-1 md:col-span-2 lg:col-span-1 row-span-2' : 'border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700'
+                }`}
         >
-            <button
+            <div
+                className="p-5 cursor-pointer"
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full flex items-center justify-between p-4 text-left"
             >
-                <div className="flex items-center gap-4">
-                    <div className="h-10 w-1 rounded-full" style={{ backgroundColor: subject.color }}></div>
-                    <div>
-                        <h3 className="font-bold text-gray-900 dark:text-white">{subject.name}</h3>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">{subject.attendedClasses}/{subject.totalClasses} • {percentage}%</p>
+                <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                        <div className="h-12 w-12 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-sm shrink-0" style={{ backgroundColor: subject.color }}>
+                            {subject.name.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-lg text-gray-900 dark:text-white leading-tight mb-1">{subject.name}</h3>
+                            <div className="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                <span className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md font-medium border border-gray-200 dark:border-gray-700">
+                                    {subject.code || 'No Code'}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                    <Clock size={12} className="opacity-70" />
+                                    {subject.schedule.length} Days/Wk
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="relative flex items-center justify-center">
+                        <svg className="w-12 h-12 transform -rotate-90">
+                            <circle cx="24" cy="24" r={radius} fill="transparent" stroke="currentColor" strokeWidth="4" className="text-gray-100 dark:text-gray-800" />
+                            <circle
+                                cx="24" cy="24" r={radius}
+                                fill="transparent"
+                                stroke={subject.color}
+                                strokeWidth="4"
+                                strokeLinecap="round"
+                                strokeDasharray={circumference}
+                                strokeDashoffset={strokeDashoffset}
+                                className="transition-all duration-1000 ease-out"
+                            />
+                        </svg>
+                        <span className="absolute text-[10px] font-bold text-gray-700 dark:text-gray-300">
+                            {percentage}%
+                        </span>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
-                    <div className={`px-2.5 py-1 rounded-lg text-xs font-bold ${isLow ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400' : 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400'}`}>
-                        {percentage}%
+
+                <div className="mt-4 flex items-center justify-between text-sm">
+                    <div className="flex flex-col">
+                        <span className="text-xs text-gray-500 uppercase font-bold tracking-wider opacity-60">Attended</span>
+                        <span className="font-bold text-gray-900 dark:text-white text-lg">
+                            {subject.attendedClasses}
+                            <span className="text-gray-400 text-sm font-medium">/{subject.totalClasses}</span>
+                        </span>
                     </div>
-                    {isExpanded ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+
+                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${isLow
+                            ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
+                            : 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400'
+                        }`}>
+                        {isLow ? <AlertTriangle size={12} /> : <CheckCircle2 size={12} />}
+                        {isLow ? 'Low Attendance' : 'On Track'}
+                    </div>
                 </div>
-            </button>
+            </div>
 
             <AnimatePresence>
                 {isExpanded && (
@@ -337,33 +390,39 @@ function SubjectCard({ subject }: { subject: Subject }) {
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
+                        transition={{ duration: 0.3, ease: 'easeInOut' }}
                     >
-                        <div className="px-4 pb-4 pt-0 space-y-4 border-t border-gray-100 dark:border-gray-800 mt-2 pt-4">
-                            <div>
-                                <div className="flex justify-between text-xs mb-1.5">
-                                    <span className="text-gray-500 dark:text-gray-400">Attendance Progress</span>
-                                    <span className="font-medium text-gray-900 dark:text-white">{subject.attendedClasses}/{subject.totalClasses}</span>
+                        <div className="px-5 pb-5 pt-0 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-black/20">
+                            <div className="pt-4 space-y-3">
+                                <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
+                                    <div className="flex items-start gap-3">
+                                        <div className={`p-2 rounded-lg shrink-0 ${isLow ? 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400' : 'bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-400'}`}>
+                                            <Target size={16} />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-0.5">Recommendation</h4>
+                                            {isLow ? (
+                                                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                                                    You are below the <span className="font-bold">{subject.minimumAttendance}%</span> threshold.
+                                                    You need to attend the next <span className="font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-1 rounded">{classesToAttend > 0 ? classesToAttend : 0}</span> classes consecutively to recover.
+                                                </p>
+                                            ) : (
+                                                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                                                    Great job! You have a safe margin. You can technically miss the next <span className="font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-1 rounded">{classesCanMiss > 0 ? classesCanMiss : 0}</span> classes and stay above {subject.minimumAttendance}%.
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
-                                <ProgressBar percentage={percentage} color={subject.color || '#3b82f6'} />
-                            </div>
 
-                            <div className="flex items-start gap-2 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg">
-                                {isLow ? (
-                                    <>
-                                        <AlertTriangle size={14} className="text-red-500 mt-0.5 shrink-0" />
-                                        <p className="text-xs text-gray-600 dark:text-gray-300">
-                                            Attendance is low! You need to attend <span className="font-bold text-red-600 dark:text-red-400">{classesToAttend > 0 ? classesToAttend : 0}</span> more classes to reach {subject.minimumAttendance}%.
-                                        </p>
-                                    </>
-                                ) : (
-                                    <>
-                                        <CheckCircle2 size={14} className="text-green-500 mt-0.5 shrink-0" />
-                                        <p className="text-xs text-gray-600 dark:text-gray-300">
-                                            On track! You can safely miss <span className="font-bold text-green-600 dark:text-green-400">{classesCanMiss > 0 ? classesCanMiss : 0}</span> classes and stay above {subject.minimumAttendance}%.
-                                        </p>
-                                    </>
-                                )}
+                                <div className="flex gap-2">
+                                    <button className="flex-1 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                                        View History
+                                    </button>
+                                    <button className="flex-1 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                                        Edit Subject
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </motion.div>
@@ -375,6 +434,7 @@ function SubjectCard({ subject }: { subject: Subject }) {
 
 function DailyTab({ subjects, logs, onMark }: { subjects: Subject[], logs: AttendanceLog[], onMark: any }) {
     const [selectedDate, setSelectedDate] = useState(new Date())
+    const [isPickerOpen, setIsPickerOpen] = useState(false)
     const dayName = selectedDate.toLocaleDateString('en-US', { weekday: 'long' })
     const dateString = selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     const isToday = selectedDate.toDateString() === new Date().toDateString()
@@ -391,22 +451,39 @@ function DailyTab({ subjects, logs, onMark }: { subjects: Subject[], logs: Atten
     }
 
     return (
-        <div className="space-y-4 max-w-2xl mx-auto">
+        <div className="space-y-4 max-w-2xl mx-auto relative">
             {/* Date Navigation */}
-            <div className="flex items-center justify-between bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
-                <button onClick={() => changeDate(-1)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-500 dark:text-gray-400">
-                    <ChevronDown className="rotate-90" size={20} />
+            <div className="flex items-center justify-between bg-white dark:bg-gray-900 p-2 pr-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm transition-all hover:shadow-md">
+                <button onClick={() => changeDate(-1)} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors text-gray-500 dark:text-gray-400">
+                    <ChevronLeft size={20} />
                 </button>
 
-                <div className="text-center">
-                    <h2 className="text-sm font-bold text-gray-900 dark:text-white">{isToday ? 'Today' : dayName}</h2>
+                <button
+                    onClick={() => setIsPickerOpen(true)}
+                    className="flex-1 flex flex-col items-center justify-center py-2 group cursor-pointer"
+                >
+                    <h2 className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-2">
+                        {isToday ? 'Today' : dayName}
+                        <ChevronDown size={14} className="text-gray-400 group-hover:text-blue-500 transition-colors" />
+                    </h2>
                     <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{dateString}</p>
-                </div>
+                </button>
 
-                <button onClick={() => changeDate(1)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-500 dark:text-gray-400">
-                    <ChevronDown className="-rotate-90" size={20} />
+                <button onClick={() => changeDate(1)} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors text-gray-500 dark:text-gray-400">
+                    <ChevronRight size={20} />
                 </button>
             </div>
+
+            {/* Date Picker Modal */}
+            <AnimatePresence>
+                {isPickerOpen && (
+                    <DatePickerModal
+                        selectedDate={selectedDate}
+                        onSelect={(date) => { setSelectedDate(date); setIsPickerOpen(false); }}
+                        onClose={() => setIsPickerOpen(false)}
+                    />
+                )}
+            </AnimatePresence>
 
             {daysClasses.length === 0 ? (
                 <EmptyState message={`No classes scheduled for ${dayName}. Enjoy your day off!`} />
@@ -419,24 +496,116 @@ function DailyTab({ subjects, logs, onMark }: { subjects: Subject[], logs: Atten
                         </span>
                     </div>
 
-                    {daysClasses.map(subject => {
-                        const log = logs.find(l =>
-                            l.subjectId === subject.id &&
-                            new Date(l.date).toDateString() === selectedDate.toDateString()
-                        )
+                    <div className="space-y-3">
+                        {daysClasses.map(subject => {
+                            const log = logs.find(l =>
+                                l.subjectId === subject.id &&
+                                new Date(l.date).toDateString() === selectedDate.toDateString()
+                            )
+
+                            return (
+                                <DailySubjectRow
+                                    key={subject.id}
+                                    subject={subject}
+                                    log={log}
+                                    date={selectedDate}
+                                    onMark={onMark}
+                                />
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
+
+function DatePickerModal({ selectedDate, onSelect, onClose }: { selectedDate: Date, onSelect: (date: Date) => void, onClose: () => void }) {
+    const [viewDate, setViewDate] = useState(new Date(selectedDate))
+
+    const getDaysInMonth = (date: Date) => {
+        const year = date.getFullYear()
+        const month = date.getMonth()
+        const days = new Date(year, month + 1, 0).getDate()
+        const firstDay = new Date(year, month, 1).getDay()
+        return { days, firstDay } // 0 = Sunday
+    }
+
+    const { days, firstDay } = getDaysInMonth(viewDate)
+    const monthName = viewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+
+    const navigateMonth = (dir: number) => {
+        const newDate = new Date(viewDate)
+        newDate.setMonth(viewDate.getMonth() + dir)
+        setViewDate(newDate)
+    }
+
+    // Helper to adjust firstDay (Assuming Monday start for academic feel? Or standard Sunday? Let's stick to standard Sunday = 0 for now but UI often likes Monday.
+    // Let's use standard Sunday start for simplicity directly mapping to getDay().
+
+    // Fill empty slots
+    const blanks = Array.from({ length: firstDay }, (_, i) => i)
+    const dayNumbers = Array.from({ length: days }, (_, i) => i + 1)
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                onClick={onClose}
+            />
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 p-6 w-full max-w-sm overflow-hidden"
+            >
+                <div className="flex items-center justify-between mb-6">
+                    <button onClick={() => navigateMonth(-1)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-500">
+                        <ChevronLeft size={20} />
+                    </button>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">{monthName}</h3>
+                    <button onClick={() => navigateMonth(1)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-500">
+                        <ChevronRight size={20} />
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-7 mb-2">
+                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => (
+                        <div key={d} className="text-center text-xs font-bold text-gray-400 py-1">{d}</div>
+                    ))}
+                </div>
+
+                <div className="grid grid-cols-7 gap-1">
+                    {blanks.map(x => <div key={`blank-${x}`} />)}
+                    {dayNumbers.map(d => {
+                        const currentDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), d)
+                        const isSelected = currentDay.toDateString() === selectedDate.toDateString()
+                        const isToday = currentDay.toDateString() === new Date().toDateString()
 
                         return (
-                            <DailySubjectRow
-                                key={subject.id}
-                                subject={subject}
-                                log={log}
-                                date={selectedDate}
-                                onMark={onMark}
-                            />
+                            <button
+                                key={d}
+                                onClick={() => onSelect(currentDay)}
+                                className={`aspect-square rounded-lg flex items-center justify-center text-sm font-medium transition-all ${isSelected
+                                    ? 'bg-black dark:bg-white text-white dark:text-black shadow-md scale-105'
+                                    : isToday
+                                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                                        : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+                                    }`}
+                            >
+                                {d}
+                            </button>
                         )
                     })}
                 </div>
-            )}
+
+                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 flex justify-center">
+                    <button onClick={() => onSelect(new Date())} className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">
+                        Jump to Today
+                    </button>
+                </div>
+            </motion.div>
         </div>
     )
 }
