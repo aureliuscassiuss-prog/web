@@ -1,11 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Coffee, Heart, Zap, Plus, X, Share2, Download, TrendingUp, Hash, ArrowRight } from 'lucide-react';
+import { Coffee, Heart, ThumbsDown, Plus, Flame, Clock, X, Sparkles, Send, Check } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import html2canvas from 'html2canvas';
 
-// --- Types & Configuration ---
-
+// Types
 interface Coffession {
     id: string;
     content: string;
@@ -15,59 +13,53 @@ interface Coffession {
     created_at: string;
 }
 
-// Neo-Brutalist Theme Configuration
+// Configuration
 const THEMES = {
     espresso: {
-        id: 'espresso',
-        label: 'DARK.MODE',
-        bg: 'bg-zinc-900',
-        text: 'text-lime-400', // Hacker terminal vibe
-        border: 'border-lime-400',
-        shadow: 'shadow-[8px_8px_0px_0px_#84cc16]', // Lime shadow
-        decor: 'pattern-grid-sm text-zinc-800'
+        name: 'Espresso',
+        bg: 'bg-stone-900',
+        text: 'text-stone-100',
+        meta: 'text-stone-400',
+        border: 'border-stone-800',
+        accent: 'bg-stone-800'
     },
     latte: {
-        id: 'latte',
-        label: 'RAW_PAPER',
-        bg: 'bg-[#fffdf5]',
-        text: 'text-black',
-        border: 'border-black',
-        shadow: 'shadow-[8px_8px_0px_0px_#000000]',
-        decor: ''
+        name: 'Latte',
+        bg: 'bg-[#fffbf0]',
+        text: 'text-[#43302b]',
+        meta: 'text-[#8c7a70]',
+        border: 'border-[#ede0d4]',
+        accent: 'bg-[#ede0d4]/50'
     },
     mocha: {
-        id: 'mocha',
-        label: 'BLUEPRINT',
-        bg: 'bg-blue-600',
-        text: 'text-white',
-        border: 'border-white',
-        shadow: 'shadow-[8px_8px_0px_0px_#000000]',
-        decor: 'pattern-dots text-blue-500'
+        name: 'Mocha',
+        bg: 'bg-[#3c2a21]',
+        text: 'text-[#e6ccb2]',
+        meta: 'text-[#9c6644]',
+        border: 'border-[#4e362e]',
+        accent: 'bg-[#4e362e]'
     },
     cappuccino: {
-        id: 'cappuccino',
-        label: 'WARNING',
-        bg: 'bg-yellow-400',
-        text: 'text-black',
-        border: 'border-black',
-        shadow: 'shadow-[8px_8px_0px_0px_#be185d]', // Pink shadow on yellow
-        decor: 'pattern-diagonal-lines text-yellow-500'
+        name: 'Cappuccino',
+        bg: 'bg-[#f5ebe0]',
+        text: 'text-[#2b211f]',
+        meta: 'text-[#7f6c65]',
+        border: 'border-[#e3d5ca]',
+        accent: 'bg-[#e3d5ca]'
     }
 };
 
-// --- Components ---
+const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: { staggerChildren: 0.1 }
+    }
+};
 
-const BrutalButton = ({ children, onClick, className = "", variant = "primary" }: any) => {
-    const base = "relative font-mono font-bold uppercase tracking-wider border-2 border-black transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none";
-    const styles = variant === "primary"
-        ? "bg-black text-white shadow-[4px_4px_0px_0px_#84cc16] hover:bg-zinc-800"
-        : "bg-white text-black shadow-[4px_4px_0px_0px_#000] hover:bg-gray-50";
-
-    return (
-        <button onClick={onClick} className={`${base} ${styles} px-6 py-3 ${className}`}>
-            {children}
-        </button>
-    );
+const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
 };
 
 export default function CoffessionsPage() {
@@ -76,22 +68,20 @@ export default function CoffessionsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [sort, setSort] = useState<'new' | 'trending'>('new');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [shareData, setShareData] = useState<Coffession | null>(null);
 
     // Create Form
     const [newContent, setNewContent] = useState('');
     const [newTheme, setNewTheme] = useState<keyof typeof THEMES>('latte');
+    const [isPosting, setIsPosting] = useState(false);
 
-    // State
+    // Votes
     const [votes, setVotes] = useState<Record<string, 'like' | 'dislike'>>({});
 
-    // Refs for sticker tilt effect
-    const containerRef = useRef<HTMLDivElement>(null);
-
+    // -- API Integration --
     useEffect(() => {
         fetchCoffessions();
-        const saved = localStorage.getItem('votes_v2');
-        if (saved) setVotes(JSON.parse(saved));
+        const savedVotes = localStorage.getItem('coffession_votes');
+        if (savedVotes) setVotes(JSON.parse(savedVotes));
     }, [sort, token]);
 
     const fetchCoffessions = async () => {
@@ -109,15 +99,27 @@ export default function CoffessionsPage() {
         }
     };
 
-    const handleVote = async (id: string) => {
-        // Prevent double voting for now (or implement toggle if desired, but Brutalist UI implies simple upvote usually)
+    const handleVote = async (id: string, type: 'like' | 'dislike') => {
+        // Prevent spam voting for MVP / Optimistic Update Logic
         if (votes[id]) return;
 
-        // Optimistic Update
-        setVotes(prev => ({ ...prev, [id]: 'like' }));
-        setCoffessions(prev => prev.map(c => c.id === id ? { ...c, likes: c.likes + 1 } : c));
-        localStorage.setItem('votes_v2', JSON.stringify({ ...votes, [id]: 'like' }));
+        // Optimistic UI
+        setCoffessions(prev => prev.map(c => {
+            if (c.id === id) {
+                return {
+                    ...c,
+                    likes: type === 'like' ? c.likes + 1 : c.likes,
+                    dislikes: type === 'dislike' ? c.dislikes + 1 : c.dislikes
+                };
+            }
+            return c;
+        }));
 
+        const newVotes = { ...votes, [id]: type };
+        setVotes(newVotes);
+        localStorage.setItem('coffession_votes', JSON.stringify(newVotes));
+
+        // Fire API call
         try {
             await fetch(`/api/coffessions?action=vote`, {
                 method: 'POST',
@@ -125,11 +127,10 @@ export default function CoffessionsPage() {
                     'Content-Type': 'application/json',
                     'Authorization': token ? `Bearer ${token}` : ''
                 },
-                body: JSON.stringify({ id, changes: { likes: 1, dislikes: 0 } })
+                body: JSON.stringify({ id, changes: { likes: type === 'like' ? 1 : 0, dislikes: type === 'dislike' ? 1 : 0 } })
             });
         } catch (e) {
             console.error('Vote failed', e);
-            // Revert on error would go here
         }
     };
 
@@ -140,6 +141,7 @@ export default function CoffessionsPage() {
             return;
         }
 
+        setIsPosting(true);
         try {
             const res = await fetch('/api/coffessions', {
                 method: 'POST',
@@ -157,266 +159,294 @@ export default function CoffessionsPage() {
             }
         } catch (error) {
             console.error('Failed to post', error);
+        } finally {
+            setIsPosting(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-[#e0e7ff] text-black font-sans selection:bg-lime-400 selection:text-black overflow-x-hidden">
-            {/* Background Grid Pattern */}
-            <div className="fixed inset-0 pointer-events-none opacity-20"
-                style={{ backgroundImage: 'radial-gradient(circle, #000 1px, transparent 1px)', backgroundSize: '24px 24px' }}
-            />
+        <div className="min-h-screen bg-stone-50 dark:bg-[#0a0a0a] font-sans selection:bg-amber-500/30 pb-32 transition-colors duration-500">
 
-            {/* --- Navbar --- */}
-            <nav className="sticky top-0 z-40 bg-[#e0e7ff]/90 backdrop-blur-sm border-b-4 border-black py-4">
-                <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
+            {/* --- Navbar / Filter --- */}
+            <div className="sticky top-0 z-40 backdrop-blur-xl bg-stone-50/80 dark:bg-[#0a0a0a]/80 border-b border-stone-200 dark:border-white/5 supports-[backdrop-filter]:bg-stone-50/60">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
                     {/* Logo */}
-                    <div className="flex items-center gap-2 select-none group">
-                        <div className="bg-black text-white p-2 border-2 border-transparent group-hover:border-lime-400 transition-colors">
-                            <Coffee size={24} strokeWidth={3} />
+                    <div
+                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                        className="flex items-center gap-3 cursor-pointer group"
+                    >
+                        <div className="relative">
+                            <div className="absolute inset-0 bg-amber-500 blur-lg opacity-20 group-hover:opacity-40 transition-opacity" />
+                            <div className="relative bg-gradient-to-br from-amber-600 to-amber-800 p-2 rounded-xl text-white shadow-lg">
+                                <Coffee className="w-5 h-5 sm:w-6 sm:h-6" />
+                            </div>
                         </div>
-                        <h1 className="text-3xl font-black italic tracking-tighter uppercase hidden sm:block">
-                            COFFESSIONS<span className="text-lime-600">_v3</span>
-                        </h1>
+                        <span className="text-xl sm:text-2xl font-black text-stone-900 dark:text-stone-100 tracking-tight">
+                            Coffessions<span className="text-amber-600">.</span>
+                        </span>
                     </div>
 
-                    {/* Controls */}
-                    <div className="flex gap-4">
-                        <div className="hidden md:flex bg-white border-2 border-black p-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]">
-                            <button
-                                onClick={() => setSort('new')}
-                                className={`px-4 py-1 font-mono font-bold text-sm transition-colors ${sort === 'new' ? 'bg-black text-lime-400' : 'hover:bg-gray-100'}`}
-                            >
-                                FRESH
-                            </button>
-                            <button
-                                onClick={() => setSort('trending')}
-                                className={`px-4 py-1 font-mono font-bold text-sm transition-colors ${sort === 'trending' ? 'bg-black text-lime-400' : 'hover:bg-gray-100'}`}
-                            >
-                                HOT
-                            </button>
+                    {/* Desktop Filters & Actions */}
+                    <div className="flex items-center gap-4">
+                        <div className="hidden sm:flex bg-stone-200/50 dark:bg-white/5 p-1 rounded-xl backdrop-blur-sm border border-black/5 dark:border-white/5">
+                            {[
+                                { id: 'new', label: 'Fresh Brew', icon: Clock },
+                                { id: 'trending', label: 'Roasting', icon: Flame }
+                            ].map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setSort(tab.id as any)}
+                                    className={`
+                                        flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-bold transition-all duration-200
+                                        ${sort === tab.id
+                                            ? 'bg-white dark:bg-stone-800 text-stone-900 dark:text-white shadow-sm scale-[1.02]'
+                                            : 'text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200 hover:bg-stone-300/30'}
+                                    `}
+                                >
+                                    <tab.icon size={14} className={sort === tab.id ? 'text-amber-600' : ''} />
+                                    {tab.label}
+                                </button>
+                            ))}
                         </div>
 
-                        <BrutalButton onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2 !py-2">
-                            <Plus size={20} strokeWidth={4} />
-                            <span className="hidden sm:inline">WRITE</span>
-                        </BrutalButton>
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setIsCreateModalOpen(true)}
+                            className="hidden sm:flex bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-950 px-5 py-2.5 rounded-xl font-bold items-center gap-2 shadow-xl shadow-stone-900/10 hover:shadow-stone-900/20 dark:hover:shadow-white/5 transition-shadow"
+                        >
+                            <Plus size={18} strokeWidth={3} />
+                            Spill It
+                        </motion.button>
                     </div>
                 </div>
-            </nav>
 
-            {/* --- Marquee Header --- */}
-            <div className="bg-lime-400 border-b-4 border-black overflow-hidden whitespace-nowrap py-2">
-                <motion.div
-                    initial={{ x: 0 }}
-                    animate={{ x: "-50%" }}
-                    transition={{ repeat: Infinity, duration: 20, ease: "linear" }}
-                    className="inline-block font-mono font-bold text-lg"
-                >
-                    ANONYMOUS CONFESSIONS /// NO JUDGMENT /// SPILL THE BEANS /// ANONYMOUS CONFESSIONS /// NO JUDGMENT /// SPILL THE BEANS ///
-                </motion.div>
+                {/* Mobile Filter Tabs (Below Header) */}
+                <div className="sm:hidden border-t border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-[#0a0a0a]/50 backdrop-blur-md px-4 py-3 flex gap-2 overflow-x-auto no-scrollbar">
+                    <button
+                        onClick={() => setSort('new')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold border transition-all ${sort === 'new' ? 'bg-white dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-stone-900 dark:text-white shadow-sm' : 'border-transparent text-stone-500 dark:text-stone-500'}`}
+                    >
+                        <Clock size={16} /> Newest
+                    </button>
+                    <button
+                        onClick={() => setSort('trending')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold border transition-all ${sort === 'trending' ? 'bg-white dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-amber-600 dark:text-amber-400 shadow-sm' : 'border-transparent text-stone-500 dark:text-stone-500'}`}
+                    >
+                        <Flame size={16} /> Trending
+                    </button>
+                </div>
             </div>
 
-            {/* --- Main Grid --- */}
-            <main className="max-w-7xl mx-auto px-4 py-12">
+            {/* --- Main Content Grid --- */}
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
                 {isLoading ? (
-                    <div className="flex justify-center py-20">
-                        <div className="animate-spin text-black">
-                            <Coffee size={64} strokeWidth={1} />
+                    <div className="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6">
+                        {[1, 2, 3, 4, 5, 6].map(i => (
+                            <div key={i} className="h-64 bg-stone-200 dark:bg-stone-800 rounded-3xl animate-pulse break-inside-avoid" />
+                        ))}
+                    </div>
+                ) : coffessions.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-32 text-center">
+                        <div className="w-24 h-24 bg-gradient-to-br from-stone-100 to-stone-200 dark:from-stone-800 dark:to-stone-900 rounded-full flex items-center justify-center mb-8 shadow-inner">
+                            <Coffee className="w-10 h-10 text-stone-300 dark:text-stone-600" />
                         </div>
+                        <h3 className="text-xl font-bold text-stone-900 dark:text-stone-100 mb-2">The pot is empty</h3>
+                        <p className="text-stone-500 dark:text-stone-400 max-w-sm">
+                            Be the first to brew a confession. It's strictly anonymous.
+                        </p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        <AnimatePresence>
-                            {coffessions.map((post, i) => {
+                    <motion.div
+                        variants={containerVariants}
+                        initial="hidden"
+                        animate="show"
+                        className="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6"
+                    >
+                        <AnimatePresence mode='popLayout'>
+                            {coffessions.map((post) => {
                                 const theme = THEMES[post.theme];
-                                const rotate = i % 2 === 0 ? 'rotate-1' : '-rotate-1';
+                                const hasVoted = !!votes[post.id];
 
                                 return (
                                     <motion.div
                                         key={post.id}
                                         layout
-                                        initial={{ scale: 0.8, opacity: 0 }}
-                                        animate={{ scale: 1, opacity: 1 }}
-                                        whileHover={{ scale: 1.02, rotate: 0, transition: { type: "spring", stiffness: 300 } }}
+                                        variants={itemVariants}
+                                        exit={{ scale: 0.9, opacity: 0 }}
+                                        whileHover={{ y: -5 }}
                                         className={`
-                                            relative flex flex-col justify-between p-6 min-h-[300px]
-                                            border-4 ${theme.border} ${theme.bg} ${theme.text} ${theme.shadow}
-                                            ${rotate} transition-transform
+                                            relative break-inside-avoid rounded-[2rem] p-6 sm:p-7
+                                            border shadow-sm hover:shadow-xl transition-all duration-300 ease-out group
+                                            ${theme.bg} ${theme.text} ${theme.border}
                                         `}
                                     >
-                                        {/* Decorative Tape/Header */}
-                                        <div className="flex justify-between items-start mb-6 border-b-2 border-current pb-2 border-dashed">
-                                            <div className="font-mono text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-                                                <Hash size={14} />
-                                                {theme.label}
+                                        {/* Decoration Gradient */}
+                                        <div className="absolute top-0 right-0 p-8 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
+                                            <div className="absolute top-4 right-4 w-12 h-12 bg-white/10 dark:bg-white/5 blur-xl rounded-full pointer-events-none" />
+                                        </div>
+
+                                        {/* Card Header */}
+                                        <div className="flex items-center gap-3 mb-6 opacity-80">
+                                            <div className={`w-10 h-10 rounded-full ${theme.accent} flex items-center justify-center`}>
+                                                <Coffee size={18} strokeWidth={2.5} className="opacity-80" />
                                             </div>
-                                            <div className="font-mono text-xs opacity-70">
-                                                {new Date(post.created_at).toLocaleDateString()}
+                                            <div>
+                                                <p className="text-xs font-bold uppercase tracking-widest opacity-90">Anonymous</p>
+                                                <p className={`text-[11px] font-medium ${theme.meta} flex items-center gap-1`}>
+                                                    {post.likes > 20 && <Sparkles size={10} className="text-amber-500" />}
+                                                    Just now
+                                                </p>
                                             </div>
                                         </div>
 
                                         {/* Content */}
-                                        <div className="flex-grow font-bold text-2xl leading-tight font-sans tracking-tight mb-8">
+                                        <p className="text-[17px] leading-relaxed font-medium mb-8 whitespace-pre-wrap tracking-wide opacity-95">
                                             {post.content}
-                                        </div>
+                                        </p>
 
-                                        {/* Actions Footer */}
-                                        <div className="flex items-center justify-between pt-4 border-t-4 border-current">
-                                            <button
-                                                onClick={() => handleVote(post.id)}
-                                                className={`
-                                                    flex items-center gap-2 px-4 py-2 font-mono font-bold border-2 border-current
-                                                    transition-all active:translate-y-1 hover:bg-black/10
-                                                    ${votes[post.id] ? 'bg-black text-white' : ''}
-                                                `}
-                                            >
-                                                <Heart size={18} className={votes[post.id] ? "fill-white" : ""} />
-                                                {post.likes}
-                                            </button>
+                                        {/* Footer / Actions */}
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => handleVote(post.id, 'like')}
+                                                    className={`
+                                                        relative overflow-hidden flex items-center gap-2 pl-3 pr-4 py-2 rounded-full transition-all duration-300 group/btn
+                                                        ${votes[post.id] === 'like'
+                                                            ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/25'
+                                                            : `${theme.accent} hover:bg-black/10 dark:hover:bg-white/10`}
+                                                    `}
+                                                >
+                                                    <Heart
+                                                        size={18}
+                                                        className={`transition-transform duration-300 group-active/btn:scale-75 ${votes[post.id] === 'like' ? 'fill-current' : ''}`}
+                                                    />
+                                                    <span className="text-xs font-bold">{post.likes}</span>
+                                                </button>
 
-                                            <button
-                                                onClick={() => setShareData(post)}
-                                                className="p-2 border-2 border-current hover:bg-black/10 transition-colors"
-                                            >
-                                                <Share2 size={20} />
-                                            </button>
-                                        </div>
-
-                                        {/* Badge for popular posts */}
-                                        {post.likes > 50 && (
-                                            <div className="absolute -top-4 -right-4 bg-red-500 text-white border-2 border-black px-3 py-1 font-black uppercase text-sm -rotate-12 shadow-[4px_4px_0px_0px_#000]">
-                                                Viral
+                                                <button
+                                                    onClick={() => handleVote(post.id, 'dislike')}
+                                                    className={`
+                                                        p-2 rounded-full transition-all duration-300
+                                                        ${votes[post.id] === 'dislike' ? 'bg-stone-800 text-white' : `${theme.accent} hover:bg-black/10 dark:hover:bg-white/10`}
+                                                    `}
+                                                >
+                                                    <ThumbsDown
+                                                        size={18}
+                                                        className={`${votes[post.id] === 'dislike' ? 'fill-current' : ''}`}
+                                                    />
+                                                </button>
                                             </div>
-                                        )}
+                                        </div>
                                     </motion.div>
                                 );
                             })}
                         </AnimatePresence>
-                    </div>
+                    </motion.div>
                 )}
             </main>
 
-            {/* --- Create Modal (The Clipboard) --- */}
+            {/* --- Mobile FAB (Floating Action Button) --- */}
+            <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setIsCreateModalOpen(true)}
+                className="sm:hidden fixed bottom-6 right-6 z-40 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 w-14 h-14 rounded-full shadow-2xl shadow-stone-900/30 flex items-center justify-center"
+            >
+                <Plus size={24} strokeWidth={3} />
+            </motion.button>
+
+            {/* --- Create Modal --- */}
             <AnimatePresence>
                 {isCreateModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-0">
                         <motion.div
-                            initial={{ y: "100%" }}
-                            animate={{ y: 0 }}
-                            exit={{ y: "100%" }}
-                            className="bg-white w-full max-w-lg border-4 border-black shadow-[12px_12px_0px_0px_#000] p-0 overflow-hidden"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsCreateModalOpen(false)}
+                            className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm transition-all"
+                        />
+
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 40 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 40 }}
+                            className="relative w-full max-w-xl bg-white dark:bg-[#151515] rounded-3xl shadow-2xl overflow-hidden ring-1 ring-black/5 dark:ring-white/10"
                         >
-                            {/* Modal Header */}
-                            <div className="bg-black text-white p-4 flex justify-between items-center">
-                                <h2 className="text-2xl font-black italic uppercase">New Entry</h2>
-                                <button onClick={() => setIsCreateModalOpen(false)} className="hover:text-red-500 transition-colors">
-                                    <X size={32} strokeWidth={3} />
-                                </button>
-                            </div>
+                            {/* Decorative Top Bar */}
+                            <div className="h-1.5 w-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-700" />
 
-                            <div className="p-6 sm:p-8 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]">
-                                <textarea
-                                    value={newContent}
-                                    onChange={(e) => setNewContent(e.target.value)}
-                                    placeholder="TYPE YOUR CONFESSION HERE..."
-                                    maxLength={280}
-                                    className="w-full h-48 bg-white border-2 border-black p-4 font-mono text-lg placeholder:text-gray-300 focus:outline-none focus:shadow-[4px_4px_0px_0px_#000] focus:-translate-y-1 transition-all resize-none mb-6"
-                                    autoFocus
-                                />
-
-                                <div className="mb-8">
-                                    <label className="block font-black text-sm uppercase mb-3">Select Aesthetic</label>
-                                    <div className="grid grid-cols-4 gap-2">
-                                        {(Object.keys(THEMES) as Array<keyof typeof THEMES>).map(key => (
-                                            <button
-                                                key={key}
-                                                onClick={() => setNewTheme(key)}
-                                                className={`
-                                                    h-12 border-2 border-black transition-all relative overflow-hidden group
-                                                    ${THEMES[key].bg}
-                                                    ${newTheme === key ? 'shadow-[4px_4px_0px_0px_#000] -translate-y-1' : 'opacity-50 hover:opacity-100'}
-                                                `}
-                                            >
-                                                {newTheme === key && <div className="absolute inset-0 flex items-center justify-center"><Zap size={20} className={key === 'espresso' ? 'text-lime-400' : 'text-black'} fill="currentColor" /></div>}
-                                            </button>
-                                        ))}
+                            <div className="p-6 sm:p-8">
+                                <div className="flex items-center justify-between mb-8">
+                                    <div className="space-y-1">
+                                        <h2 className="text-2xl font-black text-stone-900 dark:text-stone-100">Brewing Something?</h2>
+                                        <p className="text-sm text-stone-500 dark:text-stone-400">Share your thoughts anonymously.</p>
                                     </div>
+                                    <button
+                                        onClick={() => setIsCreateModalOpen(false)}
+                                        className="p-2 bg-stone-100 dark:bg-stone-800 rounded-full hover:rotate-90 transition-transform duration-300"
+                                    >
+                                        <X size={20} className="text-stone-500 dark:text-stone-400" />
+                                    </button>
                                 </div>
 
-                                <BrutalButton onClick={handleCreate} className="w-full text-lg">
-                                    PUBLISH TO GRID
-                                </BrutalButton>
+                                <div className="space-y-6">
+                                    <div className="relative">
+                                        <textarea
+                                            value={newContent}
+                                            onChange={(e) => setNewContent(e.target.value)}
+                                            placeholder="What's on your mind?..."
+                                            className="w-full h-40 p-5 rounded-2xl bg-stone-50 dark:bg-[#1a1a1a] border border-transparent focus:border-amber-500 focus:ring-0 text-lg text-stone-800 dark:text-stone-100 placeholder-stone-400 dark:placeholder-stone-600 resize-none transition-all"
+                                            maxLength={300}
+                                        />
+                                        <div className="absolute bottom-4 right-4 text-xs font-bold text-stone-400">
+                                            {newContent.length}/300
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-4 block">Select Flavor</label>
+                                        <div className="grid grid-cols-4 gap-3">
+                                            {Object.entries(THEMES).map(([key, styles]) => (
+                                                <button
+                                                    key={key}
+                                                    onClick={() => setNewTheme(key as any)}
+                                                    className={`
+                                                        relative h-16 rounded-2xl border-2 transition-all duration-300 flex items-center justify-center overflow-hidden
+                                                        ${newTheme === key
+                                                            ? 'border-amber-500 scale-105 shadow-md'
+                                                            : 'border-transparent opacity-60 hover:opacity-100 hover:scale-105'}
+                                                    `}
+                                                >
+                                                    <div className={`absolute inset-0 ${styles.bg}`} />
+                                                    {newTheme === key && (
+                                                        <motion.div
+                                                            initial={{ scale: 0 }}
+                                                            animate={{ scale: 1 }}
+                                                            className={`z-10 bg-white dark:bg-stone-900 rounded-full p-1 shadow-sm`}
+                                                        >
+                                                            <Check size={14} className="text-amber-600" />
+                                                        </motion.div>
+                                                    )}
+                                                    <span className={`z-10 text-[10px] font-bold absolute bottom-1 ${styles.text} opacity-60 uppercase`}>{styles.name}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={handleCreate}
+                                        disabled={!newContent.trim() || isPosting}
+                                        className="w-full py-4 mt-2 bg-gradient-to-r from-stone-900 to-stone-800 dark:from-stone-100 dark:to-stone-300 text-white dark:text-stone-950 rounded-2xl font-bold text-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 disabled:transform-none flex items-center justify-center gap-2"
+                                    >
+                                        {isPosting ? <span className="animate-pulse">Brewing...</span> : (
+                                            <>Post Confession <Send size={18} /></>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-
-            {/* --- Share Modal (The Ticket) --- */}
-            <AnimatePresence>
-                {shareData && (
-                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-zinc-900/90" onClick={() => setShareData(null)}>
-                        <div className="flex flex-col gap-6 items-center w-full max-w-md" onClick={e => e.stopPropagation()}>
-
-                            {/* The Capture Node */}
-                            <div
-                                id="share-ticket"
-                                className={`
-                                    w-full aspect-[4/5] p-8 flex flex-col justify-between relative
-                                    border-4 ${THEMES[shareData.theme].border} ${THEMES[shareData.theme].bg} ${THEMES[shareData.theme].text}
-                                `}
-                            >
-                                <div className="absolute top-4 right-4 opacity-20">
-                                    <Coffee size={120} strokeWidth={1} />
-                                </div>
-
-                                <div className="relative z-10 border-b-4 border-current pb-4 mb-4">
-                                    <h3 className="text-4xl font-black italic uppercase leading-none">
-                                        The<br />Tea.
-                                    </h3>
-                                </div>
-
-                                <div className="relative z-10 flex-grow flex items-center">
-                                    <p className="font-mono text-2xl font-bold leading-snug">
-                                        "{shareData.content}"
-                                    </p>
-                                </div>
-
-                                <div className="relative z-10 pt-4 border-t-4 border-current flex justify-between items-end">
-                                    <div className="flex flex-col">
-                                        <span className="text-xs font-bold uppercase mb-1">Source</span>
-                                        <span className="font-black text-xl">EXTROVERT.SITE</span>
-                                    </div>
-                                    <div className="w-16 h-16 bg-black text-white flex items-center justify-center border-2 border-white">
-                                        <ArrowRight size={32} className="-rotate-45" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Actions */}
-                            <div className="flex gap-4 w-full">
-                                <BrutalButton
-                                    className="flex-1 flex justify-center items-center gap-2"
-                                    onClick={() => {
-                                        const el = document.getElementById('share-ticket');
-                                        if (el) {
-                                            html2canvas(el).then(canvas => {
-                                                const link = document.createElement('a');
-                                                link.download = 'brutal-confession.png';
-                                                link.href = canvas.toDataURL();
-                                                link.click();
-                                            });
-                                        }
-                                    }}
-                                >
-                                    <Download size={20} /> SAVE
-                                </BrutalButton>
-                                <button onClick={() => setShareData(null)} className="w-14 h-14 bg-white border-2 border-black shadow-[4px_4px_0px_0px_#fff] flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors">
-                                    <X size={24} strokeWidth={3} />
-                                </button>
-                            </div>
-                        </div>
                     </div>
                 )}
             </AnimatePresence>
