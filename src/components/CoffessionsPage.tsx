@@ -246,13 +246,14 @@ export default function CoffessionsPage() {
         if (now - lastTap < 300) {
             // Double tap detected!
             e.preventDefault();
+            e.stopPropagation();
 
             // Get tap coordinates
             const clientX = 'clientX' in e ? e.clientX : e.touches[0]?.clientX;
             const clientY = 'clientY' in e ? e.clientY : e.touches[0]?.clientY;
 
             if (clientX && clientY) {
-                // Spawn heart at tap location
+                // Always spawn hearts for visual feedback
                 const newHearts = Array.from({ length: 3 }).map((_, i) => ({
                     id: Date.now() + i,
                     x: clientX + (Math.random() - 0.5) * 40,
@@ -267,13 +268,16 @@ export default function CoffessionsPage() {
                 }, 1000);
             }
 
-            // Only like if not already liked
-            if (votes[id] !== 'like') {
+            // Only vote if not already liked AND not currently voting
+            if (votes[id] !== 'like' && !isVoting[id]) {
                 handleVote(id, 'like');
             }
-        }
 
-        lastTapTime.current[id] = now;
+            // Reset timer to prevent triple-tap from counting
+            lastTapTime.current[id] = 0;
+        } else {
+            lastTapTime.current[id] = now;
+        }
     };
 
     const handleCreate = async () => {
@@ -437,7 +441,7 @@ export default function CoffessionsPage() {
                                             <div className="flex items-center gap-2">
                                                 {(user?.role === 'admin' || user?.role === 'semi-admin') && (
                                                     <button
-                                                        onClick={(e) => handleDelete(post.id, e)}
+                                                        onClick={(e) => { e.stopPropagation(); handleDelete(post.id, e); }}
                                                         className={`p-2 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100`}
                                                         title="Delete (Admin)"
                                                     >
@@ -458,11 +462,17 @@ export default function CoffessionsPage() {
 
                                         <div className="flex items-center justify-between pt-2 border-t border-black/5 dark:border-white/5">
                                             <div className="flex items-center gap-2">
-                                                <button onClick={() => handleVote(post.id, 'like')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all duration-200 ${votes[post.id] === 'like' ? 'bg-rose-500 text-white' : `${theme.accent} hover:brightness-95`}`}>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleVote(post.id, 'like'); }}
+                                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all duration-200 ${votes[post.id] === 'like' ? 'bg-rose-500 text-white' : `${theme.accent} hover:brightness-95`}`}
+                                                >
                                                     <Heart size={14} className={votes[post.id] === 'like' ? 'fill-current' : ''} />
                                                     <span className="text-xs font-bold">{post.likes}</span>
                                                 </button>
-                                                <button onClick={() => handleVote(post.id, 'dislike')} className={`p-1.5 rounded-full transition-all ${votes[post.id] === 'dislike' ? 'bg-stone-800 text-white' : `${theme.accent} hover:brightness-95`}`}>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleVote(post.id, 'dislike'); }}
+                                                    className={`p-1.5 rounded-full transition-all ${votes[post.id] === 'dislike' ? 'bg-stone-800 text-white' : `${theme.accent} hover:brightness-95`}`}
+                                                >
                                                     <ThumbsDown size={14} className={votes[post.id] === 'dislike' ? 'fill-current' : ''} />
                                                 </button>
                                             </div>
