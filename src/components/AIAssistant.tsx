@@ -97,14 +97,52 @@ export default function AIAssistant() {
         }
     }, [isOpen, token]);
 
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // --- Image Compression Helper ---
+    const compressImage = (file: File): Promise<string> => {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const MAX_WIDTH = 800;
+                    const MAX_HEIGHT = 800;
+
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height = Math.round((height *= MAX_WIDTH / width));
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width = Math.round((width *= MAX_HEIGHT / height));
+                            height = MAX_HEIGHT;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx?.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.6)); // Compress to JPEG 60%
+                };
+                img.src = event.target?.result as string;
+            };
+            reader.readAsDataURL(file);
+        });
+    };
+
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) {
-            const reader = new FileReader()
-            reader.onloadend = () => {
-                setSelectedImage(reader.result as string)
+            try {
+                const compressed = await compressImage(file)
+                setSelectedImage(compressed)
+            } catch (err) {
+                console.error("Image compression failed", err)
             }
-            reader.readAsDataURL(file)
         }
     }
 
@@ -128,14 +166,25 @@ export default function AIAssistant() {
                 headers['Authorization'] = `Bearer ${token}`
             }
 
+            // Sanitizing history: Remove images from past conversation history to save bandwidth/tokens
+            // Only send the current image
+            const textOnlyHistory = conversationHistory.map(msg => {
+                if (Array.isArray(msg.content)) {
+                    // Extract only text for history context
+                    const textPart = msg.content.find(c => c.type === 'text')
+                    return { role: msg.role, content: textPart ? textPart.text : '' }
+                }
+                return msg
+            })
+
             const response = await fetch('/api/ai', {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({
                     action: 'chat',
                     question: userMessageText,
-                    image: userImage, // Start sending image
-                    conversationHistory
+                    image: userImage, // Current image
+                    conversationHistory: textOnlyHistory // Lightweight history
                 })
             })
 
