@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { Send, User, Clock, Trash2 } from 'lucide-react'
+import { Send, User, Clock, Trash2, MessageCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../utils/supabaseClient'
 import { motion, AnimatePresence } from 'framer-motion'
+import ReactMarkdown from 'react-markdown'
 
 interface ChatMessage {
     id: string
@@ -27,15 +28,25 @@ export default function CoffeeChat() {
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const channelRef = useRef<any>(null)
     const typingTimeoutRef = useRef<any>(null)
+    const textareaRef = useRef<HTMLTextAreaElement>(null)
 
     // Scroll to bottom on new messages
+    const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+        messagesEndRef.current?.scrollIntoView({ behavior })
+    }
+
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }, [messages])
+        scrollToBottom()
+    }, [messages, typingUsers])
 
     // Initialize Chat
     useEffect(() => {
         const fetchMessages = async () => {
+            if (supabase.supabaseUrl.includes('placeholder')) {
+                setIsLoading(false)
+                return
+            }
+
             // Get messages from last 4 hours
             const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
 
@@ -51,6 +62,8 @@ export default function CoffeeChat() {
         }
 
         fetchMessages()
+
+        if (supabase.supabaseUrl.includes('placeholder')) return
 
         // Realtime Subscription
         const channel = supabase.channel('coffee_chat_room')
@@ -86,7 +99,7 @@ export default function CoffeeChat() {
     }, [user])
 
     const handleTyping = () => {
-        if (!channelRef.current || !user) return
+        if (!channelRef.current || !user || supabase.supabaseUrl.includes('placeholder')) return
 
         channelRef.current.track({ typing: true, user_id: user.id, user_name: user.name })
 
@@ -98,10 +111,15 @@ export default function CoffeeChat() {
     }
 
     const handleSend = async () => {
-        if (!newMessage.trim() || !user) return
+        if (!newMessage.trim() || !user || supabase.supabaseUrl.includes('placeholder')) return
 
         const msgContent = newMessage.trim()
         setNewMessage('') // Optimistic clear
+
+        // Reset height
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+        }
 
         // Remove typing status immediately
         if (channelRef.current) {
@@ -126,12 +144,10 @@ export default function CoffeeChat() {
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
 
-    // Check if running with placeholder credentials
-    const isConfigMissing = supabase.supabaseUrl.includes('placeholder')
-
-    if (isConfigMissing) {
+    // Check for missing config
+    if (supabase.supabaseUrl.includes('placeholder')) {
         return (
-            <div className="flex flex-col h-[calc(100vh-6rem)] md:h-[calc(100vh-8rem)] max-w-4xl mx-auto w-full bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 items-center justify-center p-6 text-center">
+            <div className="flex flex-col h-[calc(100vh-56px)] md:h-screen pt-14 md:pt-0 items-center justify-center p-6 text-center bg-white dark:bg-black">
                 <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4 text-red-500">
                     <Trash2 size={32} />
                 </div>
@@ -149,132 +165,171 @@ export default function CoffeeChat() {
     }
 
     return (
-        <div className="flex flex-col h-[calc(100vh-6rem)] md:h-[calc(100vh-8rem)] max-w-4xl mx-auto w-full bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
-            {/* Header */}
-            <div className="p-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-zinc-900/50 flex justify-between items-center backdrop-blur-sm">
-                <div>
-                    <h1 className="text-lg font-bold flex items-center gap-2">
-                        ☕️ Coffee Chat
-                        <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium border border-green-200">
-                            Live
-                        </span>
-                    </h1>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                        <Clock size={12} />
-                        Messages disappear after 4 hours
-                    </p>
-                </div>
-                <div className="text-xs text-gray-400">
-                    {messages.length} messages
-                </div>
-            </div>
+        <div className="flex flex-col h-[calc(100vh-56px)] md:h-screen pt-14 md:pt-0 relative bg-white dark:bg-black">
 
-            {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800">
+            {/* --- HEADER --- */}
+            <header className="flex-none h-14 border-b border-gray-100 dark:border-white/10 px-4 flex items-center justify-between bg-white/80 dark:bg-black/80 backdrop-blur-md sticky top-0 z-10">
+                <div className="flex items-center gap-2.5">
+                    <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm">
+                        <MessageCircle size={18} strokeWidth={2.5} />
+                    </div>
+                    <div>
+                        <h1 className="text-sm font-bold leading-tight">Public Chat</h1>
+                        <div className="flex items-center gap-1">
+                            <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                            <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
+                                Live • {messages.length} msgs
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div className="text-[10px] font-medium text-gray-400 border border-gray-100 dark:border-white/10 px-2 py-1 rounded-full flex items-center gap-1">
+                    <Clock size={10} /> 4h TTL
+                </div>
+            </header>
+
+            {/* --- MESSAGES AREA --- */}
+            <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-white/10">
                 {isLoading ? (
-                    <div className="flex justify-center items-center h-full text-gray-400 text-sm">
-                        Loading conversations...
+                    <div className="flex justify-center items-center h-full text-gray-400 text-sm animate-pulse">
+                        Loading conversation...
                     </div>
                 ) : messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2 opacity-50">
                         <div className="p-4 rounded-full bg-gray-100 dark:bg-zinc-900">
-                            <Send size={24} />
+                            <MessageCircle size={24} />
                         </div>
-                        <p>No messages yet. Start the conversation!</p>
+                        <p>No messages yet. Be the first!</p>
                     </div>
                 ) : (
-                    messages.map((msg) => {
-                        const isMe = msg.user_id === user?.id?.toString()
-                        return (
-                            <div key={msg.id} className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2`}>
-                                <div className={`flex max-w-[80%] md:max-w-[70%] gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
-                                    {/* Avatar */}
-                                    <div className="flex-shrink-0 mt-1">
-                                        {msg.user_avatar ? (
-                                            <img src={msg.user_avatar} alt={msg.user_name} className="w-8 h-8 rounded-full object-cover border border-gray-200 dark:border-gray-700" />
-                                        ) : (
-                                            <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-zinc-800 flex items-center justify-center text-xs font-bold text-gray-500">
-                                                {msg.user_name?.charAt(0) || '?'}
-                                            </div>
-                                        )}
-                                    </div>
+                    <div className="flex flex-col gap-4 pb-2">
+                        {messages.map((msg) => {
+                            const isMe = msg.user_id === user?.id?.toString()
+                            return (
+                                <div key={msg.id} className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-1 duration-200`}>
+                                    <div className={`flex gap-2 max-w-[85%] md:max-w-[70%] ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
 
-                                    {/* Message Bubble */}
-                                    <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
-                                                {isMe ? 'You' : msg.user_name}
-                                            </span>
-                                            <span className="text-[10px] text-gray-400">
-                                                {formatTime(msg.created_at)}
-                                            </span>
+                                        {/* Avatar */}
+                                        <div className={`
+                                            flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold mt-1 overflow-hidden
+                                            ${isMe ? 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300' : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-200'}
+                                        `}>
+                                            {msg.user_avatar ? (
+                                                <img src={msg.user_avatar} alt={msg.user_name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                msg.user_name?.charAt(0) || '?'
+                                            )}
                                         </div>
-                                        <div className={`px-4 py-2 rounded-2xl text-sm leading-relaxed shadow-sm break-words relative group ${isMe
-                                            ? 'bg-blue-600 text-white rounded-tr-none'
-                                            : 'bg-white dark:bg-zinc-900 border border-gray-200 dark:border-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-none'
-                                            }`}>
-                                            {msg.content}
+
+                                        {/* Content Bubble */}
+                                        <div className="flex flex-col gap-1 min-w-0">
+                                            <div className="flex items-center gap-2 px-1">
+                                                <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
+                                                    {isMe ? 'You' : msg.user_name}
+                                                </span>
+                                                <span className="text-[10px] text-gray-300 dark:text-gray-600">
+                                                    {formatTime(msg.created_at)}
+                                                </span>
+                                            </div>
+
+                                            <div className={`
+                                                px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap shadow-sm rounded-2xl
+                                                ${isMe
+                                                    ? 'bg-black text-white rounded-tr-sm dark:bg-white dark:text-black font-medium'
+                                                    : 'bg-white text-gray-800 border border-gray-100 rounded-tl-sm dark:bg-gray-900 dark:border-white/10 dark:text-gray-100'}
+                                            `}>
+                                                <ReactMarkdown className="prose prose-sm max-w-none break-words [&_*]:text-inherit">
+                                                    {msg.content}
+                                                </ReactMarkdown>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        )
-                    })
+                            )
+                        })}
+                        {/* Typing Indicator Bubble */}
+                        <AnimatePresence>
+                            {typingUsers.length > 0 && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 10 }}
+                                    className="flex w-full justify-start mt-2"
+                                >
+                                    <div className="flex gap-2 items-center">
+                                        <div className="h-6 w-6 shrink-0 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center">
+                                            <span className="flex gap-0.5">
+                                                <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></span>
+                                                <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce delay-75"></span>
+                                                <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce delay-150"></span>
+                                            </span>
+                                        </div>
+                                        <span className="text-xs text-gray-400 italic">
+                                            {typingUsers.length === 1
+                                                ? `${typingUsers[0].user_name} is typing...`
+                                                : `${typingUsers.length} people typing...`}
+                                        </span>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
                 )}
                 <div ref={messagesEndRef} />
-            </div>
+            </main>
 
-            {/* Typing Indicator */}
-            {typingUsers.length > 0 && (
-                <div className="px-4 py-1 text-xs text-gray-500 dark:text-gray-400 italic flex items-center gap-1 animate-pulse">
-                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></span>
-                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-75"></span>
-                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-150"></span>
-                    {typingUsers.length === 1
-                        ? `${typingUsers[0].user_name} is typing...`
-                        : `${typingUsers.length} people are typing...`}
-                </div>
-            )}
+            {/* --- FOOTER (Input Area) --- */}
+            <footer className="flex-none bg-white dark:bg-[#050505] border-t border-gray-100 dark:border-white/10 z-20 pb-[env(safe-area-inset-bottom)]">
+                <div className="p-3">
+                    <div className="relative flex items-end gap-2 bg-gray-100 dark:bg-white/5 rounded-[1.5rem] p-1.5 transition-all focus-within:ring-1 focus-within:ring-black/10 dark:focus-within:ring-white/10">
 
-            {/* Input Area */}
-            <div className="p-4 bg-white dark:bg-black border-t border-gray-200 dark:border-gray-800">
-                <div className="flex items-end gap-2 relative bg-gray-50 dark:bg-zinc-900/50 p-2 rounded-xl border border-gray-200 dark:border-gray-800 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
-                    {!user && (
-                        <div className="absolute inset-0 z-10 bg-white/60 dark:bg-black/60 backdrop-blur-[1px] flex items-center justify-center rounded-xl">
-                            <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                                Please sign in to chat
-                            </span>
-                        </div>
-                    )}
-                    <textarea
-                        value={newMessage}
-                        onChange={(e) => {
-                            setNewMessage(e.target.value)
-                            handleTyping()
-                        }}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault()
-                                handleSend()
-                            }
-                        }}
-                        placeholder="Type a message..."
-                        className="flex-1 bg-transparent border-none focus:ring-0 text-sm p-2 max-h-32 min-h-[40px] resize-none text-gray-900 dark:text-white placeholder-gray-400"
-                        rows={1}
-                        style={{ height: 'auto', minHeight: '40px' }}
-                    />
-                    <button
-                        onClick={handleSend}
-                        disabled={!newMessage.trim() || !user}
-                        className={`p-2 rounded-lg transition-all flex-shrink-0 mb-0.5 ${newMessage.trim() && user
-                            ? 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95 shadow-lg shadow-blue-500/20'
-                            : 'bg-gray-200 dark:bg-zinc-800 text-gray-400 cursor-not-allowed'
-                            }`}
-                    >
-                        <Send size={18} />
-                    </button>
+                        {!user && (
+                            <div className="absolute inset-0 z-10 bg-white/60 dark:bg-black/60 backdrop-blur-[1px] flex items-center justify-center rounded-[1.5rem]">
+                                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                                    Sign in to chat
+                                </span>
+                            </div>
+                        )}
+
+                        <textarea
+                            ref={textareaRef}
+                            value={newMessage}
+                            onChange={(e) => {
+                                setNewMessage(e.target.value)
+                                handleTyping()
+                                // Auto-grow
+                                e.target.style.height = 'auto'
+                                e.target.style.height = `${e.target.scrollHeight}px`
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault()
+                                    handleSend()
+                                }
+                            }}
+                            placeholder="Type a message..."
+                            className="flex-1 max-h-[100px] min-h-[40px] w-full resize-none bg-transparent px-3 py-2.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
+                            rows={1}
+                        />
+
+                        <button
+                            onClick={handleSend}
+                            disabled={!newMessage.trim() || !user}
+                            className={`
+                                flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all mb-1 mr-1
+                                ${!newMessage.trim() || !user
+                                    ? 'bg-gray-300 text-gray-500 dark:bg-white/10 dark:text-gray-500 cursor-not-allowed'
+                                    : 'bg-black text-white hover:scale-105 active:scale-95 dark:bg-white dark:text-black shadow-sm'}
+                            `}
+                        >
+                            <Send size={14} className={newMessage.trim() ? "ml-0.5" : ""} />
+                        </button>
+                    </div>
+                    <div className="text-[10px] text-center text-gray-300 dark:text-gray-700 mt-1">
+                        Messages are public and disappear after 4 hours.
+                    </div>
                 </div>
-            </div>
+            </footer>
         </div>
     )
 }
