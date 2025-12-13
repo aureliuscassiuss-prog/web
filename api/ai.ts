@@ -216,6 +216,7 @@ Subject: ${subject}, Program: ${program}, Year: ${formattedYear}, Branch: ${bran
 
         // Select model - use Vision for images
         const model = image ? 'llama-3.2-90b-vision-preview' : 'llama-3.3-70b-versatile';
+        console.log('Using Model:', model);
 
         const chatCompletion = await groq.chat.completions.create({
             messages,
