@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Coffee, Heart, ThumbsDown, Plus, Sparkles, Filter, Clock, Flame, X, Share2, Download, Instagram } from 'lucide-react';
+import { Coffee, Heart, Zap, Plus, X, Share2, Download, TrendingUp, Hash, ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import html2canvas from 'html2canvas';
 
-// Types
+// --- Types & Configuration ---
+
 interface Coffession {
     id: string;
     content: string;
@@ -14,27 +15,60 @@ interface Coffession {
     created_at: string;
 }
 
-// V2 Theme System - Cleaner, Premium, Less "Muddy"
-const THEME_STYLES = {
-    espresso: 'bg-[#1a1a1a] text-white border-stone-800 shadow-xl shadow-black/20 selection:bg-stone-700',
-    latte: 'bg-[#fdfbf7] text-stone-900 border-stone-100 shadow-xl shadow-stone-200/50 selection:bg-amber-100',
-    mocha: 'bg-[#2d2424] text-[#e6e1e1] border-[#3d3232] shadow-xl shadow-black/20 selection:bg-[#4a3b3b]',
-    cappuccino: 'bg-[#fffbf2] text-[#4a3b3b] border-[#f0e6d2] shadow-xl shadow-orange-900/5 selection:bg-orange-100'
+// Neo-Brutalist Theme Configuration
+const THEMES = {
+    espresso: {
+        id: 'espresso',
+        label: 'DARK.MODE',
+        bg: 'bg-zinc-900',
+        text: 'text-lime-400', // Hacker terminal vibe
+        border: 'border-lime-400',
+        shadow: 'shadow-[8px_8px_0px_0px_#84cc16]', // Lime shadow
+        decor: 'pattern-grid-sm text-zinc-800'
+    },
+    latte: {
+        id: 'latte',
+        label: 'RAW_PAPER',
+        bg: 'bg-[#fffdf5]',
+        text: 'text-black',
+        border: 'border-black',
+        shadow: 'shadow-[8px_8px_0px_0px_#000000]',
+        decor: ''
+    },
+    mocha: {
+        id: 'mocha',
+        label: 'BLUEPRINT',
+        bg: 'bg-blue-600',
+        text: 'text-white',
+        border: 'border-white',
+        shadow: 'shadow-[8px_8px_0px_0px_#000000]',
+        decor: 'pattern-dots text-blue-500'
+    },
+    cappuccino: {
+        id: 'cappuccino',
+        label: 'WARNING',
+        bg: 'bg-yellow-400',
+        text: 'text-black',
+        border: 'border-black',
+        shadow: 'shadow-[8px_8px_0px_0px_#be185d]', // Pink shadow on yellow
+        decor: 'pattern-diagonal-lines text-yellow-500'
+    }
 };
 
-const ACCENT_COLORS = {
-    espresso: 'from-stone-700 to-stone-900',
-    latte: 'from-amber-300 to-orange-300',
-    mocha: 'from-amber-800 to-stone-900',
-    cappuccino: 'from-orange-200 to-amber-300'
-};
+// --- Components ---
 
-const THEME_LABELS = {
-    espresso: 'Espresso',
-    latte: 'Latte',
-    mocha: 'Mocha',
-    cappuccino: 'Cappuccino'
-}
+const BrutalButton = ({ children, onClick, className = "", variant = "primary" }: any) => {
+    const base = "relative font-mono font-bold uppercase tracking-wider border-2 border-black transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none";
+    const styles = variant === "primary"
+        ? "bg-black text-white shadow-[4px_4px_0px_0px_#84cc16] hover:bg-zinc-800"
+        : "bg-white text-black shadow-[4px_4px_0px_0px_#000] hover:bg-gray-50";
+
+    return (
+        <button onClick={onClick} className={`${base} ${styles} px-6 py-3 ${className}`}>
+            {children}
+        </button>
+    );
+};
 
 export default function CoffessionsPage() {
     const { token } = useAuth();
@@ -42,25 +76,22 @@ export default function CoffessionsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [sort, setSort] = useState<'new' | 'trending'>('new');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-
-    // Share Modal State
     const [shareData, setShareData] = useState<Coffession | null>(null);
 
-    // Create Form State
+    // Create Form
     const [newContent, setNewContent] = useState('');
-    const [newTheme, setNewTheme] = useState<'espresso' | 'latte' | 'mocha' | 'cappuccino'>('latte');
-    const [isPosting, setIsPosting] = useState(false);
+    const [newTheme, setNewTheme] = useState<keyof typeof THEMES>('latte');
 
-    // Votes Map
+    // State
     const [votes, setVotes] = useState<Record<string, 'like' | 'dislike'>>({});
 
-    // Floating Hearts Animation State
-    const [hearts, setHearts] = useState<{ id: number; x: number; y: number; rotation: number }[]>([]);
+    // Refs for sticker tilt effect
+    const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         fetchCoffessions();
-        const savedVotes = localStorage.getItem('coffession_votes');
-        if (savedVotes) setVotes(JSON.parse(savedVotes));
+        const saved = localStorage.getItem('votes_v2');
+        if (saved) setVotes(JSON.parse(saved));
     }, [sort, token]);
 
     const fetchCoffessions = async () => {
@@ -78,14 +109,37 @@ export default function CoffessionsPage() {
         }
     };
 
+    const handleVote = async (id: string) => {
+        // Prevent double voting for now (or implement toggle if desired, but Brutalist UI implies simple upvote usually)
+        if (votes[id]) return;
+
+        // Optimistic Update
+        setVotes(prev => ({ ...prev, [id]: 'like' }));
+        setCoffessions(prev => prev.map(c => c.id === id ? { ...c, likes: c.likes + 1 } : c));
+        localStorage.setItem('votes_v2', JSON.stringify({ ...votes, [id]: 'like' }));
+
+        try {
+            await fetch(`/api/coffessions?action=vote`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': token ? `Bearer ${token}` : ''
+                },
+                body: JSON.stringify({ id, changes: { likes: 1, dislikes: 0 } })
+            });
+        } catch (e) {
+            console.error('Vote failed', e);
+            // Revert on error would go here
+        }
+    };
+
     const handleCreate = async () => {
         if (!newContent.trim()) return;
         if (!token) {
-            alert("Please sign in to post (your identity will remain anonymous).");
+            alert("Please sign in to post.");
             return;
         }
 
-        setIsPosting(true);
         try {
             const res = await fetch('/api/coffessions', {
                 method: 'POST',
@@ -103,494 +157,269 @@ export default function CoffessionsPage() {
             }
         } catch (error) {
             console.error('Failed to post', error);
-        } finally {
-            setIsPosting(false);
         }
     };
-
-    const spawnHearts = (x: number, y: number) => {
-        // Create a burst of hearts
-        const newHearts = Array.from({ length: 8 }).map((_, i) => ({
-            id: Date.now() + i,
-            x: x, // Start EXACTLY at click
-            y: y,
-            rotation: Math.random() * 360 // Random initial rotation
-        }));
-        setHearts(prev => [...prev, ...newHearts]);
-
-        // Cleanup matches animation duration
-        setTimeout(() => {
-            setHearts(prev => prev.filter(h => !newHearts.find(nh => nh.id === h.id)));
-        }, 1200);
-    };
-
-    const handleVote = async (id: string, type: 'like' | 'dislike', e?: React.MouseEvent | React.TouchEvent, isDoubleTap = false) => {
-        const currentVote = votes[id];
-        let changes = { likes: 0, dislikes: 0 };
-        let newVoteState: 'like' | 'dislike' | undefined = type;
-
-        // --- Visual Effects ---
-        if (type === 'like' && e) {
-            const clientX = 'clientX' in e ? e.clientX : (e as any).touches?.[0]?.clientX;
-            const clientY = 'clientY' in e ? e.clientY : (e as any).touches?.[0]?.clientY;
-            if (clientX && clientY) spawnHearts(clientX, clientY);
-        }
-
-        // --- Logic Fix: Double Tap ALWAYS likes, never toggles off ---
-        if (isDoubleTap && currentVote === 'like') {
-            // Already liked, just play animation (already triggered above) and return
-            return;
-        }
-
-        // --- Standard Logic ---
-        if (currentVote === type && !isDoubleTap) { // Only toggle off if not a double tap
-            // Toggle Off
-            newVoteState = undefined;
-            changes = type === 'like' ? { likes: -1, dislikes: 0 } : { likes: 0, dislikes: -1 };
-        } else if (currentVote) {
-            // Switch (e.g. Dislike -> Like)
-            changes = type === 'like'
-                ? { likes: 1, dislikes: -1 }
-                : { likes: -1, dislikes: 1 };
-        } else {
-            // New Vote
-            changes = type === 'like' ? { likes: 1, dislikes: 0 } : { likes: 0, dislikes: 1 };
-        }
-
-        // Optimistic UI Update
-        const previousCoffessions = [...coffessions];
-        setCoffessions(prev => prev.map(c => {
-            if (c.id === id) {
-                return {
-                    ...c,
-                    likes: Math.max(0, c.likes + changes.likes),
-                    dislikes: Math.max(0, c.dislikes + changes.dislikes)
-                };
-            }
-            return c;
-        }));
-
-        const newVotes = { ...votes };
-        if (newVoteState) {
-            newVotes[id] = newVoteState;
-        } else {
-            delete newVotes[id];
-        }
-        setVotes(newVotes);
-        localStorage.setItem('coffession_votes', JSON.stringify(newVotes));
-
-        try {
-            const res = await fetch(`/api/coffessions?action=vote`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': token ? `Bearer ${token}` : ''
-                },
-                body: JSON.stringify({ id, changes })
-            });
-            if (!res.ok) throw new Error('Vote failed');
-        } catch (e) {
-            console.error(e);
-            // Revert on failure
-            setCoffessions(previousCoffessions);
-            // Revert votes state roughly (simplification)
-            const revertedVotes = { ...votes };
-            if (currentVote) {
-                revertedVotes[id] = currentVote;
-            } else {
-                delete revertedVotes[id];
-            }
-            setVotes(revertedVotes);
-            localStorage.setItem('coffession_votes', JSON.stringify(revertedVotes));
-        }
-    };
-
-    // Double Tap Logic
-    const lastTap = useRef<Record<string, number>>({});
-    const handleCardClick = (id: string, e: React.MouseEvent | React.TouchEvent) => {
-        const now = Date.now();
-        const last = lastTap.current[id] || 0;
-        if (now - last < 300) {
-            handleVote(id, 'like', e, true); // Pass isDoubleTap = true
-        }
-        lastTap.current[id] = now;
-    };
-
 
     return (
-        <div className="min-h-screen bg-[#fcf9f2] dark:bg-[#0a0a0a] font-sans selection:bg-amber-100 dark:selection:bg-amber-900 pb-20 relative overflow-x-hidden">
-            {/* Fixed Grain Texture Overlay */}
-            <div className='fixed inset-0 opacity-[0.035] pointer-events-none z-[1]' style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`
-            }} />
+        <div className="min-h-screen bg-[#e0e7ff] text-black font-sans selection:bg-lime-400 selection:text-black overflow-x-hidden">
+            {/* Background Grid Pattern */}
+            <div className="fixed inset-0 pointer-events-none opacity-20"
+                style={{ backgroundImage: 'radial-gradient(circle, #000 1px, transparent 1px)', backgroundSize: '24px 24px' }}
+            />
 
-            {/* Mobile Floating Action Button (FAB) */}
-            <div className="fixed bottom-6 right-6 z-[80] sm:hidden">
-                <motion.button
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => setIsCreateModalOpen(true)}
-                    className="w-14 h-14 bg-stone-900 dark:bg-white text-white dark:text-stone-900 rounded-full shadow-2xl flex items-center justify-center"
-                >
-                    <Plus size={28} strokeWidth={2.5} />
-                </motion.button>
-            </div>
-
-            {/* 3D Realistic Hearts Overlay */}
-            <AnimatePresence>
-                {hearts.map(heart => (
-                    <motion.div
-                        key={heart.id}
-                        initial={{ opacity: 1, scale: 0, x: heart.x, y: heart.y, rotate: heart.rotation }}
-                        animate={{
-                            opacity: 0,
-                            scale: 2.5,
-                            x: heart.x + (Math.random() - 0.5) * 150, // Burst outward X
-                            y: heart.y - 200, // Float up Y
-                            rotate: heart.rotation + (Math.random() - 0.5) * 90
-                        }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 1, ease: "easeOut" }}
-                        className="fixed pointer-events-none z-[9999]"
-                        style={{ marginLeft: '-24px', marginTop: '-24px' }} // Center anchor
-                    >
-                        {/* Realistic Heart: Drop shadow + color */}
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" className="drop-shadow-xl" style={{ filter: 'drop-shadow(0px 10px 10px rgba(220, 20, 60, 0.4))' }}>
-                            <path d="M19.5 5.5C21.433 7.433 21.433 10.567 19.5 12.5L12 20L4.5 12.5C2.567 10.567 2.567 7.433 4.5 5.5C6.433 3.567 9.567 3.567 11.5 5.5L12 6L12.5 5.5C14.433 3.567 17.567 3.567 19.5 5.5Z" fill="#ff2e4d" stroke="#d61f3d" strokeWidth="1" />
-                        </svg>
-                    </motion.div>
-                ))}
-            </AnimatePresence>
-
-            {/* Header / Hero Section */}
-            <div className="sticky top-0 z-40 bg-[#fcf9f2]/90 dark:bg-[#0a0a0a]/90 backdrop-blur-xl border-b border-stone-200/50 dark:border-stone-800/50 transition-colors duration-300">
-                <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-3" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-                        <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl shadow-lg shadow-amber-500/20">
-                            <Coffee className="w-5 h-5 text-white" />
+            {/* --- Navbar --- */}
+            <nav className="sticky top-0 z-40 bg-[#e0e7ff]/90 backdrop-blur-sm border-b-4 border-black py-4">
+                <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
+                    {/* Logo */}
+                    <div className="flex items-center gap-2 select-none group">
+                        <div className="bg-black text-white p-2 border-2 border-transparent group-hover:border-lime-400 transition-colors">
+                            <Coffee size={24} strokeWidth={3} />
                         </div>
-                        <h1 className="text-xl font-black text-stone-800 dark:text-stone-100 tracking-tight font-serif">
-                            Coffessions
+                        <h1 className="text-3xl font-black italic tracking-tighter uppercase hidden sm:block">
+                            COFFESSIONS<span className="text-lime-600">_v3</span>
                         </h1>
                     </div>
 
-                    <div className="flex items-center gap-2 sm:gap-4">
-                        {/* Tab Switcher - Desktop */}
-                        <div className="hidden sm:flex bg-stone-100 dark:bg-stone-800/50 p-1 rounded-xl">
+                    {/* Controls */}
+                    <div className="flex gap-4">
+                        <div className="hidden md:flex bg-white border-2 border-black p-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]">
                             <button
                                 onClick={() => setSort('new')}
-                                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${sort === 'new' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-800 dark:text-white' : 'text-stone-500 hover:text-stone-700 dark:text-stone-400'}`}
+                                className={`px-4 py-1 font-mono font-bold text-sm transition-colors ${sort === 'new' ? 'bg-black text-lime-400' : 'hover:bg-gray-100'}`}
                             >
-                                <Clock size={14} /> Fresh
+                                FRESH
                             </button>
                             <button
                                 onClick={() => setSort('trending')}
-                                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${sort === 'trending' ? 'bg-white dark:bg-stone-700 shadow-sm text-amber-600 dark:text-amber-400' : 'text-stone-500 hover:text-stone-700 dark:text-stone-400'}`}
+                                className={`px-4 py-1 font-mono font-bold text-sm transition-colors ${sort === 'trending' ? 'bg-black text-lime-400' : 'hover:bg-gray-100'}`}
                             >
-                                <Flame size={14} /> Hot
+                                HOT
                             </button>
                         </div>
 
-                        {/* Mobile Tab Icons */}
-                        <div className="flex sm:hidden gap-1">
-                            <button onClick={() => setSort('new')} className={`p-2 rounded-lg ${sort === 'new' ? 'bg-stone-200/50 dark:bg-stone-800 text-stone-900 dark:text-white' : 'text-stone-400'}`}>
-                                <Clock size={18} />
-                            </button>
-                            <button onClick={() => setSort('trending')} className={`p-2 rounded-lg ${sort === 'trending' ? 'bg-stone-200/50 dark:bg-stone-800 text-amber-600 dark:text-amber-400' : 'text-stone-400'}`}>
-                                <Flame size={18} />
-                            </button>
-                        </div>
-
-                        <div onClick={() => setIsCreateModalOpen(true)} className="hidden sm:block">
-                            <button
-                                className="bg-stone-900 dark:bg-white text-white dark:text-stone-900 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl font-bold flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-stone-900/10 dark:shadow-white/5"
-                            >
-                                <Plus size={18} strokeWidth={3} />
-                                <span>Spill It</span>
-                            </button>
-                        </div>
+                        <BrutalButton onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2 !py-2">
+                            <Plus size={20} strokeWidth={4} />
+                            <span className="hidden sm:inline">WRITE</span>
+                        </BrutalButton>
                     </div>
                 </div>
+            </nav>
+
+            {/* --- Marquee Header --- */}
+            <div className="bg-lime-400 border-b-4 border-black overflow-hidden whitespace-nowrap py-2">
+                <motion.div
+                    initial={{ x: 0 }}
+                    animate={{ x: "-50%" }}
+                    transition={{ repeat: Infinity, duration: 20, ease: "linear" }}
+                    className="inline-block font-mono font-bold text-lg"
+                >
+                    ANONYMOUS CONFESSIONS /// NO JUDGMENT /// SPILL THE BEANS /// ANONYMOUS CONFESSIONS /// NO JUDGMENT /// SPILL THE BEANS ///
+                </motion.div>
             </div>
 
-            {/* Content Grid (Masonry) */}
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+            {/* --- Main Grid --- */}
+            <main className="max-w-7xl mx-auto px-4 py-12">
                 {isLoading ? (
-                    <div className="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6">
-                        {[1, 2, 3, 4, 5, 6].map(i => (
-                            <div key={i} className="h-64 bg-stone-200 dark:bg-stone-800 rounded-3xl animate-pulse break-inside-avoid" />
-                        ))}
-                    </div>
-                ) : coffessions.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-32 text-center">
-                        <div className="w-24 h-24 bg-stone-100 dark:bg-stone-800 rounded-full flex items-center justify-center mb-6 animate-bounce-slow">
-                            <Coffee className="w-10 h-10 text-stone-300 dark:text-stone-600" />
+                    <div className="flex justify-center py-20">
+                        <div className="animate-spin text-black">
+                            <Coffee size={64} strokeWidth={1} />
                         </div>
-                        <h3 className="text-xl font-bold text-stone-700 dark:text-stone-200 mb-2">No fresh coffee yet</h3>
-                        <p className="text-stone-500 dark:text-stone-400 max-w-sm">
-                            Be the first to spill the tea anonymously! Your confession will disappear in 48 hours.
-                        </p>
                     </div>
                 ) : (
-                    <div className="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         <AnimatePresence>
-                            {coffessions.map(post => (
-                                <motion.div
-                                    key={post.id}
-                                    layout
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.9 }}
-                                    onClick={(e) => handleCardClick(post.id, e)}
-                                    className={`
-                                        relative p-6 rounded-[2rem] break-inside-avoid border transition-all duration-300 cursor-pointer overflow-hidden group
-                                        ${THEME_STYLES[post.theme] || THEME_STYLES.latte}
-                                        hover:shadow-2xl hover:-translate-y-1
-                                    `}
-                                >
-                                    {/* Accent Bar */}
-                                    <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r opacity-80 ${ACCENT_COLORS[post.theme] || 'from-stone-400 to-stone-500'}`} />
+                            {coffessions.map((post, i) => {
+                                const theme = THEMES[post.theme];
+                                const rotate = i % 2 === 0 ? 'rotate-1' : '-rotate-1';
 
-                                    <div className="flex items-center justify-between mb-4 opacity-80 mt-2">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center backdrop-blur-sm">
-                                                <span className="text-sm">☕</span>
+                                return (
+                                    <motion.div
+                                        key={post.id}
+                                        layout
+                                        initial={{ scale: 0.8, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        whileHover={{ scale: 1.02, rotate: 0, transition: { type: "spring", stiffness: 300 } }}
+                                        className={`
+                                            relative flex flex-col justify-between p-6 min-h-[300px]
+                                            border-4 ${theme.border} ${theme.bg} ${theme.text} ${theme.shadow}
+                                            ${rotate} transition-transform
+                                        `}
+                                    >
+                                        {/* Decorative Tape/Header */}
+                                        <div className="flex justify-between items-start mb-6 border-b-2 border-current pb-2 border-dashed">
+                                            <div className="font-mono text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                                                <Hash size={14} />
+                                                {theme.label}
                                             </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] font-black uppercase tracking-widest opacity-90">Anonymous</span>
-                                                <span className="text-[10px] font-medium opacity-60">
-                                                    {new Date(post.created_at).toLocaleDateString()}
-                                                </span>
+                                            <div className="font-mono text-xs opacity-70">
+                                                {new Date(post.created_at).toLocaleDateString()}
                                             </div>
                                         </div>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); setShareData(post); }}
-                                            className="p-2 -mr-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors opacity-0 group-hover:opacity-100"
-                                        >
-                                            <Share2 size={16} />
-                                        </button>
-                                    </div>
 
-                                    <p className="text-xl font-serif font-medium leading-relaxed mb-8 whitespace-pre-wrap tracking-wide select-text opacity-90">
-                                        "{post.content}"
-                                    </p>
+                                        {/* Content */}
+                                        <div className="flex-grow font-bold text-2xl leading-tight font-sans tracking-tight mb-8">
+                                            {post.content}
+                                        </div>
 
-                                    <div className="flex items-center justify-between pt-4 border-t border-black/5 dark:border-white/5">
-                                        <div className="flex items-center gap-2">
+                                        {/* Actions Footer */}
+                                        <div className="flex items-center justify-between pt-4 border-t-4 border-current">
                                             <button
-                                                onClick={(e) => { e.stopPropagation(); handleVote(post.id, 'like', e); }}
+                                                onClick={() => handleVote(post.id)}
                                                 className={`
-                                                    group flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all
-                                                    ${votes[post.id] === 'like' ? 'bg-pink-500 text-white shadow-pink-500/30 shadow-lg' : 'hover:bg-black/5 dark:hover:bg-white/10'}
+                                                    flex items-center gap-2 px-4 py-2 font-mono font-bold border-2 border-current
+                                                    transition-all active:translate-y-1 hover:bg-black/10
+                                                    ${votes[post.id] ? 'bg-black text-white' : ''}
                                                 `}
                                             >
-                                                <Heart
-                                                    size={18}
-                                                    className={`transition-transform group-active:scale-125 ${votes[post.id] === 'like' ? 'fill-current' : ''}`}
-                                                />
-                                                <span className="text-xs font-bold">{post.likes}</span>
+                                                <Heart size={18} className={votes[post.id] ? "fill-white" : ""} />
+                                                {post.likes}
                                             </button>
 
                                             <button
-                                                onClick={(e) => { e.stopPropagation(); handleVote(post.id, 'dislike'); }}
-                                                className={`
-                                                    group flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all
-                                                    ${votes[post.id] === 'dislike' ? 'bg-stone-700 text-white shadow-lg' : 'hover:bg-black/5 dark:hover:bg-white/10'}
-                                                `}
+                                                onClick={() => setShareData(post)}
+                                                className="p-2 border-2 border-current hover:bg-black/10 transition-colors"
                                             >
-                                                <ThumbsDown
-                                                    size={18}
-                                                    className={`transition-transform group-active:rotate-12 ${votes[post.id] === 'dislike' ? 'fill-current' : ''}`}
-                                                />
+                                                <Share2 size={20} />
                                             </button>
                                         </div>
 
-                                        {post.likes > 5 && (
-                                            <div className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-1 rounded-full border border-amber-500/20">
-                                                <Flame size={12} className="fill-current" /> Hot
+                                        {/* Badge for popular posts */}
+                                        {post.likes > 50 && (
+                                            <div className="absolute -top-4 -right-4 bg-red-500 text-white border-2 border-black px-3 py-1 font-black uppercase text-sm -rotate-12 shadow-[4px_4px_0px_0px_#000]">
+                                                Viral
                                             </div>
                                         )}
-                                    </div>
-                                </motion.div>
-                            ))}
+                                    </motion.div>
+                                );
+                            })}
                         </AnimatePresence>
                     </div>
                 )}
-            </div>
+            </main>
 
-            {/* Create Post Modal */}
+            {/* --- Create Modal (The Clipboard) --- */}
             <AnimatePresence>
                 {isCreateModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
                         <motion.div
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm"
-                            onClick={() => setIsCreateModalOpen(false)}
-                        />
-
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="relative w-full max-w-lg bg-white dark:bg-[#1a1a1a] rounded-[2.5rem] p-6 sm:p-8 shadow-2xl shadow-black/20 overflow-hidden"
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            className="bg-white w-full max-w-lg border-4 border-black shadow-[12px_12px_0px_0px_#000] p-0 overflow-hidden"
                         >
-                            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500" />
-
-                            <div className="flex items-center justify-between mb-6">
-                                <div>
-                                    <h2 className="text-2xl font-black text-stone-900 dark:text-white tracking-tight">Spill the tea ☕</h2>
-                                    <p className="text-sm text-stone-500 dark:text-stone-400 font-medium">Anonymous • Disappears in 48h</p>
-                                </div>
-                                <button onClick={() => setIsCreateModalOpen(false)} className="p-2 rounded-full hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
-                                    <X size={24} className="text-stone-400" />
+                            {/* Modal Header */}
+                            <div className="bg-black text-white p-4 flex justify-between items-center">
+                                <h2 className="text-2xl font-black italic uppercase">New Entry</h2>
+                                <button onClick={() => setIsCreateModalOpen(false)} className="hover:text-red-500 transition-colors">
+                                    <X size={32} strokeWidth={3} />
                                 </button>
                             </div>
 
-                            <div className="space-y-6">
+                            <div className="p-6 sm:p-8 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]">
                                 <textarea
                                     value={newContent}
-                                    onChange={e => setNewContent(e.target.value)}
-                                    placeholder="I secretly think that..."
-                                    className="w-full h-40 p-5 rounded-3xl bg-stone-50 dark:bg-[#2a2a2a] border-2 border-transparent focus:border-amber-500 dark:focus:border-amber-500 focus:bg-white dark:focus:bg-black transition-all outline-none resize-none text-lg text-stone-800 dark:text-stone-100 placeholder-stone-400 font-medium"
+                                    onChange={(e) => setNewContent(e.target.value)}
+                                    placeholder="TYPE YOUR CONFESSION HERE..."
                                     maxLength={280}
+                                    className="w-full h-48 bg-white border-2 border-black p-4 font-mono text-lg placeholder:text-gray-300 focus:outline-none focus:shadow-[4px_4px_0px_0px_#000] focus:-translate-y-1 transition-all resize-none mb-6"
                                     autoFocus
                                 />
 
-                                <div>
-                                    <label className="text-xs font-bold uppercase tracking-widest text-stone-400 mb-3 block pl-2">Pick your flavor</label>
-                                    <div className="flex items-center gap-3 overflow-x-auto pb-2 px-1 no-scrollbar">
-                                        {(Object.keys(THEME_STYLES) as Array<keyof typeof THEME_STYLES>).map(theme => (
+                                <div className="mb-8">
+                                    <label className="block font-black text-sm uppercase mb-3">Select Aesthetic</label>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {(Object.keys(THEMES) as Array<keyof typeof THEMES>).map(key => (
                                             <button
-                                                key={theme}
-                                                onClick={() => setNewTheme(theme)}
+                                                key={key}
+                                                onClick={() => setNewTheme(key)}
                                                 className={`
-                                                    group relative w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300
-                                                    ${newTheme === theme ? 'scale-110 shadow-xl ring-2 ring-stone-900 dark:ring-white ring-offset-2 dark:ring-offset-black' : 'opacity-60 hover:opacity-100 hover:scale-105'}
+                                                    h-12 border-2 border-black transition-all relative overflow-hidden group
+                                                    ${THEMES[key].bg}
+                                                    ${newTheme === key ? 'shadow-[4px_4px_0px_0px_#000] -translate-y-1' : 'opacity-50 hover:opacity-100'}
                                                 `}
-                                                style={{
-                                                    background: theme === 'espresso' ? '#1c1917' : theme === 'latte' ? '#f3ebd3' : theme === 'mocha' ? '#3e2723' : '#ffecb3'
-                                                }}
                                             >
-                                                {newTheme === theme && (
-                                                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-white drop-shadow-md">
-                                                        <CheckIcon color={theme === 'latte' || theme === 'cappuccino' ? '#3e2723' : '#fff'} />
-                                                    </motion.div>
-                                                )}
+                                                {newTheme === key && <div className="absolute inset-0 flex items-center justify-center"><Zap size={20} className={key === 'espresso' ? 'text-lime-400' : 'text-black'} fill="currentColor" /></div>}
                                             </button>
                                         ))}
                                     </div>
                                 </div>
 
-                                <button
-                                    onClick={handleCreate}
-                                    disabled={!newContent.trim() || isPosting}
-                                    className="w-full py-4 bg-stone-900 dark:bg-white text-white dark:text-stone-900 rounded-2xl font-black text-lg hover:shadow-xl hover:shadow-stone-900/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:transform-none"
-                                >
-                                    {isPosting ? 'Brewing...' : 'Post It'}
-                                </button>
+                                <BrutalButton onClick={handleCreate} className="w-full text-lg">
+                                    PUBLISH TO GRID
+                                </BrutalButton>
                             </div>
                         </motion.div>
                     </div>
                 )}
             </AnimatePresence>
 
-            {/* Share Modal */}
+            {/* --- Share Modal (The Ticket) --- */}
             <AnimatePresence>
                 {shareData && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md" onClick={() => setShareData(null)}>
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-transparent max-w-sm w-full"
-                            onClick={e => e.stopPropagation()}
-                        >
-                            {/* Instagram Story Preview Area */}
-                            <div className="flex justify-center mb-6">
-                                <div
-                                    id="share-card"
-                                    className="w-[320px] h-[568px] flex flex-col justify-between p-10 relative overflow-hidden shadow-2xl rounded-[32px]"
-                                    style={{
-                                        // Dynamic Premium Backgrounds based on Theme
-                                        background: shareData.theme === 'espresso'
-                                            ? 'linear-gradient(135deg, #1c1917 0%, #000000 100%)'
-                                            : shareData.theme === 'latte'
-                                                ? 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)'
-                                                : shareData.theme === 'mocha'
-                                                    ? 'linear-gradient(135deg, #451a03 0%, #2a1205 100%)'
-                                                    : 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)',
-                                        color: shareData.theme === 'latte' || shareData.theme === 'cappuccino' ? '#451a03' : '#ffffff'
-                                    }}
-                                >
-                                    {/* Background Pattern */}
-                                    <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] mix-blend-overlay"></div>
-                                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-                                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-black/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-zinc-900/90" onClick={() => setShareData(null)}>
+                        <div className="flex flex-col gap-6 items-center w-full max-w-md" onClick={e => e.stopPropagation()}>
 
-                                    <div className="relative z-10">
-                                        <div className="flex items-center gap-3 mb-8 opacity-90">
-                                            <div className="w-10 h-10 rounded-full bg-current flex items-center justify-center bg-opacity-10 backdrop-blur-md border border-white/20">
-                                                <Coffee size={18} />
-                                            </div>
-                                            <div>
-                                                <div className="font-black uppercase tracking-[0.2em] text-[10px]">Extrovert</div>
-                                                <div className="font-serif italic opacity-70">Coffessions</div>
-                                            </div>
-                                        </div>
+                            {/* The Capture Node */}
+                            <div
+                                id="share-ticket"
+                                className={`
+                                    w-full aspect-[4/5] p-8 flex flex-col justify-between relative
+                                    border-4 ${THEMES[shareData.theme].border} ${THEMES[shareData.theme].bg} ${THEMES[shareData.theme].text}
+                                `}
+                            >
+                                <div className="absolute top-4 right-4 opacity-20">
+                                    <Coffee size={120} strokeWidth={1} />
+                                </div>
 
-                                        <div className="relative">
-                                            <span className="absolute -top-6 -left-4 text-6xl font-serif opacity-20">"</span>
-                                            <p className="text-3xl font-bold leading-tight tracking-tight relative z-10">
-                                                {shareData.content}
-                                            </p>
-                                        </div>
+                                <div className="relative z-10 border-b-4 border-current pb-4 mb-4">
+                                    <h3 className="text-4xl font-black italic uppercase leading-none">
+                                        The<br />Tea.
+                                    </h3>
+                                </div>
+
+                                <div className="relative z-10 flex-grow flex items-center">
+                                    <p className="font-mono text-2xl font-bold leading-snug">
+                                        "{shareData.content}"
+                                    </p>
+                                </div>
+
+                                <div className="relative z-10 pt-4 border-t-4 border-current flex justify-between items-end">
+                                    <div className="flex flex-col">
+                                        <span className="text-xs font-bold uppercase mb-1">Source</span>
+                                        <span className="font-black text-xl">EXTROVERT.SITE</span>
                                     </div>
-
-                                    <div className="relative z-10 text-center space-y-4">
-                                        <div className="w-full h-px bg-current opacity-20"></div>
-                                        <div className="flex flex-col items-center gap-1 opacity-70">
-                                            <span className="text-[10px] uppercase tracking-widest font-bold">Spilled anonymously on</span>
-                                            <span className="font-bold">extrovert.site</span>
-                                        </div>
+                                    <div className="w-16 h-16 bg-black text-white flex items-center justify-center border-2 border-white">
+                                        <ArrowRight size={32} className="-rotate-45" />
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="flex gap-3 justify-center">
-                                <button
-                                    onClick={() => setShareData(null)}
-                                    className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
-                                >
-                                    <X size={20} />
-                                </button>
-                                <button
+                            {/* Actions */}
+                            <div className="flex gap-4 w-full">
+                                <BrutalButton
+                                    className="flex-1 flex justify-center items-center gap-2"
                                     onClick={() => {
-                                        const el = document.getElementById('share-card');
+                                        const el = document.getElementById('share-ticket');
                                         if (el) {
-                                            html2canvas(el, { scale: 3, useCORS: true }).then(canvas => {
+                                            html2canvas(el).then(canvas => {
                                                 const link = document.createElement('a');
-                                                link.download = `coffession-story-${shareData.id}.png`;
-                                                link.href = canvas.toDataURL('image/png', 1.0);
+                                                link.download = 'brutal-confession.png';
+                                                link.href = canvas.toDataURL();
                                                 link.click();
                                             });
                                         }
                                     }}
-                                    className="flex-1 max-w-[200px] h-12 bg-white text-black font-bold rounded-full flex items-center justify-center gap-2 hover:scale-105 transition-transform"
                                 >
-                                    <Download size={18} /> Save Image
+                                    <Download size={20} /> SAVE
+                                </BrutalButton>
+                                <button onClick={() => setShareData(null)} className="w-14 h-14 bg-white border-2 border-black shadow-[4px_4px_0px_0px_#fff] flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors">
+                                    <X size={24} strokeWidth={3} />
                                 </button>
                             </div>
-                        </motion.div>
+                        </div>
                     </div>
                 )}
             </AnimatePresence>
         </div>
     );
-}
-
-function CheckIcon({ color }: { color: string }) {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12"></polyline>
-        </svg>
-    )
 }
