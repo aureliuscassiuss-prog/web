@@ -515,7 +515,7 @@ export default function CoffessionsPage() {
                                                 <Coffee size={18} />
                                             </div>
                                             <div>
-                                                <div className="font-black uppercase tracking-[0.2em] text-[10px]">Uninotes</div>
+                                                <div className="font-black uppercase tracking-[0.2em] text-[10px]">Extrovert</div>
                                                 <div className="font-serif italic opacity-70">Coffessions</div>
                                             </div>
                                         </div>
@@ -532,7 +532,7 @@ export default function CoffessionsPage() {
                                         <div className="w-full h-px bg-current opacity-20"></div>
                                         <div className="flex flex-col items-center gap-1 opacity-70">
                                             <span className="text-[10px] uppercase tracking-widest font-bold">Spilled anonymously on</span>
-                                            <span className="font-bold">uninotes.app</span>
+                                            <span className="font-bold">extrovert.site</span>
                                         </div>
                                     </div>
                                 </div>
