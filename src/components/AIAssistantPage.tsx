@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import {
     Send, Sparkles, RotateCcw, Bot, Copy, Check,
-    User, ThumbsUp, ThumbsDown
+    User, ThumbsUp, ThumbsDown, Paperclip, X
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -12,11 +12,12 @@ interface Message {
     sender: 'user' | 'bot'
     feedback?: 'like' | 'dislike' | null
     timestamp: Date
+    image?: string
 }
 
 interface ConversationMessage {
     role: 'user' | 'assistant'
-    content: string
+    content: string | Array<any>
 }
 
 export default function AIAssistantPage() {
@@ -34,6 +35,7 @@ export default function AIAssistantPage() {
     ])
     const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([])
     const [input, setInput] = useState('')
+    const [selectedImage, setSelectedImage] = useState<string | null>(null)
     const [isTyping, setIsTyping] = useState(false)
     const [isLoadingHistory, setIsLoadingHistory] = useState(true)
     const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -42,6 +44,7 @@ export default function AIAssistantPage() {
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const chatContainerRef = useRef<HTMLDivElement>(null)
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
     // --- Effects ---
     const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
@@ -66,12 +69,25 @@ export default function AIAssistantPage() {
                 if (res.ok) {
                     const data = await res.json();
                     if (data.history && Array.isArray(data.history) && data.history.length > 0) {
-                        const historyMessages: Message[] = data.history.map((msg: any, i: number) => ({
-                            id: `hist-${i}`,
-                            text: msg.content,
-                            sender: msg.role === 'user' ? 'user' : 'bot',
-                            timestamp: new Date()
-                        }));
+                        const historyMessages: Message[] = data.history.map((msg: any, i: number) => {
+                            let textContent = '';
+                            let imageContent = undefined;
+
+                            if (Array.isArray(msg.content)) {
+                                textContent = msg.content.find((c: any) => c.type === 'text')?.text || '';
+                                imageContent = msg.content.find((c: any) => c.type === 'image_url')?.image_url?.url;
+                            } else {
+                                textContent = msg.content;
+                            }
+
+                            return {
+                                id: `hist-${i}`,
+                                text: textContent,
+                                sender: msg.role === 'user' ? 'user' : 'bot',
+                                timestamp: new Date(),
+                                image: imageContent
+                            }
+                        });
 
                         setMessages(prev => {
                             // Keep initial greeting if history is empty or if it's just the default
@@ -92,6 +108,17 @@ export default function AIAssistantPage() {
         fetchHistory();
     }, [token]);
 
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) {
+            const reader = new FileReader()
+            reader.onloadend = () => {
+                setSelectedImage(reader.result as string)
+            }
+            reader.readAsDataURL(file)
+        }
+    }
+
     // Auto-resize textarea
     useEffect(() => {
         if (textareaRef.current) {
@@ -103,19 +130,22 @@ export default function AIAssistantPage() {
 
     // --- Handlers ---
     const handleSend = async () => {
-        if (!input.trim()) return
+        if (!input.trim() && !selectedImage) return
 
         const userMessage = input.trim()
+        const userImage = selectedImage
         const newMsgId = Date.now().toString()
 
         setMessages(prev => [...prev, {
             id: newMsgId,
             text: userMessage,
             sender: 'user',
-            timestamp: new Date()
+            timestamp: new Date(),
+            image: userImage || undefined
         }])
 
         setInput('')
+        setSelectedImage(null)
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto'
             textareaRef.current.focus()
@@ -132,6 +162,7 @@ export default function AIAssistantPage() {
                 body: JSON.stringify({
                     action: 'chat',
                     question: userMessage,
+                    image: userImage,
                     conversationHistory
                 })
             })
@@ -339,11 +370,14 @@ export default function AIAssistantPage() {
                                     {/* Content Bubble (Compact) */}
                                     <div className="flex flex-col gap-1 min-w-0">
                                         <div className={`
-                                        rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap shadow-sm
+                                        rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap shadow-sm flex flex-col gap-2
                                         ${msg.sender === 'user'
                                                 ? 'bg-black text-white rounded-tr-sm dark:bg-white dark:text-black'
                                                 : 'bg-white text-gray-800 border border-gray-100 rounded-tl-sm dark:bg-gray-900 dark:border-white/10 dark:text-gray-100'}
                                     `}>
+                                            {msg.image && (
+                                                <img src={msg.image} alt="User upload" className="rounded-lg max-h-60 w-auto object-cover border border-white/20" />
+                                            )}
                                             {/* Typewriter effect logic handled by raw text updates in state, so we just render text */}
                                             {msg.text}
                                         </div>
@@ -420,7 +454,37 @@ export default function AIAssistantPage() {
 
                 {/* Input Field - Compact */}
                 <div className="p-3 pt-0">
+                    {/* Image Preview */}
+                    {selectedImage && (
+                        <div className="mb-2 relative inline-block mx-2">
+                            <img src={selectedImage} alt="Preview" className="h-14 w-auto rounded-lg border border-gray-200 dark:border-gray-800 object-cover" />
+                            <button
+                                onClick={() => setSelectedImage(null)}
+                                className="absolute -top-1.5 -right-1.5 bg-gray-900 text-white rounded-full p-0.5 shadow-md hover:bg-red-500 transition-colors"
+                            >
+                                <X size={10} />
+                            </button>
+                        </div>
+                    )}
+
                     <div className="relative flex items-end gap-2 bg-gray-100 dark:bg-white/5 rounded-[1.5rem] p-1.5 transition-all focus-within:ring-1 focus-within:ring-black/10 dark:focus-within:ring-white/10">
+                        {/* File Input */}
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            className="hidden"
+                            accept="image/*"
+                            onChange={handleFileSelect}
+                        />
+
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-500 hover:bg-white dark:text-gray-400 dark:hover:bg-white/10 transition-colors mb-1 ml-1"
+                            title="Upload Image"
+                        >
+                            <Paperclip size={18} />
+                        </button>
+
                         <textarea
                             ref={textareaRef}
                             value={input}
@@ -431,27 +495,23 @@ export default function AIAssistantPage() {
                                     handleSend()
                                 }
                             }}
-                            placeholder="Type a message..."
+                            placeholder={selectedImage ? "Ask about this image..." : "Type a message..."}
                             className="flex-1 max-h-[100px] min-h-[40px] w-full resize-none bg-transparent px-3 py-2.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
                             rows={1}
                         />
                         <button
                             onClick={handleSend}
-                            disabled={!input.trim() || isTyping}
+                            disabled={(!input.trim() && !selectedImage) || isTyping}
                             className={`
                                 flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all mb-1 mr-1
-                                ${!input.trim() || isTyping
+                                ${(!input.trim() && !selectedImage) || isTyping
                                     ? 'bg-gray-300 text-gray-500 dark:bg-white/10 dark:text-gray-500 cursor-not-allowed'
                                     : 'bg-black text-white hover:scale-105 active:scale-95 dark:bg-white dark:text-black'}
                             `}
                         >
-                            <Send size={14} className={input.trim() ? "ml-0.5" : ""} />
+                            <Send size={14} className={(input.trim() || selectedImage) ? "ml-0.5" : ""} />
                         </button>
                     </div>
-                    {/* Hide disclaimer on mobile to save space above keyboard */}
-                    <p className="hidden md:block text-[9px] text-center text-gray-400 dark:text-gray-600 mt-1.5">
-                        AI can produce inaccurate info.
-                    </p>
                 </div>
             </footer>
 
