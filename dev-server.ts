@@ -94,6 +94,9 @@ app.all('/api/attendance', jsonParser, adaptHandler(attendanceHandler));
 import translateHandler from './api/translate.ts';
 app.all('/api/translate', jsonParser, adaptHandler(translateHandler));
 
+// 10. Coffessions
+import coffessionsHandler from './api/coffessions.ts';
+app.all('/api/coffessions', jsonParser, adaptHandler(coffessionsHandler));
 
 // Listen on 0.0.0.0 to be accessible from network
 app.listen(PORT, '0.0.0.0', () => {
@@ -107,6 +110,7 @@ Endpoints:
 - Profile:     http://localhost:${PORT}/api/profile
 - Admin:       http://localhost:${PORT}/api/admin
 - AI:          http://localhost:${PORT}/api/ai
+- Coffessions: http://localhost:${PORT}/api/coffessions
 - Leaderboard: http://localhost:${PORT}/api/leaderboard
 - Stats:       http://localhost:${PORT}/api/stats
     `);

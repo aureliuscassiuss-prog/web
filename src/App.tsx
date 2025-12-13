@@ -33,6 +33,7 @@ import SharedResourcesPage from './components/SharedResourcesPage'
 import SharedUnitPage from './components/SharedUnitPage';
 import OurTeam from './components/OurTeam';
 import PomodoroPage from './components/PomodoroPage';
+import CoffessionsPage from './components/CoffessionsPage';
 
 import SEO from './components/SEO'
 import AttendanceManager from './components/attendance/AttendanceManager'
@@ -384,6 +385,17 @@ function AppContent() {
             }}>
               <CoursePlayer />
             </ProtectedRoute>
+          } />
+
+          {/* Coffessions Route (Public but requires auth to post, Page handles it) */}
+          <Route path="/coffessions" element={
+            <>
+              <SEO
+                title="Coffessions - Anonymous Confessions | Extrovert"
+                description="Share your thoughts anonymously. Posts disappear in 48 hours."
+              />
+              <CoffessionsPage />
+            </>
           } />
 
           {/* AI Papers Route (Protected) */}

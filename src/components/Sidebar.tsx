@@ -5,6 +5,7 @@ import {
     Upload,
     ShieldCheck,
     Library,
+    Coffee,
     Sun,
     Moon,
     Bot,
@@ -68,6 +69,7 @@ export default function Sidebar({ onMobileMenuClose, isDark, toggleTheme, spotli
                 { path: '/preparation', label: 'Preparation', icon: GraduationCap },
                 { path: '/ai-assistant', label: 'AI Assistant', icon: Bot, badge: 'New' },
                 { path: '/ai-papers', label: 'AI Papers', icon: FileText, badge: 'Beta' },
+                { path: '/coffessions', label: 'Coffessions', icon: Coffee, badge: 'Hot' },
                 { path: '/leaderboard', label: 'Leaderboard', icon: BarChart3 },
             ]
         },

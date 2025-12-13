@@ -429,9 +429,11 @@ export default function AIAssistantPage() {
                                             {msg.image && (
                                                 <img src={msg.image} alt="User upload" className="rounded-lg max-h-60 w-auto object-cover border border-white/20" />
                                             )}
-                                            <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none break-words">
-                                                {msg.text}
-                                            </ReactMarkdown>
+                                            <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+                                                <ReactMarkdown>
+                                                    {msg.text}
+                                                </ReactMarkdown>
+                                            </div>
                                         </div>
 
                                         {/* Bot Actions (Small) */}
