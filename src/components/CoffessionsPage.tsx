@@ -302,9 +302,26 @@ export default function CoffessionsPage() {
                 setNewContent('');
                 setIsCreateModalOpen(false);
                 fetchCoffessions();
+                // Success feedback
+                alert('✅ Confession posted successfully!');
+            } else {
+                // Handle specific error codes
+                const errorData = await res.json().catch(() => ({ message: 'Failed to post' }));
+
+                if (res.status === 429) {
+                    // Rate limit
+                    alert('⏰ Slow down! You can only post one confession at a time. Please wait a moment before posting again.');
+                } else if (res.status === 400) {
+                    alert(`❌ ${errorData.message || 'Your confession is too short. Write at least 5 characters.'}`);
+                } else if (res.status === 401) {
+                    alert('🔒 Session expired. Please sign in again.');
+                } else {
+                    alert(`❌ Failed to post: ${errorData.message || 'Unknown error'}`);
+                }
             }
         } catch (error) {
             console.error('Failed to post', error);
+            alert('❌ Network error. Please check your connection and try again.');
         } finally {
             setIsPosting(false);
         }
