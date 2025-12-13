@@ -310,77 +310,40 @@ function SubjectCard({ subject }: { subject: Subject }) {
     const classesCanMiss = Math.floor((subject.attendedClasses - (subject.minimumAttendance / 100) * subject.totalClasses) / (subject.minimumAttendance / 100))
 
     // Circular Progress Props
-    const radius = 18;
+    const radius = 24;
     const circumference = 2 * Math.PI * radius;
     const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
     return (
         <motion.div
             layout
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            className={`relative bg-white dark:bg-gray-900 rounded-2xl border transition-all duration-300 overflow-hidden group ${isExpanded ? 'border-blue-500/30 shadow-lg ring-1 ring-blue-500/30 col-span-1 md:col-span-2 lg:col-span-1 row-span-2' : 'border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700'
+            className={`bg-white dark:bg-gray-900 rounded-2xl border transition-all duration-300 overflow-hidden ${isExpanded
+                    ? 'border-blue-500/30 shadow-lg ring-1 ring-blue-500/30 col-span-1 md:col-span-2 lg:col-span-1 row-span-2'
+                    : 'border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md hover:border-blue-200 dark:hover:border-blue-800'
                 }`}
         >
             <div
-                className="p-5 cursor-pointer"
+                className={`p-4 cursor-pointer flex items-center justify-between gap-4 ${isExpanded ? 'border-b border-gray-100 dark:border-gray-800' : ''}`}
                 onClick={() => setIsExpanded(!isExpanded)}
             >
-                <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                        <div className="h-12 w-12 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-sm shrink-0" style={{ backgroundColor: subject.color }}>
-                            {subject.name.substring(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-lg text-gray-900 dark:text-white leading-tight mb-1">{subject.name}</h3>
-                            <div className="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
-                                <span className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md font-medium border border-gray-200 dark:border-gray-700">
-                                    {subject.code || 'No Code'}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                    <Clock size={12} className="opacity-70" />
-                                    {subject.schedule.length} Days/Wk
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="relative flex items-center justify-center">
-                        <svg className="w-12 h-12 transform -rotate-90">
-                            <circle cx="24" cy="24" r={radius} fill="transparent" stroke="currentColor" strokeWidth="4" className="text-gray-100 dark:text-gray-800" />
-                            <circle
-                                cx="24" cy="24" r={radius}
-                                fill="transparent"
-                                stroke={subject.color}
-                                strokeWidth="4"
-                                strokeLinecap="round"
-                                strokeDasharray={circumference}
-                                strokeDashoffset={strokeDashoffset}
-                                className="transition-all duration-1000 ease-out"
-                            />
-                        </svg>
-                        <span className="absolute text-[10px] font-bold text-gray-700 dark:text-gray-300">
-                            {percentage}%
-                        </span>
+                <div className="flex items-center gap-3.5">
+                    <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: subject.color }}></div>
+                    <div>
+                        <h3 className="font-bold text-base text-gray-900 dark:text-white leading-tight">{subject.name}</h3>
+                        {!isExpanded && (
+                            <p className="text-[10px] text-gray-400 font-medium">Click to view details</p>
+                        )}
                     </div>
                 </div>
 
-                <div className="mt-4 flex items-center justify-between text-sm">
-                    <div className="flex flex-col">
-                        <span className="text-xs text-gray-500 uppercase font-bold tracking-wider opacity-60">Attended</span>
-                        <span className="font-bold text-gray-900 dark:text-white text-lg">
-                            {subject.attendedClasses}
-                            <span className="text-gray-400 text-sm font-medium">/{subject.totalClasses}</span>
-                        </span>
-                    </div>
-
-                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${isLow
-                            ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
-                            : 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400'
-                        }`}>
-                        {isLow ? <AlertTriangle size={12} /> : <CheckCircle2 size={12} />}
-                        {isLow ? 'Low Attendance' : 'On Track'}
-                    </div>
+                <div className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 transition-colors ${isLow
+                        ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
+                        : 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400'
+                    }`}>
+                    {percentage}%
+                    {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                 </div>
             </div>
 
@@ -392,37 +355,62 @@ function SubjectCard({ subject }: { subject: Subject }) {
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.3, ease: 'easeInOut' }}
                     >
-                        <div className="px-5 pb-5 pt-0 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-black/20">
-                            <div className="pt-4 space-y-3">
-                                <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                                    <div className="flex items-start gap-3">
-                                        <div className={`p-2 rounded-lg shrink-0 ${isLow ? 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400' : 'bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-400'}`}>
-                                            <Target size={16} />
+                        <div className="p-5 bg-gray-50/50 dark:bg-black/20 space-y-5">
+                            {/* Stats Row */}
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="relative flex items-center justify-center">
+                                        <svg className="w-14 h-14 transform -rotate-90">
+                                            <circle cx="28" cy="28" r={radius} fill="transparent" stroke="currentColor" strokeWidth="5" className="text-gray-200 dark:text-gray-800" />
+                                            <circle
+                                                cx="28" cy="28" r={radius}
+                                                fill="transparent"
+                                                stroke={subject.color}
+                                                strokeWidth="5"
+                                                strokeLinecap="round"
+                                                strokeDasharray={circumference}
+                                                strokeDashoffset={strokeDashoffset}
+                                                className="transition-all duration-1000 ease-out"
+                                            />
+                                        </svg>
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                                            <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{percentage}%</span>
                                         </div>
-                                        <div>
-                                            <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-0.5">Recommendation</h4>
-                                            {isLow ? (
-                                                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                                                    You are below the <span className="font-bold">{subject.minimumAttendance}%</span> threshold.
-                                                    You need to attend the next <span className="font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-1 rounded">{classesToAttend > 0 ? classesToAttend : 0}</span> classes consecutively to recover.
-                                                </p>
-                                            ) : (
-                                                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                                                    Great job! You have a safe margin. You can technically miss the next <span className="font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-1 rounded">{classesCanMiss > 0 ? classesCanMiss : 0}</span> classes and stay above {subject.minimumAttendance}%.
-                                                </p>
-                                            )}
-                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-0.5">Attended</div>
+                                        <span className="font-bold text-gray-900 dark:text-white text-xl">
+                                            {subject.attendedClasses}
+                                            <span className="text-gray-400 text-sm font-medium">/{subject.totalClasses}</span>
+                                        </span>
                                     </div>
                                 </div>
 
-                                <div className="flex gap-2">
-                                    <button className="flex-1 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-                                        View History
-                                    </button>
-                                    <button className="flex-1 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-                                        Edit Subject
-                                    </button>
+                                <div className="text-right">
+                                    <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-0.5">Status</div>
+                                    <div className={`flex items-center justify-end gap-1.5 text-sm font-bold ${isLow ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                                        {isLow ? (
+                                            <>Critical <AlertTriangle size={14} /></>
+                                        ) : (
+                                            <>Track <CheckCircle2 size={14} /></>
+                                        )}
+                                    </div>
                                 </div>
+                            </div>
+
+                            {/* Recommendation Box */}
+                            <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm relative overflow-hidden">
+                                <div className={`absolute left-0 top-0 bottom-0 w-1 ${isLow ? 'bg-red-500' : 'bg-green-500'}`} />
+                                <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-1 pl-2">AI Recommendation</h4>
+                                {isLow ? (
+                                    <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed pl-2">
+                                        Attend <span className="font-bold text-red-600 dark:text-red-400">{classesToAttend > 0 ? classesToAttend : 0}</span> consecutive classes to reach {subject.minimumAttendance}%.
+                                    </p>
+                                ) : (
+                                    <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed pl-2">
+                                        Safe zone. You can miss <span className="font-bold text-green-600 dark:text-green-400">{classesCanMiss > 0 ? classesCanMiss : 0}</span> classes.
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </motion.div>
@@ -675,11 +663,11 @@ function ManageTab({ subjects, onAdd, onUpdate, onDelete }: any) {
     const [isEditing, setIsEditing] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
-    const [newSubject, setNewSubject] = useState<Partial<Subject>>({
+    const [newSubject, setNewSubject] = useState<any>({
         name: '',
         code: '',
-        totalClasses: 0,
-        attendedClasses: 0,
+        totalClasses: '',
+        attendedClasses: '',
         minimumAttendance: 75,
         color: '#3b82f6',
         schedule: []
@@ -692,20 +680,21 @@ function ManageTab({ subjects, onAdd, onUpdate, onDelete }: any) {
         // Simulate network delay for better UX
         await new Promise(resolve => setTimeout(resolve, 600))
 
+        const subjectToSave: Subject = {
+            id: editingId || crypto.randomUUID(),
+            name: newSubject.name,
+            code: newSubject.code || '',
+            totalClasses: Number(newSubject.totalClasses) || 0,
+            attendedClasses: Number(newSubject.attendedClasses) || 0,
+            minimumAttendance: Number(newSubject.minimumAttendance) || 75,
+            color: newSubject.color || '#3b82f6',
+            schedule: newSubject.schedule || []
+        }
+
         if (editingId) {
-            onUpdate({ ...newSubject, id: editingId } as Subject)
+            onUpdate(subjectToSave)
         } else {
-            const subject: Subject = {
-                id: crypto.randomUUID(),
-                name: newSubject.name!,
-                code: newSubject.code || '',
-                totalClasses: Number(newSubject.totalClasses) || 0,
-                attendedClasses: Number(newSubject.attendedClasses) || 0,
-                minimumAttendance: Number(newSubject.minimumAttendance) || 75,
-                color: newSubject.color || '#3b82f6',
-                schedule: newSubject.schedule || []
-            }
-            onAdd(subject)
+            onAdd(subjectToSave)
         }
         setIsSaving(false)
         resetForm()
@@ -717,8 +706,8 @@ function ManageTab({ subjects, onAdd, onUpdate, onDelete }: any) {
         setNewSubject({
             name: '',
             code: '',
-            totalClasses: 0,
-            attendedClasses: 0,
+            totalClasses: '',
+            attendedClasses: '',
             minimumAttendance: 75,
             color: '#3b82f6',
             schedule: []
@@ -777,7 +766,7 @@ function ManageTab({ subjects, onAdd, onUpdate, onDelete }: any) {
                                         <input type="text" value={newSubject.name} onChange={e => setNewSubject({ ...newSubject, name: e.target.value })} className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. Mathematics" />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-xs font-bold text-gray-500 uppercase">Subject Code (Optional)</label>
+                                        <label className="text-xs font-bold text-gray-500 uppercase">Subject Code</label>
                                         <input type="text" value={newSubject.code} onChange={e => setNewSubject({ ...newSubject, code: e.target.value })} className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. CS101" />
                                     </div>
                                 </div>
@@ -786,15 +775,15 @@ function ManageTab({ subjects, onAdd, onUpdate, onDelete }: any) {
                                 <div className="grid grid-cols-3 gap-4">
                                     <div className="space-y-1.5">
                                         <label className="text-xs font-bold text-gray-500 uppercase">Total</label>
-                                        <input type="number" value={newSubject.totalClasses} onChange={e => setNewSubject({ ...newSubject, totalClasses: Number(e.target.value) })} className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                                        <input type="number" value={newSubject.totalClasses} onChange={e => setNewSubject({ ...newSubject, totalClasses: e.target.value })} className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
                                     </div>
                                     <div className="space-y-1.5">
                                         <label className="text-xs font-bold text-gray-500 uppercase">Attended</label>
-                                        <input type="number" value={newSubject.attendedClasses} onChange={e => setNewSubject({ ...newSubject, attendedClasses: Number(e.target.value) })} className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                                        <input type="number" value={newSubject.attendedClasses} onChange={e => setNewSubject({ ...newSubject, attendedClasses: e.target.value })} className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
                                     </div>
                                     <div className="space-y-1.5">
                                         <label className="text-xs font-bold text-gray-500 uppercase">Target %</label>
-                                        <input type="number" value={newSubject.minimumAttendance} onChange={e => setNewSubject({ ...newSubject, minimumAttendance: Number(e.target.value) })} className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                                        <input type="number" value={newSubject.minimumAttendance} onChange={e => setNewSubject({ ...newSubject, minimumAttendance: e.target.value })} className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
                                     </div>
                                 </div>
 
