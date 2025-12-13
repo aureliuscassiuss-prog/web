@@ -48,7 +48,7 @@ export default function SavedResources() {
             }
 
             try {
-                const response = await fetch('/api/resource-interactions', {
+                const response = await fetch('/api/resources?action=saved', {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -100,7 +100,7 @@ export default function SavedResources() {
                 if (note) body.note = note;
             }
 
-            const res = await fetch('/api/share', {
+            const res = await fetch('/api/resources?action=share', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

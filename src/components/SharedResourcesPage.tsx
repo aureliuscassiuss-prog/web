@@ -25,7 +25,7 @@ export default function SharedResourcesPage() {
                     headers['Authorization'] = `Bearer ${token}`;
                 }
 
-                const res = await fetch(`/api/share?slug=${slug}`, { headers });
+                const res = await fetch(`/api/resources?action=share&slug=${slug}`, { headers });
                 if (!res.ok) {
                     throw new Error('Link not found or expired');
                 }

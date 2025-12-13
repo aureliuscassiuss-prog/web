@@ -79,7 +79,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
             // Let's keep it false for background updates.
             // setIsTranslating(true); 
 
-            const response = await fetch('/api/translate', {
+            const response = await fetch('/api/ai?action=translate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text, targetLang: language })

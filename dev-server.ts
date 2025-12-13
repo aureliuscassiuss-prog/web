@@ -91,9 +91,7 @@ app.all('/api/stats', jsonParser, adaptHandler(statsHandler));
 app.all('/api/attendance', jsonParser, adaptHandler(attendanceHandler));
 
 // 9. Translation Proxy
-import translateHandler from './api/translate.ts';
-app.all('/api/translate', jsonParser, adaptHandler(translateHandler));
-
+// 9. Translation Proxy (Merged into AI)
 // 10. Coffessions
 import coffessionsHandler from './api/coffessions.ts';
 app.all('/api/coffessions', jsonParser, adaptHandler(coffessionsHandler));

@@ -119,6 +119,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(200).json({ message: 'Conversation cleared' });
         }
 
+        // --- Translation Logic ---
+        if (req.method === 'POST' && queryAction === 'translate') {
+            const { text, targetLang } = req.body;
+            if (!text || !targetLang) {
+                return res.status(400).json({ error: 'Missing text or targetLang' });
+            }
+            try {
+                const { translate } = await import('@vitalets/google-translate-api');
+                const { text: translatedText } = await translate(text, { to: targetLang });
+                return res.status(200).json({ translatedText });
+            } catch (error: any) {
+                console.error('Translation error:', error);
+                return res.status(500).json({ error: 'Translation failed', details: error.message });
+            }
+        }
+
         // --- Standard AI Generation ---
         if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
 

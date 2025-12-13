@@ -277,8 +277,249 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(200).json({ resources: resourcesWithStates });
         }
 
+        // 3. Fetched Saved Resources
+        if (action === 'saved') {
+            const token = req.headers.authorization?.replace('Bearer ', '');
+            if (!token) return res.status(401).json({ message: 'Unauthorized' });
+
+            try {
+                const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
+                const { data: savedResources, error } = await supabase
+                    .from('resources')
+                    .select('*, uploaderRel:users(avatar)')
+                    .contains('savedBy', [decoded.userId])
+                    .order('createdAt', { ascending: false });
+
+                if (error) throw error;
+
+                // Format response similar to standard fetch
+                const formatted = (savedResources || []).map((r: any) => ({
+                    ...r,
+                    uploaderAvatar: r.uploaderRel?.avatar,
+                    likes: (r.likedBy || []).length,
+                    dislikes: (r.dislikedBy || []).length,
+                    downloads: r.downloads || 0,
+                    flags: (r.flaggedBy || []).length,
+                    userLiked: (r.likedBy || []).includes(decoded.userId),
+                    userDisliked: (r.dislikedBy || []).includes(decoded.userId),
+                    userSaved: true,
+                    userFlagged: (r.flaggedBy || []).includes(decoded.userId)
+                }));
+
+                return res.status(200).json({ resources: formatted });
+            } catch (e) {
+                return res.status(500).json({ message: 'Failed to fetch saved' });
+            }
+        }
+
+        // 4. Shared Resources Fetch
+        if (action === 'share') {
+            const { slug } = req.query;
+            if (!slug || typeof slug !== 'string') return res.status(400).json({ message: 'Invalid slug' });
+
+            try {
+                // 1. Check Shared List
+                const { data: sharedList } = await supabase.from('shared_lists').select('*').eq('slug', slug).single();
+
+                let resources: any[] = [];
+                let ownerUser: any = null;
+
+                if (sharedList) {
+                    const { data: owner } = await supabase.from('users').select('name, avatar, _id').eq('_id', sharedList.ownerId).single();
+                    ownerUser = owner;
+                    if (sharedList.resources && sharedList.resources.length > 0) {
+                        const { data: resData } = await supabase
+                            .from('resources')
+                            .select('*, uploaderRel:users(avatar)')
+                            .in('_id', sharedList.resources)
+                            .eq('status', 'approved')
+                            .order('createdAt', { ascending: false });
+                        resources = resData || [];
+                    }
+                } else {
+                    // 2. Check User Slug
+                    const { data: owner } = await supabase.from('users').select('*').eq('shareSlug', slug).single();
+                    if (!owner) return res.status(404).json({ message: 'Shared list not found' });
+                    ownerUser = owner;
+                    const { data: resData } = await supabase
+                        .from('resources')
+                        .select('*, uploaderRel:users(avatar)')
+                        .contains('savedBy', [owner._id])
+                        .eq('status', 'approved')
+                        .order('createdAt', { ascending: false });
+                    resources = resData || [];
+                }
+
+                // Map Viewer State
+                let viewerUserId: string | null = null;
+                try {
+                    const token = req.headers.authorization?.replace('Bearer ', '');
+                    if (token && process.env.JWT_SECRET) {
+                        const decoded = jwt.verify(token, process.env.JWT_SECRET) as { userId: string };
+                        viewerUserId = decoded.userId;
+                    }
+                } catch (e) { }
+
+                const mappedResources = (resources || []).map((r: any) => ({
+                    ...r,
+                    uploaderAvatar: r.uploaderRel?.avatar,
+                    likes: (r.likedBy || []).length,
+                    dislikes: (r.dislikedBy || []).length,
+                    flags: (r.flaggedBy || []).length,
+                    downloads: r.downloads || 0,
+                    userLiked: viewerUserId && (r.likedBy || []).includes(viewerUserId),
+                    userDisliked: viewerUserId && (r.dislikedBy || []).includes(viewerUserId),
+                    userSaved: viewerUserId && (r.savedBy || []).includes(viewerUserId),
+                    userFlagged: viewerUserId && (r.flaggedBy || []).includes(viewerUserId)
+                }));
+
+                return res.status(200).json({
+                    user: { name: ownerUser?.name || 'Anonymous', avatar: ownerUser?.avatar },
+                    list: sharedList ? { note: sharedList.note, createdAt: sharedList.createdAt } : null,
+                    resources: mappedResources
+                });
+            } catch (error) {
+                console.error('Share fetch error:', error);
+                return res.status(500).json({ message: 'Failed to fetch shared' });
+            }
+        }
+
         // --- POST REQUESTS ---
         if (req.method === 'POST') {
+            // Handle Interactions (Like, Save, etc)
+            const { resourceId, action: interactionAction, value, type: voteType } = req.body;
+            // We check interactionAction OR query action or infer from body
+            const effectiveAction = interactionAction || (req.query.action === 'interact' || req.query.action === 'share' ? (req.query.action === 'share' ? 'share' : req.body.action) : null);
+
+            if (effectiveAction && ['like', 'dislike', 'save', 'flag', 'rate', 'download', 'share'].includes(effectiveAction)) {
+                if (!process.env.JWT_SECRET) return res.status(500).json({ message: 'Server error' });
+                const token = req.headers.authorization?.replace('Bearer ', '');
+                if (!token) return res.status(401).json({ message: 'Unauthorized' });
+
+                try {
+                    const decoded = jwt.verify(token, process.env.JWT_SECRET) as { userId: string };
+                    const userId = decoded.userId;
+
+                    // Handle Share Creation specifically
+                    if (effectiveAction === 'share') {
+                        const { resourceIds, note } = req.body;
+                        const { default: crypto } = await import('crypto');
+
+                        const { data: user } = await supabase.from('users').select('*').eq('_id', userId).single();
+                        if (!user) return res.status(404).json({ message: 'User not found' });
+
+                        if (Array.isArray(resourceIds) && resourceIds.length > 0) {
+                            const slug = crypto.randomBytes(4).toString('hex');
+                            await supabase.from('shared_lists').insert({
+                                slug, ownerId: userId, resources: resourceIds, note: note || ''
+                            });
+                            return res.status(200).json({ slug });
+                        }
+
+                        if (user.shareSlug) return res.status(200).json({ slug: user.shareSlug });
+
+                        const slug = crypto.randomBytes(4).toString('hex');
+                        await supabase.from('users').update({ shareSlug: slug }).eq('_id', userId);
+                        return res.status(200).json({ slug });
+                    }
+
+                    const { data: resource, error: fetchError } = await supabase
+                        .from('resources')
+                        .select('*')
+                        .eq('_id', resourceId)
+                        .single();
+
+                    if (fetchError || !resource) return res.status(404).json({ message: 'Resource not found' });
+
+                    const toggle = (arr: string[], id: string) => {
+                        if (!arr) arr = [];
+                        const idx = arr.indexOf(id);
+                        if (idx === -1) arr.push(id);
+                        else arr.splice(idx, 1);
+                        return arr;
+                    };
+
+                    let dbUpdates: any = {};
+                    let responseData: any = {};
+                    let message = '';
+
+                    if (effectiveAction === 'like') {
+                        let likedBy = resource.likedBy || [];
+                        let dislikedBy = resource.dislikedBy || [];
+                        if (dislikedBy.includes(userId)) {
+                            dislikedBy = dislikedBy.filter((id: string) => id !== userId);
+                            dbUpdates.dislikedBy = dislikedBy;
+                        }
+                        likedBy = toggle(likedBy, userId);
+                        dbUpdates.likedBy = likedBy;
+                        responseData.likes = likedBy.length;
+                        responseData.dislikes = dislikedBy.length;
+                        responseData.isLiked = likedBy.includes(userId);
+                        responseData.isDisliked = false;
+                        message = likedBy.includes(userId) ? 'Liked' : 'Unliked';
+                    }
+                    else if (effectiveAction === 'dislike') {
+                        let likedBy = resource.likedBy || [];
+                        let dislikedBy = resource.dislikedBy || [];
+                        if (likedBy.includes(userId)) {
+                            likedBy = likedBy.filter((id: string) => id !== userId);
+                            dbUpdates.likedBy = likedBy;
+                        }
+                        dislikedBy = toggle(dislikedBy, userId);
+                        dbUpdates.dislikedBy = dislikedBy;
+                        responseData.likes = likedBy.length;
+                        responseData.dislikes = dislikedBy.length;
+                        responseData.isLiked = false;
+                        responseData.isDisliked = dislikedBy.includes(userId);
+                        message = dislikedBy.includes(userId) ? 'Disliked' : 'Undisliked';
+                    }
+                    else if (effectiveAction === 'save') {
+                        let savedBy = toggle(resource.savedBy || [], userId);
+                        dbUpdates.savedBy = savedBy;
+                        responseData.isSaved = savedBy.includes(userId);
+                        message = savedBy.includes(userId) ? 'Saved' : 'Unsaved';
+                    }
+                    else if (effectiveAction === 'flag') {
+                        let flaggedBy = toggle(resource.flaggedBy || [], userId);
+                        dbUpdates.flaggedBy = flaggedBy;
+                        responseData.isFlagged = flaggedBy.includes(userId);
+                        message = 'Flagged';
+                    }
+                    else if (effectiveAction === 'rate') {
+                        dbUpdates.rating = value; // Needs aggregation logic usually but simplified for now
+                        message = 'Rated';
+                    }
+                    else if (effectiveAction === 'download') {
+                        dbUpdates.downloads = (resource.downloads || 0) + 1;
+                        message = 'Download counted';
+                    }
+
+                    if (Object.keys(dbUpdates).length > 0) {
+                        const { error: updateError } = await supabase
+                            .from('resources')
+                            .update(dbUpdates)
+                            .eq('_id', resourceId);
+                        if (updateError) throw updateError;
+                    }
+
+                    const returnResource = {
+                        ...resource,
+                        ...dbUpdates,
+                        likes: (dbUpdates.likedBy || resource.likedBy || []).length,
+                        dislikes: (dbUpdates.dislikedBy || resource.dislikedBy || []).length,
+                        flags: (dbUpdates.flaggedBy || resource.flaggedBy || []).length,
+                        downloads: dbUpdates.downloads !== undefined ? dbUpdates.downloads : (resource.downloads || 0),
+                        ...responseData
+                    };
+
+                    return res.status(200).json({ message, resource: returnResource });
+
+                } catch (err: any) {
+                    return res.status(500).json({ message: 'Interaction failed', error: err.message });
+                }
+            }
+
+            // --- Standard Upload Logic continues... ---
             if (!process.env.JWT_SECRET) {
                 return res.status(500).json({ message: 'Server misconfiguration' });
             }

@@ -64,7 +64,7 @@ export default function ResourceCard({
         if (!token) return false;
 
         try {
-            const response = await fetch('/api/resource-interactions', {
+            const response = await fetch('/api/resources?action=interact', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
