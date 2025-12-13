@@ -17,16 +17,16 @@ interface Coffession {
 // V2 Theme System - Cleaner, Premium, Less "Muddy"
 const THEME_STYLES = {
     espresso: 'bg-[#1a1a1a] text-white border-stone-800 shadow-xl shadow-black/20 selection:bg-stone-700',
-    latte: 'bg-white text-stone-900 border-stone-100 shadow-xl shadow-stone-200/50 selection:bg-amber-100',
+    latte: 'bg-[#fdfbf7] text-stone-900 border-stone-100 shadow-xl shadow-stone-200/50 selection:bg-amber-100',
     mocha: 'bg-[#2d2424] text-[#e6e1e1] border-[#3d3232] shadow-xl shadow-black/20 selection:bg-[#4a3b3b]',
     cappuccino: 'bg-[#fffbf2] text-[#4a3b3b] border-[#f0e6d2] shadow-xl shadow-orange-900/5 selection:bg-orange-100'
 };
 
 const ACCENT_COLORS = {
     espresso: 'from-stone-700 to-stone-900',
-    latte: 'from-amber-400 to-orange-400',
-    mocha: 'from-amber-700 to-amber-900',
-    cappuccino: 'from-orange-300 to-amber-400'
+    latte: 'from-amber-300 to-orange-300',
+    mocha: 'from-amber-800 to-stone-900',
+    cappuccino: 'from-orange-200 to-amber-300'
 };
 
 const THEME_LABELS = {
@@ -219,6 +219,22 @@ export default function CoffessionsPage() {
 
     return (
         <div className="min-h-screen bg-[#fcf9f2] dark:bg-[#0a0a0a] font-sans selection:bg-amber-100 dark:selection:bg-amber-900 pb-20 relative overflow-x-hidden">
+            {/* Fixed Grain Texture Overlay */}
+            <div className='fixed inset-0 opacity-[0.035] pointer-events-none z-[1]' style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`
+            }} />
+
+            {/* Mobile Floating Action Button (FAB) */}
+            <div className="fixed bottom-6 right-6 z-[80] sm:hidden">
+                <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="w-14 h-14 bg-stone-900 dark:bg-white text-white dark:text-stone-900 rounded-full shadow-2xl flex items-center justify-center"
+                >
+                    <Plus size={28} strokeWidth={2.5} />
+                </motion.button>
+            </div>
+
             {/* 3D Realistic Hearts Overlay */}
             <AnimatePresence>
                 {hearts.map(heart => (
@@ -246,13 +262,13 @@ export default function CoffessionsPage() {
             </AnimatePresence>
 
             {/* Header / Hero Section */}
-            <div className="sticky top-0 z-40 bg-[#fcf9f2]/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-stone-200 dark:border-stone-800 transition-colors duration-300">
-                <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+            <div className="sticky top-0 z-40 bg-[#fcf9f2]/90 dark:bg-[#0a0a0a]/90 backdrop-blur-xl border-b border-stone-200/50 dark:border-stone-800/50 transition-colors duration-300">
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-3" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
                         <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl shadow-lg shadow-amber-500/20">
-                            <Coffee className="w-6 h-6 text-white" />
+                            <Coffee className="w-5 h-5 text-white" />
                         </div>
-                        <h1 className="text-xl sm:text-2xl font-black text-stone-800 dark:text-stone-100 tracking-tight">
+                        <h1 className="text-xl font-black text-stone-800 dark:text-stone-100 tracking-tight font-serif">
                             Coffessions
                         </h1>
                     </div>
@@ -276,21 +292,22 @@ export default function CoffessionsPage() {
 
                         {/* Mobile Tab Icons */}
                         <div className="flex sm:hidden gap-1">
-                            <button onClick={() => setSort('new')} className={`p-2 rounded-lg ${sort === 'new' ? 'bg-stone-200 dark:bg-stone-800 text-stone-900 dark:text-white' : 'text-stone-400'}`}>
-                                <Clock size={20} />
+                            <button onClick={() => setSort('new')} className={`p-2 rounded-lg ${sort === 'new' ? 'bg-stone-200/50 dark:bg-stone-800 text-stone-900 dark:text-white' : 'text-stone-400'}`}>
+                                <Clock size={18} />
                             </button>
-                            <button onClick={() => setSort('trending')} className={`p-2 rounded-lg ${sort === 'trending' ? 'bg-stone-200 dark:bg-stone-800 text-amber-600 dark:text-amber-400' : 'text-stone-400'}`}>
-                                <Flame size={20} />
+                            <button onClick={() => setSort('trending')} className={`p-2 rounded-lg ${sort === 'trending' ? 'bg-stone-200/50 dark:bg-stone-800 text-amber-600 dark:text-amber-400' : 'text-stone-400'}`}>
+                                <Flame size={18} />
                             </button>
                         </div>
 
-                        <button
-                            onClick={() => setIsCreateModalOpen(true)}
-                            className="bg-stone-900 dark:bg-white text-white dark:text-stone-900 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl font-bold flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-stone-900/10 dark:shadow-white/5"
-                        >
-                            <Plus size={18} strokeWidth={3} />
-                            <span className="hidden sm:inline">Spill It</span>
-                        </button>
+                        <div onClick={() => setIsCreateModalOpen(true)} className="hidden sm:block">
+                            <button
+                                className="bg-stone-900 dark:bg-white text-white dark:text-stone-900 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl font-bold flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-stone-900/10 dark:shadow-white/5"
+                            >
+                                <Plus size={18} strokeWidth={3} />
+                                <span>Spill It</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -353,7 +370,7 @@ export default function CoffessionsPage() {
                                         </button>
                                     </div>
 
-                                    <p className="text-lg font-medium leading-relaxed mb-8 whitespace-pre-wrap tracking-wide select-text">
+                                    <p className="text-xl font-serif font-medium leading-relaxed mb-8 whitespace-pre-wrap tracking-wide select-text opacity-90">
                                         "{post.content}"
                                     </p>
 
