@@ -59,9 +59,15 @@ export default function Sidebar({ onMobileMenuClose, isDark, toggleTheme, spotli
     // Grouping items into logical categories for better discoverability
     const menuGroups: MenuGroup[] = [
         {
+            label: "General",
+            items: [
+                { path: '/', label: 'Home', icon: Home },
+                { path: '/resources', label: 'Resources', icon: Library, id: 'browse-resources' },
+            ]
+        },
+        {
             label: "Academic",
             items: [
-                { path: '/resources', label: 'Resources', icon: Library, id: 'browse-resources' },
                 { path: '/preparation', label: 'Preparation', icon: GraduationCap },
                 { path: '/ai-assistant', label: 'AI Assistant', icon: Bot, badge: 'New' },
                 { path: '/ai-papers', label: 'AI Papers', icon: FileText, badge: 'Beta' },
@@ -73,7 +79,6 @@ export default function Sidebar({ onMobileMenuClose, isDark, toggleTheme, spotli
         {
             label: "Social",
             items: [
-                { path: '/', label: 'Home', icon: Home },
                 { path: '/coffessions', label: 'Coffessions', icon: Coffee, badge: 'Hot' },
                 { path: '/leaderboard', label: 'Leaderboard', icon: BarChart3 },
             ]

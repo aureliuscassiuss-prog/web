@@ -423,7 +423,7 @@ export default function AIAssistantPage() {
                                         <div className={`
                                         rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap shadow-sm flex flex-col gap-2
                                         ${msg.sender === 'user'
-                                                ? 'bg-black text-white rounded-tr-sm dark:bg-white dark:text-black'
+                                                ? 'bg-black text-white rounded-tr-sm dark:bg-[#ffffff] dark:text-black font-medium'
                                                 : 'bg-white text-gray-800 border border-gray-100 rounded-tl-sm dark:bg-gray-900 dark:border-white/10 dark:text-gray-100'}
                                     `}>
                                             {msg.image && (
