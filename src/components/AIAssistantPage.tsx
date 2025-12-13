@@ -429,7 +429,10 @@ export default function AIAssistantPage() {
                                             {msg.image && (
                                                 <img src={msg.image} alt="User upload" className="rounded-lg max-h-60 w-auto object-cover border border-white/20" />
                                             )}
-                                            <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+                                            <div className={`prose prose-sm max-w-none break-words ${msg.sender === 'user'
+                                                    ? '[&_*]:text-inherit dark:prose-neutral' // Force inheritance for user (uses parent's Black/White text)
+                                                    : 'dark:prose-invert' // Standard behavior for bot
+                                                }`}>
                                                 <ReactMarkdown>
                                                     {msg.text}
                                                 </ReactMarkdown>
