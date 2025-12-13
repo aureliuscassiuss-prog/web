@@ -429,10 +429,25 @@ export default function AIAssistantPage() {
                                             {msg.image && (
                                                 <img src={msg.image} alt="User upload" className="rounded-lg max-h-60 w-auto object-cover border border-white/20" />
                                             )}
-                                            <div className={`prose prose-sm max-w-none break-words ${msg.sender === 'user'
-                                                    ? '[&_*]:text-inherit dark:prose-neutral' // Force inheritance for user (uses parent's Black/White text)
-                                                    : 'dark:prose-invert' // Standard behavior for bot
-                                                }`}>
+                                            <div
+                                                className={`prose prose-sm max-w-none break-words ${msg.sender === 'user'
+                                                        ? 'dark:prose-neutral'
+                                                        : 'dark:prose-invert'
+                                                    }`}
+                                                style={msg.sender === 'user' ? {
+                                                    color: 'inherit',
+                                                    '--tw-prose-body': 'inherit',
+                                                    '--tw-prose-headings': 'inherit',
+                                                    '--tw-prose-links': 'inherit',
+                                                    '--tw-prose-bold': 'inherit',
+                                                    '--tw-prose-counters': 'inherit',
+                                                    '--tw-prose-bullets': 'inherit',
+                                                    '--tw-prose-quotes': 'inherit',
+                                                    '--tw-prose-code': 'inherit',
+                                                    '--tw-prose-hr': 'inherit',
+                                                    '--tw-prose-th-borders': 'inherit',
+                                                } as React.CSSProperties : undefined}
+                                            >
                                                 <ReactMarkdown>
                                                     {msg.text}
                                                 </ReactMarkdown>
