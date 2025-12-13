@@ -4,6 +4,7 @@ import {
     User, ThumbsUp, ThumbsDown, Paperclip, X
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import ReactMarkdown from 'react-markdown'
 
 // --- Types ---
 interface Message {
@@ -428,8 +429,9 @@ export default function AIAssistantPage() {
                                             {msg.image && (
                                                 <img src={msg.image} alt="User upload" className="rounded-lg max-h-60 w-auto object-cover border border-white/20" />
                                             )}
-                                            {/* Typewriter effect logic handled by raw text updates in state, so we just render text */}
-                                            {msg.text}
+                                            <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none break-words">
+                                                {msg.text}
+                                            </ReactMarkdown>
                                         </div>
 
                                         {/* Bot Actions (Small) */}
