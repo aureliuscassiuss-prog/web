@@ -126,6 +126,28 @@ export default function CoffeeChat() {
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
 
+    // Check if running with placeholder credentials
+    const isConfigMissing = supabase.supabaseUrl.includes('placeholder')
+
+    if (isConfigMissing) {
+        return (
+            <div className="flex flex-col h-[calc(100vh-6rem)] md:h-[calc(100vh-8rem)] max-w-4xl mx-auto w-full bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 items-center justify-center p-6 text-center">
+                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4 text-red-500">
+                    <Trash2 size={32} />
+                </div>
+                <h2 className="text-xl font-bold mb-2">Chat Unavailable</h2>
+                <p className="text-gray-500 dark:text-gray-400 max-w-md mb-6">
+                    The chat system is not configured correctly. Detected missing Supabase credentials.
+                </p>
+                <div className="bg-gray-100 dark:bg-zinc-900 p-4 rounded-lg text-xs text-left font-mono overflow-x-auto max-w-full">
+                    <p className="text-gray-500 mb-2">Required Environment Variables:</p>
+                    <p>VITE_SUPABASE_URL=...</p>
+                    <p>VITE_SUPABASE_ANON_KEY=...</p>
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div className="flex flex-col h-[calc(100vh-6rem)] md:h-[calc(100vh-8rem)] max-w-4xl mx-auto w-full bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
             {/* Header */}
@@ -188,8 +210,8 @@ export default function CoffeeChat() {
                                             </span>
                                         </div>
                                         <div className={`px-4 py-2 rounded-2xl text-sm leading-relaxed shadow-sm break-words relative group ${isMe
-                                                ? 'bg-blue-600 text-white rounded-tr-none'
-                                                : 'bg-white dark:bg-zinc-900 border border-gray-200 dark:border-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-none'
+                                            ? 'bg-blue-600 text-white rounded-tr-none'
+                                            : 'bg-white dark:bg-zinc-900 border border-gray-200 dark:border-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-none'
                                             }`}>
                                             {msg.content}
                                         </div>
@@ -245,8 +267,8 @@ export default function CoffeeChat() {
                         onClick={handleSend}
                         disabled={!newMessage.trim() || !user}
                         className={`p-2 rounded-lg transition-all flex-shrink-0 mb-0.5 ${newMessage.trim() && user
-                                ? 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95 shadow-lg shadow-blue-500/20'
-                                : 'bg-gray-200 dark:bg-zinc-800 text-gray-400 cursor-not-allowed'
+                            ? 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95 shadow-lg shadow-blue-500/20'
+                            : 'bg-gray-200 dark:bg-zinc-800 text-gray-400 cursor-not-allowed'
                             }`}
                     >
                         <Send size={18} />
