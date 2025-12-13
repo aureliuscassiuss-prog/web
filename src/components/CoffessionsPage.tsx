@@ -446,10 +446,49 @@ export default function CoffessionsPage() {
                                             }
                                         }
                                     }}
-                                    className="flex-1 bg-white text-black py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 hover:bg-stone-200 transition-colors shadow-xl"
+                                    className="flex-1 bg-white text-black py-4 rounded-xl font-bold text-base flex items-center justify-center gap-2 hover:bg-stone-200 transition-colors shadow-xl"
                                 >
-                                    <Download size={20} /> Save Image
+                                    <Download size={18} /> Save
                                 </button>
+
+                                <button
+                                    onClick={async () => {
+                                        const el = document.getElementById('share-card-node');
+                                        if (el) {
+                                            try {
+                                                const canvas = await html2canvas(el, {
+                                                    scale: 2,
+                                                    backgroundColor: null,
+                                                    logging: false
+                                                });
+                                                canvas.toBlob(async (blob) => {
+                                                    if (blob && navigator.share) {
+                                                        const file = new File([blob], `coffession-${shareData.id}.png`, { type: 'image/png' });
+                                                        try {
+                                                            await navigator.share({
+                                                                files: [file],
+                                                                title: 'Coffession',
+                                                                text: 'Check out this confession from Extrovert!'
+                                                            });
+                                                        } catch (err) {
+                                                            if ((err as Error).name !== 'AbortError') {
+                                                                console.error('Share failed:', err);
+                                                            }
+                                                        }
+                                                    } else {
+                                                        alert('Sharing not supported on this device. Use Save instead.');
+                                                    }
+                                                }, 'image/png');
+                                            } catch (err) {
+                                                console.error("Capture failed:", err);
+                                            }
+                                        }
+                                    }}
+                                    className="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 text-white py-4 rounded-xl font-bold text-base flex items-center justify-center gap-2 hover:from-amber-600 hover:to-amber-700 transition-all shadow-xl"
+                                >
+                                    <Share2 size={18} /> Share
+                                </button>
+
                                 <button
                                     onClick={() => setShareData(null)}
                                     className="w-16 bg-white/10 text-white rounded-xl flex items-center justify-center hover:bg-white/20 transition-colors backdrop-blur-md"
