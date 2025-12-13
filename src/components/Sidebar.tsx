@@ -56,29 +56,34 @@ export default function Sidebar({ onMobileMenuClose, isDark, toggleTheme, spotli
         items: MenuItem[];
     }
 
-    // Grouping items creates a better visual hierarchy
+    // Grouping items into logical categories for better discoverability
     const menuGroups: MenuGroup[] = [
         {
-            label: "Platform",
+            label: "Academic",
             items: [
-                { path: '/', label: 'Home', icon: Home },
                 { path: '/resources', label: 'Resources', icon: Library, id: 'browse-resources' },
-                { path: '/attendance', label: 'Attendance', icon: CheckCircle2 },
-                { path: '/cgpa-calculator', label: 'CGPA Calculator', icon: Calculator },
-                { path: '/pomodoro', label: 'Pomodoro Timer', icon: Timer, badge: 'New' },
                 { path: '/preparation', label: 'Preparation', icon: GraduationCap },
                 { path: '/ai-assistant', label: 'AI Assistant', icon: Bot, badge: 'New' },
                 { path: '/ai-papers', label: 'AI Papers', icon: FileText, badge: 'Beta' },
+                { path: '/attendance', label: 'Attendance', icon: CheckCircle2 },
+                { path: '/cgpa-calculator', label: 'CGPA Calculator', icon: Calculator },
+                { path: '/pomodoro', label: 'Pomodoro Timer', icon: Timer, badge: 'New' },
+            ]
+        },
+        {
+            label: "Social",
+            items: [
+                { path: '/', label: 'Home', icon: Home },
                 { path: '/coffessions', label: 'Coffessions', icon: Coffee, badge: 'Hot' },
                 { path: '/leaderboard', label: 'Leaderboard', icon: BarChart3 },
             ]
         },
         {
-            label: "Account",
+            label: "Profile",
             items: [
+                { path: '/profile', label: 'Profile Settings', icon: User },
                 { path: '/uploads', label: 'My Uploads', icon: Upload },
                 { path: '/saved-resources', label: 'Saved Resources', icon: Bookmark },
-                { path: '/profile', label: 'Profile Settings', icon: User },
                 ...(hasAdminRole ? [{ path: '/admin', label: getAdminLabel(), icon: ShieldCheck }] : [])
             ]
         }
