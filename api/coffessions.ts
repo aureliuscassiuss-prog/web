@@ -107,6 +107,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(200).json({ success: true, likes: newLikes, dislikes: newDislikes });
         }
 
+        // --- 4. DELETE: Delete Confession (Admin Only) ---
+        if (req.method === 'DELETE' || (req.method === 'POST' && req.query.action === 'delete')) {
+            const { id } = req.body;
+            if (!id) return res.status(400).json({ message: 'Missing ID' });
+
+            // Check Role
+            const { data: user, error: userError } = await supabase
+                .from('users')
+                .select('role')
+                .eq('_id', userId) // Using _id as per likely schema (MongoDB style ID used in Supabase typically mapped, checking strict equality)
+                .single();
+
+            // Fallback: try checking 'id' if '_id' fails or if schema uses 'id'
+            let validRole = false;
+            if (user && (user.role === 'admin' || user.role === 'semi-admin')) {
+                validRole = true;
+            } else if (!user) {
+                // Try looking up by 'auth_id' or 'id' if _id is strictly internal
+                const { data: user2 } = await supabase.from('users').select('role').eq('id', userId).single();
+                if (user2 && (user2.role === 'admin' || user2.role === 'semi-admin')) validRole = true;
+            }
+
+            if (!validRole) return res.status(403).json({ message: 'Forbidden' });
+
+            const { error: deleteError } = await supabase
+                .from('coffessions')
+                .delete()
+                .eq('id', id);
+
+            if (deleteError) throw deleteError;
+            return res.status(200).json({ success: true });
+        }
+
         return res.status(405).json({ message: 'Method not allowed' });
 
     } catch (error: any) {

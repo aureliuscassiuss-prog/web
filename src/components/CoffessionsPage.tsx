@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Coffee, Heart, ThumbsDown, Plus, Flame, Clock, X, Sparkles, Send, Check, Share2, Download } from 'lucide-react';
+import { Coffee, Heart, ThumbsDown, Plus, Flame, Clock, X, Sparkles, Send, Check, Share2, Download, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import html2canvas from 'html2canvas';
 
@@ -64,7 +64,7 @@ const itemVariants = {
 };
 
 export default function CoffessionsPage() {
-    const { token } = useAuth();
+    const { token, user } = useAuth();
     const [coffessions, setCoffessions] = useState<Coffession[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [sort, setSort] = useState<'new' | 'trending'>('new');
@@ -105,8 +105,14 @@ export default function CoffessionsPage() {
 
     // --- OPTIMIZED VOTE LOGIC ---
     const handleVote = async (id: string, type: 'like' | 'dislike') => {
-        // Prevent rapid clicking
-        if (isVoting[id]) return;
+        // Check auth first
+        if (!token) {
+            alert('Please sign in to vote on confessions!');
+            return;
+        }
+
+        // Allow switching instantly, only block rapid clicks on SAME button
+        if (isVoting[id] && votes[id] === type) return;
 
         const currentVote = votes[id];
         let newVote: 'like' | 'dislike' | undefined = type;
@@ -200,7 +206,32 @@ export default function CoffessionsPage() {
             // Clear voting flag after a brief delay
             setTimeout(() => {
                 setIsVoting(prev => ({ ...prev, [id]: false }));
-            }, 300);
+            }, 150); // Reduced to 150ms for faster feel
+        }
+    };
+
+    const handleDelete = async (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!confirm('Delete this confession permanently?')) return;
+
+        // Optimistic delete
+        setCoffessions(prev => prev.filter(c => c.id !== id));
+
+        try {
+            const response = await fetch(`/api/coffessions?action=delete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ id })
+            });
+
+            if (!response.ok) throw new Error('Delete failed');
+        } catch (error) {
+            console.error('Delete failed', error);
+            alert('Failed to delete confession');
+            fetchCoffessions(); // Revert
         }
     };
 
@@ -360,9 +391,24 @@ export default function CoffessionsPage() {
                                                     <span className={`text-[10px] font-medium ${theme.meta} mt-0.5`}>Just now</span>
                                                 </div>
                                             </div>
-                                            <button onClick={(e) => { e.stopPropagation(); setShareData(post); }} className={`p-2 rounded-full ${theme.accent} hover:brightness-95 transition-all opacity-0 group-hover:opacity-100`} title="Share">
-                                                <Share2 size={14} />
-                                            </button>
+                                            <div className="flex items-center gap-2">
+                                                {(user?.role === 'admin' || user?.role === 'semi-admin') && (
+                                                    <button
+                                                        onClick={(e) => handleDelete(post.id, e)}
+                                                        className={`p-2 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100`}
+                                                        title="Delete (Admin)"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setShareData(post); }}
+                                                    className={`p-2 rounded-full ${theme.accent} hover:brightness-95 transition-all opacity-0 group-hover:opacity-100`}
+                                                    title="Share"
+                                                >
+                                                    <Share2 size={14} />
+                                                </button>
+                                            </div>
                                         </div>
 
                                         <p className="text-[15px] sm:text-base leading-snug font-medium mb-4 whitespace-pre-wrap opacity-95 break-words">{post.content}</p>
