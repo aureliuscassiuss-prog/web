@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { MessageCircle, X, Send, Sparkles, RotateCcw, Bot } from 'lucide-react'
+import { MessageCircle, X, Send, Sparkles, RotateCcw, Bot, Paperclip, Image as ImageIcon } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import ReactMarkdown from 'react-markdown'
 
@@ -7,11 +7,12 @@ interface Message {
     id: string
     text: string
     sender: 'user' | 'bot'
+    image?: string
 }
 
 interface ConversationMessage {
     role: 'user' | 'assistant'
-    content: string
+    content: string | Array<any>
 }
 
 export default function AIAssistant() {
@@ -22,9 +23,11 @@ export default function AIAssistant() {
     ])
     const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([])
     const [input, setInput] = useState('')
+    const [selectedImage, setSelectedImage] = useState<string | null>(null)
     const [isTyping, setIsTyping] = useState(false)
     const [isLoadingHistory, setIsLoadingHistory] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
     const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
         messagesEndRef.current?.scrollIntoView({ behavior })
@@ -53,11 +56,25 @@ export default function AIAssistant() {
                 if (res.ok) {
                     const data = await res.json();
                     if (data.history && Array.isArray(data.history) && data.history.length > 0) {
-                        const historyMessages: Message[] = data.history.map((msg: any, i: number) => ({
-                            id: `hist-${i}`,
-                            text: msg.content,
-                            sender: msg.role === 'user' ? 'user' : 'bot'
-                        }));
+                        const historyMessages: Message[] = data.history.map((msg: any, i: number) => {
+                            // Handle complex content (text + image)
+                            let textContent = '';
+                            let imageContent = undefined;
+
+                            if (Array.isArray(msg.content)) {
+                                textContent = msg.content.find((c: any) => c.type === 'text')?.text || '';
+                                imageContent = msg.content.find((c: any) => c.type === 'image_url')?.image_url?.url;
+                            } else {
+                                textContent = msg.content;
+                            }
+
+                            return {
+                                id: `hist-${i}`,
+                                text: textContent,
+                                sender: msg.role === 'user' ? 'user' : 'bot',
+                                image: imageContent
+                            }
+                        });
 
                         setMessages(prev => {
                             if (prev.length === 1 && prev[0].id === 'init-1') {
@@ -80,14 +97,27 @@ export default function AIAssistant() {
         }
     }, [isOpen, token]);
 
-    const handleSend = async () => {
-        if (!input.trim()) return
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) {
+            const reader = new FileReader()
+            reader.onloadend = () => {
+                setSelectedImage(reader.result as string)
+            }
+            reader.readAsDataURL(file)
+        }
+    }
 
-        const userMessage = input.trim()
+    const handleSend = async () => {
+        if (!input.trim() && !selectedImage) return
+
+        const userMessageText = input.trim()
+        const userImage = selectedImage
         const newMsgId = Date.now().toString()
 
-        setMessages(prev => [...prev, { id: newMsgId, text: userMessage, sender: 'user' }])
+        setMessages(prev => [...prev, { id: newMsgId, text: userMessageText, sender: 'user', image: userImage || undefined }])
         setInput('')
+        setSelectedImage(null)
         setIsTyping(true)
 
         try {
@@ -103,7 +133,8 @@ export default function AIAssistant() {
                 headers,
                 body: JSON.stringify({
                     action: 'chat',
-                    question: userMessage,
+                    question: userMessageText,
+                    image: userImage, // Start sending image
                     conversationHistory
                 })
             })
@@ -236,13 +267,17 @@ export default function AIAssistant() {
                                 >
                                     <div
                                         className={`
-                                            max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm
+                                            max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm flex flex-col gap-2
                                             ${msg.sender === 'user'
                                                 ? 'bg-black text-white dark:bg-white dark:text-black rounded-tr-none'
                                                 : 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100 rounded-tl-none border border-gray-200 dark:border-gray-700'
                                             }
                                         `}
                                     >
+                                        {msg.image && (
+                                            <img src={msg.image} alt="User upload" className="rounded-lg max-h-48 w-auto object-cover border border-white/20" />
+                                        )}
+
                                         {msg.sender === 'bot' ? (
                                             <div className="prose prose-sm max-w-none dark:prose-invert">
                                                 <ReactMarkdown>
@@ -285,7 +320,36 @@ export default function AIAssistant() {
 
                     {/* Input Area */}
                     <div className="border-t border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-black">
+                        {/* Image Preview */}
+                        {selectedImage && (
+                            <div className="mb-3 relative inline-block">
+                                <img src={selectedImage} alt="Preview" className="h-16 w-auto rounded-lg border border-gray-200 dark:border-gray-700 object-cover" />
+                                <button
+                                    onClick={() => setSelectedImage(null)}
+                                    className="absolute -top-1.5 -right-1.5 bg-gray-900 text-white rounded-full p-0.5 shadow-md hover:bg-red-500 transition-colors"
+                                >
+                                    <X className="h-3 w-3" />
+                                </button>
+                            </div>
+                        )}
+
                         <div className="flex items-end gap-2">
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                className="hidden"
+                                accept="image/*"
+                                onChange={handleFileSelect}
+                            />
+
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors"
+                                title="Upload Image"
+                            >
+                                <Paperclip className="h-5 w-5" />
+                            </button>
+
                             <textarea
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
@@ -295,13 +359,13 @@ export default function AIAssistant() {
                                         handleSend()
                                     }
                                 }}
-                                placeholder="Ask anything..."
+                                placeholder={selectedImage ? "Ask about this image..." : "Ask anything..."}
                                 className="flex-1 max-h-32 min-h-[44px] resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-gray-300 focus:outline-none focus:ring-0 dark:border-gray-800 dark:bg-gray-900 dark:text-white dark:placeholder-gray-400 dark:focus:border-gray-700"
                                 rows={1}
                             />
                             <button
                                 onClick={handleSend}
-                                disabled={!input.trim() || isTyping}
+                                disabled={(!input.trim() && !selectedImage) || isTyping}
                                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black text-white hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-white dark:text-black dark:hover:bg-gray-200 transition-colors"
                             >
                                 <Send className="h-5 w-5" />

@@ -122,10 +122,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // --- Standard AI Generation ---
         if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
 
-        const { question, conversationHistory, systemPrompt, subject, context, type, action: bodyAction } = req.body;
+        const { question, conversationHistory, systemPrompt, subject, context, type, action: bodyAction, image } = req.body;
 
-        if (!question && type !== 'generate-paper' && bodyAction !== 'chat') {
-            return res.status(400).json({ message: 'Question required' });
+        if (!question && !image && type !== 'generate-paper' && bodyAction !== 'chat') {
+            return res.status(400).json({ message: 'Question or Image required' });
         }
 
         let userId = null;
@@ -144,6 +144,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (isRestricted) return res.status(403).json({ message: 'Restricted' });
 
         const isChat = (conversationHistory && Array.isArray(conversationHistory)) || bodyAction === 'chat';
+
+        // System Prompt
         const messages: any[] = [{
             role: 'system',
             content: systemPrompt ||
@@ -198,21 +200,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 Subject: ${subject}, Program: ${program}, Year: ${formattedYear}, Branch: ${branch}. ALL questions MUST have a "text" field with the actual question string.`
             });
         } else {
-            messages.push({ role: 'user', content: question });
+            // Check if we have an image
+            if (image) {
+                messages.push({
+                    role: 'user',
+                    content: [
+                        { type: 'text', text: question || "Analyze this image." },
+                        { type: 'image_url', image_url: { url: image } }
+                    ]
+                });
+            } else {
+                messages.push({ role: 'user', content: question });
+            }
         }
+
+        // Select model - use Vision for images
+        const model = image ? 'llama-3.2-11b-vision-preview' : 'llama-3.3-70b-versatile';
 
         const chatCompletion = await groq.chat.completions.create({
             messages,
-            model: 'llama-3.3-70b-versatile',
+            model: model,
             temperature: 0.7,
-            max_tokens: type === 'generate-paper' ? 2048 : 1024
+            max_tokens: type === 'generate-paper' ? 2048 : 1024,
+            stop: null
         });
 
         const answer = chatCompletion.choices[0]?.message?.content || 'Error generating response';
 
         if (userId && isChat) {
+            const userContent = image
+                ? [{ type: 'text', text: question || "Analyze this image." }, { type: 'image_url', image_url: { url: image } }]
+                : question;
+
             const newMessages = [
-                { role: 'user', content: question },
+                { role: 'user', content: userContent },
                 { role: 'assistant', content: answer }
             ];
 
@@ -231,11 +252,15 @@ Subject: ${subject}, Program: ${program}, Year: ${formattedYear}, Branch: ${bran
         }
 
         if (isChat) {
+            const userHistoryContent = image
+                ? [{ type: 'text', text: question || "Analyze this image." }, { type: 'image_url', image_url: { url: image } }]
+                : question;
+
             res.json({
                 answer,
                 conversationHistory: [
                     ...(conversationHistory || []),
-                    { role: 'user', content: question },
+                    { role: 'user', content: userHistoryContent },
                     { role: 'assistant', content: answer }
                 ]
             });
