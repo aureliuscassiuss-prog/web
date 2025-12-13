@@ -82,6 +82,10 @@ export default function CoffessionsPage() {
     const [votes, setVotes] = useState<Record<string, 'like' | 'dislike'>>({});
     const [isVoting, setIsVoting] = useState<Record<string, boolean>>({});
 
+    // Double-tap and Hearts
+    const [hearts, setHearts] = useState<Array<{ id: number; x: number; y: number }>>([]);
+    const lastTapTime = useRef<Record<string, number>>({});
+
     useEffect(() => {
         fetchCoffessions();
         const savedVotes = localStorage.getItem('coffession_votes');
@@ -235,6 +239,43 @@ export default function CoffessionsPage() {
         }
     };
 
+    const handleCardDoubleTap = (id: string, e: React.MouseEvent | React.TouchEvent) => {
+        const now = Date.now();
+        const lastTap = lastTapTime.current[id] || 0;
+
+        if (now - lastTap < 300) {
+            // Double tap detected!
+            e.preventDefault();
+
+            // Get tap coordinates
+            const clientX = 'clientX' in e ? e.clientX : e.touches[0]?.clientX;
+            const clientY = 'clientY' in e ? e.clientY : e.touches[0]?.clientY;
+
+            if (clientX && clientY) {
+                // Spawn heart at tap location
+                const newHearts = Array.from({ length: 3 }).map((_, i) => ({
+                    id: Date.now() + i,
+                    x: clientX + (Math.random() - 0.5) * 40,
+                    y: clientY + (Math.random() - 0.5) * 40
+                }));
+
+                setHearts(prev => [...prev, ...newHearts]);
+
+                // Remove hearts after animation
+                setTimeout(() => {
+                    setHearts(prev => prev.filter(h => !newHearts.find(nh => nh.id === h.id)));
+                }, 1000);
+            }
+
+            // Only like if not already liked
+            if (votes[id] !== 'like') {
+                handleVote(id, 'like');
+            }
+        }
+
+        lastTapTime.current[id] = now;
+    };
+
     const handleCreate = async () => {
         if (!newContent.trim()) return;
         if (!token) {
@@ -378,6 +419,8 @@ export default function CoffessionsPage() {
                                         variants={itemVariants}
                                         exit={{ scale: 0.9, opacity: 0 }}
                                         whileHover={{ y: -3 }}
+                                        onClick={(e) => handleCardDoubleTap(post.id, e)}
+                                        onTouchStart={(e) => handleCardDoubleTap(post.id, e)}
                                         className={`relative break-inside-avoid rounded-2xl p-5 border shadow-sm hover:shadow-lg transition-all duration-300 ease-out group ${theme.bg} ${theme.text} ${theme.border}`}
                                     >
                                         {/* Card Content */}
@@ -433,6 +476,23 @@ export default function CoffessionsPage() {
                 )}
             </main>
 
+            {/* Floating Hearts */}
+            <AnimatePresence>
+                {hearts.map(heart => (
+                    <motion.div
+                        key={heart.id}
+                        initial={{ opacity: 1, y: 0, scale: 0.5 }}
+                        animate={{ opacity: 0, y: -100, scale: 1.2 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 1, ease: 'easeOut' }}
+                        className="fixed z-[200] pointer-events-none"
+                        style={{ left: heart.x, top: heart.y }}
+                    >
+                        <Heart size={24} className="fill-red-500 text-red-500 drop-shadow-lg" />
+                    </motion.div>
+                ))}
+            </AnimatePresence>
+
             <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => setIsCreateModalOpen(true)} className="sm:hidden fixed bottom-6 right-6 z-40 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 w-12 h-12 rounded-full shadow-xl shadow-stone-900/30 flex items-center justify-center">
                 <Plus size={20} strokeWidth={3} />
             </motion.button>
@@ -466,19 +526,23 @@ export default function CoffessionsPage() {
 
                                 <div className="relative z-10 my-auto flex flex-col items-center text-center px-1">
                                     <span className="text-7xl font-serif leading-none opacity-10 mb-2 font-black">"</span>
-                                    <p className="text-2xl sm:text-3xl font-serif font-medium leading-tight tracking-wide italic drop-shadow-sm">{shareData.content}</p>
+                                    <p className={`font-serif font-medium leading-tight tracking-wide italic drop-shadow-sm ${shareData.content.length > 150 ? 'text-xl' :
+                                        shareData.content.length > 100 ? 'text-2xl' :
+                                            shareData.content.length > 60 ? 'text-3xl' : 'text-4xl'
+                                        }`}>{shareData.content}</p>
                                     <span className="text-7xl font-serif leading-none opacity-10 mt-4 rotate-180 font-black">"</span>
                                 </div>
 
                                 <div className="relative z-10 pb-6 w-full">
-                                    <div className={`border-t border-current/20 pt-6 flex items-center justify-between`}>
+                                    <div className="flex items-center justify-between w-full">
                                         <div className="flex flex-col text-left">
                                             <span className="text-[9px] font-bold uppercase tracking-widest opacity-50">Posted by</span>
                                             <span className="font-black text-sm uppercase tracking-wider">Anonymous</span>
                                         </div>
-                                        <div className={`px-4 py-1.5 rounded-full border border-current/20 flex items-center gap-2 ${THEMES[shareData.theme].accent} bg-opacity-10 backdrop-blur-sm`}>
+
+                                        <div className={`px-3 py-1.5 rounded-full border border-current/20 flex items-center gap-1.5 ${THEMES[shareData.theme].accent} bg-opacity-10 backdrop-blur-sm shrink-0`}>
                                             <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                                            <span className="text-[9px] font-bold uppercase tracking-wider opacity-90">Secret</span>
+                                            <span className="text-[9px] font-bold uppercase tracking-wider opacity-90 whitespace-nowrap">Secret #{Math.floor(Math.random() * 1000) + 2000}</span>
                                         </div>
                                     </div>
                                 </div>
