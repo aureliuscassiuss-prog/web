@@ -52,34 +52,40 @@ function Layout({
   spotlight
 }: any) {
   const navigate = useNavigate()
+  const location = useLocation()
+  const isStanadalonePage = location.pathname === '/coffessions'
 
   return (
     <div className="flex flex-col bg-white dark:bg-black text-gray-950 dark:text-gray-50 transition-colors duration-200 font-sans selection:bg-gray-900 selection:text-white dark:selection:bg-gray-100 dark:selection:text-black min-h-screen">
 
-      {/* 1. Sticky Top Navigation (Glassmorphism) */}
-      <Header
-        onUploadClick={onUploadClick}
-        onAuthClick={onAuthClick}
-        onProfileClick={() => navigate('/profile')}
-        onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        user={user}
-      />
+      {/* 1. Sticky Top Navigation (Glassmorphism) - Hidden on Standalone Pages */}
+      {!isStanadalonePage && (
+        <Header
+          onUploadClick={onUploadClick}
+          onAuthClick={onAuthClick}
+          onProfileClick={() => navigate('/profile')}
+          onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          user={user}
+        />
+      )}
 
-      <div className="flex flex-1 items-start gap-10 px-4 sm:px-6 md:px-8 pt-6 max-w-[1600px] mx-auto w-full">
+      <div className={isStanadalonePage ? "w-full flex-1" : "flex flex-1 items-start gap-10 px-4 sm:px-6 md:px-8 pt-6 max-w-[1600px] mx-auto w-full"}>
 
-        {/* 2. Sticky Left Sidebar (Hidden on Mobile) */}
-        <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-[240px] flex-col overflow-y-auto md:flex shrink-0">
-          <Sidebar
-            isMobileMenuOpen={isMobileMenuOpen}
-            onMobileMenuClose={() => setIsMobileMenuOpen(false)}
-            isDark={isDark}
-            toggleTheme={toggleTheme}
-            spotlight={spotlight}
-          />
-        </aside>
+        {/* 2. Sticky Left Sidebar (Hidden on Mobile) - Hidden on Standalone Pages */}
+        {!isStanadalonePage && (
+          <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-[240px] flex-col overflow-y-auto md:flex shrink-0">
+            <Sidebar
+              isMobileMenuOpen={isMobileMenuOpen}
+              onMobileMenuClose={() => setIsMobileMenuOpen(false)}
+              isDark={isDark}
+              toggleTheme={toggleTheme}
+              spotlight={spotlight}
+            />
+          </aside>
+        )}
 
         {/* 3. Main Content Area */}
-        <main className="flex-1 min-w-0 animate-fade-in pb-24">
+        <main className={`flex-1 min-w-0 animate-fade-in ${isStanadalonePage ? '' : 'pb-24'}`}>
           {children}
         </main>
       </div>

@@ -29,7 +29,7 @@ const THEMES = {
         text: 'text-[#43302b]',
         meta: 'text-[#8c7a70]',
         border: 'border-[#ede0d4]',
-        accent: 'bg-[#ede0d4]/50'
+        accent: 'bg-[#ede0d4]/80'
     },
     mocha: {
         name: 'Mocha',
@@ -53,13 +53,13 @@ const containerVariants = {
     hidden: { opacity: 0 },
     show: {
         opacity: 1,
-        transition: { staggerChildren: 0.1 }
+        transition: { staggerChildren: 0.05 }
     }
 };
 
 const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 }
+    hidden: { opacity: 0, scale: 0.95 },
+    show: { opacity: 1, scale: 1 }
 };
 
 export default function CoffessionsPage() {
@@ -77,7 +77,6 @@ export default function CoffessionsPage() {
     // Votes
     const [votes, setVotes] = useState<Record<string, 'like' | 'dislike'>>({});
 
-    // -- API Integration --
     useEffect(() => {
         fetchCoffessions();
         const savedVotes = localStorage.getItem('coffession_votes');
@@ -100,10 +99,8 @@ export default function CoffessionsPage() {
     };
 
     const handleVote = async (id: string, type: 'like' | 'dislike') => {
-        // Prevent spam voting for MVP / Optimistic Update Logic
         if (votes[id]) return;
 
-        // Optimistic UI
         setCoffessions(prev => prev.map(c => {
             if (c.id === id) {
                 return {
@@ -119,7 +116,6 @@ export default function CoffessionsPage() {
         setVotes(newVotes);
         localStorage.setItem('coffession_votes', JSON.stringify(newVotes));
 
-        // Fire API call
         try {
             await fetch(`/api/coffessions?action=vote`, {
                 method: 'POST',
@@ -168,42 +164,39 @@ export default function CoffessionsPage() {
         <div className="min-h-screen bg-stone-50 dark:bg-[#0a0a0a] font-sans selection:bg-amber-500/30 pb-32 transition-colors duration-500">
 
             {/* --- Navbar / Filter --- */}
-            <div className="sticky top-0 z-40 backdrop-blur-xl bg-stone-50/80 dark:bg-[#0a0a0a]/80 border-b border-stone-200 dark:border-white/5 supports-[backdrop-filter]:bg-stone-50/60">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
+            <div className="sticky top-0 z-40 backdrop-blur-xl bg-stone-50/80 dark:bg-[#0a0a0a]/80 border-b border-stone-200 dark:border-white/5">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
                     {/* Logo */}
                     <div
                         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                        className="flex items-center gap-3 cursor-pointer group"
+                        className="flex items-center gap-2 cursor-pointer group"
                     >
-                        <div className="relative">
-                            <div className="absolute inset-0 bg-amber-500 blur-lg opacity-20 group-hover:opacity-40 transition-opacity" />
-                            <div className="relative bg-gradient-to-br from-amber-600 to-amber-800 p-2 rounded-xl text-white shadow-lg">
-                                <Coffee className="w-5 h-5 sm:w-6 sm:h-6" />
-                            </div>
+                        <div className="relative bg-gradient-to-br from-amber-600 to-amber-800 p-1.5 rounded-lg text-white shadow-md">
+                            <Coffee className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
-                        <span className="text-xl sm:text-2xl font-black text-stone-900 dark:text-stone-100 tracking-tight">
+                        <span className="text-lg sm:text-xl font-black text-stone-900 dark:text-stone-100 tracking-tight">
                             Coffessions<span className="text-amber-600">.</span>
                         </span>
                     </div>
 
                     {/* Desktop Filters & Actions */}
-                    <div className="flex items-center gap-4">
-                        <div className="hidden sm:flex bg-stone-200/50 dark:bg-white/5 p-1 rounded-xl backdrop-blur-sm border border-black/5 dark:border-white/5">
+                    <div className="flex items-center gap-3">
+                        <div className="hidden sm:flex bg-stone-200/50 dark:bg-white/5 p-1 rounded-lg backdrop-blur-sm border border-black/5 dark:border-white/5">
                             {[
-                                { id: 'new', label: 'Fresh Brew', icon: Clock },
-                                { id: 'trending', label: 'Roasting', icon: Flame }
+                                { id: 'new', label: 'Fresh', icon: Clock },
+                                { id: 'trending', label: 'Hot', icon: Flame }
                             ].map((tab) => (
                                 <button
                                     key={tab.id}
                                     onClick={() => setSort(tab.id as any)}
                                     className={`
-                                        flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-bold transition-all duration-200
+                                        flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all duration-200
                                         ${sort === tab.id
-                                            ? 'bg-white dark:bg-stone-800 text-stone-900 dark:text-white shadow-sm scale-[1.02]'
-                                            : 'text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200 hover:bg-stone-300/30'}
+                                            ? 'bg-white dark:bg-stone-800 text-stone-900 dark:text-white shadow-sm'
+                                            : 'text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200'}
                                     `}
                                 >
-                                    <tab.icon size={14} className={sort === tab.id ? 'text-amber-600' : ''} />
+                                    <tab.icon size={12} className={sort === tab.id ? 'text-amber-600' : ''} />
                                     {tab.label}
                                 </button>
                             ))}
@@ -213,130 +206,125 @@ export default function CoffessionsPage() {
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => setIsCreateModalOpen(true)}
-                            className="hidden sm:flex bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-950 px-5 py-2.5 rounded-xl font-bold items-center gap-2 shadow-xl shadow-stone-900/10 hover:shadow-stone-900/20 dark:hover:shadow-white/5 transition-shadow"
+                            className="hidden sm:flex bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-950 px-4 py-1.5 rounded-lg font-bold text-sm items-center gap-2 shadow-lg hover:shadow-xl transition-all"
                         >
-                            <Plus size={18} strokeWidth={3} />
-                            Spill It
+                            <Plus size={16} strokeWidth={3} />
+                            Post
                         </motion.button>
                     </div>
                 </div>
 
-                {/* Mobile Filter Tabs (Below Header) */}
-                <div className="sm:hidden border-t border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-[#0a0a0a]/50 backdrop-blur-md px-4 py-3 flex gap-2 overflow-x-auto no-scrollbar">
+                {/* Mobile Filter Tabs */}
+                <div className="sm:hidden border-t border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-[#0a0a0a]/50 backdrop-blur-md px-4 py-2 flex gap-2">
                     <button
                         onClick={() => setSort('new')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold border transition-all ${sort === 'new' ? 'bg-white dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-stone-900 dark:text-white shadow-sm' : 'border-transparent text-stone-500 dark:text-stone-500'}`}
+                        className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold border transition-all ${sort === 'new' ? 'bg-white dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-stone-900 dark:text-white shadow-sm' : 'border-transparent text-stone-500'}`}
                     >
-                        <Clock size={16} /> Newest
+                        <Clock size={14} /> Fresh
                     </button>
                     <button
                         onClick={() => setSort('trending')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold border transition-all ${sort === 'trending' ? 'bg-white dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-amber-600 dark:text-amber-400 shadow-sm' : 'border-transparent text-stone-500 dark:text-stone-500'}`}
+                        className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold border transition-all ${sort === 'trending' ? 'bg-white dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-amber-600 shadow-sm' : 'border-transparent text-stone-500'}`}
                     >
-                        <Flame size={16} /> Trending
+                        <Flame size={14} /> Hot
                     </button>
                 </div>
             </div>
 
             {/* --- Main Content Grid --- */}
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+            <main className="max-w-[1400px] mx-auto px-3 sm:px-6 py-6 sm:py-8">
                 {isLoading ? (
-                    <div className="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6">
-                        {[1, 2, 3, 4, 5, 6].map(i => (
-                            <div key={i} className="h-64 bg-stone-200 dark:bg-stone-800 rounded-3xl animate-pulse break-inside-avoid" />
+                    <div className="columns-2 md:columns-3 xl:columns-4 gap-4 space-y-4">
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                            <div key={i} className="h-48 bg-stone-200 dark:bg-stone-800 rounded-2xl animate-pulse break-inside-avoid" />
                         ))}
                     </div>
                 ) : coffessions.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-32 text-center">
-                        <div className="w-24 h-24 bg-gradient-to-br from-stone-100 to-stone-200 dark:from-stone-800 dark:to-stone-900 rounded-full flex items-center justify-center mb-8 shadow-inner">
-                            <Coffee className="w-10 h-10 text-stone-300 dark:text-stone-600" />
+                    <div className="text-center py-20">
+                        <div className="w-20 h-20 mx-auto bg-stone-200 dark:bg-stone-800 rounded-full flex items-center justify-center mb-4">
+                            <Coffee className="w-8 h-8 text-stone-400" />
                         </div>
-                        <h3 className="text-xl font-bold text-stone-900 dark:text-stone-100 mb-2">The pot is empty</h3>
-                        <p className="text-stone-500 dark:text-stone-400 max-w-sm">
-                            Be the first to brew a confession. It's strictly anonymous.
-                        </p>
+                        <h3 className="text-lg font-bold text-stone-900 dark:text-stone-100">No confessions yet</h3>
                     </div>
                 ) : (
+                    // GRID CONFIGURATION:
+                    // columns-1 on very small screens
+                    // columns-2 on regular mobile/tablet
+                    // columns-3 on laptop
+                    // columns-4 on desktop (to keep cards compact)
                     <motion.div
                         variants={containerVariants}
                         initial="hidden"
                         animate="show"
-                        className="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6"
+                        className="columns-1 min-[500px]:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4"
                     >
                         <AnimatePresence mode='popLayout'>
                             {coffessions.map((post) => {
                                 const theme = THEMES[post.theme];
-                                const hasVoted = !!votes[post.id];
-
                                 return (
                                     <motion.div
                                         key={post.id}
                                         layout
                                         variants={itemVariants}
                                         exit={{ scale: 0.9, opacity: 0 }}
-                                        whileHover={{ y: -5 }}
+                                        whileHover={{ y: -3 }}
                                         className={`
-                                            relative break-inside-avoid rounded-[2rem] p-6 sm:p-7
-                                            border shadow-sm hover:shadow-xl transition-all duration-300 ease-out group
+                                            relative break-inside-avoid rounded-2xl p-5
+                                            border shadow-sm hover:shadow-lg transition-all duration-300 ease-out group
                                             ${theme.bg} ${theme.text} ${theme.border}
                                         `}
                                     >
-                                        {/* Decoration Gradient */}
-                                        <div className="absolute top-0 right-0 p-8 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-                                            <div className="absolute top-4 right-4 w-12 h-12 bg-white/10 dark:bg-white/5 blur-xl rounded-full pointer-events-none" />
-                                        </div>
-
-                                        {/* Card Header */}
-                                        <div className="flex items-center gap-3 mb-6 opacity-80">
-                                            <div className={`w-10 h-10 rounded-full ${theme.accent} flex items-center justify-center`}>
-                                                <Coffee size={18} strokeWidth={2.5} className="opacity-80" />
+                                        {/* Card Header (Compact) */}
+                                        <div className="flex items-center gap-2.5 mb-3 opacity-90">
+                                            <div className={`w-8 h-8 rounded-full ${theme.accent} flex items-center justify-center shrink-0`}>
+                                                <Coffee size={14} strokeWidth={2.5} className="opacity-75" />
                                             </div>
-                                            <div>
-                                                <p className="text-xs font-bold uppercase tracking-widest opacity-90">Anonymous</p>
-                                                <p className={`text-[11px] font-medium ${theme.meta} flex items-center gap-1`}>
-                                                    {post.likes > 20 && <Sparkles size={10} className="text-amber-500" />}
+                                            <div className="flex flex-col leading-none">
+                                                <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">Anonymous</span>
+                                                <span className={`text-[10px] font-medium ${theme.meta} mt-0.5`}>
                                                     Just now
-                                                </p>
+                                                </span>
                                             </div>
                                         </div>
 
-                                        {/* Content */}
-                                        <p className="text-[17px] leading-relaxed font-medium mb-8 whitespace-pre-wrap tracking-wide opacity-95">
+                                        {/* Content - Optimized for reading */}
+                                        <p className="text-[15px] sm:text-base leading-snug font-medium mb-4 whitespace-pre-wrap opacity-95 break-words">
                                             {post.content}
                                         </p>
 
-                                        {/* Footer / Actions */}
-                                        <div className="flex items-center justify-between">
+                                        {/* Compact Footer */}
+                                        <div className="flex items-center justify-between pt-2 border-t border-black/5 dark:border-white/5">
                                             <div className="flex items-center gap-2">
                                                 <button
                                                     onClick={() => handleVote(post.id, 'like')}
                                                     className={`
-                                                        relative overflow-hidden flex items-center gap-2 pl-3 pr-4 py-2 rounded-full transition-all duration-300 group/btn
+                                                        flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all duration-200
                                                         ${votes[post.id] === 'like'
-                                                            ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/25'
-                                                            : `${theme.accent} hover:bg-black/10 dark:hover:bg-white/10`}
+                                                            ? 'bg-rose-500 text-white'
+                                                            : `${theme.accent} hover:brightness-95`}
                                                     `}
                                                 >
-                                                    <Heart
-                                                        size={18}
-                                                        className={`transition-transform duration-300 group-active/btn:scale-75 ${votes[post.id] === 'like' ? 'fill-current' : ''}`}
-                                                    />
+                                                    <Heart size={14} className={votes[post.id] === 'like' ? 'fill-current' : ''} />
                                                     <span className="text-xs font-bold">{post.likes}</span>
                                                 </button>
 
                                                 <button
                                                     onClick={() => handleVote(post.id, 'dislike')}
                                                     className={`
-                                                        p-2 rounded-full transition-all duration-300
-                                                        ${votes[post.id] === 'dislike' ? 'bg-stone-800 text-white' : `${theme.accent} hover:bg-black/10 dark:hover:bg-white/10`}
+                                                        p-1.5 rounded-full transition-all
+                                                        ${votes[post.id] === 'dislike' ? 'bg-stone-800 text-white' : `${theme.accent} hover:brightness-95`}
                                                     `}
                                                 >
-                                                    <ThumbsDown
-                                                        size={18}
-                                                        className={`${votes[post.id] === 'dislike' ? 'fill-current' : ''}`}
-                                                    />
+                                                    <ThumbsDown size={14} className={votes[post.id] === 'dislike' ? 'fill-current' : ''} />
                                                 </button>
                                             </div>
+
+                                            {/* Decorative small icon if popular */}
+                                            {post.likes > 10 && (
+                                                <div className="text-amber-500/80">
+                                                    <Sparkles size={14} />
+                                                </div>
+                                            )}
                                         </div>
                                     </motion.div>
                                 );
@@ -346,105 +334,75 @@ export default function CoffessionsPage() {
                 )}
             </main>
 
-            {/* --- Mobile FAB (Floating Action Button) --- */}
+            {/* --- Mobile FAB --- */}
             <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setIsCreateModalOpen(true)}
-                className="sm:hidden fixed bottom-6 right-6 z-40 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 w-14 h-14 rounded-full shadow-2xl shadow-stone-900/30 flex items-center justify-center"
+                className="sm:hidden fixed bottom-6 right-6 z-40 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 w-12 h-12 rounded-full shadow-xl shadow-stone-900/30 flex items-center justify-center"
             >
-                <Plus size={24} strokeWidth={3} />
+                <Plus size={20} strokeWidth={3} />
             </motion.button>
 
-            {/* --- Create Modal --- */}
+            {/* --- Create Modal (Responsive) --- */}
             <AnimatePresence>
                 {isCreateModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-0">
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setIsCreateModalOpen(false)}
-                            className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm transition-all"
+                            className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm"
                         />
 
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 40 }}
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 40 }}
-                            className="relative w-full max-w-xl bg-white dark:bg-[#151515] rounded-3xl shadow-2xl overflow-hidden ring-1 ring-black/5 dark:ring-white/10"
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="relative w-full max-w-lg bg-white dark:bg-[#151515] rounded-2xl shadow-2xl overflow-hidden"
                         >
-                            {/* Decorative Top Bar */}
-                            <div className="h-1.5 w-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-700" />
-
-                            <div className="p-6 sm:p-8">
-                                <div className="flex items-center justify-between mb-8">
-                                    <div className="space-y-1">
-                                        <h2 className="text-2xl font-black text-stone-900 dark:text-stone-100">Brewing Something?</h2>
-                                        <p className="text-sm text-stone-500 dark:text-stone-400">Share your thoughts anonymously.</p>
-                                    </div>
-                                    <button
-                                        onClick={() => setIsCreateModalOpen(false)}
-                                        className="p-2 bg-stone-100 dark:bg-stone-800 rounded-full hover:rotate-90 transition-transform duration-300"
-                                    >
-                                        <X size={20} className="text-stone-500 dark:text-stone-400" />
+                            <div className="p-5 sm:p-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h2 className="text-xl font-black text-stone-900 dark:text-stone-100">New Confession</h2>
+                                    <button onClick={() => setIsCreateModalOpen(false)} className="p-1 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-full">
+                                        <X size={20} className="text-stone-400" />
                                     </button>
                                 </div>
 
-                                <div className="space-y-6">
-                                    <div className="relative">
-                                        <textarea
-                                            value={newContent}
-                                            onChange={(e) => setNewContent(e.target.value)}
-                                            placeholder="What's on your mind?..."
-                                            className="w-full h-40 p-5 rounded-2xl bg-stone-50 dark:bg-[#1a1a1a] border border-transparent focus:border-amber-500 focus:ring-0 text-lg text-stone-800 dark:text-stone-100 placeholder-stone-400 dark:placeholder-stone-600 resize-none transition-all"
-                                            maxLength={300}
-                                        />
-                                        <div className="absolute bottom-4 right-4 text-xs font-bold text-stone-400">
-                                            {newContent.length}/300
-                                        </div>
-                                    </div>
+                                <textarea
+                                    value={newContent}
+                                    onChange={(e) => setNewContent(e.target.value)}
+                                    placeholder="Spill the beans..."
+                                    className="w-full h-32 p-4 rounded-xl bg-stone-50 dark:bg-[#1a1a1a] border-none focus:ring-1 focus:ring-amber-500 text-base text-stone-800 dark:text-stone-100 resize-none mb-4"
+                                    maxLength={300}
+                                />
 
-                                    <div>
-                                        <label className="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-4 block">Select Flavor</label>
-                                        <div className="grid grid-cols-4 gap-3">
-                                            {Object.entries(THEMES).map(([key, styles]) => (
-                                                <button
-                                                    key={key}
-                                                    onClick={() => setNewTheme(key as any)}
-                                                    className={`
-                                                        relative h-16 rounded-2xl border-2 transition-all duration-300 flex items-center justify-center overflow-hidden
-                                                        ${newTheme === key
-                                                            ? 'border-amber-500 scale-105 shadow-md'
-                                                            : 'border-transparent opacity-60 hover:opacity-100 hover:scale-105'}
-                                                    `}
-                                                >
-                                                    <div className={`absolute inset-0 ${styles.bg}`} />
-                                                    {newTheme === key && (
-                                                        <motion.div
-                                                            initial={{ scale: 0 }}
-                                                            animate={{ scale: 1 }}
-                                                            className={`z-10 bg-white dark:bg-stone-900 rounded-full p-1 shadow-sm`}
-                                                        >
-                                                            <Check size={14} className="text-amber-600" />
-                                                        </motion.div>
-                                                    )}
-                                                    <span className={`z-10 text-[10px] font-bold absolute bottom-1 ${styles.text} opacity-60 uppercase`}>{styles.name}</span>
-                                                </button>
-                                            ))}
-                                        </div>
+                                <div className="mb-6">
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {Object.entries(THEMES).map(([key, styles]) => (
+                                            <button
+                                                key={key}
+                                                onClick={() => setNewTheme(key as any)}
+                                                className={`
+                                                    relative h-12 rounded-xl transition-all flex items-center justify-center overflow-hidden
+                                                    ${newTheme === key ? 'ring-2 ring-amber-500 scale-105' : 'opacity-70 hover:opacity-100'}
+                                                `}
+                                            >
+                                                <div className={`absolute inset-0 ${styles.bg}`} />
+                                                <span className={`z-10 text-[9px] font-bold ${styles.text} uppercase`}>{styles.name}</span>
+                                            </button>
+                                        ))}
                                     </div>
-
-                                    <button
-                                        onClick={handleCreate}
-                                        disabled={!newContent.trim() || isPosting}
-                                        className="w-full py-4 mt-2 bg-gradient-to-r from-stone-900 to-stone-800 dark:from-stone-100 dark:to-stone-300 text-white dark:text-stone-950 rounded-2xl font-bold text-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 disabled:transform-none flex items-center justify-center gap-2"
-                                    >
-                                        {isPosting ? <span className="animate-pulse">Brewing...</span> : (
-                                            <>Post Confession <Send size={18} /></>
-                                        )}
-                                    </button>
                                 </div>
+
+                                <button
+                                    onClick={handleCreate}
+                                    disabled={!newContent.trim() || isPosting}
+                                    className="w-full py-3 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 rounded-xl font-bold text-sm hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                                >
+                                    {isPosting ? 'Brewing...' : <>Post It <Send size={14} /></>}
+                                </button>
                             </div>
                         </motion.div>
                     </div>
