@@ -30,6 +30,9 @@ export default function VideoChat() {
     const signalChannelRef = useRef<any>(null)
     const myQueueIdRef = useRef<string | null>(null)
 
+    // ICE Candidate Buffer to fix race conditions
+    const iceCandidatesBuffer = useRef<RTCIceCandidate[]>([])
+
     // Track if we have already sent an offer to avoid dups
     const hasSentOfferRef = useRef(false)
 
@@ -98,6 +101,7 @@ export default function VideoChat() {
 
         const peer = new RTCPeerConnection(RTC_CONFIG)
         peerRef.current = peer
+        iceCandidatesBuffer.current = [] // Reset buffer
 
         // Add local tracks
         if (localStream) {
@@ -149,6 +153,7 @@ export default function VideoChat() {
         setErrorMsg('')
         hasSentOfferRef.current = false
         setPartnerStatus('connecting')
+        iceCandidatesBuffer.current = []
 
         let stream = localStream
         if (!stream) {
@@ -238,6 +243,7 @@ export default function VideoChat() {
     const initiateCall = async (sessionId: string, isCaller: boolean) => {
         console.log(`Starting call. Session: ${sessionId}, I am Caller: ${isCaller}`)
         hasSentOfferRef.current = false
+        iceCandidatesBuffer.current = []
 
         // Initialize Signaling Channel
         const channel = supabase.channel(`video-session-${sessionId}`)
@@ -255,6 +261,14 @@ export default function VideoChat() {
                     await peerRef.current.setRemoteDescription(payload.offer)
                     const answer = await peerRef.current.createAnswer()
                     await peerRef.current.setLocalDescription(answer)
+
+                    // Flush buffer
+                    if (iceCandidatesBuffer.current.length > 0) {
+                        console.log("Flushing ICE buffer:", iceCandidatesBuffer.current.length)
+                        iceCandidatesBuffer.current.forEach(c => peerRef.current?.addIceCandidate(c))
+                        iceCandidatesBuffer.current = []
+                    }
+
                     channel.send({
                         type: 'broadcast',
                         event: 'signal',
@@ -262,11 +276,22 @@ export default function VideoChat() {
                     })
                 } else if (payload.type === 'answer' && isCaller) {
                     await peerRef.current.setRemoteDescription(payload.answer)
+                    // Flush buffer
+                    if (iceCandidatesBuffer.current.length > 0) {
+                        console.log("Flushing ICE buffer:", iceCandidatesBuffer.current.length)
+                        iceCandidatesBuffer.current.forEach(c => peerRef.current?.addIceCandidate(c))
+                        iceCandidatesBuffer.current = []
+                    }
                 } else if (payload.type === 'candidate') {
-                    await peerRef.current.addIceCandidate(payload.candidate)
+                    if (peerRef.current.remoteDescription) {
+                        await peerRef.current.addIceCandidate(payload.candidate)
+                    } else {
+                        console.log("Buffering ICE candidate")
+                        iceCandidatesBuffer.current.push(payload.candidate)
+                    }
                 }
             })
-            // Presence tracking to fix Race Condition
+            // Presence tracking
             .on('presence', { event: 'sync' }, () => {
                 const state = channel.presenceState()
                 const presenceIds = Object.keys(state)
@@ -343,36 +368,31 @@ export default function VideoChat() {
     // --- RENDER ---
 
     return (
-        <div className="flex flex-col h-[100dvh] bg-neutral-950 text-white overflow-hidden font-sans relative">
+        <div className="flex flex-col h-[100dvh] bg-black text-white overflow-hidden font-sans relative">
 
-            {/* Background Texture/Gradient */}
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-neutral-950 to-neutral-950 z-0 pointer-events-none" />
-
-            {/* Header */}
-            <header className="flex items-center justify-between px-6 py-4 z-10 sticky top-0 bg-gradient-to-b from-black/80 to-transparent backdrop-blur-sm">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-                        <Video size={20} className="text-white" />
+            {/* Header (Minimal) */}
+            <div className="absolute top-0 left-0 right-0 p-4 z-20 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between pointer-events-none">
+                <div className="flex items-center gap-2 pointer-events-auto">
+                    <div className="w-8 h-8 rounded-lg bg-blue-600/20 backdrop-blur-md border border-white/10 flex items-center justify-center">
+                        <Video size={16} className="text-blue-400" />
                     </div>
-                    <div>
-                        <h1 className="text-lg font-bold leading-tight">VideoChat</h1>
-                        <div className="flex items-center gap-2">
-                            <span className={`w-2 h-2 rounded-full ${status === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-neutral-500'}`} />
-                            <span className="text-xs text-neutral-400 font-medium">
-                                {status === 'searching' && "Matching..."}
-                                {status === 'connected' && (partnerStatus === 'connected' ? "Live Connection" : "Connecting...")}
-                                {status === 'idle' && "180+ Online"}
-                            </span>
-                        </div>
-                    </div>
+                    <span className="font-bold text-white/90 text-sm md:text-base drop-shadow-md">VideoChat</span>
                 </div>
-            </header>
+                <div className="flex items-center gap-2 pointer-events-auto">
+                    <span className={`w-2 h-2 rounded-full ${status === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-neutral-500'}`} />
+                    <span className="text-xs text-white/70 font-medium drop-shadow-md">
+                        {status === 'searching' && "Matching..."}
+                        {status === 'connected' && (partnerStatus === 'connected' ? "Live" : "Connecting...")}
+                        {status === 'idle' && "Ready"}
+                    </span>
+                </div>
+            </div>
 
-            {/* Main Video Area */}
-            <main className="flex-1 relative flex items-center justify-center p-4 z-0">
+            {/* Main Video Area - FULL SCREEN */}
+            <main className="flex-1 relative bg-black overflow-hidden">
 
-                {/* REMOTE VIDEO CONTAINER */}
-                <div className="relative w-full h-full max-w-5xl bg-neutral-900/50 rounded-[2rem] overflow-hidden border border-white/5 shadow-2xl flex items-center justify-center">
+                {/* REMOTE VIDEO CONTAINER - Full Bleed */}
+                <div className="w-full h-full flex items-center justify-center relative">
 
                     {status === 'connected' ? (
                         <>
@@ -381,15 +401,15 @@ export default function VideoChat() {
                                 ref={remoteVideoRef}
                                 autoPlay
                                 playsInline
-                                className="w-full h-full object-contain"
+                                className="w-full h-full object-cover"
                             />
 
                             {/* Connecting State Overlay */}
                             {partnerStatus === 'connecting' && (
                                 <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-20">
-                                    <div className="flex flex-col items-center gap-4">
-                                        <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
-                                        <p className="text-neutral-300 font-medium">Connecting to partner...</p>
+                                    <div className="flex flex-col items-center gap-3">
+                                        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                                        <p className="text-white/80 text-sm font-medium">Connecting...</p>
                                     </div>
                                 </div>
                             )}
@@ -403,7 +423,7 @@ export default function VideoChat() {
                                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-blue-500/10 rounded-full animate-ping [animation-duration:2s]" />
 
                                     <div className="relative w-24 h-24 bg-neutral-900/80 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/10 shadow-2xl">
-                                        <Loader2 className="w-10 h-10 text-blue-400 animate-spin" />
+                                        <User size={32} className="text-blue-400" />
                                     </div>
                                     <div className="mt-8 space-y-1 relative z-20">
                                         <h3 className="text-xl font-bold">Matching...</h3>
@@ -440,9 +460,8 @@ export default function VideoChat() {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="absolute top-20 right-4 w-[28vw] max-w-[120px] aspect-[3/4] bg-neutral-800 rounded-xl overflow-hidden border border-white/20 shadow-2xl z-30 pointer-events-none"
+                    className="absolute top-20 right-4 w-[28vw] max-w-[120px] aspect-[3/4] bg-neutral-800 rounded-xl overflow-hidden border border-white/20 shadow-2xl z-30 pointer-events-auto"
                 >
-                    {/* Added z-30 and checks for localStream */}
                     {localStream ? (
                         <video
                             ref={localVideoRef}
