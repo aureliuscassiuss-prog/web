@@ -249,21 +249,27 @@ export default function CoffeeChat() {
     }
 
     return (
-        <div className="flex flex-col h-full bg-white dark:bg-black">
+        <div className="flex flex-col h-full bg-white dark:bg-black relative">
 
             {/* --- HEADER --- */}
-            <header className="flex-shrink-0 h-14 border-b border-gray-100 dark:border-white/10 px-4 flex items-center justify-between bg-white dark:bg-black">
+            <header className="flex-shrink-0 h-14 border-b border-gray-100 dark:border-white/10 px-4 flex items-center justify-between bg-white/80 dark:bg-black/80 backdrop-blur-md sticky top-0 z-10 w-full">
                 <div className="flex items-center gap-2.5">
-                    <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm flex-shrink-0">
+                    <div className="h-8 w-8 rounded-lg bg-black dark:bg-white flex items-center justify-center text-white dark:text-black shadow-sm flex-shrink-0">
                         <MessageCircle size={18} strokeWidth={2.5} />
                     </div>
                     <div>
-                        <h1 className="text-sm font-bold leading-tight whitespace-nowrap">Public Chat</h1>
+                        <h1 className="text-sm font-bold leading-tight whitespace-nowrap text-gray-900 dark:text-white">Public Chat</h1>
                         <div className="flex items-center gap-1">
-                            <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                            <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                Live • {messages.length} msgs
-                            </span>
+                            {isLoading ? (
+                                <span className="h-2 w-16 bg-gray-200 dark:bg-zinc-800 rounded animate-pulse"></span>
+                            ) : (
+                                <>
+                                    <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                        Live • {messages.length} msgs
+                                    </span>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -275,8 +281,18 @@ export default function CoffeeChat() {
             {/* --- MESSAGES AREA --- */}
             <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-white/10">
                 {isLoading ? (
-                    <div className="flex justify-center items-center h-full text-gray-400 text-sm animate-pulse">
-                        Loading conversation...
+                    <div className="flex flex-col gap-4">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                            <div key={i} className={`flex w-full ${i % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`flex gap-2 max-w-[70%] ${i % 2 === 0 ? 'flex-row-reverse' : 'flex-row'}`}>
+                                    <div className="h-6 w-6 rounded-full bg-gray-200 dark:bg-zinc-800 animate-pulse shrink-0 mt-1"></div>
+                                    <div className="flex flex-col gap-1 w-full">
+                                        <div className="h-3 w-20 bg-gray-200 dark:bg-zinc-800 rounded animate-pulse"></div>
+                                        <div className="h-10 w-32 bg-gray-200 dark:bg-zinc-800 rounded-2xl animate-pulse"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 ) : messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2 opacity-50">

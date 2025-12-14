@@ -73,13 +73,15 @@ function Layout({
     <div className={`flex flex-col bg-white dark:bg-black text-gray-950 dark:text-gray-50 transition-colors duration-200 font-sans selection:bg-gray-900 selection:text-white dark:selection:bg-gray-100 dark:selection:text-black ${isChatPage ? 'h-[100dvh] overflow-hidden' : 'min-h-screen'}`}>
 
       {/* 1. Sticky Top Navigation (Glassmorphism) */}
-      <Header
-        onUploadClick={onUploadClick}
-        onAuthClick={onAuthClick}
-        onProfileClick={() => navigate('/profile')}
-        onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        user={user}
-      />
+      <div className="flex-shrink-0 sticky top-0 z-50 w-full">
+        <Header
+          onUploadClick={onUploadClick}
+          onAuthClick={onAuthClick}
+          onProfileClick={() => navigate('/profile')}
+          onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          user={user}
+        />
+      </div>
 
       <div className={
         isStanadalonePage ? "w-full flex-1"
