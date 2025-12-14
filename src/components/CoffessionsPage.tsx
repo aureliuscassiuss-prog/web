@@ -599,13 +599,12 @@ export default function CoffessionsPage() {
 
                                 <div className="relative z-10 my-auto flex flex-col items-center text-center px-1">
                                     <span className="text-7xl font-serif leading-none opacity-10 mb-2 font-black">"</span>
-                                    <p className={`font-serif font-medium leading-tight tracking-wide italic drop-shadow-sm break-words overflow-wrap-anywhere ${shareData.content.length > 500 ? 'text-xs leading-snug' :
-                                            shareData.content.length > 400 ? 'text-sm leading-snug' :
-                                                shareData.content.length > 300 ? 'text-base leading-snug' :
-                                                    shareData.content.length > 200 ? 'text-xl leading-tight' :
-                                                        shareData.content.length > 150 ? 'text-2xl leading-tight' :
-                                                            shareData.content.length > 100 ? 'text-4xl' :
-                                                                shareData.content.length > 50 ? 'text-5xl' : 'text-6xl'
+                                    <p className={`font-serif font-medium leading-tight tracking-wide italic drop-shadow-sm break-words overflow-wrap-anywhere ${shareData.content.length > 300 ? 'text-xs leading-snug' :
+                                            shareData.content.length > 200 ? 'text-sm leading-snug' :
+                                                shareData.content.length > 150 ? 'text-base leading-snug' :
+                                                    shareData.content.length > 100 ? 'text-lg leading-tight' :
+                                                        shareData.content.length > 50 ? 'text-xl' :
+                                                            shareData.content.length > 30 ? 'text-2xl' : 'text-3xl'
                                         }`}>{shareData.content}</p>
                                     <span className="text-7xl font-serif leading-none opacity-10 mt-4 rotate-180 font-black">"</span>
                                 </div>
@@ -660,13 +659,13 @@ export default function CoffessionsPage() {
                             <div className="relative z-10 my-auto flex flex-col items-center text-center px-4 overflow-hidden w-full">
                                 <span className="text-9xl font-serif leading-none opacity-10 mb-4 font-black">"</span>
                                 <p className={`font-serif font-medium leading-tight tracking-wide italic drop-shadow-sm break-words w-full overflow-wrap-anywhere
-                                    ${shareData.content.length > 500 ? 'text-xs leading-snug' :
-                                        shareData.content.length > 400 ? 'text-sm leading-snug' :
-                                            shareData.content.length > 300 ? 'text-base leading-snug' :
-                                                shareData.content.length > 200 ? 'text-xl leading-tight' :
-                                                    shareData.content.length > 150 ? 'text-2xl leading-tight' :
-                                                        shareData.content.length > 100 ? 'text-4xl' :
-                                                            shareData.content.length > 50 ? 'text-5xl' : 'text-6xl'}`}
+                                    ${shareData.content.length > 300 ? 'text-xs leading-snug' :
+                                        shareData.content.length > 200 ? 'text-sm leading-snug' :
+                                            shareData.content.length > 150 ? 'text-base leading-snug' :
+                                                shareData.content.length > 100 ? 'text-lg leading-tight' :
+                                                    shareData.content.length > 50 ? 'text-xl' :
+                                                        shareData.content.length > 30 ? 'text-2xl' : 'text-3xl'
+                                    }`}
                                 >
                                     {shareData.content}
                                 </p>
