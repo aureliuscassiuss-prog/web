@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../utils/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
-import { Video, Mic, MicOff, VideoOff, SkipForward, AlertCircle, Loader2, StopCircle, User, Maximize, Minimize, WifiOff } from 'lucide-react'
+import { Video, Mic, MicOff, VideoOff, SkipForward, AlertCircle, Loader2, StopCircle, User, Maximize, Minimize, WifiOff, Bug } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -23,6 +23,8 @@ export default function VideoChat() {
     const [errorMsg, setErrorMsg] = useState('')
     const [partnerStatus, setPartnerStatus] = useState<'connecting' | 'connected'>('connecting')
     const [isFullScreen, setIsFullScreen] = useState(false)
+    const [showDebug, setShowDebug] = useState(false)
+    const [debugLogs, setDebugLogs] = useState<string[]>([])
 
     // Refs for persistence without re-renders
     const localVideoRef = useRef<HTMLVideoElement>(null)
@@ -50,6 +52,12 @@ export default function VideoChat() {
     const statusRef = useRef(status)
     useEffect(() => { statusRef.current = status }, [status])
 
+    // Logging helper
+    const log = (msg: string) => {
+        console.log(msg)
+        setDebugLogs(prev => [msg, ...prev].slice(0, 20))
+    }
+
     // Ensure local video is attached when stream is ready
     useEffect(() => {
         if (localStream && localVideoRef.current) {
@@ -68,18 +76,19 @@ export default function VideoChat() {
     // Initialize Local Stream
     const initLocalStream = async () => {
         try {
-            console.log("Requesting permissions...")
+            log("Requesting permissions...")
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: { facingMode: 'user' },
                 audio: true
             })
-            console.log("Permissions granted.")
+            log("Permissions granted.")
             setLocalStream(stream)
             setErrorMsg('')
             return stream
         } catch (err: any) {
             console.error("Camera error:", err)
             setStatus('error')
+            log(`Camera error: ${err.name}`)
 
             if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
                 setErrorMsg('Permissions denied. Please reset permissions in your browser settings.')
@@ -141,7 +150,7 @@ export default function VideoChat() {
 
         // Handle remote tracks
         peer.ontrack = (event) => {
-            console.log("Remote track received")
+            log("Remote track received")
             if (event.streams && event.streams[0]) {
                 setRemoteStream(event.streams[0])
                 setPartnerStatus('connected')
@@ -156,6 +165,7 @@ export default function VideoChat() {
         // Handle ICE candidates
         peer.onicecandidate = (event) => {
             if (event.candidate) {
+                // log("Sent ICE Candidate") // Verbose
                 signalChannel.send({
                     type: 'broadcast',
                     event: 'signal',
@@ -170,22 +180,22 @@ export default function VideoChat() {
 
         peer.oniceconnectionstatechange = () => {
             const state = peer.iceConnectionState
-            console.log("ICE State:", state)
+            log(`ICE State: ${state}`)
 
             // Robust Handling: Only fail on terminal states
             if (state === 'failed' || state === 'closed') {
                 if (statusRef.current === 'connected' || statusRef.current === 'reconnecting') {
-                    console.log("ICE Failed. Restarting...")
+                    log("ICE Failed. Restarting...")
                     handleStop()
                     startSearch()
                 }
             } else if (state === 'disconnected') {
                 // Temporary network glitch - DO NOT SKIP
-                console.log("ICE Disconnected - Attempting to recover...")
+                log("ICE Disconnected - Attempting to recover...")
                 setStatus('reconnecting')
             } else if (state === 'connected' || state === 'completed') {
                 if (statusRef.current === 'reconnecting') {
-                    console.log("ICE Recovered!")
+                    log("ICE Recovered!")
                     setStatus('connected')
                 }
             }
@@ -193,11 +203,11 @@ export default function VideoChat() {
 
         peer.onconnectionstatechange = () => {
             const state = peer.connectionState
-            console.log("Connection state:", state)
+            log(`Connection state: ${state}`)
 
             if (state === 'failed') {
                 if (statusRef.current === 'connected') {
-                    console.log("Connection failed (terminal). Restarting...")
+                    log("Connection failed (terminal). Restarting...")
                     handleStop()
                     startSearch()
                 }
@@ -224,6 +234,7 @@ export default function VideoChat() {
         hasSentOfferRef.current = false
         setPartnerStatus('connecting')
         iceCandidatesBuffer.current = []
+        setDebugLogs([]) // Clear previous logs
         stopPolling() // Safety clear
 
         let stream = localStream
@@ -233,6 +244,7 @@ export default function VideoChat() {
         }
 
         setStatus('searching')
+        log("Started searching...")
 
         // ACTIVE & PASSIVE STRATEGY:
         // 1. Clean up old queue entry first (important!)
@@ -271,10 +283,12 @@ export default function VideoChat() {
             console.error("Join queue error:", error)
             setErrorMsg("Failed to join queue.")
             setStatus('error')
+            log("Queue Join Failed")
             return
         }
 
         myQueueIdRef.current = data.id
+        log("Joined queue.")
 
         // Start Heartbeat (ping every 2s to show liveness)
         if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current)
@@ -308,7 +322,7 @@ export default function VideoChat() {
                 (payload) => {
                     // Check if *I* was matched
                     if (payload.new.matched_with && partnerStatus !== 'connected') {
-                        console.log("Picked by:", payload.new.matched_with)
+                        log(`Matched by user: ${payload.new.matched_with}`)
                         // If I'm already setting up a call as a caller, this might race, 
                         // but checking partnerStatus helps.
                         if (peerRef.current) return // Already busy with another connection
@@ -358,7 +372,7 @@ export default function VideoChat() {
 
         if (candidates && candidates.length > 0) {
             const target = candidates[0]
-            console.log("Found active partner:", target.user_id)
+            log(`Found target: ${target.user_id}`)
 
             // 2. Try to CLAIM
             const { error: claimError } = await supabase
@@ -369,17 +383,17 @@ export default function VideoChat() {
             // .is ensures we only claim if they are STILL free
 
             if (!claimError) {
-                console.log("Successfully claimed partner!")
+                log("Claimed partner successfully")
                 stopPolling() // Stop searching
                 initiateCall(target.id, true) // Act as Caller
             } else {
-                console.log("Claim failed - maybe taken?")
+                log("Claim failed (taken)")
             }
         }
     }
 
     const initiateCall = async (sessionId: string, isCaller: boolean) => {
-        console.log(`Starting call. Session: ${sessionId}, I am Caller: ${isCaller}`)
+        log(`Init Call. Caller: ${isCaller}`)
 
         // --- ROBUST SESSION ID ---
         // This ensures events from previous attempts (ghosts) don't interfere
@@ -398,7 +412,7 @@ export default function VideoChat() {
         connectionTimeoutRef.current = setTimeout(() => {
             // Only trigger if we are still connecting and the session hasn't changed
             if (partnerStatus === 'connecting' && sessionIdRef.current === currentSessionId) {
-                console.log('Connection timeout (30s) - restarting search')
+                log('Timeout (30s) - restarting')
                 handleStop()
                 setTimeout(() => startSearch(), 500)
             }
@@ -421,23 +435,22 @@ export default function VideoChat() {
                     return
                 }
 
-                console.log("Received signal:", payload.type)
-
                 if (payload.type === 'bye') {
-                    console.log("Peer skipped. Restarting search...")
+                    log("Peer bye. Restarting...")
                     handleStop()
                     startSearch() // Auto-next
                     return
                 }
 
                 if (payload.type === 'offer' && !isCaller) {
+                    log("Rx Offer. Sending Answer...")
                     await peerRef.current.setRemoteDescription(payload.offer)
                     const answer = await peerRef.current.createAnswer()
                     await peerRef.current.setLocalDescription(answer)
 
                     // Flush buffer
                     if (iceCandidatesBuffer.current.length > 0) {
-                        console.log("Flushing ICE buffer:", iceCandidatesBuffer.current.length)
+                        log(`Flushing ${iceCandidatesBuffer.current.length} buffered ICE`)
                         iceCandidatesBuffer.current.forEach(c => peerRef.current?.addIceCandidate(c))
                         iceCandidatesBuffer.current = []
                     }
@@ -448,10 +461,11 @@ export default function VideoChat() {
                         payload: { type: 'answer', answer, sessionId: currentSessionId }
                     })
                 } else if (payload.type === 'answer' && isCaller) {
+                    log("Rx Answer.")
                     await peerRef.current.setRemoteDescription(payload.answer)
                     // Flush buffer
                     if (iceCandidatesBuffer.current.length > 0) {
-                        console.log("Flushing ICE buffer:", iceCandidatesBuffer.current.length)
+                        log(`Flushing ${iceCandidatesBuffer.current.length} buffered ICE`)
                         iceCandidatesBuffer.current.forEach(c => peerRef.current?.addIceCandidate(c))
                         iceCandidatesBuffer.current = []
                     }
@@ -460,13 +474,13 @@ export default function VideoChat() {
                     if (peerRef.current.remoteDescription) {
                         await peerRef.current.addIceCandidate(payload.candidate)
                     } else {
-                        console.log("Buffering ICE candidate")
+                        // log("Buffering ICE candidate")
                         iceCandidatesBuffer.current.push(payload.candidate)
                     }
                 }
             })
             .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-                console.log("presence leave", key, leftPresences)
+                log("Presence Leave")
 
                 // DEBOUNCED LEAVE: Wait 3s to confirm they are really gone
                 if (leaveTimeoutRef.current) clearTimeout(leaveTimeoutRef.current)
@@ -475,7 +489,7 @@ export default function VideoChat() {
                     const state = channel.presenceState()
                     // If the only peer left is me (or explicit 0 if I'm not tracked yet), restart
                     if (Object.keys(state).length <= 1 && statusRef.current === 'connected') {
-                        console.log("Peer confirmed left (debounced). Restarting...")
+                        log("Presence confirmed leave. Restarting...")
                         handleStop()
                         startSearch()
                     }
@@ -485,18 +499,18 @@ export default function VideoChat() {
             .on('presence', { event: 'sync' }, () => {
                 const state = channel.presenceState()
                 const presenceIds = Object.keys(state)
-                console.log("Presence sync:", presenceIds.length)
+                // log(`Presence sync: ${presenceIds.length}`)
 
                 // If presence returns, cancel the leave timeout!
                 if (presenceIds.length > 1 && leaveTimeoutRef.current) {
-                    console.log("Peer returned! Cancelling leave timeout.")
+                    log("Peer returned! Cancel leave.")
                     clearTimeout(leaveTimeoutRef.current)
                     leaveTimeoutRef.current = null
                 }
 
                 // If I am Caller, and I see SOMEONE ELSE is here, I can send Offer
                 if (isCaller && presenceIds.length > 1 && !hasSentOfferRef.current) {
-                    console.log("Peer present! Sending Offer...")
+                    log("Peer present! Sending Offer...")
                     sendOffer(peer, channel, currentSessionId)
                 }
             })
@@ -615,6 +629,14 @@ export default function VideoChat() {
                     <span className="font-bold text-sm md:text-base pr-3">VideoChat</span>
                 </div>
                 <div className="flex items-center gap-2 pointer-events-auto">
+                    {/* DEBUG BUTTON */}
+                    <button
+                        onClick={() => setShowDebug(!showDebug)}
+                        className="p-2 rounded-full bg-white/50 dark:bg-black/50 backdrop-blur-md border border-neutral-200 dark:border-white/10 hover:opacity-80 transition-all shadow-sm"
+                    >
+                        <Bug size={18} className={showDebug ? "text-blue-500" : "text-neutral-500"} />
+                    </button>
+
                     <button
                         onClick={toggleFullScreen}
                         className="p-2 rounded-full bg-white/50 dark:bg-black/50 backdrop-blur-md border border-neutral-200 dark:border-white/10 hover:scale-105 active:scale-95 transition-all shadow-sm"
@@ -632,6 +654,16 @@ export default function VideoChat() {
                     </div>
                 </div>
             </div>
+
+            {/* DEBUG OVERLAY */}
+            {showDebug && (
+                <div className="absolute top-20 left-4 w-64 h-64 bg-black/80 text-green-400 p-2 text-[10px] font-mono rounded overflow-y-auto z-40 pointer-events-auto border border-green-900/50">
+                    <div className="font-bold mb-1 border-b border-green-800 pb-1">Debug Logs</div>
+                    {debugLogs.map((log, i) => (
+                        <div key={i}>{log}</div>
+                    ))}
+                </div>
+            )}
 
             {/* Main Video Area - FULL SCREEN */}
             <main className={`flex-1 relative overflow-hidden flex items-center justify-center ${isFullScreen ? 'p-0' : 'p-2 md:p-4'}`}>
