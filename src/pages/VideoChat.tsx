@@ -572,15 +572,15 @@ export default function VideoChat() {
                                 className="w-full h-full object-cover"
                             />
 
-                            {/* Connecting State Overlay */}
-                            {partnerStatus === 'connecting' && (
+                            {/* Connecting State Overlay - REMOVED per user request for "direct" feel */}
+                            {/* {partnerStatus === 'connecting' && (
                                 <div className="absolute inset-0 bg-white/60 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center z-20">
                                     <div className="flex flex-col items-center gap-3">
                                         <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
                                         <p className="text-sm font-medium opacity-80">Connecting...</p>
                                     </div>
                                 </div>
-                            )}
+                            )} */}
                         </>
                     ) : (
                         /* IDLE / SEARCHING STATE */
@@ -714,9 +714,14 @@ export default function VideoChat() {
                             </button>
 
                             {/* Skip (Large Pill) */}
+                            {/* Skip (Large Pill) */}
                             <button
                                 onClick={handleSkip}
-                                className="h-12 md:h-14 px-6 md:px-8 rounded-full bg-blue-600 text-white font-bold flex items-center gap-2 hover:bg-blue-500 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-blue-600/20"
+                                disabled={partnerStatus === 'connecting'}
+                                className={`h-12 md:h-14 px-6 md:px-8 rounded-full font-bold flex items-center gap-2 transition-all shadow-lg 
+                                    ${partnerStatus === 'connecting'
+                                        ? 'bg-neutral-300 dark:bg-neutral-800 text-neutral-500 cursor-not-allowed'
+                                        : 'bg-blue-600 text-white hover:bg-blue-500 hover:scale-105 active:scale-95 shadow-blue-600/20'}`}
                             >
                                 <span className="hidden md:inline text-lg">Next</span>
                                 <SkipForward size={24} />
