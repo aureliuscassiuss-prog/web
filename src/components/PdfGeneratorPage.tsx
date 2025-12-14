@@ -20,20 +20,71 @@ export default function PdfGeneratorPage() {
         setGeneratedCode(null);
 
         try {
-            const systemPrompt = `You are a Python expert specializing in professional PDF generation. 
-Your task is to write a complete, runnable Python script using the 'fpdf' library to generate a HIGH - QUALITY, professionally formatted PDF based on the user's description.
+            const systemPrompt = `You are an expert Python developer specializing in creating professional, print-ready PDF documents using the fpdf library.
 
-CRITICAL FORMATTING RULES:
-1. ** Layout **: Use proper margins(25mm), line spacing(1.5), and alignment.
-2. ** Typography **: Use standard fonts(Arial, Times).Use Bold / Large fonts for Titles(size 16 - 24), Regular for body(size 11 - 12).
-3. ** Structure **:
-    - Header: Include a professional header if appropriate.
-   - Body: text wrapping(multi_cell) is MANDATORY for long text.DO NOT use single line 'cell' for paragraphs.
-   - Footer: Include page numbers.
-4. ** Content **: Ensure the content matches the user's request exactly (Notices, Resumes, etc.).
-5. ** Output **: The script must save the file as 'generated_document.pdf'.
+Generate a COMPLETE, RUNNABLE Python script that creates a beautifully formatted PDF based on the user's description.
 
-Return ONLY the Python code block.No markdown wrapper text outside the code block.`;
+MANDATORY REQUIREMENTS:
+
+1. IMPORTS & SETUP:
+   - Import FPDF from fpdf library
+   - Create PDF instance with A4 size and portrait orientation
+   - Use UTF-8 encoding if needed
+
+2. PROFESSIONAL LAYOUT:
+   - Margins: Left/Right 25mm, Top/Bottom 20mm
+   - Line spacing: 1.5x for readability
+   - Consistent alignment throughout
+   - White space: Proper spacing between sections
+
+3. TYPOGRAPHY STANDARDS:
+   - Title: Arial Bold, 20-24pt, centered
+   - Headings: Arial Bold, 14-16pt
+   - Body: Arial Regular, 11-12pt
+   - Use multi_cell() for ALL paragraphs (never single-line cell() for text blocks)
+   - Text should wrap naturally, never overflow
+
+4. DOCUMENT STRUCTURE:
+   - Header: Company/document name if applicable
+   - Body: Well-organized sections with clear hierarchy
+   - Footer: Page numbers in format "Page X of Y"
+
+5. CONTENT QUALITY:
+   - Match user's request EXACTLY
+   - Use realistic, professional content
+   - Proper grammar and formatting
+   - Include all requested elements (dates, signatures, tables, etc.)
+
+6. CODE QUALITY:
+   - Add helpful comments
+   - Handle page breaks automatically
+   - Include error handling
+   - Save as 'generated_document.pdf'
+   - Print success message
+
+EXAMPLE STRUCTURE (adapt to user's request):
+\`\`\`python
+from fpdf import FPDF
+
+class PDF(FPDF):
+    def header(self):
+        # Header code here
+        pass
+    
+    def footer(self):
+        # Page number footer
+        self.set_y(-15)
+        self.set_font('Arial', 'I', 8)
+        self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
+
+pdf = PDF()
+pdf.add_page()
+# Document content here
+pdf.output('generated_document.pdf')
+print("PDF generated successfully!")
+\`\`\`
+
+Return ONLY the complete, runnable Python code. No explanations, no markdown formatting outside the code.`;
 
             const response = await fetch('/api/ai', {
                 method: 'POST',
