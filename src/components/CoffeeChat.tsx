@@ -17,6 +17,7 @@ interface ChatMessage {
 interface TypingUser {
     user_id: string
     user_name: string
+    user_avatar?: string
 }
 
 export default function CoffeeChat() {
@@ -29,6 +30,19 @@ export default function CoffeeChat() {
     const channelRef = useRef<any>(null)
     const typingTimeoutRef = useRef<any>(null)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+    // Sound Effects
+    const playSendSound = () => {
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3')
+        audio.volume = 0.5
+        audio.play().catch(e => console.log('Audio play failed', e))
+    }
+
+    const playReceiveSound = () => {
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3')
+        audio.volume = 0.5
+        audio.play().catch(e => console.log('Audio play failed', e))
+    }
 
     // Scroll to bottom on new messages
     const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
@@ -56,8 +70,9 @@ export default function CoffeeChat() {
                 .gt('created_at', fourHoursAgo)
                 .order('created_at', { ascending: true })
 
-            if (error) console.error('Error fetching messages:', error)
             if (data) setMessages(data)
+            if (error) console.error('Error fetching messages:', error)
+
             setIsLoading(false)
         }
 
@@ -74,6 +89,11 @@ export default function CoffeeChat() {
                 (payload) => {
                     const newMsg = payload.new as ChatMessage
                     setMessages(prev => [...prev, newMsg])
+
+                    // Play sound if message is from someone else
+                    if (newMsg.user_id !== user?.id?.toString()) {
+                        playReceiveSound()
+                    }
                 }
             )
             .on('presence', { event: 'sync' }, () => {
@@ -83,7 +103,11 @@ export default function CoffeeChat() {
                 Object.values(state).forEach((presences: any) => {
                     presences.forEach((p: any) => {
                         if (p.typing && p.user_id !== user?.id) {
-                            typing.push({ user_id: p.user_id, user_name: p.user_name })
+                            typing.push({
+                                user_id: p.user_id,
+                                user_name: p.user_name,
+                                user_avatar: p.user_avatar
+                            })
                         }
                     })
                 })
@@ -101,12 +125,22 @@ export default function CoffeeChat() {
     const handleTyping = () => {
         if (!channelRef.current || !user || supabase.supabaseUrl.includes('placeholder')) return
 
-        channelRef.current.track({ typing: true, user_id: user.id, user_name: user.name })
+        channelRef.current.track({
+            typing: true,
+            user_id: user.id,
+            user_name: user.name,
+            user_avatar: user.avatar
+        })
 
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
 
         typingTimeoutRef.current = setTimeout(() => {
-            channelRef.current.track({ typing: false, user_id: user.id, user_name: user.name })
+            channelRef.current.track({
+                typing: false,
+                user_id: user.id,
+                user_name: user.name,
+                user_avatar: user.avatar
+            })
         }, 1500)
     }
 
@@ -121,9 +155,17 @@ export default function CoffeeChat() {
             textareaRef.current.style.height = 'auto';
         }
 
+        // Play Send Sound
+        playSendSound()
+
         // Remove typing status immediately
         if (channelRef.current) {
-            channelRef.current.track({ typing: false, user_id: user.id, user_name: user.name })
+            channelRef.current.track({
+                typing: false,
+                user_id: user.id,
+                user_name: user.name,
+                user_avatar: user.avatar
+            })
         }
 
         const { error } = await supabase.from('coffee_chat_messages').insert({
@@ -147,7 +189,7 @@ export default function CoffeeChat() {
     // Check for missing config
     if (supabase.supabaseUrl.includes('placeholder')) {
         return (
-            <div className="flex flex-col h-[calc(100vh-56px)] md:h-screen pt-14 md:pt-0 items-center justify-center p-6 text-center bg-white dark:bg-black">
+            <div className="flex flex-col h-[calc(100vh-64px)] items-center justify-center p-6 text-center bg-white dark:bg-black">
                 <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4 text-red-500">
                     <Trash2 size={32} />
                 </div>
@@ -165,7 +207,7 @@ export default function CoffeeChat() {
     }
 
     return (
-        <div className="flex flex-col h-[calc(100vh-80px)] md:h-screen pt-14 md:pt-0 relative bg-white dark:bg-black">
+        <div className="flex flex-col h-[calc(100vh-64px)] relative bg-white dark:bg-black">
 
             {/* --- HEADER --- */}
             <header className="flex-none h-14 border-b border-gray-100 dark:border-white/10 px-4 flex items-center justify-between bg-white/80 dark:bg-black/80 backdrop-blur-md sticky top-0 z-10">
@@ -259,9 +301,13 @@ export default function CoffeeChat() {
                                     className="flex w-full justify-start"
                                 >
                                     <div className="flex gap-2 max-w-[85%] md:max-w-[70%] flex-row">
-                                        {/* Avatar Placeholder for Typing */}
+                                        {/* Avatar for Typing User */}
                                         <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold mt-1 overflow-hidden bg-gray-100 text-gray-400 dark:bg-white/10 dark:text-gray-500">
-                                            ...
+                                            {typingUser.user_avatar ? (
+                                                <img src={typingUser.user_avatar} alt={typingUser.user_name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                typingUser.user_name?.charAt(0) || '?'
+                                            )}
                                         </div>
 
                                         <div className="flex flex-col gap-1 min-w-0">
