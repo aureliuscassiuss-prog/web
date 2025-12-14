@@ -17,7 +17,8 @@ import {
     Bookmark,
     CheckCircle2,
     Timer,
-    MessageCircle
+    MessageCircle,
+    Video
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -82,6 +83,7 @@ export default function Sidebar({ onMobileMenuClose, isDark, toggleTheme, spotli
             items: [
                 { path: '/coffessions', label: 'Coffessions', icon: Coffee, badge: 'Hot' },
                 { path: '/chat', label: 'Community Chat', icon: MessageCircle, badge: 'Live' },
+                { path: '/video-chat', label: 'Video Chat', icon: Video, badge: 'New' },
                 { path: '/leaderboard', label: 'Leaderboard', icon: BarChart3 },
             ]
         },

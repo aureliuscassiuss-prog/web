@@ -35,6 +35,7 @@ import OurTeam from './components/OurTeam';
 import PomodoroPage from './components/PomodoroPage';
 import CoffessionsPage from './components/CoffessionsPage';
 import CoffeeChat from './components/CoffeeChat';
+import VideoChat from './pages/VideoChat';
 
 import SEO from './components/SEO'
 import AttendanceManager from './components/attendance/AttendanceManager'
@@ -431,6 +432,16 @@ function AppContent() {
               />
               <CoffeeChat />
             </>
+          } />
+
+          {/* Video Chat Route (Protected) */}
+          <Route path="/video-chat" element={
+            <ProtectedRoute onAuthRequired={() => {
+              setAuthModalInitialView('login')
+              setIsAuthModalOpen(true)
+            }}>
+              <VideoChat />
+            </ProtectedRoute>
           } />
 
           {/* AI Papers Route (Protected) */}
