@@ -517,7 +517,7 @@ async function handleClearChat(res: VercelResponse) {
     const { error } = await supabase
         .from('chat_messages')
         .delete()
-        .neq('id', 0); // Delete all rows
+        .gt('created_at', '1970-01-01T00:00:00.000Z'); // Delete all rows (safer than ID check)
 
     if (error) {
         console.error('Clear chat error:', error);
