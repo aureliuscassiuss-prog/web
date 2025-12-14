@@ -93,6 +93,20 @@ export default function VideoChat() {
         }
     }
 
+    const toggleFullScreen = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {
+                console.error(`Error enabling fullscreen: ${err.message}`);
+            });
+            setIsFullScreen(true);
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+                setIsFullScreen(false);
+            }
+        }
+    }
+
     // --- RTC LOGIC ---
 
     const createPeer = (isCaller: boolean, signalChannel: any) => {
@@ -370,28 +384,36 @@ export default function VideoChat() {
     // --- RENDER ---
 
     return (
-        <div className="flex flex-col h-[100dvh] bg-black text-white overflow-hidden font-sans relative">
+        <div className="flex flex-col h-[100dvh] bg-white dark:bg-black text-neutral-900 dark:text-white overflow-hidden font-sans relative">
 
             {/* Header (Minimal) */}
-            <div className="absolute top-0 left-0 right-0 p-4 z-20 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between pointer-events-none">
-                <div className="flex items-center gap-2 pointer-events-auto">
-                    <div className="w-8 h-8 rounded-lg bg-blue-600/20 backdrop-blur-md border border-white/10 flex items-center justify-center">
-                        <Video size={16} className="text-blue-400" />
+            <div className="absolute top-0 left-0 right-0 p-4 z-20 flex items-center justify-between pointer-events-none">
+                <div className="flex items-center gap-2 pointer-events-auto bg-white/50 dark:bg-black/50 backdrop-blur-md p-1.5 rounded-full border border-neutral-200 dark:border-white/10 shadow-sm">
+                    <div className="w-8 h-8 rounded-full bg-blue-600/10 dark:bg-blue-600/20 flex items-center justify-center">
+                        <Video size={16} className="text-blue-600 dark:text-blue-400" />
                     </div>
-                    <span className="font-bold text-white/90 text-sm md:text-base drop-shadow-md">VideoChat</span>
+                    <span className="font-bold text-sm md:text-base pr-3">VideoChat</span>
                 </div>
                 <div className="flex items-center gap-2 pointer-events-auto">
-                    <span className={`w - 2 h - 2 rounded - full ${status === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-neutral-500'} `} />
-                    <span className="text-xs text-white/70 font-medium drop-shadow-md">
-                        {status === 'searching' && "Matching..."}
-                        {status === 'connected' && (partnerStatus === 'connected' ? "Live" : "Connecting...")}
-                        {status === 'idle' && "Ready"}
-                    </span>
+                    <button
+                        onClick={toggleFullScreen}
+                        className="p-2 rounded-full bg-white/50 dark:bg-black/50 backdrop-blur-md border border-neutral-200 dark:border-white/10 hover:scale-105 active:scale-95 transition-all shadow-sm"
+                    >
+                        {isFullScreen ? <Minimize size={18} /> : <Maximize size={18} />}
+                    </button>
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/50 dark:bg-black/50 backdrop-blur-md border border-neutral-200 dark:border-white/10 shadow-sm">
+                        <span className={`w-2 h-2 rounded-full ${status === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-neutral-400 dark:bg-neutral-600'}`} />
+                        <span className="text-xs font-medium opacity-80">
+                            {status === 'searching' && "Matching..."}
+                            {status === 'connected' && (partnerStatus === 'connected' ? "Live" : "Connecting...")}
+                            {status === 'idle' && "Ready"}
+                        </span>
+                    </div>
                 </div>
             </div>
 
             {/* Main Video Area - FULL SCREEN */}
-            <main className="flex-1 relative bg-black overflow-hidden">
+            <main className="flex-1 relative overflow-hidden flex items-center justify-center">
 
                 {/* REMOTE VIDEO CONTAINER - Full Bleed */}
                 <div className="w-full h-full flex items-center justify-center relative">
@@ -408,10 +430,10 @@ export default function VideoChat() {
 
                             {/* Connecting State Overlay */}
                             {partnerStatus === 'connecting' && (
-                                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-20">
+                                <div className="absolute inset-0 bg-white/60 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center z-20">
                                     <div className="flex flex-col items-center gap-3">
                                         <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-                                        <p className="text-white/80 text-sm font-medium">Connecting...</p>
+                                        <p className="text-sm font-medium opacity-80">Connecting...</p>
                                     </div>
                                 </div>
                             )}
@@ -420,34 +442,34 @@ export default function VideoChat() {
                         /* IDLE / SEARCHING STATE */
                         <div className="flex flex-col items-center justify-center text-center p-6 w-full max-w-md mx-auto z-10">
                             {status === 'searching' ? (
-                                <div className="relative py-12">
+                                <div className="relative py-12 flex flex-col items-center justify-center">
                                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-blue-500/10 rounded-full animate-ping [animation-duration:3s]" />
-                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-blue-500/10 rounded-full animate-ping [animation-duration:2s]" />
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-blue-500/20 rounded-full animate-ping [animation-duration:2s]" />
 
-                                    <div className="relative w-24 h-24 bg-neutral-900/80 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/10 shadow-2xl">
-                                        <User size={32} className="text-blue-400" />
+                                    <div className="relative w-24 h-24 bg-white dark:bg-neutral-900 backdrop-blur-xl rounded-full flex items-center justify-center border border-neutral-200 dark:border-white/10 shadow-2xl mx-auto">
+                                        <User size={32} className="text-blue-500 dark:text-blue-400" />
                                     </div>
                                     <div className="mt-8 space-y-1 relative z-20">
                                         <h3 className="text-xl font-bold">Matching...</h3>
-                                        <p className="text-neutral-400 text-sm">Finding a student for you</p>
+                                        <p className="text-neutral-500 dark:text-neutral-400 text-sm">Finding someone for you</p>
                                     </div>
                                 </div>
                             ) : (
-                                <div className="space-y-6 animate-in fade-in zoom-in duration-500">
-                                    <div className="w-24 h-24 bg-gradient-to-br from-indigo-500/20 to-blue-500/20 rounded-[1.5rem] flex items-center justify-center mx-auto border border-white/10 rotate-3 shadow-2xl">
-                                        <User size={40} className="text-blue-400" />
+                                <div className="space-y-6 animate-in fade-in zoom-in duration-500 flex flex-col items-center">
+                                    <div className="w-24 h-24 bg-gradient-to-br from-indigo-500/10 to-blue-500/10 dark:from-indigo-500/20 dark:to-blue-500/20 rounded-[1.5rem] flex items-center justify-center mx-auto border border-neutral-200 dark:border-white/10 rotate-3 shadow-2xl">
+                                        <User size={40} className="text-blue-600 dark:text-blue-400" />
                                     </div>
                                     <div className="space-y-2">
-                                        <h2 className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-white to-neutral-400">
+                                        <h2 className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-neutral-800 to-neutral-500 dark:from-white dark:to-neutral-400">
                                             Random Chat
                                         </h2>
-                                        <p className="text-sm text-neutral-400 max-w-xs mx-auto">
+                                        <p className="text-sm text-neutral-500 dark:text-neutral-400 max-w-xs mx-auto">
                                             Connect instantly with students. Safe & Anonymous.
                                         </p>
                                     </div>
                                     <button
                                         onClick={startSearch}
-                                        className="w-full py-4 bg-white text-black rounded-full font-bold text-lg hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-white/5 flex items-center justify-center gap-2"
+                                        className="w-full py-4 bg-neutral-900 dark:bg-white text-white dark:text-black rounded-full font-bold text-lg hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-neutral-900/10 dark:shadow-white/5 flex items-center justify-center gap-2"
                                     >
                                         <span>Start Matching</span>
                                         <SkipForward className="w-5 h-5" />
@@ -462,7 +484,7 @@ export default function VideoChat() {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="absolute top-20 right-4 w-[28vw] max-w-[120px] aspect-[3/4] bg-neutral-800 rounded-xl overflow-hidden border border-white/20 shadow-2xl z-30 pointer-events-auto"
+                    className="absolute top-20 right-4 w-[28vw] max-w-[120px] aspect-[3/4] bg-neutral-100 dark:bg-neutral-800 rounded-xl overflow-hidden border border-neutral-300 dark:border-white/20 shadow-2xl z-30"
                 >
                     {localStream ? (
                         <video
@@ -470,10 +492,10 @@ export default function VideoChat() {
                             autoPlay
                             playsInline
                             muted
-                            className={`w - full h - full object - cover mirror ${isVideoOff ? 'hidden' : ''} `}
+                            className={`w-full h-full object-cover mirror ${isVideoOff ? 'hidden' : ''}`}
                         />
                     ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center bg-neutral-900 text-neutral-500 gap-1">
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-neutral-100 dark:bg-neutral-900 text-neutral-400 gap-1">
                             <VideoOff className="w-5 h-5" />
                         </div>
                     )}
@@ -496,14 +518,14 @@ export default function VideoChat() {
                             exit={{ opacity: 0, y: -20 }}
                             className="absolute top-20 left-4 right-4 z-50 mx-auto max-w-sm"
                         >
-                            <div className="bg-red-950/90 backdrop-blur border border-red-500/30 text-red-200 px-4 py-3 rounded-xl shadow-xl flex items-center gap-3">
-                                <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+                            <div className="bg-red-50/90 dark:bg-red-950/90 backdrop-blur border border-red-200 dark:border-red-500/30 text-red-800 dark:text-red-200 px-4 py-3 rounded-xl shadow-xl flex items-center gap-3">
+                                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-500 shrink-0" />
                                 <div className="flex-1 text-sm">
-                                    <p className="font-medium text-red-400">{errorMsg}</p>
+                                    <p className="font-medium">{errorMsg}</p>
                                 </div>
                                 <button
                                     onClick={() => { setErrorMsg(''); startSearch(); }}
-                                    className="p-1.5 bg-red-500/20 hover:bg-red-500/30 rounded-lg text-red-400 transition-colors"
+                                    className="p-1.5 bg-red-100 dark:bg-red-500/20 hover:bg-red-200 dark:hover:bg-red-500/30 rounded-lg text-red-600 dark:text-red-400 transition-colors"
                                 >
                                     <Loader2 size={16} />
                                 </button>
@@ -516,14 +538,14 @@ export default function VideoChat() {
 
             {/* CONTROLS BAR (Overlay) */}
             <div className="absolute bottom-8 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
-                <div className="pointer-events-auto flex items-center gap-3 md:gap-4 bg-neutral-950/80 backdrop-blur-xl p-2 rounded-full border border-white/10 shadow-2xl shadow-black/50">
+                <div className="pointer-events-auto flex items-center gap-3 md:gap-4 bg-white/80 dark:bg-neutral-950/80 backdrop-blur-xl p-2 rounded-full border border-neutral-200 dark:border-white/10 shadow-2xl shadow-black/10 dark:shadow-black/50">
 
                     {status !== 'idle' ? (
                         <>
                             {/* Mute Box */}
                             <button
                                 onClick={toggleMute}
-                                className={`w - 12 h - 12 md: w - 14 md: h - 14 rounded - full flex items - center justify - center transition - all ${isMuted ? 'bg-white text-black' : 'bg-white/10 text-white hover:bg-white/20'} `}
+                                className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all ${isMuted ? 'bg-neutral-900 dark:bg-white text-white dark:text-black' : 'bg-neutral-100 dark:bg-white/10 hover:bg-neutral-200 dark:hover:bg-white/20'}`}
                             >
                                 {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
                             </button>
@@ -531,18 +553,18 @@ export default function VideoChat() {
                             {/* Video Box */}
                             <button
                                 onClick={toggleVideo}
-                                className={`w - 12 h - 12 md: w - 14 md: h - 14 rounded - full flex items - center justify - center transition - all ${isVideoOff ? 'bg-white text-black' : 'bg-white/10 text-white hover:bg-white/20'} `}
+                                className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all ${isVideoOff ? 'bg-neutral-900 dark:bg-white text-white dark:text-black' : 'bg-neutral-100 dark:bg-white/10 hover:bg-neutral-200 dark:hover:bg-white/20'}`}
                             >
                                 {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />}
                             </button>
 
                             {/* Divider */}
-                            <div className="w-px h-6 bg-white/10 mx-1" />
+                            <div className="w-px h-6 bg-neutral-200 dark:bg-white/10 mx-1" />
 
                             {/* Stop (Small) */}
                             <button
                                 onClick={handleStop}
-                                className="w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all"
+                                className="w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-500 hover:bg-red-500 hover:text-white transition-all"
                             >
                                 <StopCircle size={24} />
                             </button>
@@ -557,7 +579,7 @@ export default function VideoChat() {
                             </button>
                         </>
                     ) : (
-                        <div className="px-6 py-3 text-sm text-neutral-400 font-medium">
+                        <div className="px-6 py-3 text-sm text-neutral-500 dark:text-neutral-400 font-medium">
                             Ready
                         </div>
                     )}
