@@ -40,6 +40,7 @@ export default function VideoChat() {
 
     // Connection timeout ref
     const connectionTimeoutRef = useRef<number | null>(null)
+    const heartbeatIntervalRef = useRef<number | null>(null)
 
     // Status ref for callbacks
     const statusRef = useRef(status)
@@ -249,7 +250,8 @@ export default function VideoChat() {
             .from('video_chat_queue')
             .upsert({
                 user_id: user.id,
-                matched_with: null // Reset this ensuring we are fresh
+                matched_with: null,
+                updated_at: new Date().toISOString()
             }, { onConflict: 'user_id' })
             .select()
             .single()
@@ -262,6 +264,17 @@ export default function VideoChat() {
         }
 
         myQueueIdRef.current = data.id
+
+        // Start Heartbeat (ping every 2s to show liveness)
+        if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current)
+        heartbeatIntervalRef.current = window.setInterval(async () => {
+            if (myQueueIdRef.current) {
+                await supabase
+                    .from('video_chat_queue')
+                    .update({ updated_at: new Date().toISOString() })
+                    .eq('id', myQueueIdRef.current)
+            }
+        }, 2000)
 
         // Subscribe to MY row to see if I get picked (Passive)
         if (!myQueueIdRef.current) return
@@ -319,13 +332,17 @@ export default function VideoChat() {
         if (!user) return
 
         // 1. Find a candidate (exclude entries less than 2s old to avoid race conditions)
+        // AND ensure they are alive (updated_at > 5s ago)
         const twoSecondsAgo = new Date(Date.now() - 2000).toISOString()
+        const fiveSecondsAgo = new Date(Date.now() - 5000).toISOString()
+
         const { data: candidates } = await supabase
             .from('video_chat_queue')
             .select('*')
             .neq('user_id', user.id)
             .is('matched_with', null)
             .lt('created_at', twoSecondsAgo) // Only match with entries at least 2s old
+            .gt('updated_at', fiveSecondsAgo) // Only match with LIVE users (heartbeat)
             .limit(1)
 
         if (candidates && candidates.length > 0) {
@@ -511,6 +528,12 @@ export default function VideoChat() {
         if (queueSubscriptionRef.current) {
             supabase.removeChannel(queueSubscriptionRef.current)
             queueSubscriptionRef.current = null
+        }
+
+        // Clear heartbeat
+        if (heartbeatIntervalRef.current) {
+            clearInterval(heartbeatIntervalRef.current)
+            heartbeatIntervalRef.current = null
         }
 
         if (user) {
