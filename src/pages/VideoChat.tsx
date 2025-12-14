@@ -474,13 +474,16 @@ export default function VideoChat() {
     // --- STOP / SKIP ---
 
     const handleStop = async (sendBye = false) => {
-        // Send BYE if requested and connected
+        // Send BYE if requested and connected (Fire and forget with small buffer)
         if (sendBye && signalChannelRef.current && peerRef.current) {
-            await signalChannelRef.current.send({
+            signalChannelRef.current.send({
                 type: 'broadcast',
                 event: 'signal',
                 payload: { type: 'bye' }
-            })
+            }).catch(e => console.error("Error sending bye:", e))
+
+            // Give a tiny moment for the message to hit the network buffer before we tear down
+            await new Promise(resolve => setTimeout(resolve, 20))
         }
 
         setStatus('idle')
