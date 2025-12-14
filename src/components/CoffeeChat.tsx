@@ -73,14 +73,11 @@ export default function CoffeeChat() {
 
         if (isLoadMore) setIsLoadingMore(true)
 
-        // Get messages from last 4 hours
-        const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
-
-        // Cursor-based pagination
+        // Efficiently get latest 20 messages (Index Scan)
+        // Removed arbitrary 4h filter to prevent slow queries on sparse data
         let query = supabase
             .from('coffee_chat_messages')
             .select('*')
-            .gt('created_at', fourHoursAgo)
             .order('created_at', { ascending: false }) // Get latest first
             .limit(20)
 
@@ -361,7 +358,7 @@ export default function CoffeeChat() {
                     </div>
                 </div>
                 <div className="text-[10px] font-medium text-gray-400 border border-gray-100 dark:border-white/10 px-2 py-1 rounded-full flex items-center gap-1 flex-shrink-0">
-                    <Clock size={10} /> 4h TTL
+                    <Clock size={10} /> Recent
                 </div>
             </header>
 
@@ -542,7 +539,7 @@ export default function CoffeeChat() {
                         </button>
                     </div>
                     <div className="text-[10px] text-center text-gray-300 dark:text-gray-700 mt-1">
-                        Messages are public and disappear after 4 hours.
+                        Messages are public.
                     </div>
                 </div>
             </footer>
