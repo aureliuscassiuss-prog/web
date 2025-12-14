@@ -14,6 +14,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
 
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
@@ -21,7 +22,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
         // --- 1. GET: List Active Confessions ---
-        if (req.method === 'GET') {
+        // --- 1. GET: List Active Confessions ---
+        if (req.method === 'GET' && !req.query.action) {
             const { sort = 'new' } = req.query; // 'new' | 'trending'
 
             // Calculate 48h ago timestamp for filtering
@@ -31,7 +33,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 .from('coffessions')
                 .select('*')
                 .gt('created_at', twoDaysAgo) // Only active posts
-            // .eq('is_hidden', false) // Optional: if we implement hiding
 
             if (sort === 'trending') {
                 query = query.order('likes', { ascending: false });
@@ -45,44 +46,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(200).json(data);
         }
 
-        // --- Auth Check for Writes ---
-        const token = req.headers.authorization?.replace('Bearer ', '');
-        if (!token) return res.status(401).json({ message: 'Unauthorized' });
-
-        let userId: string;
-        try {
-            const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
-            userId = decoded.userId;
-        } catch (e) {
-            return res.status(401).json({ message: 'Invalid token' });
-        }
-
-        // --- 1.5. GET: My Votes (Fetch user's vote history) ---
+        // --- 1.5. GET: My Votes ---
         if (req.method === 'GET' && req.query.action === 'my-votes') {
             const token = req.headers.authorization?.replace('Bearer ', '');
-            if (!token) return res.status(200).json({}); // Return empty if not logged in
+            if (!token) return res.status(200).json({});
 
+            let userId: string;
             try {
                 const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
-                const userId = decoded.userId;
-
-                const { data, error } = await supabase
-                    .from('coffession_votes')
-                    .select('coffession_id, vote_type')
-                    .eq('user_id', userId);
-
-                if (error) throw error;
-
-                // Return as map: { [id]: 'like' | 'dislike' }
-                const voteMap = (data || []).reduce((acc: any, curr: any) => {
-                    acc[curr.coffession_id] = curr.vote_type;
-                    return acc;
-                }, {});
-
-                return res.status(200).json(voteMap);
+                userId = decoded.userId;
             } catch (e) {
-                return res.status(200).json({});
+                console.error('Token verification failed:', e);
+                return res.status(200).json({}); // Silent fail for auth is ok, just empty votes
             }
+
+            const { data, error } = await supabase
+                .from('coffession_votes')
+                .select('coffession_id, vote_type')
+                .eq('user_id', userId);
+
+            if (error) {
+                console.error('Fetch votes DB Error:', error);
+                throw error; // Let main catch handle it or return 500
+            }
+
+            console.log(`Fetched ${data?.length} votes for user ${userId}`);
+
+            // Return as map: { [id]: 'like' | 'dislike' }
+            const voteMap = (data || []).reduce((acc: any, curr: any) => {
+                acc[curr.coffession_id] = curr.vote_type;
+                return acc;
+            }, {});
+
+            return res.status(200).json(voteMap);
         }
 
         // --- 2. POST: Create Confession ---

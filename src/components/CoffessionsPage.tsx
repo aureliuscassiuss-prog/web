@@ -111,11 +111,14 @@ export default function CoffessionsPage() {
 
     const fetchMyVotes = async () => {
         try {
+            console.log('[Debug] Fetching votes...', { hasToken: !!token });
             const res = await fetch('/api/coffessions?action=my-votes', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+            console.log('[Debug] Votes response:', res.status);
             if (res.ok) {
                 const data = await res.json();
+                console.log('[Debug] Votes data:', data);
                 setVotes(data);
                 votesRef.current = data;
                 // Establish baseline for optimistic updates
