@@ -238,7 +238,9 @@ Subject: ${subject}, Program: ${program}, Year: ${formattedYear}, Branch: ${bran
             messages,
             model: model,
             temperature: 0.7,
-            max_tokens: type === 'generate-paper' ? 2048 : 1024,
+            model: model,
+            temperature: 0.7,
+            max_tokens: req.body.maxTokens || (type === 'generate-paper' ? 2048 : 2048), // Increased default for chat/code
             stop: null
         });
 

@@ -44,20 +44,26 @@ Return ONLY the Python code block.No markdown wrapper text outside the code bloc
                 body: JSON.stringify({
                     action: 'chat',
                     question: prompt,
-                    systemPrompt: systemPrompt
+                    systemPrompt: systemPrompt,
+                    maxTokens: 4000
                 })
             });
 
             if (!response.ok) {
-                throw new Error('Failed to generate code');
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.message || 'Failed to generate code');
             }
 
             const data = await response.json();
 
-            // Extract code from markdown block if present
+            // Extract code from markdown block if present (supports python, py, or no language tag)
             const text = data.answer || '';
-            const codeMatch = text.match(/```python([\s\S] *?)```/);
-            const cleanCode = codeMatch ? codeMatch[1].trim() : text;
+            const codeMatch = text.match(/```(?:python|py)?\s*([\s\S]*?)```/i);
+            const cleanCode = codeMatch ? codeMatch[1].trim() : text.trim();
+
+            if (!cleanCode) {
+                throw new Error("AI returned empty response. Please try again.");
+            }
 
             setGeneratedCode(cleanCode);
 
