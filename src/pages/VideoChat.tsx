@@ -41,10 +41,14 @@ export default function VideoChat() {
     // Connection timeout ref
     const connectionTimeoutRef = useRef<number | null>(null)
 
+    // Status ref for callbacks
+    const statusRef = useRef(status)
+    useEffect(() => { statusRef.current = status }, [status])
+
     // Cleanup on unmount
     useEffect(() => {
         return () => {
-            handleStop()
+            handleStop(true) // Send bye on unmount
         }
     }, [])
 
@@ -151,13 +155,29 @@ export default function VideoChat() {
             }
         }
 
+        peer.oniceconnectionstatechange = () => {
+            const state = peer.iceConnectionState
+            console.log("ICE State:", state)
+            if (state === 'disconnected' || state === 'failed' || state === 'closed') {
+                // Auto-matching on disconnect
+                if (statusRef.current === 'connected') {
+                    console.log("Peer disconnected. Restarting...")
+                    handleStop()
+                    startSearch()
+                }
+            }
+        }
+
         peer.onconnectionstatechange = () => {
             console.log("Connection state:", peer.connectionState)
             if (peer.connectionState === 'disconnected' || peer.connectionState === 'failed') {
-                setStatus('idle')
-                setRemoteStream(null)
-                if (connectionTimeoutRef.current) {
-                    clearTimeout(connectionTimeoutRef.current)
+                if (statusRef.current === 'connected') {
+                    console.log("Connection failed (state). Restarting...")
+                    handleStop()
+                    startSearch()
+                } else {
+                    setStatus('idle')
+                    setRemoteStream(null)
                 }
             }
             if (peer.connectionState === 'connected') {
@@ -320,14 +340,14 @@ export default function VideoChat() {
             clearTimeout(connectionTimeoutRef.current)
         }
 
-        // Set connection timeout - if not connected in 15s, restart
+        // Set connection timeout - if not connected in 8s, restart
         connectionTimeoutRef.current = setTimeout(() => {
             if (partnerStatus === 'connecting') {
                 console.log('Connection timeout - restarting search')
                 handleStop()
-                setTimeout(() => startSearch(), 1000)
+                setTimeout(() => startSearch(), 500)
             }
-        }, 15000)
+        }, 8000)
 
         // Initialize Signaling Channel
         const channel = supabase.channel(`video-session-${sessionId}`)
@@ -340,6 +360,13 @@ export default function VideoChat() {
                 if (!peerRef.current) return
 
                 console.log("Received signal:", payload.type)
+
+                if (payload.type === 'bye') {
+                    console.log("Peer skipped. Restarting search...")
+                    handleStop()
+                    startSearch() // Auto-next
+                    return
+                }
 
                 if (payload.type === 'offer' && !isCaller) {
                     await peerRef.current.setRemoteDescription(payload.offer)
@@ -373,6 +400,16 @@ export default function VideoChat() {
                         console.log("Buffering ICE candidate")
                         iceCandidatesBuffer.current.push(payload.candidate)
                     }
+                }
+            })
+            .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+                console.log("presence leave", key, leftPresences)
+                // If the only peer left, restart
+                const state = channel.presenceState()
+                if (Object.keys(state).length <= 1 && statusRef.current === 'connected') {
+                    console.log("Peer left presence. Restarting...")
+                    handleStop()
+                    startSearch()
                 }
             })
             // Presence tracking
@@ -416,7 +453,16 @@ export default function VideoChat() {
 
     // --- STOP / SKIP ---
 
-    const handleStop = async () => {
+    const handleStop = async (sendBye = false) => {
+        // Send BYE if requested and connected
+        if (sendBye && signalChannelRef.current && peerRef.current) {
+            await signalChannelRef.current.send({
+                type: 'broadcast',
+                event: 'signal',
+                payload: { type: 'bye' }
+            })
+        }
+
         setStatus('idle')
         setRemoteStream(null)
         setPartnerStatus('connecting')
@@ -451,9 +497,9 @@ export default function VideoChat() {
     }
 
     const handleSkip = async () => {
-        await handleStop()
+        await handleStop(true) // Send BYE signal
         // Small delay to ensure DB cleanup propagates if needed, though cleanup is fire-and-forget
-        setTimeout(() => startSearch(), 500)
+        setTimeout(() => startSearch(), 100)
     }
 
     // --- RENDER ---
@@ -638,7 +684,7 @@ export default function VideoChat() {
 
                             {/* Stop (Small) */}
                             <button
-                                onClick={handleStop}
+                                onClick={() => handleStop()}
                                 className="w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-500 hover:bg-red-500 hover:text-white transition-all"
                             >
                                 <StopCircle size={24} />
