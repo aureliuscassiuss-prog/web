@@ -361,6 +361,8 @@ export default function VideoChat() {
 
     const checkForPartner = async () => {
         if (!user) return
+        // If we already have a partner, don't look for another one
+        if (currentPartnerIdRef.current) return
 
         // 1. Find a candidate (exclude entries less than 2s old to avoid race conditions)
         // AND ensure they are alive (updated_at > 7s ago - generous buffer)
@@ -400,6 +402,14 @@ export default function VideoChat() {
 
     const initiateCall = async (partnerUserId: string, _ignoredIsCaller?: boolean) => {
         if (!user) return
+
+        // IDEMPOTENCY CHECK:
+        // If we are already initializing/connected with this partner, ignore duplicate requests.
+        // This prevents "Double Match" resets.
+        if (currentPartnerIdRef.current === partnerUserId) {
+            console.log("Already initiating/connected with this partner. Ignoring.")
+            return
+        }
 
         // Set current partner to prevent re-entry from heartbeat updates
         currentPartnerIdRef.current = partnerUserId
