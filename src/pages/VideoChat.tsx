@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../utils/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
-import { Video, Mic, MicOff, VideoOff, SkipForward, AlertCircle, Loader2, StopCircle, User, Maximize, Minimize, WifiOff, Bug } from 'lucide-react'
+import { Video, Mic, MicOff, VideoOff, SkipForward, AlertCircle, Loader2, StopCircle, User, Maximize, Minimize, WifiOff } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -23,8 +23,6 @@ export default function VideoChat() {
     const [errorMsg, setErrorMsg] = useState('')
     const [partnerStatus, setPartnerStatus] = useState<'connecting' | 'connected'>('connecting')
     const [isFullScreen, setIsFullScreen] = useState(false)
-    const [showDebug, setShowDebug] = useState(false)
-    const [debugLogs, setDebugLogs] = useState<string[]>([])
 
     // Refs for persistence without re-renders
     const localVideoRef = useRef<HTMLVideoElement>(null)
@@ -55,7 +53,6 @@ export default function VideoChat() {
     // Logging helper
     const log = (msg: string) => {
         console.log(msg)
-        setDebugLogs(prev => [msg, ...prev].slice(0, 20))
     }
 
     // Ensure local video is attached when stream is ready
@@ -234,7 +231,6 @@ export default function VideoChat() {
         hasSentOfferRef.current = false
         setPartnerStatus('connecting')
         iceCandidatesBuffer.current = []
-        setDebugLogs([]) // Clear previous logs
         stopPolling() // Safety clear
 
         let stream = localStream
@@ -629,14 +625,6 @@ export default function VideoChat() {
                     <span className="font-bold text-sm md:text-base pr-3">VideoChat</span>
                 </div>
                 <div className="flex items-center gap-2 pointer-events-auto">
-                    {/* DEBUG BUTTON */}
-                    <button
-                        onClick={() => setShowDebug(!showDebug)}
-                        className="p-2 rounded-full bg-white/50 dark:bg-black/50 backdrop-blur-md border border-neutral-200 dark:border-white/10 hover:opacity-80 transition-all shadow-sm"
-                    >
-                        <Bug size={18} className={showDebug ? "text-blue-500" : "text-neutral-500"} />
-                    </button>
-
                     <button
                         onClick={toggleFullScreen}
                         className="p-2 rounded-full bg-white/50 dark:bg-black/50 backdrop-blur-md border border-neutral-200 dark:border-white/10 hover:scale-105 active:scale-95 transition-all shadow-sm"
@@ -654,16 +642,6 @@ export default function VideoChat() {
                     </div>
                 </div>
             </div>
-
-            {/* DEBUG OVERLAY */}
-            {showDebug && (
-                <div className="absolute top-20 left-4 w-64 h-64 bg-black/80 text-green-400 p-2 text-[10px] font-mono rounded overflow-y-auto z-40 pointer-events-auto border border-green-900/50">
-                    <div className="font-bold mb-1 border-b border-green-800 pb-1">Debug Logs</div>
-                    {debugLogs.map((log, i) => (
-                        <div key={i}>{log}</div>
-                    ))}
-                </div>
-            )}
 
             {/* Main Video Area - FULL SCREEN */}
             <main className={`flex-1 relative overflow-hidden flex items-center justify-center ${isFullScreen ? 'p-0' : 'p-2 md:p-4'}`}>
