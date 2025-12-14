@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { RealtimeChannel } from '@supabase/supabase-js'
 
 // WebRTC Configuration - Expanded for better connectivity
+// WebRTC Configuration - Expanded for better connectivity
 const RTC_CONFIG: RTCConfiguration = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -22,9 +23,9 @@ const RTC_CONFIG: RTCConfiguration = {
     iceTransportPolicy: 'all'
 }
 
-export const VideoChat = () => {
+export default function VideoChat() {
     const { user } = useAuth()
-    const [status, setStatus] = useState<'idle' | 'searching' | 'error'>('idle')
+    const [status, setStatus] = useState<'idle' | 'searching' | 'connected' | 'error'>('idle')
     const [localStream, setLocalStream] = useState<MediaStream | null>(null)
     const localStreamRef = useRef<MediaStream | null>(null) // Ref for instant access without closure staleness
     const [isMuted, setIsMuted] = useState(false)
