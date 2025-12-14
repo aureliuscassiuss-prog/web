@@ -712,7 +712,7 @@ export default function VideoChat() {
             <main className={`flex-1 relative overflow-hidden flex items-center justify-center ${isFullScreen ? 'p-0' : 'p-2 md:p-4'}`}>
 
                 {/* REMOTE VIDEO CONTAINER - Full Bleed */}
-                <div className={`w-full h-full flex items-center justify-center relative bg-neutral-900 border border-neutral-200 dark:border-white/10 shadow-2xl overflow-hidden ${isFullScreen ? 'rounded-none' : 'rounded-3xl'}`}>
+                <div className={`w-full h-full flex items-center justify-center relative border border-neutral-200 dark:border-white/10 shadow-2xl overflow-hidden ${isFullScreen ? 'rounded-none' : 'rounded-3xl'} ${status === 'connected' ? 'bg-neutral-900' : 'bg-neutral-50 dark:bg-neutral-900'}`}>
 
                     {status === 'connected' ? (
                         <>
