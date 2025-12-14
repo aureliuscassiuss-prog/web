@@ -21,7 +21,7 @@ interface TypingUser {
 }
 
 export default function CoffeeChat() {
-    const { user } = useAuth()
+    const { user, token } = useAuth()
     const [messages, setMessages] = useState<ChatMessage[]>([])
     const [newMessage, setNewMessage] = useState('')
     const [typingUsers, setTypingUsers] = useState<TypingUser[]>([])
@@ -34,6 +34,26 @@ export default function CoffeeChat() {
     const channelRef = useRef<any>(null)
     const typingTimeoutRef = useRef<any>(null)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+    const handleClearChat = async () => {
+        if (!confirm('Are you sure you want to delete ALL messages? This cannot be undone.')) return;
+        try {
+            const res = await fetch('/api/admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ action: 'clear-chat' })
+            });
+            if (res.ok) {
+                setMessages([]);
+                // Optional: broadcast?
+            } else {
+                alert('Failed to clear chat.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error clearing chat.');
+        }
+    };
 
     // Visual Viewport for instant keyboard response
     const [viewportHeight, setViewportHeight] = useState(
@@ -357,8 +377,19 @@ export default function CoffeeChat() {
                         </div>
                     </div>
                 </div>
-                <div className="text-[10px] font-medium text-gray-400 border border-gray-100 dark:border-white/10 px-2 py-1 rounded-full flex items-center gap-1 flex-shrink-0">
-                    <Clock size={10} /> Recent
+                <div className="flex items-center gap-2">
+                    <div className="text-[10px] font-medium text-gray-400 border border-gray-100 dark:border-white/10 px-2 py-1 rounded-full flex items-center gap-1 flex-shrink-0">
+                        <Clock size={10} /> Recent
+                    </div>
+                    {(user?.role === 'admin' || user?.role === 'semi-admin') && (
+                        <button
+                            onClick={handleClearChat}
+                            className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                            title="Clear Chat"
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                    )}
                 </div>
             </header>
 

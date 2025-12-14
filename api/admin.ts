@@ -93,6 +93,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             } else if (bodyAction === 'approve-role' || bodyAction === 'reject-role') {
                 if (!hasPermission(['admin'])) return res.status(403).json({ message: 'Forbidden' });
                 return await handleRoleRequestAction(body, res);
+            } else if (bodyAction === 'clear-chat') {
+                if (!hasPermission(['admin', 'semi-admin'])) return res.status(403).json({ message: 'Forbidden' });
+                return await handleClearChat(res);
             } else {
                 return res.status(400).json({ message: 'Invalid action' });
             }
@@ -509,4 +512,16 @@ async function handleRequestRole(body: any, userId: string, res: VercelResponse)
 // Deprecated, logic moved to handleResourceAction
 async function handleRoleRequestAction(body: any, res: VercelResponse) {
     return res.status(200).json({ message: 'Use handleResourceAction instead' });
+}
+async function handleClearChat(res: VercelResponse) {
+    const { error } = await supabase
+        .from('chat_messages')
+        .delete()
+        .neq('id', 0); // Delete all rows
+
+    if (error) {
+        console.error('Clear chat error:', error);
+        return res.status(500).json({ message: 'Failed to clear chat' });
+    }
+    return res.status(200).json({ message: 'Chat cleared successfully' });
 }
