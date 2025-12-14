@@ -1,7 +1,8 @@
+
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../utils/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
-import { Video, Mic, MicOff, VideoOff, SkipForward, AlertCircle, Loader2, StopCircle, User } from 'lucide-react'
+import { Video, Mic, MicOff, VideoOff, SkipForward, AlertCircle, Loader2, StopCircle, User, Maximize, Minimize } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 // WebRTC Configuration
@@ -21,6 +22,7 @@ export default function VideoChat() {
     const [isVideoOff, setIsVideoOff] = useState(false)
     const [errorMsg, setErrorMsg] = useState('')
     const [partnerStatus, setPartnerStatus] = useState<'connecting' | 'connected'>('connecting')
+    const [isFullScreen, setIsFullScreen] = useState(false)
 
     // Refs for persistence without re-renders
     const localVideoRef = useRef<HTMLVideoElement>(null)
@@ -71,7 +73,7 @@ export default function VideoChat() {
             } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
                 setErrorMsg('Camera/Mic is being used by another app.')
             } else {
-                setErrorMsg(`Could not access device: ${err.message || 'Unknown error'}`)
+                setErrorMsg(`Could not access device: ${err.message || 'Unknown error'} `)
             }
             return null
         }
@@ -218,7 +220,7 @@ export default function VideoChat() {
         // 4. Subscribe to MY row
         if (!myQueueIdRef.current) return
 
-        const channel = supabase.channel(`queue-${myQueueIdRef.current}`)
+        const channel = supabase.channel(`queue - ${myQueueIdRef.current} `)
         queueSubscriptionRef.current = channel
 
         channel
@@ -228,7 +230,7 @@ export default function VideoChat() {
                     event: 'UPDATE',
                     schema: 'public',
                     table: 'video_chat_queue',
-                    filter: `id=eq.${myQueueIdRef.current}`
+                    filter: `id = eq.${myQueueIdRef.current} `
                 },
                 (payload) => {
                     if (payload.new.matched_with) {
@@ -241,12 +243,12 @@ export default function VideoChat() {
     }
 
     const initiateCall = async (sessionId: string, isCaller: boolean) => {
-        console.log(`Starting call. Session: ${sessionId}, I am Caller: ${isCaller}`)
+        console.log(`Starting call.Session: ${sessionId}, I am Caller: ${isCaller} `)
         hasSentOfferRef.current = false
         iceCandidatesBuffer.current = []
 
         // Initialize Signaling Channel
-        const channel = supabase.channel(`video-session-${sessionId}`)
+        const channel = supabase.channel(`video - session - ${sessionId} `)
         signalChannelRef.current = channel
 
         const peer = createPeer(isCaller, channel)
@@ -379,7 +381,7 @@ export default function VideoChat() {
                     <span className="font-bold text-white/90 text-sm md:text-base drop-shadow-md">VideoChat</span>
                 </div>
                 <div className="flex items-center gap-2 pointer-events-auto">
-                    <span className={`w-2 h-2 rounded-full ${status === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-neutral-500'}`} />
+                    <span className={`w - 2 h - 2 rounded - full ${status === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-neutral-500'} `} />
                     <span className="text-xs text-white/70 font-medium drop-shadow-md">
                         {status === 'searching' && "Matching..."}
                         {status === 'connected' && (partnerStatus === 'connected' ? "Live" : "Connecting...")}
@@ -468,7 +470,7 @@ export default function VideoChat() {
                             autoPlay
                             playsInline
                             muted
-                            className={`w-full h-full object-cover mirror ${isVideoOff ? 'hidden' : ''}`}
+                            className={`w - full h - full object - cover mirror ${isVideoOff ? 'hidden' : ''} `}
                         />
                     ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center bg-neutral-900 text-neutral-500 gap-1">
@@ -521,7 +523,7 @@ export default function VideoChat() {
                             {/* Mute Box */}
                             <button
                                 onClick={toggleMute}
-                                className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all ${isMuted ? 'bg-white text-black' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                                className={`w - 12 h - 12 md: w - 14 md: h - 14 rounded - full flex items - center justify - center transition - all ${isMuted ? 'bg-white text-black' : 'bg-white/10 text-white hover:bg-white/20'} `}
                             >
                                 {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
                             </button>
@@ -529,7 +531,7 @@ export default function VideoChat() {
                             {/* Video Box */}
                             <button
                                 onClick={toggleVideo}
-                                className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all ${isVideoOff ? 'bg-white text-black' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                                className={`w - 12 h - 12 md: w - 14 md: h - 14 rounded - full flex items - center justify - center transition - all ${isVideoOff ? 'bg-white text-black' : 'bg-white/10 text-white hover:bg-white/20'} `}
                             >
                                 {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />}
                             </button>
