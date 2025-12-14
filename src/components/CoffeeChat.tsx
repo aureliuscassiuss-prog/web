@@ -255,7 +255,7 @@ export default function CoffeeChat() {
         })
 
         // Send to Supabase in background
-        const { error, data } = await supabase
+        const { error } = await supabase
             .from('coffee_chat_messages')
             .insert({
                 content: msgContent,
@@ -301,7 +301,7 @@ export default function CoffeeChat() {
     }
 
     return (
-        <div className="flex flex-col h-full bg-white dark:bg-black relative">
+        <div className="flex flex-col h-full bg-white dark:bg-black relative overflow-hidden">
 
             {/* --- HEADER --- */}
             <header className="flex-shrink-0 h-14 border-b border-gray-100 dark:border-white/10 px-4 flex items-center justify-between bg-white/80 dark:bg-black/80 backdrop-blur-md sticky top-0 z-10 w-full">
@@ -334,7 +334,7 @@ export default function CoffeeChat() {
             <main
                 ref={scrollContainerRef}
                 onScroll={handleScroll}
-                className="flex-1 overflow-y-auto overflow-x-hidden p-4 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-white/10"
+                className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-[140px] scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-white/10"
             >
                 {isLoadingMore && (
                     <div className="flex justify-center py-2">
@@ -461,7 +461,7 @@ export default function CoffeeChat() {
             </main>
 
             {/* --- FOOTER (Input Area) --- */}
-            <footer className="flex-shrink-0 bg-white dark:bg-[#050505] border-t border-gray-100 dark:border-white/10 pb-[env(safe-area-inset-bottom)]">
+            <footer className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#050505] border-t border-gray-100 dark:border-white/10 pb-[env(safe-area-inset-bottom)] z-20">
                 <div className="p-3">
                     <div className="relative flex items-end gap-2 bg-gray-100 dark:bg-white/5 rounded-[1.5rem] p-1.5 transition-all focus-within:ring-1 focus-within:ring-black/10 dark:focus-within:ring-white/10">
 
