@@ -342,7 +342,7 @@ export default function CoffeeChat() {
                         <MessageCircle size={18} strokeWidth={2.5} />
                     </div>
                     <div>
-                        <h1 className="text-sm font-bold leading-tight whitespace-nowrap text-gray-900 dark:text-white">Public Chat</h1>
+                        <h1 className="text-sm font-bold leading-tight whitespace-nowrap text-gray-900 dark:text-white">Group Chat (GC)</h1>
                         <div className="flex items-center gap-1">
                             {isLoading ? (
                                 <span className="h-2 w-16 bg-gray-200 dark:bg-zinc-800 rounded animate-pulse"></span>

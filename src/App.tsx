@@ -430,7 +430,7 @@ function AppContent() {
           <Route path="/chat" element={
             <>
               <SEO
-                title="Community Chat - Real-time Discussion"
+                title="Group Chat (GC) - Real-time Discussion"
                 description="Chat with other students in real-time. Discuss studies, events, or just hang out."
               />
               <CoffeeChat />
