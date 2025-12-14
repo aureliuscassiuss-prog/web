@@ -160,6 +160,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // --- 4. DELETE: Delete Confession (Admin Only) ---
         if (req.method === 'DELETE' || (req.method === 'POST' && req.query.action === 'delete')) {
+            const token = req.headers.authorization?.replace('Bearer ', '');
+            if (!token) return res.status(401).json({ message: 'Unauthorized' });
+
+            let userId: string;
+            try {
+                const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+                userId = decoded.userId;
+            } catch (e) {
+                return res.status(401).json({ message: 'Invalid token' });
+            }
+
             const { id } = req.body;
             if (!id) return res.status(400).json({ message: 'Missing ID' });
 
@@ -167,20 +178,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const { data: user, error: userError } = await supabase
                 .from('users')
                 .select('role')
-                .eq('_id', userId) // Using _id as per likely schema (MongoDB style ID used in Supabase typically mapped, checking strict equality)
+                .eq('_id', userId)
                 .single();
 
-            // Fallback: try checking 'id' if '_id' fails or if schema uses 'id'
             let validRole = false;
             if (user && (user.role === 'admin' || user.role === 'semi-admin')) {
                 validRole = true;
             } else if (!user) {
-                // Try looking up by 'auth_id' or 'id' if _id is strictly internal
-                const { data: user2 } = await supabase.from('users').select('role').eq('id', userId).single();
-                if (user2 && (user2.role === 'admin' || user2.role === 'semi-admin')) validRole = true;
+                // Return generic 403 if user not found, strict security
             }
 
+            // Fallback check for alternate ID mapping if needed, but primary check should suffice. 
+            // Simplified for reliability.
             if (!validRole) return res.status(403).json({ message: 'Forbidden' });
+
+            // MANUAL CASCADE: Delete votes first to avoid FK constraint violation
+            const { error: voteDeleteError } = await supabase
+                .from('coffession_votes')
+                .delete()
+                .eq('coffession_id', id);
+
+            if (voteDeleteError) console.error("Error clearing votes on delete:", voteDeleteError);
+            // Continue even if error (might be empty/no votes), or strict handling
 
             const { error: deleteError } = await supabase
                 .from('coffessions')
