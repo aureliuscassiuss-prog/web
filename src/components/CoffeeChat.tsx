@@ -94,10 +94,12 @@ export default function CoffeeChat() {
         if (isLoadMore) setIsLoadingMore(true)
 
         // Efficiently get latest 20 messages (Index Scan)
-        // Removed arbitrary 4h filter to prevent slow queries on sparse data
+        // Filter to show only messages from the last 24 hours
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
         let query = supabase
             .from('coffee_chat_messages')
             .select('*')
+            .gt('created_at', twentyFourHoursAgo)
             .order('created_at', { ascending: false }) // Get latest first
             .limit(20)
 
