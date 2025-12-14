@@ -45,6 +45,13 @@ export default function VideoChat() {
     const statusRef = useRef(status)
     useEffect(() => { statusRef.current = status }, [status])
 
+    // Initialize camera on mount
+    useEffect(() => {
+        if (!localStream) {
+            initLocalStream()
+        }
+    }, [])
+
     // Cleanup on unmount
     useEffect(() => {
         return () => {
@@ -213,10 +220,18 @@ export default function VideoChat() {
         setStatus('searching')
 
         // ACTIVE & PASSIVE STRATEGY:
-        // 1. Put myself in the pool (Passive)
+        // 1. Clean up old queue entry first (important!)
+        if (user) {
+            await supabase.from('video_chat_queue').delete().eq('user_id', user.id)
+        }
+
+        // 2. Small delay to ensure DB propagates delete
+        await new Promise(resolve => setTimeout(resolve, 200))
+
+        // 3. Put myself in the pool (Passive)
         await addToQueue()
 
-        // 2. Actively look for others (Active)
+        // 4. Actively look for others (Active)
         startPolling()
     }
 
@@ -300,12 +315,14 @@ export default function VideoChat() {
     const checkForPartner = async () => {
         if (!user) return
 
-        // 1. Find a candidate
+        // 1. Find a candidate (exclude entries less than 2s old to avoid race conditions)
+        const twoSecondsAgo = new Date(Date.now() - 2000).toISOString()
         const { data: candidates } = await supabase
             .from('video_chat_queue')
             .select('*')
             .neq('user_id', user.id)
             .is('matched_with', null)
+            .lt('created_at', twoSecondsAgo) // Only match with entries at least 2s old
             .limit(1)
 
         if (candidates && candidates.length > 0) {
@@ -498,8 +515,8 @@ export default function VideoChat() {
 
     const handleSkip = async () => {
         await handleStop(true) // Send BYE signal
-        // Small delay to ensure DB cleanup propagates if needed, though cleanup is fire-and-forget
-        setTimeout(() => startSearch(), 100)
+        // Delay to ensure cleanup completes
+        setTimeout(() => startSearch(), 300)
     }
 
     // --- RENDER ---
