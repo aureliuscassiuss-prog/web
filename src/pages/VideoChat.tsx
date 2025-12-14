@@ -38,19 +38,34 @@ export default function VideoChat() {
     // Initialize Local Stream
     const initLocalStream = async () => {
         try {
+            console.log("Requesting permissions...")
+            // Explicitly request user facing camera for mobile
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: true,
+                video: { facingMode: 'user' },
                 audio: true
             })
+            console.log("Permissions granted, stream active.")
             setLocalStream(stream)
             if (localVideoRef.current) {
                 localVideoRef.current.srcObject = stream
+                // Important for mobile to play video
+                localVideoRef.current.play().catch(e => console.error("Local video play error:", e))
             }
+            setErrorMsg('') // Clear any previous errors
             return stream
-        } catch (err) {
+        } catch (err: any) {
             console.error("Camera error:", err)
             setStatus('error')
-            setErrorMsg('Could not access camera/microphone. Please allow permissions.')
+
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                setErrorMsg('Permissions denied. Please reset permissions in your browser settings.')
+            } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                setErrorMsg('No camera or microphone found.')
+            } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+                setErrorMsg('Camera/Mic is being used by another app.')
+            } else {
+                setErrorMsg(`Could not access device: ${err.message || 'Unknown error'}`)
+            }
             return null
         }
     }
@@ -414,9 +429,24 @@ export default function VideoChat() {
 
                 {/* Error Banner */}
                 {errorMsg && (
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-500/90 text-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 shadow-lg animate-in slide-in-from-top-2">
-                        <AlertCircle size={16} />
-                        {errorMsg}
+                    <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-50">
+                        <div className="bg-red-500/90 text-white px-4 py-3 rounded-xl shadow-lg animate-in slide-in-from-top-2 flex flex-col items-center gap-2 text-center">
+                            <div className="flex items-center gap-2 font-medium">
+                                <AlertCircle size={20} />
+                                <span>Access Error</span>
+                            </div>
+                            <p className="text-sm opacity-90">{errorMsg}</p>
+                            <button
+                                onClick={() => {
+                                    setStatus('idle')
+                                    setErrorMsg('')
+                                    initLocalStream()
+                                }}
+                                className="mt-1 px-4 py-1.5 bg-white text-red-600 rounded-full text-xs font-bold uppercase tracking-wider hover:bg-red-50"
+                            >
+                                Try Again
+                            </button>
+                        </div>
                     </div>
                 )}
 
