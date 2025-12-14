@@ -1,417 +1,644 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../utils/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
-import { Video, Mic, MicOff, VideoOff, SkipForward, AlertCircle, Loader2, StopCircle, User, Maximize, Minimize, Wifi, Zap } from 'lucide-react'
+import { Video, Mic, MicOff, VideoOff, SkipForward, AlertCircle, Loader2, StopCircle, User, Maximize, Minimize } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
-// Optimized WebRTC Config
+// WebRTC Configuration
 const RTC_CONFIG = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:global.stun.twilio.com:3478' }
-    ],
-    iceCandidatePoolSize: 10, // Pre-fetch candidates for speed
+    ]
 }
-
-type ConnectionStatus = 'idle' | 'searching' | 'connecting' | 'connected' | 'error'
 
 export default function VideoChat() {
     const { user } = useAuth()
-
-    // UI State
-    const [status, setStatus] = useState<ConnectionStatus>('idle')
+    const [status, setStatus] = useState<'idle' | 'searching' | 'connected' | 'error'>('idle')
     const [localStream, setLocalStream] = useState<MediaStream | null>(null)
-    const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
+    const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null) // Used for state tracking, mainly
     const [isMuted, setIsMuted] = useState(false)
     const [isVideoOff, setIsVideoOff] = useState(false)
     const [errorMsg, setErrorMsg] = useState('')
+    const [partnerStatus, setPartnerStatus] = useState<'connecting' | 'connected'>('connecting')
     const [isFullScreen, setIsFullScreen] = useState(false)
-    const [debugInfo, setDebugInfo] = useState('')
 
-    // Mutable Refs (State that doesn't trigger re-renders)
+    // Refs for persistence without re-renders
     const localVideoRef = useRef<HTMLVideoElement>(null)
     const remoteVideoRef = useRef<HTMLVideoElement>(null)
     const peerRef = useRef<RTCPeerConnection | null>(null)
-    const signalChannelRef = useRef<any>(null)
     const queueSubscriptionRef = useRef<any>(null)
-
-    // Search & Session Control
-    const isSearchingRef = useRef(false)
+    const signalChannelRef = useRef<any>(null)
     const myQueueIdRef = useRef<string | null>(null)
-    const currentSessionIdRef = useRef<string | null>(null)
-    const heartbeatRef = useRef<number | null>(null)
 
-    // --- 1. MEDIA SETUP (Optimized) ---
+    // ICE Candidate Buffer to fix race conditions
+    const iceCandidatesBuffer = useRef<RTCIceCandidate[]>([])
 
-    const initMedia = async () => {
-        if (localStream) return localStream;
+    // Track if we have already sent an offer to avoid dups
+    const hasSentOfferRef = useRef(false)
 
+    // Connection timeout ref
+    const connectionTimeoutRef = useRef<number | null>(null)
+    const heartbeatIntervalRef = useRef<number | null>(null)
+
+    // Status ref for callbacks
+    const statusRef = useRef(status)
+    useEffect(() => { statusRef.current = status }, [status])
+
+    // Ensure local video is attached when stream is ready
+    useEffect(() => {
+        if (localStream && localVideoRef.current) {
+            localVideoRef.current.srcObject = localStream
+            localVideoRef.current.play().catch(e => console.error("Local video play error:", e))
+        }
+    }, [localStream])
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            handleStop(true) // Send bye on unmount
+        }
+    }, [])
+
+    // Initialize Local Stream
+    const initLocalStream = async () => {
         try {
+            console.log("Requesting permissions...")
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
-                audio: { echoCancellation: true, noiseSuppression: true }
+                video: { facingMode: 'user' },
+                audio: true
             })
+            console.log("Permissions granted.")
             setLocalStream(stream)
-            if (localVideoRef.current) {
-                localVideoRef.current.srcObject = stream
-            }
+            setErrorMsg('')
             return stream
         } catch (err: any) {
-            console.error("Media Error:", err)
+            console.error("Camera error:", err)
             setStatus('error')
-            setErrorMsg(`Could not access camera/microphone: ${err.message}`)
+
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                setErrorMsg('Permissions denied. Please reset permissions in your browser settings.')
+            } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                setErrorMsg('No camera or microphone found.')
+            } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+                setErrorMsg('Camera/Mic is being used by another app.')
+            } else {
+                setErrorMsg(`Could not access device: ${err.message || 'Unknown error'} `)
+            }
             return null
         }
     }
 
-    // --- 2. CLEANUP UTILS ---
-
-    const cleanupConnection = useCallback(async () => {
-        // Stop Search
-        isSearchingRef.current = false;
-        if (heartbeatRef.current) clearInterval(heartbeatRef.current)
-
-        // Close Peer
-        if (peerRef.current) {
-            peerRef.current.ontrack = null
-            peerRef.current.onicecandidate = null
-            peerRef.current.close()
-            peerRef.current = null
-        }
-
-        // Remove Channels
-        if (signalChannelRef.current) {
-            await supabase.removeChannel(signalChannelRef.current)
-            signalChannelRef.current = null
-        }
-        if (queueSubscriptionRef.current) {
-            await supabase.removeChannel(queueSubscriptionRef.current)
-            queueSubscriptionRef.current = null
-        }
-
-        // Clean DB
-        if (myQueueIdRef.current && user) {
-            await supabase.from('video_chat_queue').delete().eq('id', myQueueIdRef.current)
-            myQueueIdRef.current = null
-        }
-
-        // UI Reset
-        setRemoteStream(null)
-        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null
-        currentSessionIdRef.current = null
-    }, [user])
-
-    const handleStop = async () => {
-        setStatus('idle')
-        await cleanupConnection()
+    const toggleMute = () => {
         if (localStream) {
-            localStream.getTracks().forEach(t => t.stop())
-            setLocalStream(null)
+            localStream.getAudioTracks().forEach(track => track.enabled = !track.enabled)
+            setIsMuted(!isMuted)
         }
     }
 
-    const handleSkip = async () => {
-        setStatus('searching') // Keep UI in searching mode
-        setRemoteStream(null)
-        await cleanupConnection()
-
-        // Instant restart
-        // Small delay to allow DB propagation/cleanup
-        setTimeout(() => startMatchingProcess(), 50)
+    const toggleVideo = () => {
+        if (localStream) {
+            localStream.getVideoTracks().forEach(track => track.enabled = !track.enabled)
+            setIsVideoOff(!isVideoOff)
+        }
     }
 
-    // --- 3. MATCHING LOGIC (The Core Fix) ---
+    const toggleFullScreen = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {
+                console.error(`Error enabling fullscreen: ${err.message}`);
+            });
+            setIsFullScreen(true);
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+                setIsFullScreen(false);
+            }
+        }
+    }
 
-    const startMatchingProcess = async () => {
+    // --- RTC LOGIC ---
+
+    const createPeer = (signalChannel: any) => {
+        // Close existing peer if any
+        if (peerRef.current) {
+            peerRef.current.close()
+        }
+
+        const peer = new RTCPeerConnection(RTC_CONFIG)
+        peerRef.current = peer
+        iceCandidatesBuffer.current = [] // Reset buffer
+
+        // Add local tracks
+        if (localStream) {
+            localStream.getTracks().forEach(track => peer.addTrack(track, localStream))
+        }
+
+        // Handle remote tracks
+        peer.ontrack = (event) => {
+            console.log("Remote track received")
+            if (event.streams && event.streams[0]) {
+                setRemoteStream(event.streams[0])
+                setPartnerStatus('connected')
+                if (remoteVideoRef.current) {
+                    remoteVideoRef.current.srcObject = event.streams[0]
+                    remoteVideoRef.current.play().catch(e => console.error("Remote play error", e))
+                }
+            }
+        }
+
+        // Handle ICE candidates
+        peer.onicecandidate = (event) => {
+            if (event.candidate) {
+                signalChannel.send({
+                    type: 'broadcast',
+                    event: 'signal',
+                    payload: { type: 'candidate', candidate: event.candidate }
+                })
+            }
+        }
+
+        peer.oniceconnectionstatechange = () => {
+            const state = peer.iceConnectionState
+            console.log("ICE State:", state)
+            if (state === 'disconnected' || state === 'failed' || state === 'closed') {
+                // Auto-matching on disconnect
+                if (statusRef.current === 'connected') {
+                    console.log("Peer disconnected. Restarting...")
+                    handleStop()
+                    startSearch()
+                }
+            }
+        }
+
+        peer.onconnectionstatechange = () => {
+            console.log("Connection state:", peer.connectionState)
+            if (peer.connectionState === 'disconnected' || peer.connectionState === 'failed') {
+                if (statusRef.current === 'connected') {
+                    console.log("Connection failed (state). Restarting...")
+                    handleStop()
+                    startSearch()
+                } else {
+                    setStatus('idle')
+                    setRemoteStream(null)
+                }
+            }
+            if (peer.connectionState === 'connected') {
+                setPartnerStatus('connected')
+                // Clear timeout on successful connection
+                if (connectionTimeoutRef.current) {
+                    clearTimeout(connectionTimeoutRef.current)
+                }
+            }
+        }
+
+        return peer
+    }
+
+    // --- MATCHING LOGIC ---
+
+    const startSearch = async () => {
         if (!user) return
-        setErrorMsg('')
-        setDebugInfo('Initializing media...')
 
-        // 1. Get Media First (Parallel)
-        const stream = await initMedia()
-        if (!stream) return
+        // Reset Logic
+        setErrorMsg('')
+        hasSentOfferRef.current = false
+        setPartnerStatus('connecting')
+        iceCandidatesBuffer.current = []
+        stopPolling() // Safety clear
+
+        let stream = localStream
+        if (!stream) {
+            stream = await initLocalStream()
+            if (!stream) return
+        }
 
         setStatus('searching')
-        isSearchingRef.current = true
-        setDebugInfo('Joining queue...')
 
-        try {
-            // 2. Clean old entries to prevent ghosting
+        // ACTIVE & PASSIVE STRATEGY:
+        // 1. Clean up old queue entry first (important!)
+        if (user) {
             await supabase.from('video_chat_queue').delete().eq('user_id', user.id)
+        }
 
-            // 3. Insert Self (Passive Mode)
-            const { data: queueEntry, error } = await supabase
-                .from('video_chat_queue')
-                .insert({ user_id: user.id, status: 'waiting' }) // Ensure your DB accepts this
-                .select()
-                .single()
+        // 2. Small delay to ensure DB propagates delete
+        await new Promise(resolve => setTimeout(resolve, 200))
 
-            if (error || !queueEntry) throw new Error("Queue join failed: " + error.message)
-            myQueueIdRef.current = queueEntry.id
+        // 3. Put myself in the pool (Passive)
+        await addToQueue()
 
-            // 4. Start Heartbeat (Keep alive)
-            heartbeatRef.current = window.setInterval(async () => {
-                if (myQueueIdRef.current) {
-                    await supabase.from('video_chat_queue')
-                        .update({ updated_at: new Date().toISOString() })
-                        .eq('id', myQueueIdRef.current)
-                }
-            }, 2000)
+        // 4. Actively look for others (Active)
+        startPolling()
+    }
 
-            // 5. Subscribe to Self (To know if WE get picked)
-            const myChannel = supabase.channel(`queue-${queueEntry.id}`)
-            queueSubscriptionRef.current = myChannel
+    // Polling ref for active searching
+    const searchingIntervalRef = useRef<number | null>(null)
 
-            myChannel.on('postgres_changes', {
-                event: 'UPDATE',
-                schema: 'public',
-                table: 'video_chat_queue',
-                filter: `id=eq.${queueEntry.id}`
-            }, (payload) => {
-                if (payload.new.matched_with && isSearchingRef.current) {
-                    // WE WERE PICKED!
-                    setDebugInfo('Matched! Connecting (Passive)...')
-                    isSearchingRef.current = false // Stop searching
-                    // The sessionId is OUR queue ID because the Caller joined US
-                    initiateWebRTC(payload.new.matched_with, queueEntry.id, false)
-                }
-            }).subscribe()
+    const addToQueue = async () => {
+        if (!user) return
 
-            // 6. Actively Search for Others (The "Fast" Loop)
-            searchLoop()
+        // Insert self or update existing
+        const { data, error } = await supabase
+            .from('video_chat_queue')
+            .upsert({
+                user_id: user.id,
+                matched_with: null,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'user_id' })
+            .select()
+            .single()
 
-        } catch (e: any) {
-            console.error(e)
-            setErrorMsg(`Connection error: ${e.message || "Unknown error"}`)
+        if (error) {
+            console.error("Join queue error:", error)
+            setErrorMsg("Failed to join queue.")
             setStatus('error')
+            return
+        }
+
+        myQueueIdRef.current = data.id
+
+        // Start Heartbeat (ping every 2s to show liveness)
+        if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current)
+        heartbeatIntervalRef.current = window.setInterval(async () => {
+            if (myQueueIdRef.current) {
+                await supabase
+                    .from('video_chat_queue')
+                    .update({ updated_at: new Date().toISOString() })
+                    .eq('id', myQueueIdRef.current)
+            }
+        }, 2000)
+
+        // Subscribe to MY row to see if I get picked (Passive)
+        if (!myQueueIdRef.current) return
+
+        // Clean existing sub
+        if (queueSubscriptionRef.current) supabase.removeChannel(queueSubscriptionRef.current)
+
+        const channel = supabase.channel(`queue-${myQueueIdRef.current}`)
+        queueSubscriptionRef.current = channel
+
+        channel
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'video_chat_queue',
+                    filter: `id=eq.${myQueueIdRef.current}`
+                },
+                (payload) => {
+                    // Check if *I* was matched
+                    if (payload.new.matched_with && partnerStatus !== 'connected') {
+                        console.log("Picked by:", payload.new.matched_with)
+                        // If I'm already setting up a call as a caller, this might race, 
+                        // but checking partnerStatus helps.
+                        if (peerRef.current) return // Already busy with another connection
+
+                        stopPolling()
+                        initiateCall(myQueueIdRef.current!, false)
+                    }
+                }
+            )
+            .subscribe()
+    }
+
+    const startPolling = () => {
+        if (searchingIntervalRef.current) clearInterval(searchingIntervalRef.current)
+
+        // Immediate check then interval
+        checkForPartner()
+
+        searchingIntervalRef.current = window.setInterval(async () => {
+            await checkForPartner()
+        }, 2000) // Check every 2s
+    }
+
+    const stopPolling = () => {
+        if (searchingIntervalRef.current) {
+            clearInterval(searchingIntervalRef.current)
+            searchingIntervalRef.current = null
         }
     }
 
-    const searchLoop = async () => {
-        if (!isSearchingRef.current || !user) return
+    const checkForPartner = async () => {
+        if (!user) return
 
-        // Look for anyone who is NOT me, NOT matched, and recently active
+        // 1. Find a candidate (exclude entries less than 2s old to avoid race conditions)
+        // AND ensure they are alive (updated_at > 7s ago - generous buffer)
+        const twoSecondsAgo = new Date(Date.now() - 2000).toISOString()
+        const sevenSecondsAgo = new Date(Date.now() - 7000).toISOString()
+
         const { data: candidates } = await supabase
             .from('video_chat_queue')
             .select('*')
             .neq('user_id', user.id)
             .is('matched_with', null)
-            .gt('updated_at', new Date(Date.now() - 5000).toISOString()) // Alive in last 5s
+            .lt('created_at', twoSecondsAgo)
+            .gt('updated_at', sevenSecondsAgo) // Only match with LIVE users
             .limit(1)
 
         if (candidates && candidates.length > 0) {
             const target = candidates[0]
+            console.log("Found active partner:", target.user_id)
 
-            // Atomic Lock: Try to write OUR ID into THEIR row
-            const { error } = await supabase
+            // 2. Try to CLAIM
+            const { error: claimError } = await supabase
                 .from('video_chat_queue')
                 .update({ matched_with: user.id })
                 .eq('id', target.id)
-                .is('matched_with', null) // Optimistic concurrency control
+                .is('matched_with', null)
+            // .is ensures we only claim if they are STILL free
 
-            if (!error) {
-                // SUCCESS! We claimed them.
-                setDebugInfo('Found partner! Connecting (Active)...')
-                isSearchingRef.current = false
-                // Session ID is THEIR queue ID (we are visiting them)
-                initiateWebRTC(target.user_id, target.id, true)
-                return
+            if (!claimError) {
+                console.log("Successfully claimed partner!")
+                stopPolling() // Stop searching
+                initiateCall(target.id, true) // Act as Caller
+            } else {
+                console.log("Claim failed - maybe taken?")
             }
-        }
-
-        // Retry faster (recursive with minimal delay)
-        if (isSearchingRef.current) {
-            setTimeout(searchLoop, 500) // 500ms poll is aggressive but safe
         }
     }
 
-    // --- 4. WEB RTC LOGIC (Robust) ---
+    const initiateCall = async (sessionId: string, isCaller: boolean) => {
+        console.log(`Starting call. Session: ${sessionId}, I am Caller: ${isCaller}`)
+        hasSentOfferRef.current = false
+        iceCandidatesBuffer.current = []
 
-    const initiateWebRTC = (partnerId: string, sessionId: string, isCaller: boolean) => {
-        setStatus('connecting')
-        currentSessionIdRef.current = sessionId
-
-        // Cleanup previous peer
-        if (peerRef.current) peerRef.current.close()
-
-        const peer = new RTCPeerConnection(RTC_CONFIG)
-        peerRef.current = peer
-
-        // Add Tracks
-        if (localStream) {
-            localStream.getTracks().forEach(track => peer.addTrack(track, localStream))
+        // Clear any existing timeout
+        if (connectionTimeoutRef.current) {
+            clearTimeout(connectionTimeoutRef.current)
         }
 
-        // Handle Remote Stream
-        peer.ontrack = (event) => {
-            if (event.streams && event.streams[0]) {
-                setRemoteStream(event.streams[0])
-                if (remoteVideoRef.current) {
-                    remoteVideoRef.current.srcObject = event.streams[0]
-                }
-                setStatus('connected') // WE ARE LIVE
+        // Set connection timeout - if not connected in 10s, restart
+        connectionTimeoutRef.current = setTimeout(() => {
+            if (partnerStatus === 'connecting') {
+                console.log('Connection timeout - restarting search')
+                handleStop()
+                setTimeout(() => startSearch(), 500)
             }
-        }
+        }, 10000)
 
-        // Signaling Channel
-        const channel = supabase.channel(`session-${sessionId}`)
+        // Initialize Signaling Channel
+        const channel = supabase.channel(`video-session-${sessionId}`)
         signalChannelRef.current = channel
 
-        // ICE Candidates
-        peer.onicecandidate = (event) => {
-            if (event.candidate) {
-                channel.send({
-                    type: 'broadcast',
-                    event: 'candidate',
-                    payload: { candidate: event.candidate, from: user?.id }
-                })
-            }
-        }
+        const peer = createPeer(channel)
 
-        // Connection State Monitoring
-        peer.onconnectionstatechange = () => {
-            // FIX: Only fail on 'failed', ignore 'disconnected' for mobile stability
-            if (peer.connectionState === 'failed') {
-                // Auto-reconnect or skip
-                if (status === 'connected') handleSkip()
-            }
-        }
-
-        // Signal Listeners
         channel
-            .on('broadcast', { event: 'candidate' }, ({ payload }) => {
-                if (peer && payload.from !== user?.id && payload.candidate) {
-                    peer.addIceCandidate(new RTCIceCandidate(payload.candidate)).catch(e => console.warn(e))
+            .on('broadcast', { event: 'signal' }, async ({ payload }) => {
+                if (!peerRef.current) return
+
+                console.log("Received signal:", payload.type)
+
+                if (payload.type === 'bye') {
+                    console.log("Peer skipped. Restarting search...")
+                    handleStop()
+                    startSearch() // Auto-next
+                    return
+                }
+
+                if (payload.type === 'offer' && !isCaller) {
+                    await peerRef.current.setRemoteDescription(payload.offer)
+                    const answer = await peerRef.current.createAnswer()
+                    await peerRef.current.setLocalDescription(answer)
+
+                    // Flush buffer
+                    if (iceCandidatesBuffer.current.length > 0) {
+                        console.log("Flushing ICE buffer:", iceCandidatesBuffer.current.length)
+                        iceCandidatesBuffer.current.forEach(c => peerRef.current?.addIceCandidate(c))
+                        iceCandidatesBuffer.current = []
+                    }
+
+                    channel.send({
+                        type: 'broadcast',
+                        event: 'signal',
+                        payload: { type: 'answer', answer }
+                    })
+                } else if (payload.type === 'answer' && isCaller) {
+                    await peerRef.current.setRemoteDescription(payload.answer)
+                    // Flush buffer
+                    if (iceCandidatesBuffer.current.length > 0) {
+                        console.log("Flushing ICE buffer:", iceCandidatesBuffer.current.length)
+                        iceCandidatesBuffer.current.forEach(c => peerRef.current?.addIceCandidate(c))
+                        iceCandidatesBuffer.current = []
+                    }
+                } else if (payload.type === 'candidate') {
+                    if (peerRef.current.remoteDescription) {
+                        await peerRef.current.addIceCandidate(payload.candidate)
+                    } else {
+                        console.log("Buffering ICE candidate")
+                        iceCandidatesBuffer.current.push(payload.candidate)
+                    }
                 }
             })
-            .on('broadcast', { event: 'sdp' }, async ({ payload }) => {
-                if (!peer || payload.from === user?.id) return
+            .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+                console.log("presence leave", key, leftPresences)
+                // If the only peer left, restart
+                const state = channel.presenceState()
+                if (Object.keys(state).length <= 1 && statusRef.current === 'connected') {
+                    console.log("Peer left presence. Restarting...")
+                    handleStop()
+                    startSearch()
+                }
+            })
+            // Presence tracking
+            .on('presence', { event: 'sync' }, () => {
+                const state = channel.presenceState()
+                const presenceIds = Object.keys(state)
+                console.log("Presence sync:", presenceIds.length)
 
-                const sdp = payload.sdp
-
-                try {
-                    if (sdp.type === 'offer') {
-                        // Received Offer (Answerer)
-                        await peer.setRemoteDescription(new RTCSessionDescription(sdp))
-                        const answer = await peer.createAnswer()
-                        await peer.setLocalDescription(answer)
-                        channel.send({
-                            type: 'broadcast',
-                            event: 'sdp',
-                            payload: { sdp: answer, from: user?.id }
-                        })
-                    } else if (sdp.type === 'answer') {
-                        // Received Answer (Caller)
-                        await peer.setRemoteDescription(new RTCSessionDescription(sdp))
-                    }
-                } catch (err) {
-                    console.error("SDP Error", err)
+                // If I am Caller, and I see SOMEONE ELSE is here, I can send Offer
+                if (isCaller && presenceIds.length > 1 && !hasSentOfferRef.current) {
+                    console.log("Peer present! Sending Offer...")
+                    sendOffer(peer, channel)
                 }
             })
             .subscribe(async (status) => {
                 if (status === 'SUBSCRIBED') {
-                    // Logic: Caller creates offer immediately once channel is open
-                    if (isCaller) {
-                        const offer = await peer.createOffer()
-                        await peer.setLocalDescription(offer)
-                        channel.send({
-                            type: 'broadcast',
-                            event: 'sdp',
-                            payload: { sdp: offer, from: user?.id }
-                        })
-                    }
+                    // Track my presence so the other person knows I'm here
+                    await channel.track({ user_id: user?.id })
                 }
             })
+
+        setStatus('connected')
     }
 
+    const sendOffer = async (peer: RTCPeerConnection, channel: any) => {
+        if (hasSentOfferRef.current) return
+        hasSentOfferRef.current = true
 
-    // --- 5. RENDER ---
+        try {
+            const offer = await peer.createOffer()
+            await peer.setLocalDescription(offer)
+            channel.send({
+                type: 'broadcast',
+                event: 'signal',
+                payload: { type: 'offer', offer }
+            })
+        } catch (e) {
+            console.error("Error creating offer:", e)
+        }
+    }
+
+    // --- STOP / SKIP ---
+
+    const handleStop = async (sendBye = false) => {
+        // Send BYE if requested and connected (Fire and forget with small buffer)
+        if (sendBye && signalChannelRef.current && peerRef.current) {
+            signalChannelRef.current.send({
+                type: 'broadcast',
+                event: 'signal',
+                payload: { type: 'bye' }
+            }).catch(e => console.error("Error sending bye:", e))
+
+            // Give a tiny moment for the message to hit the network buffer before we tear down
+            await new Promise(resolve => setTimeout(resolve, 20))
+        }
+
+        setStatus('idle')
+        setRemoteStream(null)
+        setPartnerStatus('connecting')
+        stopPolling() // Stop active search
+
+        // Clear connection timeout
+        if (connectionTimeoutRef.current) {
+            clearTimeout(connectionTimeoutRef.current)
+            connectionTimeoutRef.current = null
+        }
+
+        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null
+
+        if (peerRef.current) {
+            peerRef.current.close()
+            peerRef.current = null
+        }
+
+        if (signalChannelRef.current) {
+            supabase.removeChannel(signalChannelRef.current)
+            signalChannelRef.current = null
+        }
+        if (queueSubscriptionRef.current) {
+            supabase.removeChannel(queueSubscriptionRef.current)
+            queueSubscriptionRef.current = null
+        }
+
+        // Clear heartbeat
+        if (heartbeatIntervalRef.current) {
+            clearInterval(heartbeatIntervalRef.current)
+            heartbeatIntervalRef.current = null
+        }
+
+        if (user) {
+            await supabase.from('video_chat_queue').delete().eq('user_id', user.id)
+        }
+        myQueueIdRef.current = null
+
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop())
+            setLocalStream(null)
+            if (localVideoRef.current) localVideoRef.current.srcObject = null
+        }
+    }
+
+    const handleSkip = async () => {
+        await handleStop(true) // Send BYE signal
+        // Immediate restart (relies on robust queue filters)
+        setTimeout(() => startSearch(), 50)
+    }
+
+    // --- RENDER ---
 
     return (
-        <div className="flex flex-col h-[100dvh] bg-black text-white font-sans relative overflow-hidden">
+        <div className="flex flex-col h-[100dvh] bg-white dark:bg-black text-neutral-900 dark:text-white overflow-hidden font-sans relative">
 
-            {/* Header */}
-            <header className="absolute top-0 left-0 right-0 p-4 z-20 flex justify-between items-center pointer-events-none">
-                <div className="bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 pointer-events-auto flex items-center gap-2">
-                    <Zap size={16} className={status === 'connected' ? 'text-green-400 fill-current' : 'text-neutral-500'} />
-                    <span className="font-bold text-sm tracking-wide">
-                        {status === 'idle' && "Ready"}
-                        {status === 'searching' && "Scanning..."}
-                        {status === 'connecting' && "Establishing..."}
-                        {status === 'connected' && "Connected"}
-                    </span>
+            {/* Header (Minimal) */}
+            <div className="absolute top-0 left-0 right-0 p-4 z-20 flex items-center justify-between pointer-events-none">
+                <div className="flex items-center gap-2 pointer-events-auto bg-white/50 dark:bg-black/50 backdrop-blur-md p-1.5 rounded-full border border-neutral-200 dark:border-white/10 shadow-sm">
+                    <div className="w-8 h-8 rounded-full bg-blue-600/10 dark:bg-blue-600/20 flex items-center justify-center">
+                        <Video size={16} className="text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <span className="font-bold text-sm md:text-base pr-3">VideoChat</span>
                 </div>
-
-                <button
-                    onClick={() => setIsFullScreen(!isFullScreen)}
-                    className="p-3 bg-black/40 backdrop-blur-md rounded-full border border-white/10 hover:bg-white/10 pointer-events-auto transition-colors"
-                >
-                    {isFullScreen ? <Minimize size={20} /> : <Maximize size={20} />}
-                </button>
-            </header>
-
-            {/* Debug (Tiny bottom left) */}
-            <div className="absolute bottom-4 left-4 z-10 text-[10px] text-white/30 font-mono pointer-events-none">
-                {debugInfo}
+                <div className="flex items-center gap-2 pointer-events-auto">
+                    <button
+                        onClick={toggleFullScreen}
+                        className="p-2 rounded-full bg-white/50 dark:bg-black/50 backdrop-blur-md border border-neutral-200 dark:border-white/10 hover:scale-105 active:scale-95 transition-all shadow-sm"
+                    >
+                        {isFullScreen ? <Minimize size={18} /> : <Maximize size={18} />}
+                    </button>
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/50 dark:bg-black/50 backdrop-blur-md border border-neutral-200 dark:border-white/10 shadow-sm">
+                        <span className={`w-2 h-2 rounded-full ${status === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-neutral-400 dark:bg-neutral-600'}`} />
+                        <span className="text-xs font-medium opacity-80">
+                            {status === 'searching' && "Matching..."}
+                            {status === 'connected' && (partnerStatus === 'connected' ? "Live" : "Connecting...")}
+                            {status === 'idle' && "Ready"}
+                        </span>
+                    </div>
+                </div>
             </div>
 
-            {/* Main Stage */}
-            <main className="flex-1 relative flex items-center justify-center bg-neutral-900">
+            {/* Main Video Area - FULL SCREEN */}
+            <main className={`flex-1 relative overflow-hidden flex items-center justify-center ${isFullScreen ? 'p-0' : 'p-2 md:p-4'}`}>
 
-                {/* REMOTE VIDEO */}
-                <div className="absolute inset-0 w-full h-full">
-                    {status === 'connected' || status === 'connecting' ? (
-                        <video
-                            ref={remoteVideoRef}
-                            autoPlay
-                            playsInline
-                            className="w-full h-full object-cover"
-                        />
-                    ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center bg-neutral-900 relative overflow-hidden">
-                            {/* Animated Background */}
-                            <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-900 via-black to-black animate-pulse" />
+                {/* REMOTE VIDEO CONTAINER - Full Bleed */}
+                <div className={`w-full h-full flex items-center justify-center relative bg-neutral-900 border border-neutral-200 dark:border-white/10 shadow-2xl overflow-hidden ${isFullScreen ? 'rounded-none' : 'rounded-3xl'}`}>
 
-                            {status === 'searching' ? (
-                                <div className="z-10 flex flex-col items-center gap-6">
-                                    <div className="relative">
-                                        <div className="absolute inset-0 bg-blue-500/30 blur-2xl rounded-full animate-ping" />
-                                        <div className="w-24 h-24 bg-neutral-800 rounded-full flex items-center justify-center border border-white/10 relative z-10">
-                                            <Loader2 size={40} className="text-blue-500 animate-spin" />
-                                        </div>
+                    {status === 'connected' ? (
+                        <>
+                            {/* Video Element */}
+                            <video
+                                ref={remoteVideoRef}
+                                autoPlay
+                                playsInline
+                                className="w-full h-full object-cover"
+                            />
+
+                            {/* Connecting State Overlay - REMOVED per user request for "direct" feel */}
+                            {/* {partnerStatus === 'connecting' && (
+                                <div className="absolute inset-0 bg-white/60 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center z-20">
+                                    <div className="flex flex-col items-center gap-3">
+                                        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                                        <p className="text-sm font-medium opacity-80">Connecting...</p>
                                     </div>
-                                    <p className="text-neutral-400 font-medium animate-pulse">Finding a partner...</p>
                                 </div>
-                            ) : status === 'error' ? (
-                                <div className="text-center px-6">
-                                    <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
-                                    <h3 className="text-xl font-bold text-white mb-2">Connection Error</h3>
-                                    <p className="text-neutral-400 mb-6">{errorMsg}</p>
-                                    <button
-                                        onClick={() => handleSkip()}
-                                        className="px-6 py-2 bg-red-600 hover:bg-red-500 text-white rounded-full font-bold transition-colors"
-                                    >
-                                        Try Again
-                                    </button>
+                            )} */}
+                        </>
+                    ) : (
+                        /* IDLE / SEARCHING STATE */
+                        <div className="flex flex-col items-center justify-center text-center p-6 w-full max-w-md mx-auto z-10">
+                            {status === 'searching' ? (
+                                <div className="relative py-12 flex flex-col items-center justify-center">
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-blue-500/10 rounded-full animate-ping [animation-duration:3s]" />
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-blue-500/20 rounded-full animate-ping [animation-duration:2s]" />
+
+                                    <div className="relative w-24 h-24 bg-white dark:bg-neutral-900 backdrop-blur-xl rounded-full flex items-center justify-center border border-neutral-200 dark:border-white/10 shadow-2xl mx-auto">
+                                        <User size={32} className="text-blue-500 dark:text-blue-400" />
+                                    </div>
+                                    <div className="mt-8 space-y-1 relative z-20">
+                                        <h3 className="text-xl font-bold">Matching...</h3>
+                                        <p className="text-neutral-500 dark:text-neutral-400 text-sm">Finding someone for you</p>
+                                    </div>
                                 </div>
                             ) : (
-                                <div className="text-center z-10 px-4">
-                                    <div className="w-20 h-20 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-blue-900/20 rotate-3">
-                                        <User size={40} className="text-white" />
+                                <div className="space-y-6 animate-in fade-in zoom-in duration-500 flex flex-col items-center">
+                                    <div className="w-24 h-24 bg-gradient-to-br from-indigo-500/10 to-blue-500/10 dark:from-indigo-500/20 dark:to-blue-500/20 rounded-[1.5rem] flex items-center justify-center mx-auto border border-neutral-200 dark:border-white/10 rotate-3 shadow-2xl">
+                                        <User size={40} className="text-blue-600 dark:text-blue-400" />
                                     </div>
-                                    <h1 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">
-                                        Random Chat
-                                    </h1>
-                                    <p className="text-neutral-400 mb-8 max-w-xs mx-auto">
-                                        Click start to find a random student instantly.
-                                    </p>
+                                    <div className="space-y-2">
+                                        <h2 className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-neutral-800 to-neutral-500 dark:from-white dark:to-neutral-400">
+                                            Random Chat
+                                        </h2>
+                                        <p className="text-sm text-neutral-500 dark:text-neutral-400 max-w-xs mx-auto">
+                                            Connect instantly with students. Safe & Anonymous.
+                                        </p>
+                                    </div>
                                     <button
-                                        onClick={startMatchingProcess}
-                                        className="group relative px-8 py-4 bg-white text-black rounded-full font-bold text-lg hover:scale-105 active:scale-95 transition-all shadow-[0_0_40px_-10px_rgba(255,255,255,0.3)]"
+                                        onClick={startSearch}
+                                        className="w-full py-4 bg-neutral-900 dark:bg-white text-white dark:text-black rounded-full font-bold text-lg hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-neutral-900/10 dark:shadow-white/5 flex items-center justify-center gap-2"
                                     >
-                                        <span className="flex items-center gap-2">
-                                            Start Matching <SkipForward size={20} className="group-hover:translate-x-1 transition-transform" />
-                                        </span>
+                                        <span>Start Matching</span>
+                                        <SkipForward className="w-5 h-5" />
                                     </button>
                                 </div>
                             )}
@@ -419,74 +646,118 @@ export default function VideoChat() {
                     )}
                 </div>
 
-                {/* SELF VIDEO (Draggable/Floating feel) */}
+                {/* LOCAL VIDEO (PIP) - Fixed Visibility */}
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: localStream ? 1 : 0, scale: 1 }}
-                    className="absolute top-20 right-4 w-[100px] md:w-[140px] aspect-[3/4] bg-neutral-800 rounded-xl overflow-hidden border border-white/20 shadow-2xl z-30"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="absolute top-20 right-4 w-[28vw] max-w-[120px] aspect-[3/4] bg-neutral-100 dark:bg-neutral-800 rounded-2xl overflow-hidden border border-neutral-300 dark:border-white/20 shadow-2xl z-30"
                 >
-                    <video
-                        ref={localVideoRef}
-                        autoPlay
-                        playsInline
-                        muted
-                        className={`w-full h-full object-cover mirror ${isVideoOff ? 'hidden' : ''}`}
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-neutral-800 text-neutral-500" hidden={!isVideoOff}>
-                        <VideoOff size={24} />
+                    {localStream ? (
+                        <video
+                            ref={localVideoRef}
+                            autoPlay
+                            playsInline
+                            muted
+                            className={`w-full h-full object-cover mirror ${isVideoOff ? 'hidden' : ''}`}
+                        />
+                    ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-neutral-100 dark:bg-neutral-900 text-neutral-400 gap-1">
+                            <VideoOff className="w-5 h-5" />
+                        </div>
+                    )}
+
+                    <div className="absolute bottom-1.5 left-1.5 flex gap-1">
+                        {isMuted && (
+                            <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white shadow-sm">
+                                <MicOff size={10} />
+                            </div>
+                        )}
                     </div>
                 </motion.div>
 
-                {/* CONTROLS */}
-                {status !== 'idle' && status !== 'error' && (
-                    <div className="absolute bottom-8 z-40 flex items-center gap-4">
-                        <div className="flex items-center gap-2 bg-black/60 backdrop-blur-xl p-2 rounded-full border border-white/10">
+                {/* ERROR TOAST */}
+                <AnimatePresence>
+                    {errorMsg && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="absolute top-20 left-4 right-4 z-50 mx-auto max-w-sm"
+                        >
+                            <div className="bg-red-50/90 dark:bg-red-950/90 backdrop-blur border border-red-200 dark:border-red-500/30 text-red-800 dark:text-red-200 px-4 py-3 rounded-xl shadow-xl flex items-center gap-3">
+                                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-500 shrink-0" />
+                                <div className="flex-1 text-sm">
+                                    <p className="font-medium">{errorMsg}</p>
+                                </div>
+                                <button
+                                    onClick={() => { setErrorMsg(''); startSearch(); }}
+                                    className="p-1.5 bg-red-100 dark:bg-red-500/20 hover:bg-red-200 dark:hover:bg-red-500/30 rounded-lg text-red-600 dark:text-red-400 transition-colors"
+                                >
+                                    <Loader2 size={16} />
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+            </main>
+
+            {/* CONTROLS BAR (Overlay) */}
+            <div className="absolute bottom-8 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
+                <div className="pointer-events-auto flex items-center gap-3 md:gap-4 bg-white/80 dark:bg-neutral-950/80 backdrop-blur-xl p-2 rounded-full border border-neutral-200 dark:border-white/10 shadow-2xl shadow-black/10 dark:shadow-black/50">
+
+                    {status !== 'idle' ? (
+                        <>
+                            {/* Mute Box */}
                             <button
-                                onClick={() => {
-                                    if (localStream) {
-                                        localStream.getAudioTracks().forEach(t => t.enabled = !t.enabled)
-                                        setIsMuted(!isMuted)
-                                    }
-                                }}
-                                className={`p-4 rounded-full transition-all ${isMuted ? 'bg-red-500/20 text-red-500' : 'hover:bg-white/10 text-white'}`}
+                                onClick={toggleMute}
+                                className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all ${isMuted ? 'bg-neutral-900 dark:bg-white text-white dark:text-black' : 'bg-neutral-100 dark:bg-white/10 hover:bg-neutral-200 dark:hover:bg-white/20'}`}
                             >
-                                {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
+                                {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
                             </button>
 
+                            {/* Video Box */}
                             <button
-                                onClick={() => {
-                                    if (localStream) {
-                                        localStream.getVideoTracks().forEach(t => t.enabled = !t.enabled)
-                                        setIsVideoOff(!isVideoOff)
-                                    }
-                                }}
-                                className={`p-4 rounded-full transition-all ${isVideoOff ? 'bg-red-500/20 text-red-500' : 'hover:bg-white/10 text-white'}`}
+                                onClick={toggleVideo}
+                                className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all ${isVideoOff ? 'bg-neutral-900 dark:bg-white text-white dark:text-black' : 'bg-neutral-100 dark:bg-white/10 hover:bg-neutral-200 dark:hover:bg-white/20'}`}
                             >
-                                {isVideoOff ? <VideoOff size={24} /> : <Video size={24} />}
+                                {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />}
                             </button>
 
+                            {/* Divider */}
+                            <div className="w-px h-6 bg-neutral-200 dark:bg-white/10 mx-1" />
+
+                            {/* Stop (Small) */}
                             <button
-                                onClick={handleStop}
-                                className="p-4 rounded-full hover:bg-red-500/20 text-red-500 transition-all"
+                                onClick={() => handleStop()}
+                                className="w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-500 hover:bg-red-500 hover:text-white transition-all"
                             >
                                 <StopCircle size={24} />
                             </button>
-                        </div>
 
-                        <button
-                            onClick={handleSkip}
-                            disabled={status === 'searching'}
-                            className={`h-[64px] px-8 rounded-full font-bold text-lg flex items-center gap-2 transition-all shadow-lg
-                                ${status === 'searching'
-                                    ? 'bg-neutral-800 text-neutral-500 cursor-wait'
-                                    : 'bg-blue-600 text-white hover:bg-blue-500 hover:scale-105 active:scale-95 shadow-blue-500/30'
-                                }`}
-                        >
-                            Next <SkipForward size={24} />
-                        </button>
-                    </div>
-                )}
-            </main>
+                            {/* Skip (Large Pill) */}
+                            {/* Skip (Large Pill) */}
+                            <button
+                                onClick={handleSkip}
+                                disabled={partnerStatus === 'connecting'}
+                                className={`h-12 md:h-14 px-6 md:px-8 rounded-full font-bold flex items-center gap-2 transition-all shadow-lg 
+                                    ${partnerStatus === 'connecting'
+                                        ? 'bg-neutral-300 dark:bg-neutral-800 text-neutral-500 cursor-not-allowed'
+                                        : 'bg-blue-600 text-white hover:bg-blue-500 hover:scale-105 active:scale-95 shadow-blue-600/20'}`}
+                            >
+                                <span className="hidden md:inline text-lg">Next</span>
+                                <SkipForward size={24} />
+                            </button>
+                        </>
+                    ) : (
+                        <div className="px-6 py-3 text-sm text-neutral-500 dark:text-neutral-400 font-medium">
+                            Ready
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
     )
 }
+
+
