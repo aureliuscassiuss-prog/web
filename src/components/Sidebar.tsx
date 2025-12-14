@@ -83,7 +83,7 @@ export default function Sidebar({ onMobileMenuClose, isDark, toggleTheme, spotli
             items: [
                 { path: '/coffessions', label: 'Coffessions', icon: Coffee, badge: 'Hot' },
                 { path: '/chat', label: 'Community Chat', icon: MessageCircle, badge: 'Live' },
-                { path: '/video-chat', label: 'Video Chat', icon: Video, badge: 'New' },
+                { path: '/video-chat', label: 'Omex', icon: Video, badge: 'New' },
                 { path: '/leaderboard', label: 'Leaderboard', icon: BarChart3 },
             ]
         },

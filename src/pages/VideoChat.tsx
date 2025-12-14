@@ -751,7 +751,7 @@ export default function VideoChat() {
                                     </div>
                                     <div className="space-y-2">
                                         <h2 className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-neutral-800 to-neutral-500 dark:from-white dark:to-neutral-400">
-                                            Random Chat
+                                            Omex
                                         </h2>
                                         <p className="text-sm text-neutral-500 dark:text-neutral-400 max-w-xs mx-auto">
                                             Connect instantly with students. Safe & Anonymous.
