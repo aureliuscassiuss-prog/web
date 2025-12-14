@@ -88,7 +88,29 @@ export default function CoffeeChat() {
                 { event: 'INSERT', schema: 'public', table: 'coffee_chat_messages' },
                 (payload) => {
                     const newMsg = payload.new as ChatMessage
-                    setMessages(prev => [...prev, newMsg])
+
+                    // Prevent duplicate if this is our own message (already added optimistically)
+                    setMessages(prev => {
+                        // Skip if this exact message already exists
+                        if (prev.some(m => m.id === newMsg.id)) {
+                            return prev
+                        }
+
+                        // Replace temp message if it exists with same content
+                        const tempIndex = prev.findIndex(m =>
+                            m.id.toString().startsWith('temp-') &&
+                            m.content === newMsg.content &&
+                            m.user_id === newMsg.user_id
+                        )
+
+                        if (tempIndex !== -1) {
+                            const updated = [...prev]
+                            updated[tempIndex] = newMsg
+                            return updated
+                        }
+
+                        return [...prev, newMsg]
+                    })
 
                     // Play sound if message is from someone else
                     if (newMsg.user_id !== user?.id?.toString()) {
@@ -150,7 +172,7 @@ export default function CoffeeChat() {
         const msgContent = newMessage.trim()
         setNewMessage('') // Optimistic clear
 
-        // Reset height
+        // Reset textarea height
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
         }
@@ -168,17 +190,37 @@ export default function CoffeeChat() {
             })
         }
 
-        const { error } = await supabase.from('coffee_chat_messages').insert({
+        // Optimistic UI update - show message immediately
+        const optimisticMessage: ChatMessage = {
+            id: `temp-${Date.now()}-${Math.random()}`, // Temporary unique ID
             content: msgContent,
             user_id: user.id.toString(),
             user_name: user.name,
-            user_avatar: user.avatar
-        })
+            user_avatar: user.avatar,
+            created_at: new Date().toISOString()
+        }
+
+        setMessages(prev => [...prev, optimisticMessage])
+
+        // Send to Supabase in background
+        const { error, data } = await supabase
+            .from('coffee_chat_messages')
+            .insert({
+                content: msgContent,
+                user_id: user.id.toString(),
+                user_name: user.name,
+                user_avatar: user.avatar
+            })
+            .select()
+            .single()
 
         if (error) {
             console.error('Failed to send:', error)
-            alert('Failed to send message')
+            // Remove optimistic message on error
+            setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id))
+            alert('Failed to send message. Please try again.')
         }
+        // Real message will come via realtime subscription and replace the temp one
     }
 
     const formatTime = (dateStr: string) => {
@@ -189,7 +231,7 @@ export default function CoffeeChat() {
     // Check for missing config
     if (supabase.supabaseUrl.includes('placeholder')) {
         return (
-            <div className="flex flex-col h-[calc(100vh-64px)] items-center justify-center p-6 text-center bg-white dark:bg-black">
+            <div className="flex flex-col h-full items-center justify-center p-6 text-center bg-white dark:bg-black">
                 <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4 text-red-500">
                     <Trash2 size={32} />
                 </div>
@@ -207,25 +249,25 @@ export default function CoffeeChat() {
     }
 
     return (
-        <div className="flex flex-col h-full relative bg-white dark:bg-black">
+        <div className="flex flex-col h-full bg-white dark:bg-black">
 
             {/* --- HEADER --- */}
-            <header className="flex-none h-14 border-b border-gray-100 dark:border-white/10 px-4 flex items-center justify-between bg-white/80 dark:bg-black/80 backdrop-blur-md sticky top-0 z-10">
+            <header className="flex-shrink-0 h-14 border-b border-gray-100 dark:border-white/10 px-4 flex items-center justify-between bg-white dark:bg-black">
                 <div className="flex items-center gap-2.5">
-                    <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm">
+                    <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm flex-shrink-0">
                         <MessageCircle size={18} strokeWidth={2.5} />
                     </div>
                     <div>
-                        <h1 className="text-sm font-bold leading-tight">Public Chat</h1>
+                        <h1 className="text-sm font-bold leading-tight whitespace-nowrap">Public Chat</h1>
                         <div className="flex items-center gap-1">
                             <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                            <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
+                            <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
                                 Live • {messages.length} msgs
                             </span>
                         </div>
                     </div>
                 </div>
-                <div className="text-[10px] font-medium text-gray-400 border border-gray-100 dark:border-white/10 px-2 py-1 rounded-full flex items-center gap-1">
+                <div className="text-[10px] font-medium text-gray-400 border border-gray-100 dark:border-white/10 px-2 py-1 rounded-full flex items-center gap-1 flex-shrink-0">
                     <Clock size={10} /> 4h TTL
                 </div>
             </header>
@@ -247,8 +289,13 @@ export default function CoffeeChat() {
                     <div className="flex flex-col gap-4 pb-2">
                         {messages.map((msg) => {
                             const isMe = msg.user_id === user?.id?.toString()
+                            const isTempMessage = msg.id.toString().startsWith('temp-')
+
                             return (
-                                <div key={msg.id} className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-1 duration-200`}>
+                                <div
+                                    key={msg.id}
+                                    className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-1 duration-200 ${isTempMessage ? 'opacity-70' : ''}`}
+                                >
                                     <div className={`flex gap-2 max-w-[85%] md:max-w-[70%] ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
 
                                         {/* Avatar */}
@@ -330,7 +377,7 @@ export default function CoffeeChat() {
             </main>
 
             {/* --- FOOTER (Input Area) --- */}
-            <footer className="flex-none bg-white dark:bg-[#050505] border-t border-gray-100 dark:border-white/10 z-20 pb-[env(safe-area-inset-bottom)]">
+            <footer className="flex-shrink-0 bg-white dark:bg-[#050505] border-t border-gray-100 dark:border-white/10 pb-[env(safe-area-inset-bottom)]">
                 <div className="p-3">
                     <div className="relative flex items-end gap-2 bg-gray-100 dark:bg-white/5 rounded-[1.5rem] p-1.5 transition-all focus-within:ring-1 focus-within:ring-black/10 dark:focus-within:ring-white/10">
 
