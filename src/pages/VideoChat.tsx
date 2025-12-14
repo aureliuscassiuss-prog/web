@@ -1,9 +1,9 @@
-
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../utils/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
-import { Video, Mic, MicOff, VideoOff, SkipForward, AlertCircle, Loader2, StopCircle, User, Maximize, Minimize } from 'lucide-react'
+import { Video, Mic, MicOff, VideoOff, SkipForward, AlertCircle, Loader2, StopCircle, User, Maximize, Minimize, WifiOff } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { v4 as uuidv4 } from 'uuid'
 
 // WebRTC Configuration
 const RTC_CONFIG = {
@@ -15,9 +15,9 @@ const RTC_CONFIG = {
 
 export default function VideoChat() {
     const { user } = useAuth()
-    const [status, setStatus] = useState<'idle' | 'searching' | 'connected' | 'error'>('idle')
+    const [status, setStatus] = useState<'idle' | 'searching' | 'connected' | 'reconnecting' | 'error'>('idle')
     const [localStream, setLocalStream] = useState<MediaStream | null>(null)
-    const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null) // Used for state tracking, mainly
+    const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
     const [isMuted, setIsMuted] = useState(false)
     const [isVideoOff, setIsVideoOff] = useState(false)
     const [errorMsg, setErrorMsg] = useState('')
@@ -31,6 +31,10 @@ export default function VideoChat() {
     const queueSubscriptionRef = useRef<any>(null)
     const signalChannelRef = useRef<any>(null)
     const myQueueIdRef = useRef<string | null>(null)
+
+    // Session Integrity
+    const sessionIdRef = useRef<string | null>(null)
+    const leaveTimeoutRef = useRef<number | null>(null)
 
     // ICE Candidate Buffer to fix race conditions
     const iceCandidatesBuffer = useRef<RTCIceCandidate[]>([])
@@ -120,7 +124,7 @@ export default function VideoChat() {
 
     // --- RTC LOGIC ---
 
-    const createPeer = (signalChannel: any) => {
+    const createPeer = (signalChannel: any, currentSessionId: string) => {
         // Close existing peer if any
         if (peerRef.current) {
             peerRef.current.close()
@@ -141,6 +145,7 @@ export default function VideoChat() {
             if (event.streams && event.streams[0]) {
                 setRemoteStream(event.streams[0])
                 setPartnerStatus('connected')
+                setStatus('connected') // Recover from reconnecting
                 if (remoteVideoRef.current) {
                     remoteVideoRef.current.srcObject = event.streams[0]
                     remoteVideoRef.current.play().catch(e => console.error("Remote play error", e))
@@ -154,7 +159,11 @@ export default function VideoChat() {
                 signalChannel.send({
                     type: 'broadcast',
                     event: 'signal',
-                    payload: { type: 'candidate', candidate: event.candidate }
+                    payload: {
+                        type: 'candidate',
+                        candidate: event.candidate,
+                        sessionId: currentSessionId // Tag with session ID
+                    }
                 })
             }
         }
@@ -162,30 +171,39 @@ export default function VideoChat() {
         peer.oniceconnectionstatechange = () => {
             const state = peer.iceConnectionState
             console.log("ICE State:", state)
-            if (state === 'disconnected' || state === 'failed' || state === 'closed') {
-                // Auto-matching on disconnect
-                if (statusRef.current === 'connected') {
-                    console.log("Peer disconnected. Restarting...")
+
+            // Robust Handling: Only fail on terminal states
+            if (state === 'failed' || state === 'closed') {
+                if (statusRef.current === 'connected' || statusRef.current === 'reconnecting') {
+                    console.log("ICE Failed. Restarting...")
                     handleStop()
                     startSearch()
+                }
+            } else if (state === 'disconnected') {
+                // Temporary network glitch - DO NOT SKIP
+                console.log("ICE Disconnected - Attempting to recover...")
+                setStatus('reconnecting')
+            } else if (state === 'connected' || state === 'completed') {
+                if (statusRef.current === 'reconnecting') {
+                    console.log("ICE Recovered!")
+                    setStatus('connected')
                 }
             }
         }
 
         peer.onconnectionstatechange = () => {
-            console.log("Connection state:", peer.connectionState)
-            if (peer.connectionState === 'disconnected' || peer.connectionState === 'failed') {
+            const state = peer.connectionState
+            console.log("Connection state:", state)
+
+            if (state === 'failed') {
                 if (statusRef.current === 'connected') {
-                    console.log("Connection failed (state). Restarting...")
+                    console.log("Connection failed (terminal). Restarting...")
                     handleStop()
                     startSearch()
-                } else {
-                    setStatus('idle')
-                    setRemoteStream(null)
                 }
-            }
-            if (peer.connectionState === 'connected') {
+            } else if (state === 'connected') {
                 setPartnerStatus('connected')
+                setStatus('connected')
                 // Clear timeout on successful connection
                 if (connectionTimeoutRef.current) {
                     clearTimeout(connectionTimeoutRef.current)
@@ -362,6 +380,12 @@ export default function VideoChat() {
 
     const initiateCall = async (sessionId: string, isCaller: boolean) => {
         console.log(`Starting call. Session: ${sessionId}, I am Caller: ${isCaller}`)
+
+        // --- ROBUST SESSION ID ---
+        // This ensures events from previous attempts (ghosts) don't interfere
+        const currentSessionId = sessionId
+        sessionIdRef.current = currentSessionId
+
         hasSentOfferRef.current = false
         iceCandidatesBuffer.current = []
 
@@ -370,24 +394,32 @@ export default function VideoChat() {
             clearTimeout(connectionTimeoutRef.current)
         }
 
-        // Set connection timeout - if not connected in 10s, restart
+        // Set connection timeout - INCREASED TO 30s for Mobile (God-mode reliability)
         connectionTimeoutRef.current = setTimeout(() => {
-            if (partnerStatus === 'connecting') {
-                console.log('Connection timeout - restarting search')
+            // Only trigger if we are still connecting and the session hasn't changed
+            if (partnerStatus === 'connecting' && sessionIdRef.current === currentSessionId) {
+                console.log('Connection timeout (30s) - restarting search')
                 handleStop()
                 setTimeout(() => startSearch(), 500)
             }
-        }, 10000)
+        }, 30000)
 
         // Initialize Signaling Channel
         const channel = supabase.channel(`video-session-${sessionId}`)
         signalChannelRef.current = channel
 
-        const peer = createPeer(channel)
+        const peer = createPeer(channel, currentSessionId)
 
         channel
             .on('broadcast', { event: 'signal' }, async ({ payload }) => {
                 if (!peerRef.current) return
+
+                // GHOST PROTECTION: internal check although channel name is unique,
+                // explicit check serves as documentation and double-safety
+                if (payload.sessionId && payload.sessionId !== currentSessionId) {
+                    console.warn("Ignoring signal from invalid session", payload.sessionId)
+                    return
+                }
 
                 console.log("Received signal:", payload.type)
 
@@ -413,7 +445,7 @@ export default function VideoChat() {
                     channel.send({
                         type: 'broadcast',
                         event: 'signal',
-                        payload: { type: 'answer', answer }
+                        payload: { type: 'answer', answer, sessionId: currentSessionId }
                     })
                 } else if (payload.type === 'answer' && isCaller) {
                     await peerRef.current.setRemoteDescription(payload.answer)
@@ -424,6 +456,7 @@ export default function VideoChat() {
                         iceCandidatesBuffer.current = []
                     }
                 } else if (payload.type === 'candidate') {
+                    // Basic trickle handling
                     if (peerRef.current.remoteDescription) {
                         await peerRef.current.addIceCandidate(payload.candidate)
                     } else {
@@ -434,13 +467,19 @@ export default function VideoChat() {
             })
             .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
                 console.log("presence leave", key, leftPresences)
-                // If the only peer left, restart
-                const state = channel.presenceState()
-                if (Object.keys(state).length <= 1 && statusRef.current === 'connected') {
-                    console.log("Peer left presence. Restarting...")
-                    handleStop()
-                    startSearch()
-                }
+
+                // DEBOUNCED LEAVE: Wait 3s to confirm they are really gone
+                if (leaveTimeoutRef.current) clearTimeout(leaveTimeoutRef.current)
+
+                leaveTimeoutRef.current = window.setTimeout(() => {
+                    const state = channel.presenceState()
+                    // If the only peer left is me (or explicit 0 if I'm not tracked yet), restart
+                    if (Object.keys(state).length <= 1 && statusRef.current === 'connected') {
+                        console.log("Peer confirmed left (debounced). Restarting...")
+                        handleStop()
+                        startSearch()
+                    }
+                }, 3000)
             })
             // Presence tracking
             .on('presence', { event: 'sync' }, () => {
@@ -448,10 +487,17 @@ export default function VideoChat() {
                 const presenceIds = Object.keys(state)
                 console.log("Presence sync:", presenceIds.length)
 
+                // If presence returns, cancel the leave timeout!
+                if (presenceIds.length > 1 && leaveTimeoutRef.current) {
+                    console.log("Peer returned! Cancelling leave timeout.")
+                    clearTimeout(leaveTimeoutRef.current)
+                    leaveTimeoutRef.current = null
+                }
+
                 // If I am Caller, and I see SOMEONE ELSE is here, I can send Offer
                 if (isCaller && presenceIds.length > 1 && !hasSentOfferRef.current) {
                     console.log("Peer present! Sending Offer...")
-                    sendOffer(peer, channel)
+                    sendOffer(peer, channel, currentSessionId)
                 }
             })
             .subscribe(async (status) => {
@@ -464,7 +510,7 @@ export default function VideoChat() {
         setStatus('connected')
     }
 
-    const sendOffer = async (peer: RTCPeerConnection, channel: any) => {
+    const sendOffer = async (peer: RTCPeerConnection, channel: any, currentSessionId: string) => {
         if (hasSentOfferRef.current) return
         hasSentOfferRef.current = true
 
@@ -474,7 +520,7 @@ export default function VideoChat() {
             channel.send({
                 type: 'broadcast',
                 event: 'signal',
-                payload: { type: 'offer', offer }
+                payload: { type: 'offer', offer, sessionId: currentSessionId }
             })
         } catch (e) {
             console.error("Error creating offer:", e)
@@ -489,7 +535,8 @@ export default function VideoChat() {
             signalChannelRef.current.send({
                 type: 'broadcast',
                 event: 'signal',
-                payload: { type: 'bye' }
+                // Use current ref
+                payload: { type: 'bye', sessionId: sessionIdRef.current }
             }).catch(e => console.error("Error sending bye:", e))
 
             // Give a tiny moment for the message to hit the network buffer before we tear down
@@ -500,6 +547,13 @@ export default function VideoChat() {
         setRemoteStream(null)
         setPartnerStatus('connecting')
         stopPolling() // Stop active search
+
+        // Clear refs
+        sessionIdRef.current = null
+        if (leaveTimeoutRef.current) {
+            clearTimeout(leaveTimeoutRef.current)
+            leaveTimeoutRef.current = null
+        }
 
         // Clear connection timeout
         if (connectionTimeoutRef.current) {
@@ -568,9 +622,10 @@ export default function VideoChat() {
                         {isFullScreen ? <Minimize size={18} /> : <Maximize size={18} />}
                     </button>
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/50 dark:bg-black/50 backdrop-blur-md border border-neutral-200 dark:border-white/10 shadow-sm">
-                        <span className={`w-2 h-2 rounded-full ${status === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-neutral-400 dark:bg-neutral-600'}`} />
+                        <span className={`w-2 h-2 rounded-full ${status === 'connected' ? 'bg-green-500 animate-pulse' : status === 'reconnecting' ? 'bg-yellow-500 animate-pulse' : 'bg-neutral-400 dark:bg-neutral-600'}`} />
                         <span className="text-xs font-medium opacity-80">
                             {status === 'searching' && "Matching..."}
+                            {status === 'reconnecting' && "Reconnecting..."}
                             {status === 'connected' && (partnerStatus === 'connected' ? "Live" : "Connecting...")}
                             {status === 'idle' && "Ready"}
                         </span>
@@ -584,7 +639,7 @@ export default function VideoChat() {
                 {/* REMOTE VIDEO CONTAINER - Full Bleed */}
                 <div className={`w-full h-full flex items-center justify-center relative bg-neutral-900 border border-neutral-200 dark:border-white/10 shadow-2xl overflow-hidden ${isFullScreen ? 'rounded-none' : 'rounded-3xl'}`}>
 
-                    {status === 'connected' ? (
+                    {status === 'connected' || status === 'reconnecting' ? (
                         <>
                             {/* Video Element */}
                             <video
@@ -594,15 +649,15 @@ export default function VideoChat() {
                                 className="w-full h-full object-cover"
                             />
 
-                            {/* Connecting State Overlay - REMOVED per user request for "direct" feel */}
-                            {/* {partnerStatus === 'connecting' && (
-                                <div className="absolute inset-0 bg-white/60 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center z-20">
-                                    <div className="flex flex-col items-center gap-3">
-                                        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-                                        <p className="text-sm font-medium opacity-80">Connecting...</p>
+                            {/* RECONNECTING OVERLAY */}
+                            {status === 'reconnecting' && (
+                                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-20">
+                                    <div className="flex flex-col items-center gap-3 animate-pulse">
+                                        <WifiOff className="w-10 h-10 text-yellow-500" />
+                                        <p className="text-white font-medium">Reconnecting...</p>
                                     </div>
                                 </div>
-                            )} */}
+                            )}
                         </>
                     ) : (
                         /* IDLE / SEARCHING STATE */
@@ -739,9 +794,9 @@ export default function VideoChat() {
                             {/* Skip (Large Pill) */}
                             <button
                                 onClick={handleSkip}
-                                disabled={partnerStatus === 'connecting'}
+                                disabled={partnerStatus === 'connecting' && status !== 'reconnecting'}
                                 className={`h-12 md:h-14 px-6 md:px-8 rounded-full font-bold flex items-center gap-2 transition-all shadow-lg 
-                                    ${partnerStatus === 'connecting'
+                                    ${partnerStatus === 'connecting' && status !== 'reconnecting'
                                         ? 'bg-neutral-300 dark:bg-neutral-800 text-neutral-500 cursor-not-allowed'
                                         : 'bg-blue-600 text-white hover:bg-blue-500 hover:scale-105 active:scale-95 shadow-blue-600/20'}`}
                             >
@@ -759,5 +814,3 @@ export default function VideoChat() {
         </div>
     )
 }
-
-
