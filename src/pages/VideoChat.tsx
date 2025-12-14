@@ -38,6 +38,9 @@ export default function VideoChat() {
     // Track if we have already sent an offer to avoid dups
     const hasSentOfferRef = useRef(false)
 
+    // Connection timeout ref
+    const connectionTimeoutRef = useRef<number | null>(null)
+
     // Cleanup on unmount
     useEffect(() => {
         return () => {
@@ -153,9 +156,16 @@ export default function VideoChat() {
             if (peer.connectionState === 'disconnected' || peer.connectionState === 'failed') {
                 setStatus('idle')
                 setRemoteStream(null)
+                if (connectionTimeoutRef.current) {
+                    clearTimeout(connectionTimeoutRef.current)
+                }
             }
             if (peer.connectionState === 'connected') {
                 setPartnerStatus('connected')
+                // Clear timeout on successful connection
+                if (connectionTimeoutRef.current) {
+                    clearTimeout(connectionTimeoutRef.current)
+                }
             }
         }
 
@@ -244,7 +254,7 @@ export default function VideoChat() {
                     event: 'UPDATE',
                     schema: 'public',
                     table: 'video_chat_queue',
-                    filter: `id = eq.${myQueueIdRef.current} `
+                    filter: `id=eq.${myQueueIdRef.current}`
                 },
                 (payload) => {
                     if (payload.new.matched_with) {
@@ -257,12 +267,26 @@ export default function VideoChat() {
     }
 
     const initiateCall = async (sessionId: string, isCaller: boolean) => {
-        console.log(`Starting call.Session: ${sessionId}, I am Caller: ${isCaller} `)
+        console.log(`Starting call. Session: ${sessionId}, I am Caller: ${isCaller}`)
         hasSentOfferRef.current = false
         iceCandidatesBuffer.current = []
 
+        // Clear any existing timeout
+        if (connectionTimeoutRef.current) {
+            clearTimeout(connectionTimeoutRef.current)
+        }
+
+        // Set connection timeout - if not connected in 15s, restart
+        connectionTimeoutRef.current = setTimeout(() => {
+            if (partnerStatus === 'connecting') {
+                console.log('Connection timeout - restarting search')
+                handleStop()
+                setTimeout(() => startSearch(), 1000)
+            }
+        }, 15000)
+
         // Initialize Signaling Channel
-        const channel = supabase.channel(`video - session - ${sessionId} `)
+        const channel = supabase.channel(`video-session-${sessionId}`)
         signalChannelRef.current = channel
 
         const peer = createPeer(isCaller, channel)
@@ -352,6 +376,12 @@ export default function VideoChat() {
         setStatus('idle')
         setRemoteStream(null)
         setPartnerStatus('connecting')
+
+        // Clear connection timeout
+        if (connectionTimeoutRef.current) {
+            clearTimeout(connectionTimeoutRef.current)
+            connectionTimeoutRef.current = null
+        }
 
         if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null
 
