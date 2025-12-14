@@ -207,7 +207,7 @@ export default function CoffeeChat() {
     }
 
     return (
-        <div className="flex flex-col h-[calc(100vh-64px)] relative bg-white dark:bg-black">
+        <div className="flex flex-col h-full relative bg-white dark:bg-black">
 
             {/* --- HEADER --- */}
             <header className="flex-none h-14 border-b border-gray-100 dark:border-white/10 px-4 flex items-center justify-between bg-white/80 dark:bg-black/80 backdrop-blur-md sticky top-0 z-10">

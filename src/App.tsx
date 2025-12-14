@@ -70,7 +70,7 @@ function Layout({
   }, [isMobileMenuOpen]);
 
   return (
-    <div className="flex flex-col bg-white dark:bg-black text-gray-950 dark:text-gray-50 transition-colors duration-200 font-sans selection:bg-gray-900 selection:text-white dark:selection:bg-gray-100 dark:selection:text-black min-h-screen">
+    <div className={`flex flex-col bg-white dark:bg-black text-gray-950 dark:text-gray-50 transition-colors duration-200 font-sans selection:bg-gray-900 selection:text-white dark:selection:bg-gray-100 dark:selection:text-black ${isChatPage ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
 
       {/* 1. Sticky Top Navigation (Glassmorphism) */}
       <Header
