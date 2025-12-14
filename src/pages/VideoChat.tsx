@@ -156,12 +156,20 @@ export default function VideoChat() {
         // Handle ICE candidates
         peer.onicecandidate = (event) => {
             if (event.candidate) {
+                console.log("🔵 Generated ICE Candidate:", event.candidate.type, event.candidate.candidate)
                 signalChannel.send({
                     type: 'broadcast',
                     event: 'signal',
                     payload: { type: 'candidate', candidate: event.candidate }
                 })
+            } else {
+                console.log("✅ ICE Candidate gathering complete")
             }
+        }
+
+        // Track ICE gathering state
+        peer.onicegatheringstatechange = () => {
+            console.log("ICE Gathering State:", peer.iceGatheringState)
         }
 
         peer.oniceconnectionstatechange = () => {
@@ -498,14 +506,16 @@ export default function VideoChat() {
                     }
 
                 } else if (payload.type === 'candidate') {
+                    console.log("🟢 Received ICE Candidate:", payload.candidate.type, payload.candidate.candidate)
                     if (peerRef.current.remoteDescription) {
                         try {
                             await peerRef.current.addIceCandidate(payload.candidate)
+                            console.log("✅ ICE Candidate added successfully")
                         } catch (e: any) {
-                            console.warn("Error adding ICE candidate:", e)
+                            console.error("❌ Error adding ICE candidate:", e)
                         }
                     } else {
-                        console.log("Buffering ICE candidate")
+                        console.log("📦 Buffering ICE candidate (no remote desc yet)")
                         iceCandidatesBuffer.current.push(payload.candidate)
                     }
                 }
