@@ -332,17 +332,17 @@ export default function VideoChat() {
         if (!user) return
 
         // 1. Find a candidate (exclude entries less than 2s old to avoid race conditions)
-        // AND ensure they are alive (updated_at > 5s ago)
+        // AND ensure they are alive (updated_at > 7s ago - generous buffer)
         const twoSecondsAgo = new Date(Date.now() - 2000).toISOString()
-        const fiveSecondsAgo = new Date(Date.now() - 5000).toISOString()
+        const sevenSecondsAgo = new Date(Date.now() - 7000).toISOString()
 
         const { data: candidates } = await supabase
             .from('video_chat_queue')
             .select('*')
             .neq('user_id', user.id)
             .is('matched_with', null)
-            .lt('created_at', twoSecondsAgo) // Only match with entries at least 2s old
-            .gt('updated_at', fiveSecondsAgo) // Only match with LIVE users (heartbeat)
+            .lt('created_at', twoSecondsAgo)
+            .gt('updated_at', sevenSecondsAgo) // Only match with LIVE users
             .limit(1)
 
         if (candidates && candidates.length > 0) {
@@ -377,14 +377,14 @@ export default function VideoChat() {
             clearTimeout(connectionTimeoutRef.current)
         }
 
-        // Set connection timeout - if not connected in 5s, restart
+        // Set connection timeout - if not connected in 10s, restart
         connectionTimeoutRef.current = setTimeout(() => {
             if (partnerStatus === 'connecting') {
                 console.log('Connection timeout - restarting search')
                 handleStop()
                 setTimeout(() => startSearch(), 500)
             }
-        }, 5000)
+        }, 10000)
 
         // Initialize Signaling Channel
         const channel = supabase.channel(`video-session-${sessionId}`)
