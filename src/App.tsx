@@ -36,6 +36,7 @@ import PomodoroPage from './components/PomodoroPage';
 import CoffessionsPage from './components/CoffessionsPage';
 import CoffeeChat from './components/CoffeeChat';
 import VideoChat from './pages/VideoChat';
+import PdfGeneratorPage from './components/PdfGeneratorPage';
 
 import SEO from './components/SEO'
 import AttendanceManager from './components/attendance/AttendanceManager'
@@ -444,6 +445,16 @@ function AppContent() {
               setIsAuthModalOpen(true)
             }}>
               <VideoChat />
+            </ProtectedRoute>
+          } />
+
+          {/* PDF Generator Route (Protected) */}
+          <Route path="/pdf-generator" element={
+            <ProtectedRoute onAuthRequired={() => {
+              setAuthModalInitialView('login')
+              setIsAuthModalOpen(true)
+            }}>
+              <PdfGeneratorPage />
             </ProtectedRoute>
           } />
 
