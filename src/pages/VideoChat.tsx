@@ -601,7 +601,7 @@ export default function VideoChat() {
 
     // --- STOP / SKIP ---
 
-    const handleStop = async (sendBye = false) => {
+    const handleStop = async (sendBye = false, preserveMedia = false) => {
         // Send BYE if requested and connected (Fire and forget with small buffer)
         if (sendBye && signalChannelRef.current && peerRef.current) {
             signalChannelRef.current.send({
@@ -658,15 +658,19 @@ export default function VideoChat() {
         }
         myQueueIdRef.current = null
 
-        if (localStream) {
-            localStream.getTracks().forEach(track => track.stop())
-            setLocalStream(null)
-            if (localVideoRef.current) localVideoRef.current.srcObject = null
+        // Only stop tracks if NOT preserving media (e.g. closing app)
+        if (!preserveMedia) {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop())
+                setLocalStream(null)
+                localStreamRef.current = null // Sync ref
+                if (localVideoRef.current) localVideoRef.current.srcObject = null
+            }
         }
     }
 
     const handleSkip = async () => {
-        await handleStop(true) // Send BYE signal
+        await handleStop(true, true) // Send BYE + KEY CHANGE: Preserve Media
         // Immediate restart (relies on robust queue filters)
         setTimeout(() => startSearch(), 50)
     }
