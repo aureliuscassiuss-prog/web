@@ -681,13 +681,7 @@ export default function VideoChat() {
         <div className="flex flex-col h-[100dvh] bg-white dark:bg-black text-neutral-900 dark:text-white overflow-hidden font-sans relative">
 
             {/* Header (Minimal) */}
-            <div className="absolute top-0 left-0 right-0 p-4 z-20 flex items-center justify-between pointer-events-none">
-                <div className="flex items-center gap-2 pointer-events-auto bg-white/50 dark:bg-black/50 backdrop-blur-md p-1.5 rounded-full border border-neutral-200 dark:border-white/10 shadow-sm">
-                    <div className="w-8 h-8 rounded-full bg-blue-600/10 dark:bg-blue-600/20 flex items-center justify-center">
-                        <Video size={16} className="text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <span className="font-bold text-sm md:text-base pr-3">VideoChat</span>
-                </div>
+            <div className="absolute top-0 left-0 right-0 p-4 z-20 flex items-center justify-end pointer-events-none">
                 <div className="flex items-center gap-2 pointer-events-auto">
                     <button
                         onClick={toggleFullScreen}
