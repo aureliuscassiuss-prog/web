@@ -90,6 +90,7 @@ export default function CoffessionsPage() {
     const votesRef = useRef<Record<string, 'like' | 'dislike'>>({});
     const initialVotesRef = useRef<Record<string, 'like' | 'dislike'>>({});
     const voteTimeoutRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+    const pendingVotesRef = useRef<Set<string>>(new Set()); // Track pending API calls to prevent duplicates
 
     useEffect(() => {
         if (isCreateModalOpen || shareData) {
@@ -200,22 +201,15 @@ export default function CoffessionsPage() {
         }
 
         voteTimeoutRef.current[id] = setTimeout(async () => {
+            // Prevent duplicate API calls if already sending for this ID
+            if (pendingVotesRef.current.has(id)) {
+                delete voteTimeoutRef.current[id];
+                return;
+            }
+
+            pendingVotesRef.current.add(id);
+
             try {
-                // We send the final state relative to the server's truth? 
-                // Actually, our API takes *deltas*. This is tricky with debouncing.
-                // If we debounce deltas, we need to sum them up.
-                // BETTER APPROACH FOR "BADDEST GLITCH":
-                // Just send the VOTE ACTION. "I want to LIKE this".
-                // And let the server handle "If already liked, remove like".
-                // BUT sticking to the existing API structure (assuming it handles deltas):
-
-                // For simplified "super smooth" experience without complex delta accumulation:
-                // We will just fire the API request. The "glitch" usually happens because the UI
-                // jumps back and forth. By using `votesRef`, the UI transition is smooth.
-                // To be safe with the backend, we should arguably NOT debounce deltas if the backend relies on them sequentially.
-                // However, the user said "instant update".
-                // The most robust way is:
-
                 const response = await fetch(`/api/coffessions?action=vote`, {
                     method: 'POST',
                     headers: {
@@ -237,8 +231,10 @@ export default function CoffessionsPage() {
                 console.error('Vote failed remotely', e);
                 // We don't revert here because it causes jumping. 
                 // We assume server eventually squares up or next fetch fixes it.
+            } finally {
+                pendingVotesRef.current.delete(id);
+                delete voteTimeoutRef.current[id];
             }
-            delete voteTimeoutRef.current[id];
         }, 300); // 300ms debounce effectively "calms" the network traffic
     };
 
@@ -603,9 +599,13 @@ export default function CoffessionsPage() {
 
                                 <div className="relative z-10 my-auto flex flex-col items-center text-center px-1">
                                     <span className="text-7xl font-serif leading-none opacity-10 mb-2 font-black">"</span>
-                                    <p className={`font-serif font-medium leading-tight tracking-wide italic drop-shadow-sm ${shareData.content.length > 150 ? 'text-xl' :
-                                        shareData.content.length > 100 ? 'text-2xl' :
-                                            shareData.content.length > 60 ? 'text-3xl' : 'text-4xl'
+                                    <p className={`font-serif font-medium leading-tight tracking-wide italic drop-shadow-sm break-words overflow-wrap-anywhere ${shareData.content.length > 500 ? 'text-xs leading-snug' :
+                                        shareData.content.length > 400 ? 'text-sm leading-snug' :
+                                            shareData.content.length > 300 ? 'text-base leading-snug' :
+                                                shareData.content.length > 200 ? 'text-lg leading-tight' :
+                                                    shareData.content.length > 150 ? 'text-xl leading-tight' :
+                                                        shareData.content.length > 100 ? 'text-2xl' :
+                                                            shareData.content.length > 60 ? 'text-3xl' : 'text-4xl'
                                         }`}>{shareData.content}</p>
                                     <span className="text-7xl font-serif leading-none opacity-10 mt-4 rotate-180 font-black">"</span>
                                 </div>
@@ -659,12 +659,14 @@ export default function CoffessionsPage() {
 
                             <div className="relative z-10 my-auto flex flex-col items-center text-center px-4 overflow-hidden w-full">
                                 <span className="text-9xl font-serif leading-none opacity-10 mb-4 font-black">"</span>
-                                <p className={`font-serif font-medium leading-tight tracking-wide italic drop-shadow-sm break-words w-full
-                                    ${shareData.content.length > 400 ? 'text-base' :
-                                        shareData.content.length > 300 ? 'text-lg' :
-                                            shareData.content.length > 200 ? 'text-xl' :
-                                                shareData.content.length > 100 ? 'text-4xl' :
-                                                    shareData.content.length > 50 ? 'text-5xl' : 'text-6xl'}`}
+                                <p className={`font-serif font-medium leading-tight tracking-wide italic drop-shadow-sm break-words w-full overflow-wrap-anywhere
+                                    ${shareData.content.length > 500 ? 'text-xs leading-snug' :
+                                        shareData.content.length > 400 ? 'text-sm leading-snug' :
+                                            shareData.content.length > 300 ? 'text-base leading-snug' :
+                                                shareData.content.length > 200 ? 'text-xl leading-tight' :
+                                                    shareData.content.length > 150 ? 'text-2xl leading-tight' :
+                                                        shareData.content.length > 100 ? 'text-4xl' :
+                                                            shareData.content.length > 50 ? 'text-5xl' : 'text-6xl'}`}
                                 >
                                     {shareData.content}
                                 </p>

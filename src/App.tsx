@@ -55,7 +55,7 @@ function Layout({
 }: any) {
   const navigate = useNavigate()
   const location = useLocation()
-  const isStanadalonePage = location.pathname === '/coffessions'
+  const isStanadalonePage = false // Removed coffessions - sidebar now visible on all pages except chat
   const isChatPage = location.pathname === '/chat'
 
   // Lock body scroll when mobile menu is open
