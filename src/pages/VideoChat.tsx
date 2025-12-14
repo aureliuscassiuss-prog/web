@@ -21,7 +21,6 @@ export default function VideoChat() {
     const { user } = useAuth()
     const [status, setStatus] = useState<'idle' | 'searching' | 'connected' | 'error'>('idle')
     const [localStream, setLocalStream] = useState<MediaStream | null>(null)
-    const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null) // Used for state tracking, mainly
     const [isMuted, setIsMuted] = useState(false)
     const [isVideoOff, setIsVideoOff] = useState(false)
     const [errorMsg, setErrorMsg] = useState('')
@@ -144,7 +143,7 @@ export default function VideoChat() {
         peer.ontrack = (event) => {
             console.log("Remote track received")
             if (event.streams && event.streams[0]) {
-                setRemoteStream(event.streams[0])
+                // setRemoteStream(event.streams[0]) // Not needed if we use ref directly
                 setPartnerStatus('connected')
                 if (remoteVideoRef.current) {
                     remoteVideoRef.current.srcObject = event.streams[0]
@@ -204,7 +203,7 @@ export default function VideoChat() {
                     startSearch()
                 } else {
                     setStatus('idle')
-                    setRemoteStream(null)
+                    // setRemoteStream(null)
                 }
             } else if (peer.connectionState === 'disconnected') {
                 // Show reconnecting for temporary disconnects
@@ -327,7 +326,7 @@ export default function VideoChat() {
                         if (peerRef.current) return // Already busy with another connection
 
                         stopPolling()
-                        initiateCall(myQueueIdRef.current!, false)
+                        initiateCall(payload.new.matched_with, false) // Role derived inside
                     }
                 }
             )
@@ -384,14 +383,25 @@ export default function VideoChat() {
             if (!claimError) {
                 console.log("Successfully claimed partner!")
                 stopPolling() // Stop searching
-                initiateCall(target.id, true) // Act as Caller
+                stopPolling() // Stop searching
+                initiateCall(target.user_id, true) // Role derived inside
             } else {
                 console.log("Claim failed - maybe taken?")
             }
         }
     }
 
-    const initiateCall = async (sessionId: string, isCaller: boolean) => {
+    const initiateCall = async (partnerUserId: string, _ignoredIsCaller?: boolean) => {
+        if (!user) return
+
+        // DETERMINISTIC SIGNALING:
+        // 1. Session ID = Sorted IDs (So both end up in "A-B")
+        const ids = [user.id, partnerUserId].sort()
+        const sessionId = ids.join('-')
+
+        // 2. Caller = First ID in sort order (So no collision on who offers)
+        const isCaller = user.id === ids[0]
+
         console.log(`Starting call. Session: ${sessionId}, I am Caller: ${isCaller}`)
         hasSentOfferRef.current = false
         iceCandidatesBuffer.current = []
@@ -533,7 +543,7 @@ export default function VideoChat() {
                 type: 'broadcast',
                 event: 'signal',
                 payload: { type: 'bye' }
-            }).catch(e => console.error("Error sending bye:", e))
+            }).catch((e: any) => console.error("Error sending bye:", e))
 
             // Give a tiny moment for the message to hit the network buffer before we tear down
             await new Promise(resolve => setTimeout(resolve, 20))
@@ -546,7 +556,7 @@ export default function VideoChat() {
         }
 
         setStatus('idle')
-        setRemoteStream(null)
+        // setRemoteStream(null)
         setPartnerStatus('connecting')
         stopPolling() // Stop active search
 
