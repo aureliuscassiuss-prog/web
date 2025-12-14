@@ -399,10 +399,10 @@ export default function CoffessionsPage() {
     };
 
     return (
-        <div className="min-h-screen bg-stone-50 dark:bg-[#0a0a0a] font-sans selection:bg-amber-500/30 pb-32 transition-colors duration-500">
+        <div className="min-h-screen font-sans selection:bg-amber-500/30 pb-32 transition-colors duration-500">
 
             {/* Navbar & Filters (Same as before) */}
-            <div className="sticky top-0 z-40 backdrop-blur-xl bg-stone-50/80 dark:bg-[#0a0a0a]/80 border-b border-stone-200 dark:border-white/5">
+            <div className="sticky top-14 sm:top-16 z-30 backdrop-blur-xl bg-stone-50/80 dark:bg-[#0a0a0a]/80 border-b border-stone-200 dark:border-white/5">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
                     <div onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex items-center gap-2 cursor-pointer group">
                         <div className="relative bg-gradient-to-br from-amber-600 to-amber-800 p-1.5 rounded-lg text-white shadow-md">
@@ -597,7 +597,7 @@ export default function CoffessionsPage() {
                                     <h1 className="font-serif italic text-4xl font-black tracking-tight leading-none opacity-90">Coffession</h1>
                                 </div>
 
-                                <div className="relative z-10 my-auto flex flex-col items-center text-center px-8">
+                                <div className="relative z-10 my-auto flex flex-col items-center text-center px-12">
                                     <span className="text-7xl font-serif leading-none opacity-10 mb-2 font-black">"</span>
                                     <p className={`font-serif font-medium leading-tight tracking-wide italic drop-shadow-sm break-words overflow-wrap-anywhere ${shareData.content.length > 300 ? 'text-xs leading-snug' :
                                         shareData.content.length > 200 ? 'text-sm leading-snug' :
@@ -656,7 +656,7 @@ export default function CoffessionsPage() {
                                 <h1 className="font-serif italic text-6xl font-black tracking-tight opacity-90">Coffession</h1>
                             </div>
 
-                            <div className="relative z-10 my-auto flex flex-col items-center text-center px-8 overflow-hidden w-full">
+                            <div className="relative z-10 my-auto flex flex-col items-center text-center px-12 overflow-hidden w-full">
                                 <span className="text-9xl font-serif leading-none opacity-10 mb-4 font-black">"</span>
                                 <p className={`font-serif font-medium leading-tight tracking-wide italic drop-shadow-sm break-words w-full overflow-wrap-anywhere
                                     ${shareData.content.length > 300 ? 'text-xs leading-snug' :

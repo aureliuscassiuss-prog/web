@@ -88,7 +88,7 @@ function Layout({
       <div className={
         isStanadalonePage ? "w-full flex-1"
           : isChatPage ? "flex flex-1 w-full overflow-hidden"
-            : `flex flex-1 items-start gap-10 ${isCoffessionsPage ? 'px-0 sm:px-6' : 'px-4 sm:px-6'} md:px-8 pt-6 max-w-[1600px] mx-auto w-full`
+            : `flex flex-1 items-start gap-10 ${isCoffessionsPage ? 'px-0 sm:px-6 pt-0' : 'px-4 sm:px-6 pt-6'} md:px-8 max-w-[1600px] mx-auto w-full`
       }>
 
         {/* 2. Sticky Left Sidebar (Hidden on Mobile) - Hidden on Standalone Pages */}
