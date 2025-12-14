@@ -5,8 +5,10 @@ import { useAuth } from '../contexts/AuthContext'
 import { Video, Mic, MicOff, VideoOff, SkipForward, AlertCircle, Loader2, StopCircle, User, Maximize, Minimize } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
-// WebRTC Configuration
-const RTC_CONFIG = {
+import { RealtimeChannel } from '@supabase/supabase-js'
+
+// WebRTC Configuration - Expanded for better connectivity
+const RTC_CONFIG: RTCConfiguration = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
@@ -14,32 +16,36 @@ const RTC_CONFIG = {
         { urls: 'stun:stun3.l.google.com:19302' },
         { urls: 'stun:stun4.l.google.com:19302' },
         { urls: 'stun:global.stun.twilio.com:3478' }
-    ]
+    ],
+    iceCandidatePoolSize: 10,
+    bundlePolicy: 'max-bundle',
+    iceTransportPolicy: 'all'
 }
 
-export default function VideoChat() {
+export const VideoChat = () => {
     const { user } = useAuth()
-    const [status, setStatus] = useState<'idle' | 'searching' | 'connected' | 'error'>('idle')
+    const [status, setStatus] = useState<'idle' | 'searching' | 'error'>('idle')
     const [localStream, setLocalStream] = useState<MediaStream | null>(null)
+    const localStreamRef = useRef<MediaStream | null>(null) // Ref for instant access without closure staleness
     const [isMuted, setIsMuted] = useState(false)
     const [isVideoOff, setIsVideoOff] = useState(false)
     const [errorMsg, setErrorMsg] = useState('')
-    const [partnerStatus, setPartnerStatus] = useState<'connecting' | 'connected' | 'reconnecting'>('connecting')
+    const [partnerStatus, setPartnerStatus] = useState<'idle' | 'searching' | 'connecting' | 'connected' | 'reconnecting'>('idle')
     const [isFullScreen, setIsFullScreen] = useState(false)
 
     // Refs for persistence without re-renders
     const localVideoRef = useRef<HTMLVideoElement>(null)
     const remoteVideoRef = useRef<HTMLVideoElement>(null)
     const peerRef = useRef<RTCPeerConnection | null>(null)
-    const queueSubscriptionRef = useRef<any>(null)
-    const signalChannelRef = useRef<any>(null)
+    const queueSubscriptionRef = useRef<RealtimeChannel | null>(null)
+    const signalChannelRef = useRef<RealtimeChannel | null>(null)
     const myQueueIdRef = useRef<string | null>(null)
 
     // ICE Candidate Buffer to fix race conditions
     const iceCandidatesBuffer = useRef<RTCIceCandidate[]>([])
 
     // Track if we have already sent an offer to avoid dups
-    const hasSentOfferRef = useRef(false)
+    const hasSentOfferRef = useRef<boolean>(false)
 
     // Connection timeout ref
     const connectionTimeoutRef = useRef<number | null>(null)
@@ -76,6 +82,7 @@ export default function VideoChat() {
             })
             console.log("Permissions granted.")
             setLocalStream(stream)
+            localStreamRef.current = stream // Update ref immediately
             setErrorMsg('')
             return stream
         } catch (err: any) {
@@ -125,7 +132,7 @@ export default function VideoChat() {
 
     // --- RTC LOGIC ---
 
-    const createPeer = (signalChannel: any) => {
+    const createPeer = (signalChannel: any, activeStream: MediaStream) => {
         // Close existing peer if any
         if (peerRef.current) {
             peerRef.current.close()
@@ -135,9 +142,12 @@ export default function VideoChat() {
         peerRef.current = peer
         iceCandidatesBuffer.current = [] // Reset buffer
 
-        // Add local tracks
-        if (localStream) {
-            localStream.getTracks().forEach(track => peer.addTrack(track, localStream))
+        // Add local tracks - USE EXPLICIT STREAM
+        if (activeStream) {
+            console.log(`Adding ${activeStream.getTracks().length} tracks to peer connection`)
+            activeStream.getTracks().forEach(track => peer.addTrack(track, activeStream))
+        } else {
+            console.warn("⚠️ No local stream provided to createPeer - ICE candidates may not generate!")
         }
 
         // Handle remote tracks
@@ -245,7 +255,7 @@ export default function VideoChat() {
         currentPartnerIdRef.current = null
         stopPolling() // Safety clear
 
-        let stream = localStream
+        let stream = localStreamRef.current // Prefer Ref
         if (!stream) {
             stream = await initLocalStream()
             if (!stream) return
@@ -263,16 +273,16 @@ export default function VideoChat() {
         await new Promise(resolve => setTimeout(resolve, 200))
 
         // 3. Put myself in the pool (Passive)
-        await addToQueue()
+        await addToQueue(stream)
 
         // 4. Actively look for others (Active)
-        startPolling()
+        startPolling(stream)
     }
 
     // Polling ref for active searching
     const searchingIntervalRef = useRef<number | null>(null)
 
-    const addToQueue = async () => {
+    const addToQueue = async (activeStream: MediaStream) => {
         if (!user) return
 
         // Insert self or update existing
@@ -337,26 +347,32 @@ export default function VideoChat() {
                         }
 
                         console.log("Picked by:", payload.new.matched_with)
-                        // If I'm already setting up a call as a caller, this might race, 
+                        // If I'm already setting up a call as a caller, this might race,
                         // but checking partnerStatus helps.
                         if (peerRef.current) return // Already busy with another connection
 
                         stopPolling()
-                        initiateCall(payload.new.matched_with, false) // Role derived inside
+                        // Use ref as backup if not passed (though we try to pass it)
+                        const currentStream = activeStream || localStreamRef.current
+                        if (currentStream) {
+                            initiateCall(payload.new.matched_with, currentStream, false)
+                        } else {
+                            console.error("Cannot initiate call - no local stream!")
+                        }
                     }
                 }
             )
             .subscribe()
     }
 
-    const startPolling = () => {
+    const startPolling = (activeStream: MediaStream) => {
         if (searchingIntervalRef.current) clearInterval(searchingIntervalRef.current)
 
         // Immediate check then interval
-        checkForPartner()
+        checkForPartner(activeStream)
 
         searchingIntervalRef.current = window.setInterval(async () => {
-            await checkForPartner()
+            await checkForPartner(activeStream)
         }, 2000) // Check every 2s
     }
 
@@ -367,7 +383,7 @@ export default function VideoChat() {
         }
     }
 
-    const checkForPartner = async () => {
+    const checkForPartner = async (activeStream: MediaStream) => {
         if (!user) return
         // If we already have a partner, don't look for another one
         if (currentPartnerIdRef.current) return
@@ -401,15 +417,20 @@ export default function VideoChat() {
             if (!claimError) {
                 console.log("Successfully claimed partner!")
                 stopPolling() // Stop searching
-                initiateCall(target.user_id, true) // Role derived inside
+                initiateCall(target.user_id, activeStream, true) // Role derived inside
             } else {
                 console.log("Claim failed - maybe taken?")
             }
         }
     }
 
-    const initiateCall = async (partnerUserId: string, _ignoredIsCaller?: boolean) => {
+    const initiateCall = async (partnerUserId: string, activeStream: MediaStream, _ignoredIsCaller?: boolean) => {
         if (!user) return
+
+        if (!activeStream) {
+            console.error("❌ ABORTING CALL: No media stream available!")
+            return
+        }
 
         // IDEMPOTENCY CHECK:
         // If we are already initializing/connected with this partner, ignore duplicate requests.
@@ -452,7 +473,7 @@ export default function VideoChat() {
         const channel = supabase.channel(`video-session-${sessionId}`)
         signalChannelRef.current = channel
 
-        const peer = createPeer(channel)
+        const peer = createPeer(channel, activeStream)
 
         channel
             .on('broadcast', { event: 'signal' }, async ({ payload }) => {
