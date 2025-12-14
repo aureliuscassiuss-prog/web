@@ -46,13 +46,6 @@ export default function VideoChat() {
     const statusRef = useRef(status)
     useEffect(() => { statusRef.current = status }, [status])
 
-    // Initialize camera on mount
-    useEffect(() => {
-        if (!localStream) {
-            initLocalStream()
-        }
-    }, [])
-
     // Ensure local video is attached when stream is ready
     useEffect(() => {
         if (localStream && localVideoRef.current) {
@@ -540,6 +533,12 @@ export default function VideoChat() {
             await supabase.from('video_chat_queue').delete().eq('user_id', user.id)
         }
         myQueueIdRef.current = null
+
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop())
+            setLocalStream(null)
+            if (localVideoRef.current) localVideoRef.current.srcObject = null
+        }
     }
 
     const handleSkip = async () => {
