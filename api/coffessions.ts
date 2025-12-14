@@ -57,8 +57,48 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(401).json({ message: 'Invalid token' });
         }
 
+        // --- 1.5. GET: My Votes (Fetch user's vote history) ---
+        if (req.method === 'GET' && req.query.action === 'my-votes') {
+            const token = req.headers.authorization?.replace('Bearer ', '');
+            if (!token) return res.status(200).json({}); // Return empty if not logged in
+
+            try {
+                const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+                const userId = decoded.userId;
+
+                const { data, error } = await supabase
+                    .from('coffession_votes')
+                    .select('coffession_id, vote_type')
+                    .eq('user_id', userId);
+
+                if (error) throw error;
+
+                // Return as map: { [id]: 'like' | 'dislike' }
+                const voteMap = (data || []).reduce((acc: any, curr: any) => {
+                    acc[curr.coffession_id] = curr.vote_type;
+                    return acc;
+                }, {});
+
+                return res.status(200).json(voteMap);
+            } catch (e) {
+                return res.status(200).json({});
+            }
+        }
+
         // --- 2. POST: Create Confession ---
         if (req.method === 'POST' && !req.query.action) {
+            // ... (Auth happens inside POST block for creation)
+            const token = req.headers.authorization?.replace('Bearer ', '');
+            if (!token) return res.status(401).json({ message: 'Unauthorized' });
+
+            let userId: string;
+            try {
+                const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+                userId = decoded.userId;
+            } catch (e) {
+                return res.status(401).json({ message: 'Invalid token' });
+            }
+
             const { content, theme = 'espresso' } = req.body;
 
             if (!content || content.length < 5) return res.status(400).json({ message: 'Content too short' });
@@ -78,33 +118,48 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(201).json(data);
         }
 
-        // --- 3. POST /vote: Like/Dislike ---
+        // --- 3. POST /vote: Relational Vote (Upsert) ---
         if (req.method === 'POST' && req.query.action === 'vote') {
-            const { id, changes } = req.body;
-            // changes: { likes?: number, dislikes?: number }
+            const token = req.headers.authorization?.replace('Bearer ', '');
+            if (!token) return res.status(401).json({ message: 'Unauthorized' });
 
-            if (!id || !changes) return res.status(400).json({ message: 'Invalid vote data' });
+            let userId: string;
+            try {
+                const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+                userId = decoded.userId;
+            } catch (e) {
+                return res.status(401).json({ message: 'Invalid token' });
+            }
 
-            // Fetch current counts
-            const { data: current, error: fetchError } = await supabase
-                .from('coffessions')
-                .select('likes, dislikes')
-                .eq('id', id)
-                .single();
+            const { id, type } = req.body; // type: 'like' | 'dislike' | null (remove)
 
-            if (fetchError || !current) return res.status(404).json({ message: 'Post not found' });
+            if (!id) return res.status(400).json({ message: 'Missing ID' });
 
-            // Calculate new counts (ensure they don't go below 0)
-            const newLikes = Math.max(0, (current.likes || 0) + (changes.likes || 0));
-            const newDislikes = Math.max(0, (current.dislikes || 0) + (changes.dislikes || 0));
+            // Using "Upsert" logic with the new relational table.
+            // The DB Trigger (handle_vote_update) maintains the counts on the posts table automatically.
 
-            const { error: updateError } = await supabase
-                .from('coffessions')
-                .update({ likes: newLikes, dislikes: newDislikes })
-                .eq('id', id);
+            if (type) {
+                // Insert or Update the vote row
+                const { error } = await supabase
+                    .from('coffession_votes')
+                    .upsert({
+                        user_id: userId,
+                        coffession_id: id,
+                        vote_type: type
+                    }, { onConflict: 'user_id, coffession_id' }); // Relies on the unique constraint
 
-            if (updateError) throw updateError;
-            return res.status(200).json({ success: true, likes: newLikes, dislikes: newDislikes });
+                if (error) throw error;
+            } else {
+                // Delete the vote row (Unvote)
+                const { error } = await supabase
+                    .from('coffession_votes')
+                    .delete()
+                    .match({ user_id: userId, coffession_id: id });
+
+                if (error) throw error;
+            }
+
+            return res.status(200).json({ success: true });
         }
 
         // --- 4. DELETE: Delete Confession (Admin Only) ---

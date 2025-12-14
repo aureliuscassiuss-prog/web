@@ -106,19 +106,27 @@ export default function CoffessionsPage() {
 
     useEffect(() => {
         fetchCoffessions();
-        const savedVotes = localStorage.getItem('coffession_votes');
-        if (savedVotes) {
-            const parsed = JSON.parse(savedVotes);
-            setVotes(parsed);
-            votesRef.current = parsed;
-            // We capture the initial state of votes when the page loads (or sort changes)
-            // This assumes 'coffessions' data from server corresponds to these votes.
-            // This might be slightly off if user voted in another tab, but good enough for session consistency.
-            if (Object.keys(initialVotesRef.current).length === 0) {
-                initialVotesRef.current = parsed;
-            }
-        }
+        if (token) fetchMyVotes();
     }, [sort, token]);
+
+    const fetchMyVotes = async () => {
+        try {
+            const res = await fetch('/api/coffessions?action=my-votes', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setVotes(data);
+                votesRef.current = data;
+                // Establish baseline for optimistic updates
+                if (Object.keys(initialVotesRef.current).length === 0) {
+                    initialVotesRef.current = { ...data };
+                }
+            }
+        } catch (error) {
+            console.error('Failed to fetch votes', error);
+        }
+    };
 
     const fetchCoffessions = async () => {
         setIsLoading(true);
@@ -158,27 +166,9 @@ export default function CoffessionsPage() {
 
         let newVote: 'like' | 'dislike' | undefined = type;
 
-        let likeDelta = 0;
-        let dislikeDelta = 0;
-
         if (currentVote === type) {
             // Toggle off
             newVote = undefined;
-            if (type === 'like') likeDelta = -1;
-            if (type === 'dislike') dislikeDelta = -1;
-        } else if (currentVote) {
-            // Swap
-            if (type === 'like') {
-                likeDelta = 1;
-                dislikeDelta = -1;
-            } else {
-                likeDelta = -1;
-                dislikeDelta = 1;
-            }
-        } else {
-            // New vote
-            if (type === 'like') likeDelta = 1;
-            if (type === 'dislike') dislikeDelta = 1;
         }
 
         // 1. Synchronously update Refs (The Truth)
@@ -195,11 +185,8 @@ export default function CoffessionsPage() {
             else delete next[id];
             return next;
         });
-        localStorage.setItem('coffession_votes', JSON.stringify(votesRef.current));
 
-        // Note: We NO LONGER manually mutate the coffessions array.
-        // The UI renders the count based on derived state.
-        // This prevents the "infinite increment" glitch.
+        // No localStorage anymore - Server is source of truth
 
         // 3. Debounced API Call
         // Clear existing timeout for this post ID to avoid sending intermediate states
@@ -225,10 +212,7 @@ export default function CoffessionsPage() {
                     },
                     body: JSON.stringify({
                         id,
-                        changes: {
-                            likes: likeDelta,
-                            dislikes: dislikeDelta
-                        }
+                        type: newVote // Relational Vote: 'like' | 'dislike' | undefined
                     })
                 });
 
