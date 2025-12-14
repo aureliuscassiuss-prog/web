@@ -26,7 +26,11 @@ export default function CoffeeChat() {
     const [newMessage, setNewMessage] = useState('')
     const [typingUsers, setTypingUsers] = useState<TypingUser[]>([])
     const [isLoading, setIsLoading] = useState(true)
+    const [isLoadingMore, setIsLoadingMore] = useState(false)
+    const [hasMore, setHasMore] = useState(true)
     const messagesEndRef = useRef<HTMLDivElement>(null)
+    const scrollContainerRef = useRef<HTMLDivElement>(null)
+    const shouldScrollToBottomRef = useRef(true)
     const channelRef = useRef<any>(null)
     const typingTimeoutRef = useRef<any>(null)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -46,36 +50,81 @@ export default function CoffeeChat() {
 
     // Scroll to bottom on new messages
     const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
-        messagesEndRef.current?.scrollIntoView({ behavior })
+        if (shouldScrollToBottomRef.current) {
+            messagesEndRef.current?.scrollIntoView({ behavior })
+        }
     }
 
     useEffect(() => {
         scrollToBottom()
     }, [messages, typingUsers])
 
-    // Initialize Chat
-    useEffect(() => {
-        const fetchMessages = async () => {
-            if (supabase.supabaseUrl.includes('placeholder')) {
-                setIsLoading(false)
-                return
-            }
-
-            // Get messages from last 4 hours
-            const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
-
-            const { data, error } = await supabase
-                .from('coffee_chat_messages')
-                .select('*')
-                .gt('created_at', fourHoursAgo)
-                .order('created_at', { ascending: true })
-
-            if (data) setMessages(data)
-            if (error) console.error('Error fetching messages:', error)
-
+    const fetchMessages = async (isLoadMore = false) => {
+        if (supabase.supabaseUrl.includes('placeholder')) {
             setIsLoading(false)
+            return
         }
 
+        if (isLoadMore) setIsLoadingMore(true)
+
+        // Get messages from last 4 hours
+        const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
+
+        // Cursor-based pagination
+        let query = supabase
+            .from('coffee_chat_messages')
+            .select('*')
+            .gt('created_at', fourHoursAgo)
+            .order('created_at', { ascending: false }) // Get latest first
+            .limit(20)
+
+        if (isLoadMore && messages.length > 0) {
+            // Get messages older than the oldest loaded message
+            query = query.lt('created_at', messages[0].created_at)
+        }
+
+        const { data, error } = await query
+
+        if (error) {
+            console.error('Error fetching messages:', error)
+        } else if (data) {
+            const newMessages = [...data].reverse() // Reverse to put in chronological order
+
+            if (data.length < 20) setHasMore(false)
+
+            if (isLoadMore) {
+                // Maintain scroll position
+                const container = scrollContainerRef.current
+                const oldScrollHeight = container?.scrollHeight || 0
+
+                shouldScrollToBottomRef.current = false
+                setMessages(prev => [...newMessages, ...prev])
+
+                // Adjust scroll after render (using setTimeout to wait for paint)
+                requestAnimationFrame(() => {
+                    if (container) {
+                        const newScrollHeight = container.scrollHeight
+                        container.scrollTop = newScrollHeight - oldScrollHeight
+                    }
+                })
+            } else {
+                shouldScrollToBottomRef.current = true
+                setMessages(newMessages)
+            }
+        }
+
+        setIsLoading(false)
+        setIsLoadingMore(false)
+    }
+
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const { scrollTop } = e.currentTarget
+        if (scrollTop === 0 && hasMore && !isLoading && !isLoadingMore) {
+            fetchMessages(true)
+        }
+    }
+
+    useEffect(() => {
         fetchMessages()
 
         if (supabase.supabaseUrl.includes('placeholder')) return
@@ -96,7 +145,6 @@ export default function CoffeeChat() {
                             return prev
                         }
 
-                        // Replace temp message if it exists with same content
                         const tempIndex = prev.findIndex(m =>
                             m.id.toString().startsWith('temp-') &&
                             m.content === newMsg.content &&
@@ -109,6 +157,7 @@ export default function CoffeeChat() {
                             return updated
                         }
 
+                        shouldScrollToBottomRef.current = true // Auto-scroll for new real messages
                         return [...prev, newMsg]
                     })
 
@@ -200,7 +249,10 @@ export default function CoffeeChat() {
             created_at: new Date().toISOString()
         }
 
-        setMessages(prev => [...prev, optimisticMessage])
+        setMessages(prev => {
+            shouldScrollToBottomRef.current = true
+            return [...prev, optimisticMessage]
+        })
 
         // Send to Supabase in background
         const { error, data } = await supabase
@@ -279,7 +331,16 @@ export default function CoffeeChat() {
             </header>
 
             {/* --- MESSAGES AREA --- */}
-            <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-white/10">
+            <main
+                ref={scrollContainerRef}
+                onScroll={handleScroll}
+                className="flex-1 overflow-y-auto overflow-x-hidden p-4 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-white/10"
+            >
+                {isLoadingMore && (
+                    <div className="flex justify-center py-2">
+                        <span className="h-4 w-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></span>
+                    </div>
+                )}
                 {isLoading ? (
                     <div className="flex flex-col gap-4">
                         {[1, 2, 3, 4, 5].map((i) => (
