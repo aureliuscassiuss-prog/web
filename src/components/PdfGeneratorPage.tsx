@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { FileText, Code, Check, Copy, Sparkles, AlertCircle } from 'lucide-react';
+import { FileText, Code, Check, Copy, Sparkles, AlertCircle, Download, Terminal } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
@@ -20,19 +20,26 @@ export default function PdfGeneratorPage() {
         setGeneratedCode(null);
 
         try {
-            const systemPrompt = `You are a Python expert specializing in PDF generation. 
-Your task is to write a complete, runnable Python script using the 'fpdf' library (or 'reportlab' if better suited) to generate a high-quality PDF based on the user's description.
-- The output filename should be 'output.pdf'.
-- Include comments explaining the code.
-- Ensure the code handles text wrapping and page breaks correctly.
-- Return ONLY the Python code block. Do not include introductory text or conclusions like "Here is the code". Just the code wrapped in markdown python ticks.
-`;
+            const systemPrompt = `You are a Python expert specializing in professional PDF generation. 
+Your task is to write a complete, runnable Python script using the 'fpdf' library to generate a HIGH - QUALITY, professionally formatted PDF based on the user's description.
+
+CRITICAL FORMATTING RULES:
+1. ** Layout **: Use proper margins(25mm), line spacing(1.5), and alignment.
+2. ** Typography **: Use standard fonts(Arial, Times).Use Bold / Large fonts for Titles(size 16 - 24), Regular for body(size 11 - 12).
+3. ** Structure **:
+    - Header: Include a professional header if appropriate.
+   - Body: text wrapping(multi_cell) is MANDATORY for long text.DO NOT use single line 'cell' for paragraphs.
+   - Footer: Include page numbers.
+4. ** Content **: Ensure the content matches the user's request exactly (Notices, Resumes, etc.).
+5. ** Output **: The script must save the file as 'generated_document.pdf'.
+
+Return ONLY the Python code block.No markdown wrapper text outside the code block.`;
 
             const response = await fetch('/api/ai', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${token} `
                 },
                 body: JSON.stringify({
                     action: 'chat',
@@ -49,7 +56,7 @@ Your task is to write a complete, runnable Python script using the 'fpdf' librar
 
             // Extract code from markdown block if present
             const text = data.answer || '';
-            const codeMatch = text.match(/```python([\s\S]*?)```/);
+            const codeMatch = text.match(/```python([\s\S] *?)```/);
             const cleanCode = codeMatch ? codeMatch[1].trim() : text;
 
             setGeneratedCode(cleanCode);
@@ -67,6 +74,20 @@ Your task is to write a complete, runnable Python script using the 'fpdf' librar
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         }
+    };
+
+    const handleDownload = () => {
+        if (!generatedCode) return;
+
+        const blob = new Blob([generatedCode], { type: 'text/x-python' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'generate_pdf.py';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     };
 
     return (
@@ -117,11 +138,12 @@ Your task is to write a complete, runnable Python script using the 'fpdf' librar
                                     onClick={handleGenerate}
                                     disabled={!prompt.trim() || isGenerating}
                                     className={`
-                                        w-full py-4 rounded-xl font-bold text-sm tracking-wide transition-all duration-300 flex items-center justify-center gap-2
+w - full py - 4 rounded - xl font - bold text - sm tracking - wide transition - all duration - 300 flex items - center justify - center gap - 2
                                         ${!prompt.trim() || isGenerating
                                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-white/5 dark:text-gray-600'
-                                            : 'bg-black text-white hover:scale-[1.02] active:scale-[0.98] dark:bg-white dark:text-black shadow-lg shadow-black/5 dark:shadow-white/5'}
-                                    `}
+                                            : 'bg-black text-white hover:scale-[1.02] active:scale-[0.98] dark:bg-white dark:text-black shadow-lg shadow-black/5 dark:shadow-white/5'
+                                        }
+`}
                                 >
                                     {isGenerating ? (
                                         <>
@@ -158,15 +180,27 @@ Your task is to write a complete, runnable Python script using the 'fpdf' librar
                                     </div>
                                     <span className="ml-2 text-xs font-medium text-gray-500 dark:text-gray-400">generator.py</span>
                                 </div>
-                                {generatedCode && (
-                                    <button
-                                        onClick={handleCopy}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white dark:bg-white/10 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/20 transition-colors"
-                                    >
-                                        {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
-                                        {copied ? 'Copied' : 'Copy Code'}
-                                    </button>
-                                )}
+                                <div className="flex items-center gap-2">
+                                    {generatedCode && (
+                                        <>
+                                            <button
+                                                onClick={handleDownload}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white dark:bg-white/10 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/20 transition-colors"
+                                                title="Download Python Script"
+                                            >
+                                                <Download size={14} />
+                                                <span className="hidden sm:inline">Download</span>
+                                            </button>
+                                            <button
+                                                onClick={handleCopy}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white dark:bg-white/10 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/20 transition-colors"
+                                            >
+                                                {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                                                <span className="hidden sm:inline">{copied ? 'Copied' : 'Copy'}</span>
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Code Area */}
@@ -176,7 +210,8 @@ Your task is to write a complete, runnable Python script using the 'fpdf' librar
                                         <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
                                             <Code size={32} />
                                         </div>
-                                        <p className="max-w-[200px] text-sm">Generated code will appear here clearly formatted.</p>
+                                        <p className="max-w-[200px] text-sm md:text-base">Generated Python code will appear here ready to copy or download.</p>
+                                        <p className="mt-2 text-xs text-gray-600 dark:text-gray-500">Includes professional formatting & layout.</p>
                                     </div>
                                 )}
 
@@ -187,7 +222,7 @@ Your task is to write a complete, runnable Python script using the 'fpdf' librar
                                             <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
                                             <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce"></div>
                                         </div>
-                                        <span className="text-xs font-mono text-gray-400">Writing Python script...</span>
+                                        <span className="text-xs font-mono text-gray-400">Simulating PDF Layout...</span>
                                     </div>
                                 )}
 
@@ -210,6 +245,21 @@ Your task is to write a complete, runnable Python script using the 'fpdf' librar
                                 )}
                             </div>
                         </div>
+
+                        {/* Instructions (New) */}
+                        {generatedCode && (
+                            <div className="animate-fade-in bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20 rounded-xl p-4 flex items-start gap-3">
+                                <Terminal size={18} className="text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+                                <div className="space-y-1">
+                                    <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-300">How to run this?</h4>
+                                    <p className="text-xs text-blue-700 dark:text-blue-400 leading-relaxed">
+                                        1. Download the script or copy the code.<br />
+                                        2. Run <code className="px-1 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">pip install fpdf</code> in your terminal.<br />
+                                        3. Run <code className="px-1 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">python generate_pdf.py</code> to create the PDF file.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
