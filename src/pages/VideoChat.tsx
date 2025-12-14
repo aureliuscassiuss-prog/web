@@ -56,10 +56,10 @@ export default function VideoChat() {
                 localVideoRef.current.srcObject = stream
             }
             return stream
-        } catch (err) {
+        } catch (err: any) {
             console.error("Media Error:", err)
             setStatus('error')
-            setErrorMsg("Could not access camera/microphone.")
+            setErrorMsg(`Could not access camera/microphone: ${err.message}`)
             return null
         }
     }
@@ -146,7 +146,7 @@ export default function VideoChat() {
                 .select()
                 .single()
 
-            if (error || !queueEntry) throw new Error("Queue join failed")
+            if (error || !queueEntry) throw new Error("Queue join failed: " + error.message)
             myQueueIdRef.current = queueEntry.id
 
             // 4. Start Heartbeat (Keep alive)
@@ -182,7 +182,7 @@ export default function VideoChat() {
 
         } catch (e: any) {
             console.error(e)
-            setErrorMsg("Connection failed. Please try again.")
+            setErrorMsg(`Connection error: ${e.message || "Unknown error"}`)
             setStatus('error')
         }
     }
@@ -270,7 +270,8 @@ export default function VideoChat() {
 
         // Connection State Monitoring
         peer.onconnectionstatechange = () => {
-            if (peer.connectionState === 'failed' || peer.connectionState === 'disconnected') {
+            // FIX: Only fail on 'failed', ignore 'disconnected' for mobile stability
+            if (peer.connectionState === 'failed') {
                 // Auto-reconnect or skip
                 if (status === 'connected') handleSkip()
             }
