@@ -35,6 +35,12 @@ export default function CoffeeChat() {
     const typingTimeoutRef = useRef<any>(null)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+    // Visual Viewport for instant keyboard response
+    const [viewportHeight, setViewportHeight] = useState(
+        typeof window !== 'undefined' ? (window.visualViewport?.height || window.innerHeight) : 0
+    )
+    const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false)
+
     // Sound Effects
     const playSendSound = () => {
         const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3')
@@ -193,6 +199,32 @@ export default function CoffeeChat() {
         }
     }, [user])
 
+    // Visual Viewport listener for instant keyboard response on mobile
+    useEffect(() => {
+        if (typeof window === 'undefined') return
+
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768)
+            if (window.visualViewport) {
+                setViewportHeight(window.visualViewport.height)
+                if (window.innerWidth < 768) {
+                    setTimeout(() => scrollToBottom('auto'), 100)
+                }
+            }
+        }
+
+        window.visualViewport?.addEventListener('resize', handleResize)
+        window.addEventListener('resize', handleResize)
+
+        // Initial set
+        handleResize()
+
+        return () => {
+            window.visualViewport?.removeEventListener('resize', handleResize)
+            window.removeEventListener('resize', handleResize)
+        }
+    }, [])
+
     const handleTyping = () => {
         if (!channelRef.current || !user || supabase.supabaseUrl.includes('placeholder')) return
 
@@ -301,7 +333,10 @@ export default function CoffeeChat() {
     }
 
     return (
-        <div className="flex flex-col h-full bg-white dark:bg-black relative overflow-hidden">
+        <div className={`
+            flex flex-col bg-white dark:bg-black overflow-hidden
+            ${isMobile ? 'fixed top-16 bottom-0 inset-x-0 z-20' : 'relative h-full'}
+        `}>
 
             {/* --- HEADER --- */}
             <header className="flex-shrink-0 h-14 border-b border-gray-100 dark:border-white/10 px-4 flex items-center justify-between bg-white/80 dark:bg-black/80 backdrop-blur-md sticky top-0 z-10 w-full">
@@ -334,7 +369,7 @@ export default function CoffeeChat() {
             <main
                 ref={scrollContainerRef}
                 onScroll={handleScroll}
-                className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-[140px] scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-white/10"
+                className="flex-1 overflow-y-auto overflow-x-hidden p-4 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-white/10"
             >
                 {isLoadingMore && (
                     <div className="flex justify-center py-2">
@@ -461,7 +496,7 @@ export default function CoffeeChat() {
             </main>
 
             {/* --- FOOTER (Input Area) --- */}
-            <footer className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#050505] border-t border-gray-100 dark:border-white/10 pb-[env(safe-area-inset-bottom)] z-20">
+            <footer className={`flex-none bg-white dark:bg-[#050505] border-t border-gray-100 dark:border-white/10 z-20 ${isMobile ? 'pb-2' : 'pb-[env(safe-area-inset-bottom)]'}`}>
                 <div className="p-3">
                     <div className="relative flex items-end gap-2 bg-gray-100 dark:bg-white/5 rounded-[1.5rem] p-1.5 transition-all focus-within:ring-1 focus-within:ring-black/10 dark:focus-within:ring-white/10">
 
