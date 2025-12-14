@@ -9,6 +9,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 const RTC_CONFIG = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' },
         { urls: 'stun:global.stun.twilio.com:3478' }
     ]
 }
@@ -171,9 +175,14 @@ export default function VideoChat() {
                     console.log("ICE temporarily disconnected, attempting to reconnect...")
                     setPartnerStatus('reconnecting')
                 }
-            } else if (state === 'connected') {
+            } else if (state === 'connected' || state === 'completed') {
                 // Successfully (re)connected
                 setPartnerStatus('connected')
+                // Clear timeout on successful ICE connection as well (double safety)
+                if (connectionTimeoutRef.current) {
+                    clearTimeout(connectionTimeoutRef.current)
+                    connectionTimeoutRef.current = null
+                }
             } else if (state === 'failed' || state === 'closed') {
                 // Only restart on permanent failures
                 if (statusRef.current === 'connected') {
@@ -447,7 +456,11 @@ export default function VideoChat() {
                     }
                 } else if (payload.type === 'candidate') {
                     if (peerRef.current.remoteDescription) {
-                        await peerRef.current.addIceCandidate(payload.candidate)
+                        try {
+                            await peerRef.current.addIceCandidate(payload.candidate)
+                        } catch (e: any) {
+                            console.warn("Error adding ICE candidate:", e)
+                        }
                     } else {
                         console.log("Buffering ICE candidate")
                         iceCandidatesBuffer.current.push(payload.candidate)
