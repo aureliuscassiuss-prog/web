@@ -85,7 +85,7 @@ function Layout({
 
       <div className={
         isStanadalonePage ? "w-full flex-1"
-          : isChatPage ? "flex flex-1 items-start w-full"
+          : isChatPage ? "flex flex-1 w-full overflow-hidden"
             : "flex flex-1 items-start gap-10 px-4 sm:px-6 md:px-8 pt-6 max-w-[1600px] mx-auto w-full"
       }>
 
