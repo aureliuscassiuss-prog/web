@@ -45,6 +45,7 @@ export default function VideoChat() {
     const connectionTimeoutRef = useRef<number | null>(null)
     const heartbeatIntervalRef = useRef<number | null>(null)
     const presenceLeaveTimeoutRef = useRef<number | null>(null)
+    const currentPartnerIdRef = useRef<string | null>(null) // Track current partner to avoid resets
 
     // Status ref for callbacks
     const statusRef = useRef(status)
@@ -233,6 +234,7 @@ export default function VideoChat() {
         hasSentOfferRef.current = false
         setPartnerStatus('connecting')
         iceCandidatesBuffer.current = []
+        currentPartnerIdRef.current = null
         stopPolling() // Safety clear
 
         let stream = localStream
@@ -320,6 +322,12 @@ export default function VideoChat() {
                 (payload) => {
                     // Check if *I* was matched
                     if (payload.new.matched_with && partnerStatus !== 'connected') {
+                        // IGNORE packets if we are already processing this partner
+                        // This prevents the "reset loop" caused by heartbeats updating the row
+                        if (currentPartnerIdRef.current === payload.new.matched_with) {
+                            return
+                        }
+
                         console.log("Picked by:", payload.new.matched_with)
                         // If I'm already setting up a call as a caller, this might race, 
                         // but checking partnerStatus helps.
@@ -383,7 +391,6 @@ export default function VideoChat() {
             if (!claimError) {
                 console.log("Successfully claimed partner!")
                 stopPolling() // Stop searching
-                stopPolling() // Stop searching
                 initiateCall(target.user_id, true) // Role derived inside
             } else {
                 console.log("Claim failed - maybe taken?")
@@ -393,6 +400,9 @@ export default function VideoChat() {
 
     const initiateCall = async (partnerUserId: string, _ignoredIsCaller?: boolean) => {
         if (!user) return
+
+        // Set current partner to prevent re-entry from heartbeat updates
+        currentPartnerIdRef.current = partnerUserId
 
         // DETERMINISTIC SIGNALING:
         // 1. Session ID = Sorted IDs (So both end up in "A-B")
@@ -440,30 +450,43 @@ export default function VideoChat() {
                 }
 
                 if (payload.type === 'offer' && !isCaller) {
-                    await peerRef.current.setRemoteDescription(payload.offer)
-                    const answer = await peerRef.current.createAnswer()
-                    await peerRef.current.setLocalDescription(answer)
+                    try {
+                        console.log("Accepting Offer...")
+                        await peerRef.current.setRemoteDescription(payload.offer)
+                        console.log("Creating Answer...")
+                        const answer = await peerRef.current.createAnswer()
+                        await peerRef.current.setLocalDescription(answer)
 
-                    // Flush buffer
-                    if (iceCandidatesBuffer.current.length > 0) {
-                        console.log("Flushing ICE buffer:", iceCandidatesBuffer.current.length)
-                        iceCandidatesBuffer.current.forEach(c => peerRef.current?.addIceCandidate(c))
-                        iceCandidatesBuffer.current = []
+                        // Flush buffer
+                        if (iceCandidatesBuffer.current.length > 0) {
+                            console.log("Flushing ICE buffer:", iceCandidatesBuffer.current.length)
+                            iceCandidatesBuffer.current.forEach(c => peerRef.current?.addIceCandidate(c))
+                            iceCandidatesBuffer.current = []
+                        }
+
+                        channel.send({
+                            type: 'broadcast',
+                            event: 'signal',
+                            payload: { type: 'answer', answer }
+                        })
+                        console.log("Answer Sent!")
+                    } catch (e) {
+                        console.error("Error handling offer:", e)
                     }
-
-                    channel.send({
-                        type: 'broadcast',
-                        event: 'signal',
-                        payload: { type: 'answer', answer }
-                    })
                 } else if (payload.type === 'answer' && isCaller) {
-                    await peerRef.current.setRemoteDescription(payload.answer)
-                    // Flush buffer
-                    if (iceCandidatesBuffer.current.length > 0) {
-                        console.log("Flushing ICE buffer:", iceCandidatesBuffer.current.length)
-                        iceCandidatesBuffer.current.forEach(c => peerRef.current?.addIceCandidate(c))
-                        iceCandidatesBuffer.current = []
+                    try {
+                        console.log("Received Answer, setting remote description...")
+                        await peerRef.current.setRemoteDescription(payload.answer)
+                        // Flush buffer
+                        if (iceCandidatesBuffer.current.length > 0) {
+                            console.log("Flushing ICE buffer:", iceCandidatesBuffer.current.length)
+                            iceCandidatesBuffer.current.forEach(c => peerRef.current?.addIceCandidate(c))
+                            iceCandidatesBuffer.current = []
+                        }
+                    } catch (e) {
+                        console.error("Error setting answer:", e)
                     }
+
                 } else if (payload.type === 'candidate') {
                     if (peerRef.current.remoteDescription) {
                         try {
