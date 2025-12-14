@@ -625,7 +625,7 @@ export default function VideoChat() {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="absolute top-20 right-4 w-[28vw] max-w-[120px] aspect-[3/4] bg-neutral-100 dark:bg-neutral-800 rounded-xl overflow-hidden border border-neutral-300 dark:border-white/20 shadow-2xl z-30"
+                    className="absolute top-20 right-4 w-[28vw] max-w-[120px] aspect-[3/4] bg-neutral-100 dark:bg-neutral-800 rounded-2xl overflow-hidden border border-neutral-300 dark:border-white/20 shadow-2xl z-30"
                 >
                     {localStream ? (
                         <video
