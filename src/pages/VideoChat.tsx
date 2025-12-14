@@ -21,7 +21,7 @@ export default function VideoChat() {
     const [isMuted, setIsMuted] = useState(false)
     const [isVideoOff, setIsVideoOff] = useState(false)
     const [errorMsg, setErrorMsg] = useState('')
-    const [partnerStatus, setPartnerStatus] = useState<'connecting' | 'connected'>('connecting')
+    const [partnerStatus, setPartnerStatus] = useState<'connecting' | 'connected' | 'reconnecting'>('connecting')
     const [isFullScreen, setIsFullScreen] = useState(false)
 
     // Refs for persistence without re-renders
@@ -41,6 +41,7 @@ export default function VideoChat() {
     // Connection timeout ref
     const connectionTimeoutRef = useRef<number | null>(null)
     const heartbeatIntervalRef = useRef<number | null>(null)
+    const presenceLeaveTimeoutRef = useRef<number | null>(null)
 
     // Status ref for callbacks
     const statusRef = useRef(status)
@@ -162,10 +163,21 @@ export default function VideoChat() {
         peer.oniceconnectionstatechange = () => {
             const state = peer.iceConnectionState
             console.log("ICE State:", state)
-            if (state === 'disconnected' || state === 'failed' || state === 'closed') {
-                // Auto-matching on disconnect
+
+            // Only restart on PERMANENT failures, not temporary disconnects
+            if (state === 'disconnected') {
+                // Show reconnecting state for temporary disconnects
                 if (statusRef.current === 'connected') {
-                    console.log("Peer disconnected. Restarting...")
+                    console.log("ICE temporarily disconnected, attempting to reconnect...")
+                    setPartnerStatus('reconnecting')
+                }
+            } else if (state === 'connected') {
+                // Successfully (re)connected
+                setPartnerStatus('connected')
+            } else if (state === 'failed' || state === 'closed') {
+                // Only restart on permanent failures
+                if (statusRef.current === 'connected') {
+                    console.log("ICE connection permanently failed. Restarting...")
                     handleStop()
                     startSearch()
                 }
@@ -174,17 +186,24 @@ export default function VideoChat() {
 
         peer.onconnectionstatechange = () => {
             console.log("Connection state:", peer.connectionState)
-            if (peer.connectionState === 'disconnected' || peer.connectionState === 'failed') {
+
+            // Only restart on FAILED, not disconnected (which is temporary)
+            if (peer.connectionState === 'failed') {
                 if (statusRef.current === 'connected') {
-                    console.log("Connection failed (state). Restarting...")
+                    console.log("Connection permanently failed. Restarting...")
                     handleStop()
                     startSearch()
                 } else {
                     setStatus('idle')
                     setRemoteStream(null)
                 }
-            }
-            if (peer.connectionState === 'connected') {
+            } else if (peer.connectionState === 'disconnected') {
+                // Show reconnecting for temporary disconnects
+                if (statusRef.current === 'connected') {
+                    console.log("Connection temporarily disconnected...")
+                    setPartnerStatus('reconnecting')
+                }
+            } else if (peer.connectionState === 'connected') {
                 setPartnerStatus('connected')
                 // Clear timeout on successful connection
                 if (connectionTimeoutRef.current) {
@@ -250,11 +269,14 @@ export default function VideoChat() {
             .single()
 
         if (error) {
-            console.error("Join queue error:", error)
-            setErrorMsg("Failed to join queue.")
+            console.error("❌ Join queue error - Database operation failed:", error)
+            console.error("Error details:", { message: error.message, code: error.code, details: error.details })
+            setErrorMsg("Failed to join queue. Please refresh and try again.")
             setStatus('error')
             return
         }
+
+        console.log("✅ Successfully joined queue with ID:", data.id)
 
         myQueueIdRef.current = data.id
 
@@ -434,13 +456,21 @@ export default function VideoChat() {
             })
             .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
                 console.log("presence leave", key, leftPresences)
-                // If the only peer left, restart
-                const state = channel.presenceState()
-                if (Object.keys(state).length <= 1 && statusRef.current === 'connected') {
-                    console.log("Peer left presence. Restarting...")
-                    handleStop()
-                    startSearch()
+
+                // Debounce presence leave - wait 2s before restarting
+                // This prevents premature restarts during temporary network blips
+                if (presenceLeaveTimeoutRef.current) {
+                    clearTimeout(presenceLeaveTimeoutRef.current)
                 }
+
+                presenceLeaveTimeoutRef.current = window.setTimeout(() => {
+                    const state = channel.presenceState()
+                    if (Object.keys(state).length <= 1 && statusRef.current === 'connected') {
+                        console.log("Peer left presence (confirmed after debounce). Restarting...")
+                        handleStop()
+                        startSearch()
+                    }
+                }, 2000)
             })
             // Presence tracking
             .on('presence', { event: 'sync' }, () => {
@@ -494,6 +524,12 @@ export default function VideoChat() {
 
             // Give a tiny moment for the message to hit the network buffer before we tear down
             await new Promise(resolve => setTimeout(resolve, 20))
+        }
+
+        // Clear presence leave timeout
+        if (presenceLeaveTimeoutRef.current) {
+            clearTimeout(presenceLeaveTimeoutRef.current)
+            presenceLeaveTimeoutRef.current = null
         }
 
         setStatus('idle')
@@ -568,10 +604,12 @@ export default function VideoChat() {
                         {isFullScreen ? <Minimize size={18} /> : <Maximize size={18} />}
                     </button>
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/50 dark:bg-black/50 backdrop-blur-md border border-neutral-200 dark:border-white/10 shadow-sm">
-                        <span className={`w-2 h-2 rounded-full ${status === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-neutral-400 dark:bg-neutral-600'}`} />
+                        <span className={`w-2 h-2 rounded-full ${status === 'connected' && partnerStatus === 'connected' ? 'bg-green-500 animate-pulse' : partnerStatus === 'reconnecting' ? 'bg-yellow-500 animate-pulse' : 'bg-neutral-400 dark:bg-neutral-600'}`} />
                         <span className="text-xs font-medium opacity-80">
                             {status === 'searching' && "Matching..."}
-                            {status === 'connected' && (partnerStatus === 'connected' ? "Live" : "Connecting...")}
+                            {status === 'connected' && partnerStatus === 'connected' && "Live"}
+                            {status === 'connected' && partnerStatus === 'connecting' && "Connecting..."}
+                            {status === 'connected' && partnerStatus === 'reconnecting' && "Reconnecting..."}
                             {status === 'idle' && "Ready"}
                         </span>
                     </div>
