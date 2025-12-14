@@ -112,7 +112,7 @@ export default function VideoChat() {
 
     // --- RTC LOGIC ---
 
-    const createPeer = (isCaller: boolean, signalChannel: any) => {
+    const createPeer = (signalChannel: any) => {
         // Close existing peer if any
         if (peerRef.current) {
             peerRef.current.close()
@@ -176,10 +176,13 @@ export default function VideoChat() {
 
     const startSearch = async () => {
         if (!user) return
+
+        // Reset Logic
         setErrorMsg('')
         hasSentOfferRef.current = false
         setPartnerStatus('connecting')
         iceCandidatesBuffer.current = []
+        stopPolling() // Safety clear
 
         let stream = localStream
         if (!stream) {
@@ -189,38 +192,16 @@ export default function VideoChat() {
 
         setStatus('searching')
 
-        // 1. Check queue for partner
-        const { data: candidates, error } = await supabase
-            .from('video_chat_queue')
-            .select('*')
-            .neq('user_id', user.id)
-            .is('matched_with', null)
-            .limit(1)
+        // ACTIVE & PASSIVE STRATEGY:
+        // 1. Put myself in the pool (Passive)
+        await addToQueue()
 
-        if (error) console.error("Queue check error", error)
-
-        if (candidates && candidates.length > 0) {
-            const target = candidates[0]
-            console.log("Found partner:", target.user_id)
-
-            // 2. Try to CLAIM this user
-            const { error: claimError } = await supabase
-                .from('video_chat_queue')
-                .update({ matched_with: user.id })
-                .eq('id', target.id)
-                .is('matched_with', null)
-
-            if (!claimError) {
-                // SUCCESS: We are the CALLER
-                console.log("Claimed partner. Acting as CALLER.")
-                initiateCall(target.id, true)
-                return
-            }
-        }
-
-        // 3. No one found -> Join Queue (as CALLEE)
-        addToQueue()
+        // 2. Actively look for others (Active)
+        startPolling()
     }
+
+    // Polling ref for active searching
+    const searchingIntervalRef = useRef<number | null>(null)
 
     const addToQueue = async () => {
         if (!user) return
@@ -228,7 +209,10 @@ export default function VideoChat() {
         // Insert self or update existing
         const { data, error } = await supabase
             .from('video_chat_queue')
-            .upsert({ user_id: user.id }, { onConflict: 'user_id' })
+            .upsert({
+                user_id: user.id,
+                matched_with: null // Reset this ensuring we are fresh
+            }, { onConflict: 'user_id' })
             .select()
             .single()
 
@@ -241,10 +225,13 @@ export default function VideoChat() {
 
         myQueueIdRef.current = data.id
 
-        // 4. Subscribe to MY row
+        // Subscribe to MY row to see if I get picked (Passive)
         if (!myQueueIdRef.current) return
 
-        const channel = supabase.channel(`queue - ${myQueueIdRef.current} `)
+        // Clean existing sub
+        if (queueSubscriptionRef.current) supabase.removeChannel(queueSubscriptionRef.current)
+
+        const channel = supabase.channel(`queue-${myQueueIdRef.current}`)
         queueSubscriptionRef.current = channel
 
         channel
@@ -257,13 +244,70 @@ export default function VideoChat() {
                     filter: `id=eq.${myQueueIdRef.current}`
                 },
                 (payload) => {
-                    if (payload.new.matched_with) {
+                    // Check if *I* was matched
+                    if (payload.new.matched_with && partnerStatus !== 'connected') {
                         console.log("Picked by:", payload.new.matched_with)
+                        // If I'm already setting up a call as a caller, this might race, 
+                        // but checking partnerStatus helps.
+                        if (peerRef.current) return // Already busy with another connection
+
+                        stopPolling()
                         initiateCall(myQueueIdRef.current!, false)
                     }
                 }
             )
             .subscribe()
+    }
+
+    const startPolling = () => {
+        if (searchingIntervalRef.current) clearInterval(searchingIntervalRef.current)
+
+        // Immediate check then interval
+        checkForPartner()
+
+        searchingIntervalRef.current = window.setInterval(async () => {
+            await checkForPartner()
+        }, 2000) // Check every 2s
+    }
+
+    const stopPolling = () => {
+        if (searchingIntervalRef.current) {
+            clearInterval(searchingIntervalRef.current)
+            searchingIntervalRef.current = null
+        }
+    }
+
+    const checkForPartner = async () => {
+        if (!user) return
+
+        // 1. Find a candidate
+        const { data: candidates } = await supabase
+            .from('video_chat_queue')
+            .select('*')
+            .neq('user_id', user.id)
+            .is('matched_with', null)
+            .limit(1)
+
+        if (candidates && candidates.length > 0) {
+            const target = candidates[0]
+            console.log("Found active partner:", target.user_id)
+
+            // 2. Try to CLAIM
+            const { error: claimError } = await supabase
+                .from('video_chat_queue')
+                .update({ matched_with: user.id })
+                .eq('id', target.id)
+                .is('matched_with', null)
+            // .is ensures we only claim if they are STILL free
+
+            if (!claimError) {
+                console.log("Successfully claimed partner!")
+                stopPolling() // Stop searching
+                initiateCall(target.id, true) // Act as Caller
+            } else {
+                console.log("Claim failed - maybe taken?")
+            }
+        }
     }
 
     const initiateCall = async (sessionId: string, isCaller: boolean) => {
@@ -289,7 +333,7 @@ export default function VideoChat() {
         const channel = supabase.channel(`video-session-${sessionId}`)
         signalChannelRef.current = channel
 
-        const peer = createPeer(isCaller, channel)
+        const peer = createPeer(channel)
 
         channel
             .on('broadcast', { event: 'signal' }, async ({ payload }) => {
@@ -376,6 +420,7 @@ export default function VideoChat() {
         setStatus('idle')
         setRemoteStream(null)
         setPartnerStatus('connecting')
+        stopPolling() // Stop active search
 
         // Clear connection timeout
         if (connectionTimeoutRef.current) {
