@@ -88,6 +88,7 @@ export default function CoffessionsPage() {
 
     // Ref for immediate state access (Fixes rapid-click glitch)
     const votesRef = useRef<Record<string, 'like' | 'dislike'>>({});
+    const initialVotesRef = useRef<Record<string, 'like' | 'dislike'>>({});
     const voteTimeoutRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
     useEffect(() => {
@@ -108,6 +109,12 @@ export default function CoffessionsPage() {
             const parsed = JSON.parse(savedVotes);
             setVotes(parsed);
             votesRef.current = parsed;
+            // We capture the initial state of votes when the page loads (or sort changes)
+            // This assumes 'coffessions' data from server corresponds to these votes.
+            // This might be slightly off if user voted in another tab, but good enough for session consistency.
+            if (Object.keys(initialVotesRef.current).length === 0) {
+                initialVotesRef.current = parsed;
+            }
         }
     }, [sort, token]);
 
@@ -182,17 +189,9 @@ export default function CoffessionsPage() {
         });
         localStorage.setItem('coffession_votes', JSON.stringify(votesRef.current));
 
-        // Update counts
-        setCoffessions(prev => prev.map(c => {
-            if (c.id === id) {
-                return {
-                    ...c,
-                    likes: Math.max(0, c.likes + likeDelta),
-                    dislikes: Math.max(0, c.dislikes + dislikeDelta)
-                };
-            }
-            return c;
-        }));
+        // Note: We NO LONGER manually mutate the coffessions array.
+        // The UI renders the count based on derived state.
+        // This prevents the "infinite increment" glitch.
 
         // 3. Debounced API Call
         // Clear existing timeout for this post ID to avoid sending intermediate states
@@ -462,6 +461,28 @@ export default function CoffessionsPage() {
                         <AnimatePresence mode='popLayout'>
                             {coffessions.map((post) => {
                                 const theme = THEMES[post.theme];
+
+                                // --- ROBUST DERIVED STATE CALCULATION ---
+                                // Display = ServerCount + (CurrentVoteDelta) - (InitialVoteDelta)
+                                // This ensures that no matter how many times you click, 
+                                // the value is strictly tied to the difference between "Now" and "Start".
+
+                                const currentVote = votes[post.id];
+                                const initialVote = initialVotesRef.current[post.id]; // What server "knows" (roughly)
+
+                                // Delta mapping: none -> 0, like -> 1, dislike -> 0 (for like count)
+                                // Note: Dislike count is separate.
+
+                                const getLikeValue = (v: string | undefined) => (v === 'like' ? 1 : 0);
+                                const getDislikeValue = (v: string | undefined) => (v === 'dislike' ? 1 : 0);
+
+                                const likeDelta = getLikeValue(currentVote) - getLikeValue(initialVote);
+                                const dislikeDelta = getDislikeValue(currentVote) - getDislikeValue(initialVote);
+
+                                // Clamp to 0 just in case of weird sync issues, though deltas usually handle it.
+                                const displayLikes = Math.max(0, post.likes + likeDelta);
+                                const displayDislikes = Math.max(0, post.dislikes + dislikeDelta);
+
                                 return (
                                     <motion.div
                                         key={post.id}
@@ -513,7 +534,7 @@ export default function CoffessionsPage() {
                                                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all duration-200 ${votes[post.id] === 'like' ? 'bg-rose-500 text-white' : `${theme.accent} hover:brightness-95`}`}
                                                 >
                                                     <Heart size={14} className={votes[post.id] === 'like' ? 'fill-current' : ''} />
-                                                    <span className="text-xs font-bold">{post.likes}</span>
+                                                    <span className="text-xs font-bold">{displayLikes}</span>
                                                 </button>
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleVote(post.id, 'dislike'); }}
@@ -639,9 +660,11 @@ export default function CoffessionsPage() {
                             <div className="relative z-10 my-auto flex flex-col items-center text-center px-4 overflow-hidden w-full">
                                 <span className="text-9xl font-serif leading-none opacity-10 mb-4 font-black">"</span>
                                 <p className={`font-serif font-medium leading-tight tracking-wide italic drop-shadow-sm break-words w-full
-                                    ${shareData.content.length > 200 ? 'text-2xl' :
-                                        shareData.content.length > 100 ? 'text-4xl' :
-                                            shareData.content.length > 50 ? 'text-5xl' : 'text-6xl'}`}
+                                    ${shareData.content.length > 400 ? 'text-base' :
+                                        shareData.content.length > 300 ? 'text-lg' :
+                                            shareData.content.length > 200 ? 'text-xl' :
+                                                shareData.content.length > 100 ? 'text-4xl' :
+                                                    shareData.content.length > 50 ? 'text-5xl' : 'text-6xl'}`}
                                 >
                                     {shareData.content}
                                 </p>
