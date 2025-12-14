@@ -52,6 +52,14 @@ export default function VideoChat() {
         }
     }, [])
 
+    // Ensure local video is attached when stream is ready
+    useEffect(() => {
+        if (localStream && localVideoRef.current) {
+            localVideoRef.current.srcObject = localStream
+            localVideoRef.current.play().catch(e => console.error("Local video play error:", e))
+        }
+    }, [localStream])
+
     // Cleanup on unmount
     useEffect(() => {
         return () => {
@@ -69,11 +77,6 @@ export default function VideoChat() {
             })
             console.log("Permissions granted.")
             setLocalStream(stream)
-            if (localVideoRef.current) {
-                localVideoRef.current.srcObject = stream
-                // Important for mobile to play video
-                localVideoRef.current.play().catch(e => console.error("Local video play error:", e))
-            }
             setErrorMsg('')
             return stream
         } catch (err: any) {
@@ -515,8 +518,8 @@ export default function VideoChat() {
 
     const handleSkip = async () => {
         await handleStop(true) // Send BYE signal
-        // Delay to ensure cleanup completes
-        setTimeout(() => startSearch(), 300)
+        // Immediate restart (relies on robust queue filters)
+        setTimeout(() => startSearch(), 50)
     }
 
     // --- RENDER ---
