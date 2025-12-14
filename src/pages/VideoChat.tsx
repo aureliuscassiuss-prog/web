@@ -392,14 +392,14 @@ export default function VideoChat() {
             clearTimeout(connectionTimeoutRef.current)
         }
 
-        // Set connection timeout - if not connected in 10s, restart
+        // Set connection timeout - if not connected in 20s, restart
         connectionTimeoutRef.current = setTimeout(() => {
             if (partnerStatus === 'connecting') {
-                console.log('Connection timeout - restarting search')
+                console.log('Connection timeout (20s) - restarting search')
                 handleStop()
                 setTimeout(() => startSearch(), 500)
             }
-        }, 10000)
+        }, 20000)
 
         // Initialize Signaling Channel
         const channel = supabase.channel(`video-session-${sessionId}`)
