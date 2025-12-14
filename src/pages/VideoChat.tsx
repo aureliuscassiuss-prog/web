@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../utils/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
-import { Video, Mic, MicOff, VideoOff, SkipForward, AlertCircle, Loader2 } from 'lucide-react'
+import { Video, Mic, MicOff, VideoOff, SkipForward, AlertCircle, Loader2, StopCircle, User } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 // WebRTC Configuration
 const RTC_CONFIG = {
@@ -15,10 +16,11 @@ export default function VideoChat() {
     const { user } = useAuth()
     const [status, setStatus] = useState<'idle' | 'searching' | 'connected' | 'error'>('idle')
     const [localStream, setLocalStream] = useState<MediaStream | null>(null)
-    const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
+    const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null) // Used for state tracking, mainly
     const [isMuted, setIsMuted] = useState(false)
     const [isVideoOff, setIsVideoOff] = useState(false)
     const [errorMsg, setErrorMsg] = useState('')
+    const [partnerStatus, setPartnerStatus] = useState<'connecting' | 'connected'>('connecting')
 
     // Refs for persistence without re-renders
     const localVideoRef = useRef<HTMLVideoElement>(null)
@@ -27,6 +29,9 @@ export default function VideoChat() {
     const queueSubscriptionRef = useRef<any>(null)
     const signalChannelRef = useRef<any>(null)
     const myQueueIdRef = useRef<string | null>(null)
+
+    // Track if we have already sent an offer to avoid dups
+    const hasSentOfferRef = useRef(false)
 
     // Cleanup on unmount
     useEffect(() => {
@@ -39,19 +44,18 @@ export default function VideoChat() {
     const initLocalStream = async () => {
         try {
             console.log("Requesting permissions...")
-            // Explicitly request user facing camera for mobile
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: { facingMode: 'user' },
                 audio: true
             })
-            console.log("Permissions granted, stream active.")
+            console.log("Permissions granted.")
             setLocalStream(stream)
             if (localVideoRef.current) {
                 localVideoRef.current.srcObject = stream
                 // Important for mobile to play video
                 localVideoRef.current.play().catch(e => console.error("Local video play error:", e))
             }
-            setErrorMsg('') // Clear any previous errors
+            setErrorMsg('')
             return stream
         } catch (err: any) {
             console.error("Camera error:", err)
@@ -70,7 +74,6 @@ export default function VideoChat() {
         }
     }
 
-    // Toggle Mute
     const toggleMute = () => {
         if (localStream) {
             localStream.getAudioTracks().forEach(track => track.enabled = !track.enabled)
@@ -78,7 +81,6 @@ export default function VideoChat() {
         }
     }
 
-    // Toggle Video
     const toggleVideo = () => {
         if (localStream) {
             localStream.getVideoTracks().forEach(track => track.enabled = !track.enabled)
@@ -88,7 +90,12 @@ export default function VideoChat() {
 
     // --- RTC LOGIC ---
 
-    const createPeer = (initiator: boolean, signalChannel: any) => {
+    const createPeer = (isCaller: boolean, signalChannel: any) => {
+        // Close existing peer if any
+        if (peerRef.current) {
+            peerRef.current.close()
+        }
+
         const peer = new RTCPeerConnection(RTC_CONFIG)
         peerRef.current = peer
 
@@ -100,9 +107,13 @@ export default function VideoChat() {
         // Handle remote tracks
         peer.ontrack = (event) => {
             console.log("Remote track received")
-            setRemoteStream(event.streams[0])
-            if (remoteVideoRef.current) {
-                remoteVideoRef.current.srcObject = event.streams[0]
+            if (event.streams && event.streams[0]) {
+                setRemoteStream(event.streams[0])
+                setPartnerStatus('connected')
+                if (remoteVideoRef.current) {
+                    remoteVideoRef.current.srcObject = event.streams[0]
+                    remoteVideoRef.current.play().catch(e => console.error("Remote play error", e))
+                }
             }
         }
 
@@ -120,9 +131,11 @@ export default function VideoChat() {
         peer.onconnectionstatechange = () => {
             console.log("Connection state:", peer.connectionState)
             if (peer.connectionState === 'disconnected' || peer.connectionState === 'failed') {
-                // handleStop() // Don't stop immediately, wait for user or try to recover?
-                // Ideally, restart search
                 setStatus('idle')
+                setRemoteStream(null)
+            }
+            if (peer.connectionState === 'connected') {
+                setPartnerStatus('connected')
             }
         }
 
@@ -134,6 +147,8 @@ export default function VideoChat() {
     const startSearch = async () => {
         if (!user) return
         setErrorMsg('')
+        hasSentOfferRef.current = false
+        setPartnerStatus('connecting')
 
         let stream = localStream
         if (!stream) {
@@ -143,11 +158,7 @@ export default function VideoChat() {
 
         setStatus('searching')
 
-        // 1. Check if anyone is waiting in the queue (excluding myself)
-        // using RPC or simple select. RLS filters might prevent seeing others if config is strict, 
-        // but our migration allowed public select.
-
-        // Find a random user not me
+        // 1. Check queue for partner
         const { data: candidates, error } = await supabase
             .from('video_chat_queue')
             .select('*')
@@ -155,63 +166,51 @@ export default function VideoChat() {
             .is('matched_with', null)
             .limit(1)
 
-        if (error) {
-            console.error("Queue check error", error)
-            // Continue to wait...
-        }
+        if (error) console.error("Queue check error", error)
 
         if (candidates && candidates.length > 0) {
             const target = candidates[0]
-            console.log("Found potential partner:", target.user_id)
+            console.log("Found partner:", target.user_id)
 
             // 2. Try to CLAIM this user
             const { error: claimError } = await supabase
                 .from('video_chat_queue')
                 .update({ matched_with: user.id })
                 .eq('id', target.id)
-                .is('matched_with', null) // Optimistic Lock
+                .is('matched_with', null)
 
             if (!claimError) {
                 // SUCCESS: We are the CALLER
                 console.log("Claimed partner. Acting as CALLER.")
                 initiateCall(target.id, true)
                 return
-            } else {
-                console.log("Failed to claim (race condition), joining queue instead.")
             }
         }
 
-        // 3. No one found or claim failed -> Join Queue (as CALLEE)
+        // 3. No one found -> Join Queue (as CALLEE)
         addToQueue()
     }
 
     const addToQueue = async () => {
         if (!user) return
 
-        // Insert self
+        // Insert self or update existing
         const { data, error } = await supabase
             .from('video_chat_queue')
-            .insert({ user_id: user.id })
+            .upsert({ user_id: user.id }, { onConflict: 'user_id' })
             .select()
             .single()
 
         if (error) {
             console.error("Join queue error:", error)
-            // If Duplicate error, maybe we are already in queue?
-            if (error.code === '23505') { // Unique violation
-                // Try to fetch existing
-                const { data: existing } = await supabase.from('video_chat_queue').select().eq('user_id', user.id).single()
-                if (existing) myQueueIdRef.current = existing.id
-            } else {
-                setErrorMsg("Failed to join queue.")
-                setStatus('error')
-                return
-            }
-        } else {
-            myQueueIdRef.current = data.id
+            setErrorMsg("Failed to join queue.")
+            setStatus('error')
+            return
         }
 
-        // 4. Subscribe to MY row to see when someone picks me
+        myQueueIdRef.current = data.id
+
+        // 4. Subscribe to MY row
         if (!myQueueIdRef.current) return
 
         const channel = supabase.channel(`queue-${myQueueIdRef.current}`)
@@ -228,9 +227,7 @@ export default function VideoChat() {
                 },
                 (payload) => {
                     if (payload.new.matched_with) {
-                        console.log("I was picked by:", payload.new.matched_with)
-                        // We are the CALLEE
-                        // The session ID is My Queue ID (the row where match happened)
+                        console.log("Picked by:", payload.new.matched_with)
                         initiateCall(myQueueIdRef.current!, false)
                     }
                 }
@@ -240,13 +237,7 @@ export default function VideoChat() {
 
     const initiateCall = async (sessionId: string, isCaller: boolean) => {
         console.log(`Starting call. Session: ${sessionId}, I am Caller: ${isCaller}`)
-
-        // Remove from queue logic (if I was in queue waiting)
-        // If I was the Picker, I wasn't in queue. If I was Pickee, I am in queue.
-        // We can clean up the queue row LATER (on disconnect) or now. 
-        // Better now to prevent others from picking me? 
-        // Wait, if I am Pickee, row is already 'matched_with' so no one else can pick.
-        // If I am Picker, I am not in queue.
+        hasSentOfferRef.current = false
 
         // Initialize Signaling Channel
         const channel = supabase.channel(`video-session-${sessionId}`)
@@ -275,29 +266,43 @@ export default function VideoChat() {
                     await peerRef.current.addIceCandidate(payload.candidate)
                 }
             })
+            // Presence tracking to fix Race Condition
+            .on('presence', { event: 'sync' }, () => {
+                const state = channel.presenceState()
+                const presenceIds = Object.keys(state)
+                console.log("Presence sync:", presenceIds.length)
+
+                // If I am Caller, and I see SOMEONE ELSE is here, I can send Offer
+                if (isCaller && presenceIds.length > 1 && !hasSentOfferRef.current) {
+                    console.log("Peer present! Sending Offer...")
+                    sendOffer(peer, channel)
+                }
+            })
             .subscribe(async (status) => {
                 if (status === 'SUBSCRIBED') {
-                    if (isCaller) {
-                        const offer = await peer.createOffer()
-                        await peer.setLocalDescription(offer)
-                        // Give a small delay for sub to be ready on other side?
-                        // Supabase realtime doesn't buffer. Pickee needs to be subbed.
-                        // Pickee initiates SUB immediately when matched.
-                        // Caller initiates SUB immediately after claiming.
-                        // To be safe, Caller sends OFFER periodically until Answered?
-                        // Or wait a second.
-                        setTimeout(() => {
-                            channel.send({
-                                type: 'broadcast',
-                                event: 'signal',
-                                payload: { type: 'offer', offer }
-                            })
-                        }, 1000)
-                    }
+                    // Track my presence so the other person knows I'm here
+                    await channel.track({ user_id: user?.id })
                 }
             })
 
         setStatus('connected')
+    }
+
+    const sendOffer = async (peer: RTCPeerConnection, channel: any) => {
+        if (hasSentOfferRef.current) return
+        hasSentOfferRef.current = true
+
+        try {
+            const offer = await peer.createOffer()
+            await peer.setLocalDescription(offer)
+            channel.send({
+                type: 'broadcast',
+                event: 'signal',
+                payload: { type: 'offer', offer }
+            })
+        } catch (e) {
+            console.error("Error creating offer:", e)
+        }
     }
 
     // --- STOP / SKIP ---
@@ -305,15 +310,15 @@ export default function VideoChat() {
     const handleStop = async () => {
         setStatus('idle')
         setRemoteStream(null)
+        setPartnerStatus('connecting')
+
         if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null
 
-        // cleanup peer
         if (peerRef.current) {
             peerRef.current.close()
             peerRef.current = null
         }
 
-        // cleanup channels
         if (signalChannelRef.current) {
             supabase.removeChannel(signalChannelRef.current)
             signalChannelRef.current = null
@@ -323,7 +328,6 @@ export default function VideoChat() {
             queueSubscriptionRef.current = null
         }
 
-        // Cleanup DB (remove from queue if exists)
         if (user) {
             await supabase.from('video_chat_queue').delete().eq('user_id', user.id)
         }
@@ -332,80 +336,112 @@ export default function VideoChat() {
 
     const handleSkip = async () => {
         await handleStop()
-        startSearch()
+        // Small delay to ensure DB cleanup propagates if needed, though cleanup is fire-and-forget
+        setTimeout(() => startSearch(), 500)
     }
 
     // --- RENDER ---
 
     return (
-        <div className="flex flex-col h-[100dvh] bg-neutral-950 text-white overflow-hidden">
-            {/* Header (Minimal) */}
-            <div className="flex items-center justify-between px-4 py-3 bg-neutral-900 border-b border-white/10 shrink-0 z-10">
-                <div className="flex items-center gap-2">
-                    <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                        VideoChat
-                    </span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-500 border border-yellow-500/20">Beta</span>
+        <div className="flex flex-col h-[100dvh] bg-neutral-950 text-white overflow-hidden font-sans relative">
+
+            {/* Background Texture/Gradient */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-neutral-950 to-neutral-950 z-0 pointer-events-none" />
+
+            {/* Header */}
+            <header className="flex items-center justify-between px-6 py-4 z-10 sticky top-0 bg-gradient-to-b from-black/80 to-transparent backdrop-blur-sm">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                        <Video size={20} className="text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-lg font-bold leading-tight">VideoChat</h1>
+                        <div className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full ${status === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-neutral-500'}`} />
+                            <span className="text-xs text-neutral-400 font-medium">
+                                {status === 'searching' && "Matching..."}
+                                {status === 'connected' && (partnerStatus === 'connected' ? "Live Connection" : "Connecting...")}
+                                {status === 'idle' && "180+ Online"}
+                            </span>
+                        </div>
+                    </div>
                 </div>
-                <div className="text-sm text-neutral-400">
-                    {status === 'searching' && "Looking for someone..."}
-                    {status === 'connected' && "Connected to stranger"}
-                    {status === 'idle' && "Ready to start"}
-                </div>
-            </div>
+            </header>
 
             {/* Main Video Area */}
-            <div className="flex-1 relative flex items-center justify-center bg-black">
+            <main className="flex-1 relative flex items-center justify-center p-4 z-0">
 
-                {/* Remote Video (Full Screen) */}
-                {status === 'connected' && (
-                    <video
-                        ref={remoteVideoRef}
-                        autoPlay
-                        playsInline
-                        className="w-full h-full object-contain"
-                    />
-                )}
+                {/* REMOTE VIDEO CONTAINER */}
+                <div className="relative w-full h-full max-w-5xl bg-neutral-900/50 rounded-[2rem] overflow-hidden border border-white/5 shadow-2xl flex items-center justify-center">
 
-                {/* Placeholder / Search UI */}
-                {(status === 'idle' || status === 'searching') && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-0">
-                        {status === 'searching' ? (
-                            <div className="flex flex-col items-center gap-4 animate-in fade-in duration-500">
-                                <div className="relative">
-                                    <div className="w-20 h-20 rounded-full border-4 border-blue-500/30 animate-ping absolute inset-0"></div>
-                                    <div className="w-20 h-20 rounded-full bg-neutral-800 flex items-center justify-center relative z-10 border border-white/10">
-                                        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                    {status === 'connected' ? (
+                        <>
+                            {/* Video Element */}
+                            <video
+                                ref={remoteVideoRef}
+                                autoPlay
+                                playsInline
+                                className="w-full h-full object-contain"
+                            />
+
+                            {/* Connecting State Overlay */}
+                            {partnerStatus === 'connecting' && (
+                                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-20">
+                                    <div className="flex flex-col items-center gap-4">
+                                        <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+                                        <p className="text-neutral-300 font-medium">Connecting to partner...</p>
                                     </div>
                                 </div>
-                                <h3 className="text-xl font-medium text-white">Searching for partner...</h3>
-                                <p className="text-neutral-500 text-sm max-w-xs">
-                                    We are connecting you with a random student. Please be polite!
-                                </p>
-                            </div>
-                        ) : (
-                            <div className="flex flex-col items-center gap-6 max-w-md">
-                                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-2xl shadow-blue-500/20 mb-2">
-                                    <Video className="w-10 h-10 text-white" />
+                            )}
+                        </>
+                    ) : (
+                        /* IDLE / SEARCHING STATE */
+                        <div className="flex flex-col items-center justify-center text-center p-8 max-w-md mx-auto">
+                            {status === 'searching' ? (
+                                <div className="mb-8 relative">
+                                    <div className="absolute inset-0 bg-blue-500/20 rounded-full animate-ping blur-xl" />
+                                    <div className="relative w-32 h-32 bg-neutral-800 rounded-full flex items-center justify-center border border-white/10 shadow-inner">
+                                        <Loader2 className="w-12 h-12 text-blue-400 animate-spin" />
+                                    </div>
+                                    <div className="mt-8 space-y-2">
+                                        <h3 className="text-2xl font-bold">Looking for someone...</h3>
+                                        <p className="text-neutral-400">Finding the perfect match for you.</p>
+                                    </div>
                                 </div>
-                                <h2 className="text-3xl font-bold">Random Video Chat</h2>
-                                <p className="text-neutral-400">
-                                    Meet new people from your university. Connect instantly.
-                                    Remember to follow community guidelines.
-                                </p>
-                                <button
-                                    onClick={startSearch}
-                                    className="px-8 py-4 bg-white text-black rounded-full font-bold text-lg hover:scale-105 active:scale-95 transition-all shadow-xl shadow-white/10 flex items-center gap-2"
-                                >
-                                    Start Matching <SkipForward className="w-5 h-5" />
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                )}
+                            ) : (
+                                <div className="space-y-8 animate-in fade-in zoom-in duration-500">
+                                    <div className="w-32 h-32 bg-gradient-to-br from-indigo-500/20 to-blue-500/20 rounded-[2rem] flex items-center justify-center mx-auto border border-white/10 rotate-3 transform transition-transform hover:rotate-6">
+                                        <User size={64} className="text-blue-400" />
+                                    </div>
+                                    <div className="space-y-3">
+                                        <h2 className="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-white to-neutral-400">
+                                            Meet Random People
+                                        </h2>
+                                        <p className="text-lg text-neutral-400 leading-relaxed">
+                                            Connect instantly with students from your campus.
+                                            <br className="hidden md:block" />Safe, anonymous, and fun.
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={startSearch}
+                                        className="group relative inline-flex items-center gap-3 px-8 py-4 bg-white text-black rounded-full font-bold text-lg hover:scale-105 transition-all shadow-xl shadow-white/10 overflow-hidden"
+                                    >
+                                        <span className="relative z-10">Start Matching</span>
+                                        <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-500 opacity-0 group-hover:opacity-10 transition-opacity" />
+                                        <SkipForward className="w-5 h-5 relative z-10 group-hover:translate-x-1 transition-transform" />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
 
-                {/* Local Video (Floating PIP) */}
-                <div className="absolute bottom-6 right-6 w-32 md:w-48 aspect-[3/4] md:aspect-video bg-neutral-900 rounded-xl overflow-hidden border border-white/10 shadow-2xl z-20">
+                {/* LOCAL VIDEO (PIP) */}
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="absolute bottom-8 right-8 w-36 sm:w-48 aspect-[3/4] sm:aspect-video bg-neutral-800 rounded-2xl overflow-hidden border border-white/10 shadow-2xl z-30"
+                >
                     {localStream ? (
                         <video
                             ref={localVideoRef}
@@ -415,87 +451,108 @@ export default function VideoChat() {
                             className={`w-full h-full object-cover mirror ${isVideoOff ? 'hidden' : ''}`}
                         />
                     ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-neutral-900 text-neutral-600">
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-neutral-900 text-neutral-500 gap-2">
                             <VideoOff className="w-6 h-6" />
+                            <span className="text-[10px] uppercase font-bold tracking-wider">Camera Off</span>
                         </div>
                     )}
 
-                    {/* Mute/Video Indicators */}
-                    <div className="absolute bottom-2 left-2 flex gap-1">
-                        {isMuted && <div className="p-1 bg-red-500/80 rounded-full"><MicOff size={10} /></div>}
-                        {isVideoOff && <div className="p-1 bg-red-500/80 rounded-full"><VideoOff size={10} /></div>}
-                    </div>
-                </div>
-
-                {/* Error Banner */}
-                {errorMsg && (
-                    <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-50">
-                        <div className="bg-red-500/90 text-white px-4 py-3 rounded-xl shadow-lg animate-in slide-in-from-top-2 flex flex-col items-center gap-2 text-center">
-                            <div className="flex items-center gap-2 font-medium">
-                                <AlertCircle size={20} />
-                                <span>Access Error</span>
+                    {/* Status Badge */}
+                    <div className="absolute bottom-2 left-2 flex gap-1.5">
+                        {isMuted && (
+                            <div className="w-6 h-6 bg-red-500/90 rounded-full flex items-center justify-center text-white shadow-sm backdrop-blur-md">
+                                <MicOff size={12} />
                             </div>
-                            <p className="text-sm opacity-90">{errorMsg}</p>
+                        )}
+                    </div>
+                </motion.div>
+
+                {/* ERROR TOAST */}
+                <AnimatePresence>
+                    {errorMsg && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="absolute top-8 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4"
+                        >
+                            <div className="bg-red-500/10 backdrop-blur-xl border border-red-500/20 text-red-200 px-4 py-3 rounded-2xl shadow-xl flex items-start gap-3">
+                                <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                                <div className="flex-1 text-sm">
+                                    <p className="font-semibold text-red-500 mb-1">Connection Error</p>
+                                    <p className="opacity-90 leading-snug">{errorMsg}</p>
+                                    <button
+                                        onClick={() => { setErrorMsg(''); startSearch(); }}
+                                        className="mt-3 text-xs font-bold bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 transition-colors"
+                                    >
+                                        Try Again
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+            </main>
+
+            {/* CONTROLS BAR (Floating) */}
+            <div className="pb-8 pt-4 px-4 flex justify-center sticky bottom-0 z-40">
+                <div className="flex items-center gap-4 bg-neutral-900/80 backdrop-blur-xl p-2.5 rounded-full border border-white/5 shadow-2xl">
+
+                    {status !== 'idle' ? (
+                        <>
+                            <ControlBtn
+                                onClick={toggleMute}
+                                active={isMuted}
+                                icon={isMuted ? MicOff : Mic}
+                                activeClass="bg-red-500/20 text-red-500 hover:bg-red-500/30"
+                            />
+                            <ControlBtn
+                                onClick={toggleVideo}
+                                active={isVideoOff}
+                                icon={isVideoOff ? VideoOff : Video}
+                                activeClass="bg-red-500/20 text-red-500 hover:bg-red-500/30"
+                            />
+
+                            <div className="w-px h-8 bg-white/10 mx-2" />
+
                             <button
-                                onClick={() => {
-                                    setStatus('idle')
-                                    setErrorMsg('')
-                                    initLocalStream()
-                                }}
-                                className="mt-1 px-4 py-1.5 bg-white text-red-600 rounded-full text-xs font-bold uppercase tracking-wider hover:bg-red-50"
+                                onClick={handleStop}
+                                className="w-12 h-12 rounded-full flex items-center justify-center bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300"
+                                title="Stop Connection"
                             >
-                                Try Again
+                                <StopCircle size={20} fill="currentColor" className="opacity-50" />
                             </button>
+
+                            <button
+                                onClick={handleSkip}
+                                className="h-12 px-6 rounded-full bg-white text-black font-bold flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-lg"
+                            >
+                                <SkipForward size={18} />
+                                <span>Next Person</span>
+                            </button>
+                        </>
+                    ) : (
+                        <div className="px-4 py-2 text-sm text-neutral-500 font-medium">
+                            Ready to start matching
                         </div>
-                    </div>
-                )}
-
-            </div>
-
-            {/* Controls Footer */}
-            <div className="h-20 bg-neutral-900/90 backdrop-blur border-t border-white/5 shrink-0 flex items-center justify-center gap-4 px-4">
-
-                {status !== 'idle' && (
-                    <>
-                        <button
-                            onClick={toggleMute}
-                            className={`p-4 rounded-full transition-all ${isMuted ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30' : 'bg-neutral-800 hover:bg-neutral-700 text-white'}`}
-                        >
-                            {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
-                        </button>
-
-                        <button
-                            onClick={toggleVideo}
-                            className={`p-4 rounded-full transition-all ${isVideoOff ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30' : 'bg-neutral-800 hover:bg-neutral-700 text-white'}`}
-                        >
-                            {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />}
-                        </button>
-
-                        <div className="w-px h-8 bg-white/10 mx-2"></div>
-
-                        <button
-                            onClick={handleSkip}
-                            className="px-8 py-3 bg-white text-black rounded-full font-bold hover:bg-gray-200 active:scale-95 transition-all flex items-center gap-2"
-                        >
-                            <SkipForward className="w-5 h-5" />
-                            Skip
-                        </button>
-
-                        <button
-                            onClick={handleStop}
-                            className="px-4 py-3 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-full font-medium transition-all"
-                        >
-                            Stop
-                        </button>
-                    </>
-                )}
-
-                {status === 'idle' && localStream && (
-                    <div className="text-neutral-500 text-sm">
-                        Camera and microphone ready
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
         </div>
+    )
+}
+
+function ControlBtn({ onClick, active, icon: Icon, activeClass }: any) {
+    return (
+        <button
+            onClick={onClick}
+            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ${active
+                    ? activeClass
+                    : 'bg-neutral-800 text-white/90 hover:bg-neutral-700 hover:scale-110'
+                }`}
+        >
+            <Icon size={20} />
+        </button>
     )
 }
