@@ -323,13 +323,20 @@ export default function CoffeeChat() {
 
                                             <div className={`
                                                 px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap shadow-sm rounded-2xl
+                                                break-words overflow-hidden max-w-full
                                                 ${isMe
                                                     ? 'bg-black text-white rounded-tr-sm dark:bg-white dark:text-black font-medium'
                                                     : 'bg-white text-gray-800 border border-gray-100 rounded-tl-sm dark:bg-gray-900 dark:border-white/10 dark:text-gray-100'}
                                             `}>
-                                                <ReactMarkdown className="prose prose-sm max-w-none break-words [&_*]:text-inherit">
-                                                    {msg.content}
-                                                </ReactMarkdown>
+                                                <div className="prose prose-sm max-w-none break-words break-all [&_*]:text-inherit [&_p]:m-0 [&_a]:text-blue-500 hover:[&_a]:underline">
+                                                    <ReactMarkdown
+                                                        components={{
+                                                            p: ({ node, ...props }) => <p className="mb-0 block break-words break-all" {...props} />
+                                                        }}
+                                                    >
+                                                        {msg.content}
+                                                    </ReactMarkdown>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
