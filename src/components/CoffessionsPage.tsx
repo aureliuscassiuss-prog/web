@@ -85,6 +85,7 @@ export default function CoffessionsPage() {
     // Double-tap and Hearts
     const [hearts, setHearts] = useState<Array<{ id: number; x: number; y: number }>>([]);
     const lastTapTime = useRef<Record<string, number>>({});
+    const lastVoteTimeRef = useRef<Record<string, number>>({});
 
     // Ref for immediate state access (Fixes rapid-click glitch)
     const votesRef = useRef<Record<string, 'like' | 'dislike'>>({});
@@ -141,6 +142,12 @@ export default function CoffessionsPage() {
             alert('Please sign in to vote on confessions!');
             return;
         }
+
+        // Throttle Interaction (Prevent Glitchy Rapid Clicks)
+        const now = Date.now();
+        const lastVote = lastVoteTimeRef.current[id] || 0;
+        if (now - lastVote < 500) return;
+        lastVoteTimeRef.current[id] = now;
 
         // Use REF for immediate source of truth to avoid stale closures during rapid clicks
         const currentVote = votesRef.current[id];
@@ -599,7 +606,7 @@ export default function CoffessionsPage() {
 
                                 <div className="relative z-10 my-auto flex flex-col items-center text-center px-12">
                                     <span className="text-7xl font-serif leading-none opacity-10 mb-2 font-black">"</span>
-                                    <p className={`font-serif font-medium leading-tight tracking-wide italic drop-shadow-sm break-words overflow-wrap-anywhere ${shareData.content.length > 300 ? 'text-xs leading-snug' :
+                                    <p className={`font-serif font-medium leading-tight tracking-wide italic drop-shadow-sm break-words break-all overflow-wrap-anywhere ${shareData.content.length > 300 ? 'text-xs leading-snug' :
                                         shareData.content.length > 200 ? 'text-sm leading-snug' :
                                             shareData.content.length > 150 ? 'text-base leading-snug' :
                                                 shareData.content.length > 100 ? 'text-lg leading-tight' :
@@ -658,7 +665,7 @@ export default function CoffessionsPage() {
 
                             <div className="relative z-10 my-auto flex flex-col items-center text-center px-12 overflow-hidden w-full">
                                 <span className="text-9xl font-serif leading-none opacity-10 mb-4 font-black">"</span>
-                                <p className={`font-serif font-medium leading-tight tracking-wide italic drop-shadow-sm break-words w-full overflow-wrap-anywhere
+                                <p className={`font-serif font-medium leading-tight tracking-wide italic drop-shadow-sm break-words break-all w-full overflow-wrap-anywhere
                                     ${shareData.content.length > 300 ? 'text-xs leading-snug' :
                                         shareData.content.length > 200 ? 'text-sm leading-snug' :
                                             shareData.content.length > 150 ? 'text-base leading-snug' :
