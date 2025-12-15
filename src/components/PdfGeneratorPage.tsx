@@ -163,7 +163,7 @@ export default function PdfGeneratorPage() {
                 {!pdfReady ? (
                     <div className="w-full max-w-4xl text-center space-y-6 sm:space-y-12 animate-fade-in-up">
 
-                        {/* Heading - Responsive Color */}
+                        {/* Heading */}
                         <div className="space-y-4 sm:space-y-6">
                             <h1 className="font-serif text-5xl sm:text-7xl lg:text-8xl leading-[0.9] text-slate-900 dark:text-white drop-shadow-sm dark:drop-shadow-2xl tracking-tight">
                                 Generate <span className="italic text-transparent bg-clip-text bg-gradient-to-br from-indigo-500 via-purple-500 to-blue-500 dark:from-indigo-300 dark:via-white dark:to-blue-300">Stunning Documents</span>
@@ -176,17 +176,18 @@ export default function PdfGeneratorPage() {
                             </p>
                         </div>
 
-                        {/* REDESIGNED INPUT CONSOLE - "Sleek Module" for Light & Dark */}
+                        {/* REDESIGNED INPUT CONSOLE */}
                         <div className="relative w-full max-w-2xl mx-auto group">
 
-                            {/* Border Beam Effect - Conic Gradient (Restored) */}
+                            {/* --- FIXED BORDER BEAM --- */}
                             <div className="absolute -inset-[2px] rounded-[26px] sm:rounded-[34px] overflow-hidden pointer-events-none z-0">
-                                <div className="absolute top-1/2 left-1/2 w-[200%] aspect-square -translate-x-1/2 -translate-y-1/2 animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_240deg,#6366f1_300deg,#a855f7_360deg)] opacity-100" style={{ animationDuration: '4s' }}></div>
+                                <div
+                                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500%] h-[500%] animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_300deg,#6366f1_330deg,#a855f7_360deg)] opacity-100"
+                                    style={{ animationDuration: '4s' }}
+                                />
                             </div>
 
-
-
-                            {/* Main Box - White in Light Mode, Black in Dark Mode */}
+                            {/* Main Box */}
                             <div className="relative z-10 bg-white dark:bg-[#09090b] rounded-[24px] sm:rounded-[32px] border border-slate-200 dark:border-white/5 shadow-2xl shadow-slate-200/50 dark:shadow-none">
 
                                 <div className="p-[2px]">
@@ -201,7 +202,7 @@ export default function PdfGeneratorPage() {
 
                                         <div className="flex items-center justify-center mt-2 pt-4 border-t border-slate-200 dark:border-white/5 relative overflow-visible">
 
-                                            {/* Centered Custom Font Dropdown */}
+                                            {/* Font Dropdown */}
                                             <div className="relative" ref={fontDropdownRef}>
                                                 <button
                                                     onClick={() => setIsFontOpen(!isFontOpen)}
@@ -212,7 +213,6 @@ export default function PdfGeneratorPage() {
                                                     <ChevronDown size={14} className={`text-slate-400 dark:text-zinc-500 transition-transform ${isFontOpen ? 'rotate-180' : ''}`} />
                                                 </button>
 
-                                                {/* Smart Dropdown Menu - appears above with proper width */}
                                                 {isFontOpen && (
                                                     <div className="fixed left-1/2 -translate-x-1/2 bottom-auto w-52 bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border border-slate-200 dark:border-zinc-800 p-1 z-[100] animate-in fade-in slide-in-from-bottom-2 duration-200 max-h-72 overflow-y-auto"
                                                         style={{
@@ -243,7 +243,7 @@ export default function PdfGeneratorPage() {
                                     </div>
                                 </div>
 
-                                {/* Full Width Action Bar */}
+                                {/* Action Bar */}
                                 <div className="p-1 pt-0">
                                     <button
                                         onClick={handleGenerate}
@@ -281,7 +281,7 @@ export default function PdfGeneratorPage() {
 
                     </div>
                 ) : (
-                    /* Success View - Redesigned Console Style */
+                    /* Success View */
                     <div className="w-full max-w-lg mx-auto text-center space-y-8 animate-fade-in-up pt-12">
 
                         <div className="space-y-4">
@@ -294,11 +294,13 @@ export default function PdfGeneratorPage() {
 
                         {/* Console Card */}
                         <div className="relative group w-full">
-                            {/* Border Beam Effect */}
+                            {/* --- FIXED BORDER BEAM (Green) --- */}
                             <div className="absolute -inset-[2px] rounded-[26px] overflow-hidden pointer-events-none z-0">
-                                <div className="absolute top-1/2 left-1/2 w-[200%] aspect-square -translate-x-1/2 -translate-y-1/2 animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_240deg,#22c55e_300deg,#10b981_360deg)] opacity-100" style={{ animationDuration: '4s' }}></div>
+                                <div
+                                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500%] h-[500%] animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_300deg,#22c55e_330deg,#10b981_360deg)] opacity-100"
+                                    style={{ animationDuration: '4s' }}
+                                />
                             </div>
-
 
                             <div className="relative z-10 bg-white dark:bg-[#09090b] rounded-[24px] border border-slate-200 dark:border-white/5 shadow-2xl shadow-slate-200/50 dark:shadow-none overflow-hidden p-[2px]">
                                 <div className="bg-slate-50 dark:bg-[#09090b] rounded-[22px] p-6 transition-colors hover:bg-slate-100 dark:hover:bg-[#0c0c0f]">
@@ -344,13 +346,25 @@ export default function PdfGeneratorPage() {
             </div>
 
             <style>{`
+                /* Added Keyframes for smooth spin */
+                @keyframes spin {
+                    from { transform: translate(-50%, -50%) rotate(0deg); }
+                    to { transform: translate(-50%, -50%) rotate(360deg); }
+                }
+
+                /* Updated class to use explicit keyframes and ensure transform origin is correct */
+                .animate-spin-slow {
+                    animation: spin 8s linear infinite;
+                    transform-origin: center center;
+                }
+
                 @keyframes tilt {
                     0%, 50%, 100% { transform: rotate(0deg); }
                     25% { transform: rotate(0.5deg); }
                     75% { transform: rotate(-0.5deg); }
                 }
                 .animate-tilt { animation: tilt 10s infinite linear; }
-                .animate-spin-slow { animation: spin 8s linear infinite; }
+                
                 .animate-gradient-xy {
                     background-size: 200% 200%;
                     animation: gradient-xy 6s ease infinite;
@@ -360,7 +374,6 @@ export default function PdfGeneratorPage() {
                     50% { background-position: 100% 50%; }
                     100% { background-position: 0% 50%; }
                 }
-
             `}</style>
         </div>
     );
