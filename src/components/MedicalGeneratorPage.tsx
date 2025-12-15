@@ -13,9 +13,9 @@ const FourPointStar = ({ className }: { className?: string }) => (
     >
         <defs>
             <linearGradient id="starGradientMedical" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#14b8a6" /> {/* Teal-500 */}
-                <stop offset="50%" stopColor="#10b981" /> {/* Emerald-500 */}
-                <stop offset="100%" stopColor="#06b6d4" /> {/* Cyan-500 */}
+                <stop offset="0%" stopColor="#3b82f6" /> {/* Blue-500 */}
+                <stop offset="50%" stopColor="#06b6d4" /> {/* Cyan-500 */}
+                <stop offset="100%" stopColor="#14b8a6" /> {/* Teal-500 */}
             </linearGradient>
         </defs>
         <path
@@ -178,10 +178,10 @@ const MedicalGeneratorPage = () => {
 
                         {/* INPUT CONSOLE */}
                         <div className="relative w-full max-w-3xl mx-auto group">
-                            {/* --- BORDER BEAM (Medical Theme) --- */}
+                            {/* --- BORDER BEAM (Medical Blue Theme) --- */}
                             <div className="absolute -inset-[2px] rounded-[26px] sm:rounded-[34px] overflow-hidden pointer-events-none z-0">
                                 <div
-                                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500%] h-[500%] animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_300deg,#14b8a6_330deg,#10b981_360deg)] opacity-100"
+                                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500%] h-[500%] animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_300deg,#3b82f6_330deg,#06b6d4_360deg)] opacity-100"
                                     style={{ animationDuration: '4s' }}
                                 />
                             </div>
@@ -229,7 +229,7 @@ const MedicalGeneratorPage = () => {
                                                         type="button"
                                                         onClick={() => handleGenderChange(gender)}
                                                         className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${formData.patient_gender === gender
-                                                            ? 'bg-white dark:bg-zinc-800 text-teal-600 dark:text-teal-400 shadow-sm'
+                                                            ? 'bg-white dark:bg-zinc-800 text-cyan-600 dark:text-cyan-400 shadow-sm'
                                                             : 'text-slate-500 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-300'
                                                             }`}
                                                     >
@@ -296,7 +296,7 @@ const MedicalGeneratorPage = () => {
                                                 disabled={isLoading}
                                                 className="group relative w-full inline-flex items-center justify-center p-[1px] rounded-full overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.99]"
                                             >
-                                                <div className="absolute inset-0 bg-gradient-to-r from-teal-500 via-emerald-500 to-teal-500 animate-gradient-xy opacity-100"></div>
+                                                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500 animate-gradient-xy opacity-100"></div>
                                                 <div className="relative w-full py-4 bg-black rounded-full flex items-center justify-center gap-3 transition-all group-hover:bg-[#0c0c0f]">
                                                     <FourPointStar className={`w-6 h-6 text-white ${isLoading ? 'animate-spin' : ''}`} />
                                                     <span className="font-semibold text-white text-lg tracking-wide">
