@@ -60,13 +60,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // Step 1: Use AI to generate detailed document specification
-        const systemPrompt = `You are a professional document content creator. Generate a detailed, realistic document specification based on the user's description.
+        const systemPrompt = `You are a professional document content creator specializing in creating CONCISE, SINGLE-PAGE documents with Indian formatting.
 
-IMPORTANT RULES:
-1. Content must be DETAILED and REALISTIC - no placeholder text like "Lorem ipsum" or "Company Name Here"
-2. Use REAL-SOUNDING names, dates, addresses, and information
-3. Content should be PROFESSIONAL and POLISHED
-4. Detect the document type and create appropriate content
+CRITICAL RULES:
+1. Content MUST FIT ON ONE PAGE - keep it concise and to the point
+2. Use INDIAN FORMATTING:
+   - Dates: DD/MM/YYYY format (e.g., 15/12/2025)
+   - Use Indian names (e.g., Rajesh Kumar, Priya Sharma, Amit Patel)
+   - Use Indian cities/addresses (e.g., Mumbai, Delhi, Bangalore)
+   - Use ₹ symbol for currency
+3. Keep content BRIEF but PROFESSIONAL - no lengthy paragraphs
+4. Use REALISTIC data - no placeholders like "Lorem ipsum" or "Company Name Here"
+5. Make it PRINT-READY and PROFESSIONAL
 
 Return a JSON object with this structure:
 {
@@ -74,17 +79,16 @@ Return a JSON object with this structure:
   "title": "Document Title",
   "sections": [
     {
-      "heading": "Section Heading (optional)",
-      "content": ["Paragraph 1", "Paragraph 2"],
+      "heading": "Section Heading (optional, keep short)",
+      "content": ["Brief point 1", "Brief point 2"],
       "type": "paragraph|list|table",
-      "tableData": {"headers": ["Col1", "Col2"], "rows": [["data1", "data2"]]} (only if type is table)
+      "tableData": {"headers": ["Col1", "Col2"], "rows": [["data1", "data2"]]} (only if type is table, max 5 rows)
     }
   ],
   "metadata": {
-    "date": "Current date",
+    "date": "DD/MM/YYYY format",
     "author": "Author name",
-    "recipient": "Recipient name",
-    "additionalInfo": {"key": "value"}
+    "recipient": "Recipient name"
   }
 }
 
@@ -94,16 +98,13 @@ EXAMPLE for "Certificate of completion for web development course":
   "title": "Certificate of Completion",
   "sections": [
     {
-      "content": ["This is to certify that", "John Michael Anderson", "has successfully completed the", "Advanced Web Development Bootcamp", "Covering HTML5, CSS3, JavaScript, React, Node.js, and MongoDB", "Demonstrated exceptional skill and dedication throughout the 12-week intensive program"]
-    },
-    {
-      "content": ["Awarded on December 15, 2025"]
+      "content": ["This is to certify that", "Rahul Verma", "has successfully completed", "Web Development Bootcamp", "December 2024"]
     }
   ],
   "metadata": {
-    "date": "December 15, 2025",
-    "recipient": "John Michael Anderson",
-    "author": "TechAcademy Institute"
+    "date": "15/12/2024",
+    "recipient": "Rahul Verma",
+    "author": "Tech Institute India"
   }
 }
 
@@ -165,89 +166,74 @@ Return ONLY valid JSON, no markdown formatting.`;
             });
         };
 
-        // Add decorative elements based on document type
+        // Add minimal professional styling
         if (docContent.type === 'certificate') {
-            // Add decorative border
-            pdf.setDrawColor(41, 98, 255);
-            pdf.setLineWidth(0.5);
-            pdf.rect(15, 15, pageWidth - 30, pageHeight - 30);
-            pdf.setLineWidth(0.2);
-            pdf.rect(17, 17, pageWidth - 34, pageHeight - 34);
-            yPosition = 40;
+            // Simple black border for certificates only
+            pdf.setDrawColor(0, 0, 0);
+            pdf.setLineWidth(0.8);
+            pdf.rect(20, 20, pageWidth - 40, pageHeight - 40);
+            yPosition = 45;
         }
 
-        // Set color scheme based on document type
-        const getAccentColor = (type: string): [number, number, number] => {
-            switch (type) {
-                case 'certificate': return [41, 98, 255]; // Blue
-                case 'invoice': return [16, 185, 129]; // Green
-                case 'letter': return [99, 102, 241]; // Indigo
-                case 'notice': return [245, 158, 11]; // Amber
-                case 'report': return [139, 92, 246]; // Purple
-                default: return [0, 0, 0]; // Black
-            }
-        };
-
-        const accentColor = getAccentColor(docContent.type);
-        pdf.setTextColor(...accentColor);
+        // Professional black text only (no colors)
+        pdf.setTextColor(0, 0, 0);
 
         // Add title
-        addText(docContent.title, 24, 'bold', 'center', true);
-        yPosition += 10;
+        addText(docContent.title, docContent.type === 'certificate' ? 20 : 18, 'bold', 'center', true);
+        yPosition += docContent.type === 'certificate' ? 8 : 5;
 
-        // Reset color for body text
-        pdf.setTextColor(0, 0, 0);
+        // Keep text black throughout
 
         // Add sections
         docContent.sections.forEach((section, index) => {
             // Add heading if exists
             if (section.heading) {
-                yPosition += 5;
-                pdf.setTextColor(...accentColor);
-                addText(section.heading, 16, 'bold', 'left', true);
                 yPosition += 3;
-                pdf.setTextColor(0, 0, 0);
+                addText(section.heading, 12, 'bold', 'left', true);
+                yPosition += 2;
             }
 
             // Add content based on type
             if (section.type === 'table' && section.tableData) {
-                // Simple table implementation
-                yPosition += 5;
+                // Simple table with black headers
+                yPosition += 3;
                 const colWidth = contentWidth / section.tableData.headers.length;
 
-                // Headers
-                pdf.setFillColor(...accentColor);
+                // Headers - black background, white text
+                pdf.setFillColor(0, 0, 0);
                 pdf.setTextColor(255, 255, 255);
                 section.tableData.headers.forEach((header, i) => {
-                    pdf.rect(margin + (i * colWidth), yPosition, colWidth, 8, 'F');
-                    pdf.text(header, margin + (i * colWidth) + 2, yPosition + 6);
+                    pdf.rect(margin + (i * colWidth), yPosition, colWidth, 7, 'F');
+                    pdf.setFontSize(10);
+                    pdf.text(header, margin + (i * colWidth) + 2, yPosition + 5);
                 });
-                yPosition += 8;
+                yPosition += 7;
 
                 // Rows
                 pdf.setTextColor(0, 0, 0);
                 section.tableData.rows.forEach((row) => {
                     row.forEach((cell, i) => {
-                        pdf.rect(margin + (i * colWidth), yPosition, colWidth, 7);
-                        pdf.text(cell, margin + (i * colWidth) + 2, yPosition + 5);
+                        pdf.rect(margin + (i * colWidth), yPosition, colWidth, 6);
+                        pdf.setFontSize(9);
+                        pdf.text(cell, margin + (i * colWidth) + 2, yPosition + 4);
                     });
-                    yPosition += 7;
+                    yPosition += 6;
                 });
-                yPosition += 5;
+                yPosition += 3;
             } else if (section.type === 'list') {
                 // Bullet list
                 section.content.forEach((item) => {
                     pdf.text('•', margin, yPosition);
-                    addText(item, 11, 'normal', 'left');
-                    yPosition += 2;
+                    addText(item, 10, 'normal', 'left');
+                    yPosition += 1.5;
                 });
             } else {
                 // Paragraphs (default)
                 section.content.forEach((paragraph) => {
                     const align = docContent.type === 'certificate' ? 'center' : 'left';
-                    const fontSize = docContent.type === 'certificate' ? 14 : 11;
+                    const fontSize = docContent.type === 'certificate' ? 12 : 10;
                     addText(paragraph, fontSize, 'normal', align);
-                    yPosition += 5;
+                    yPosition += docContent.type === 'certificate' ? 3 : 2;
                 });
             }
         });
