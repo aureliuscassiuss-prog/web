@@ -179,9 +179,11 @@ export default function PdfGeneratorPage() {
                         {/* REDESIGNED INPUT CONSOLE - "Sleek Module" for Light & Dark */}
                         <div className="relative w-full max-w-2xl mx-auto group">
 
-                            {/* Animated Gradient: Very Subtle in Light Mode, Vibrant in Dark */}
-                            <div className="absolute -inset-[2px] rounded-[26px] sm:rounded-[34px] bg-[conic-gradient(from_0deg_at_50%_50%,#00000000_0deg,#3b82f6_180deg,#00000000_360deg)] animate-spin-slow opacity-30 dark:opacity-100"></div>
-                            <div className="absolute -inset-[2px] rounded-[26px] sm:rounded-[34px] bg-[conic-gradient(from_180deg_at_50%_50%,#00000000_0deg,#8b5cf6_180deg,#00000000_360deg)] animate-spin-slow opacity-30 dark:opacity-100" style={{ animationDelay: '-1.5s' }}></div>
+                            {/* Border Beam Effect */}
+                            <div className="absolute -inset-[2px] rounded-[26px] sm:rounded-[34px] overflow-hidden">
+                                <div className="absolute top-1/2 left-1/2 w-[250%] h-[250%] -translate-x-1/2 -translate-y-1/2 animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_340deg,#6366f1_360deg)] opacity-70 dark:opacity-100 mix-blend-screen" style={{ animationDuration: '4s' }}></div>
+                            </div>
+
 
                             {/* Main Box - White in Light Mode, Black in Dark Mode */}
                             <div className="relative bg-white dark:bg-[#09090b] rounded-[24px] sm:rounded-[32px] border border-slate-200 dark:border-white/5 shadow-2xl shadow-slate-200/50 dark:shadow-none">
@@ -279,8 +281,10 @@ export default function PdfGeneratorPage() {
 
                         {/* Console Card */}
                         <div className="relative group w-full">
-                            {/* Gradient Border */}
-                            <div className="absolute -inset-[2px] rounded-[26px] bg-[conic-gradient(from_0deg_at_50%_50%,#00000000_0deg,#22c55e_180deg,#00000000_360deg)] animate-spin-slow opacity-30 dark:opacity-100"></div>
+                            {/* Border Beam Effect */}
+                            <div className="absolute -inset-[2px] rounded-[26px] overflow-hidden">
+                                <div className="absolute top-1/2 left-1/2 w-[250%] h-[250%] -translate-x-1/2 -translate-y-1/2 animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_340deg,#22c55e_360deg)] opacity-70 dark:opacity-100 mix-blend-screen" style={{ animationDuration: '4s' }}></div>
+                            </div>
 
                             <div className="relative bg-white dark:bg-[#09090b] rounded-[24px] border border-slate-200 dark:border-white/5 shadow-2xl shadow-slate-200/50 dark:shadow-none overflow-hidden p-[2px]">
                                 <div className="bg-slate-50 dark:bg-[#09090b] rounded-[22px] p-6 transition-colors hover:bg-slate-100 dark:hover:bg-[#0c0c0f]">
