@@ -184,7 +184,7 @@ export default function PdfGeneratorPage() {
                             <div className="absolute -inset-[2px] rounded-[26px] sm:rounded-[34px] bg-[conic-gradient(from_180deg_at_50%_50%,#00000000_0deg,#8b5cf6_180deg,#00000000_360deg)] animate-spin-slow opacity-30 dark:opacity-100" style={{ animationDelay: '-1.5s' }}></div>
 
                             {/* Main Box - White in Light Mode, Black in Dark Mode */}
-                            <div className="relative bg-white dark:bg-[#09090b] rounded-[24px] sm:rounded-[32px] border border-slate-200 dark:border-white/5 shadow-2xl shadow-slate-200/50 dark:shadow-none overflow-hidden">
+                            <div className="relative bg-white dark:bg-[#09090b] rounded-[24px] sm:rounded-[32px] border border-slate-200 dark:border-white/5 shadow-2xl shadow-slate-200/50 dark:shadow-none">
 
                                 <div className="p-[2px]">
                                     <div className="bg-slate-50 dark:bg-[#09090b] rounded-[22px] sm:rounded-[30px] p-5 sm:p-8 transition-colors duration-500 hover:bg-slate-100 dark:hover:bg-[#0c0c0f]">
@@ -196,7 +196,7 @@ export default function PdfGeneratorPage() {
                                             disabled={isGenerating}
                                         />
 
-                                        <div className="flex items-center justify-center mt-2 pt-4 border-t border-slate-200 dark:border-white/5">
+                                        <div className="flex items-center justify-center mt-2 pt-4 border-t border-slate-200 dark:border-white/5 relative overflow-visible">
 
                                             {/* Centered Custom Font Dropdown */}
                                             <div className="relative" ref={fontDropdownRef}>
@@ -211,7 +211,11 @@ export default function PdfGeneratorPage() {
 
                                                 {/* Smart Dropdown Menu - appears above with proper width */}
                                                 {isFontOpen && (
-                                                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-52 bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border border-slate-200 dark:border-zinc-800 p-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 max-h-72 overflow-y-auto">
+                                                    <div className="fixed left-1/2 -translate-x-1/2 bottom-auto w-52 bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border border-slate-200 dark:border-zinc-800 p-1 z-[100] animate-in fade-in slide-in-from-bottom-2 duration-200 max-h-72 overflow-y-auto"
+                                                        style={{
+                                                            top: `${fontDropdownRef.current?.getBoundingClientRect().top ? fontDropdownRef.current.getBoundingClientRect().top - 10 : 0}px`,
+                                                            transform: 'translate(-50%, -100%)'
+                                                        }}>
                                                         {fonts.map((f) => (
                                                             <button
                                                                 key={f.id}
