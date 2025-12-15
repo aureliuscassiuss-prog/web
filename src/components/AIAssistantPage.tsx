@@ -38,6 +38,7 @@ export default function AIAssistantPage() {
     const [input, setInput] = useState('')
     const [selectedImage, setSelectedImage] = useState<string | null>(null)
     const [isTyping, setIsTyping] = useState(false)
+    const [isWaiting, setIsWaiting] = useState(false)
     const [isLoadingHistory, setIsLoadingHistory] = useState(true)
     const [copiedId, setCopiedId] = useState<string | null>(null)
 
@@ -83,6 +84,7 @@ export default function AIAssistantPage() {
             intervalRef.current = null;
         }
         setIsTyping(false);
+        setIsWaiting(false);
     };
 
     // Fetch History on Mount
@@ -218,6 +220,7 @@ export default function AIAssistantPage() {
             textareaRef.current.focus()
         }
         setIsTyping(true)
+        setIsWaiting(true)
 
         // Initialize AbortController
         abortControllerRef.current = new AbortController();
@@ -255,6 +258,7 @@ export default function AIAssistantPage() {
             const data = await response.json()
 
             // Simulate typing effect
+            setIsWaiting(false);
             // We DON'T set isTyping false here yet, we wait for typing to finish
             const botMsgId = (Date.now() + 1).toString();
 
@@ -290,6 +294,7 @@ export default function AIAssistantPage() {
             setConversationHistory(data.conversationHistory || [])
 
         } catch (error: any) {
+            setIsWaiting(false);
             if (error.name === 'AbortError') {
                 console.log('Generation stopped by user');
                 setIsTyping(false);
@@ -527,7 +532,7 @@ export default function AIAssistantPage() {
                     )}
 
                     {/* Typing Indicator / "Thinking" */}
-                    {isTyping && (
+                    {isWaiting && (
                         <div className="flex justify-start">
                             <div className="flex gap-2 max-w-[85%]">
                                 <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-black text-white dark:bg-white dark:text-black mt-1">
