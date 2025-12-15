@@ -181,7 +181,7 @@ export default function PdfGeneratorPage() {
 
                             {/* Border Beam Effect */}
                             <div className="absolute -inset-[2px] rounded-[26px] sm:rounded-[34px] overflow-hidden">
-                                <div className="absolute top-1/2 left-1/2 w-[250%] h-[250%] -translate-x-1/2 -translate-y-1/2 animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_340deg,#6366f1_360deg)] opacity-70 dark:opacity-100 mix-blend-screen" style={{ animationDuration: '4s' }}></div>
+                                <div className="absolute top-1/2 left-1/2 w-[250%] h-[250%] -translate-x-1/2 -translate-y-1/2 animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_320deg,#6366f1_340deg,#a855f7_360deg)] opacity-100" style={{ animationDuration: '4s' }}></div>
                             </div>
 
 
@@ -283,7 +283,7 @@ export default function PdfGeneratorPage() {
                         <div className="relative group w-full">
                             {/* Border Beam Effect */}
                             <div className="absolute -inset-[2px] rounded-[26px] overflow-hidden">
-                                <div className="absolute top-1/2 left-1/2 w-[250%] h-[250%] -translate-x-1/2 -translate-y-1/2 animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_340deg,#22c55e_360deg)] opacity-70 dark:opacity-100 mix-blend-screen" style={{ animationDuration: '4s' }}></div>
+                                <div className="absolute top-1/2 left-1/2 w-[250%] h-[250%] -translate-x-1/2 -translate-y-1/2 animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_300deg,#22c55e_360deg)] opacity-100" style={{ animationDuration: '4s' }}></div>
                             </div>
 
                             <div className="relative bg-white dark:bg-[#09090b] rounded-[24px] border border-slate-200 dark:border-white/5 shadow-2xl shadow-slate-200/50 dark:shadow-none overflow-hidden p-[2px]">
