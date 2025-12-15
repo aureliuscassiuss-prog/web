@@ -8,7 +8,22 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/LOGO.png" />
   <link rel="icon" type="image/png" sizes="16x16" href="/LOGO.png" />
   <link rel="manifest" href="/manifest.json" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <script>
+    (function () {
+      // Dynamic Viewport for Small Screens
+      // If screen is smaller than 390px, force it to be 390px (shrink to fit)
+      // Otherwise use standard device-width
+      var viewport = document.createElement('meta');
+      viewport.name = "viewport";
+
+      if (screen.width < 390) {
+        viewport.content = "width=390, user-scalable=no";
+      } else {
+        viewport.content = "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no";
+      }
+      document.head.appendChild(viewport);
+    })();
+  </script>
   <title>Extrovert - #1 Medicaps University Notes & AI Tools | Omex Video Chat</title>
   <meta name="description"
     content="The Ultimate Student Platform: Download Medicaps University Notes & PYQs, use AI PDF Generator, and connect on Omex (Omegle Alternative). Your all-in-one college companion." />
