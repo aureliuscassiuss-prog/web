@@ -181,13 +181,13 @@ export default function PdfGeneratorPage() {
 
                             {/* Border Beam Effect */}
                             <div className="absolute -inset-[2px] rounded-[26px] sm:rounded-[34px] overflow-hidden pointer-events-none z-0">
-                                <div className="absolute top-1/2 left-1/2 w-[1000%] h-[1000%] -translate-x-1/2 -translate-y-1/2 animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_60deg,#6366f1_120deg,#a855f7_180deg,transparent_240deg)] opacity-100"></div>
+                                <div className="absolute top-1/2 left-1/2 w-[200%] aspect-square -translate-x-1/2 -translate-y-1/2 animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_300deg,#6366f1_330deg,#a855f7_360deg)] opacity-100" style={{ animationDuration: '4s' }}></div>
                             </div>
 
 
 
                             {/* Main Box - White in Light Mode, Black in Dark Mode */}
-                            <div className="relative bg-white dark:bg-[#09090b] rounded-[24px] sm:rounded-[32px] border border-slate-200 dark:border-white/5 shadow-2xl shadow-slate-200/50 dark:shadow-none">
+                            <div className="relative z-10 bg-white dark:bg-[#09090b] rounded-[24px] sm:rounded-[32px] border border-slate-200 dark:border-white/5 shadow-2xl shadow-slate-200/50 dark:shadow-none">
 
                                 <div className="p-[2px]">
                                     <div className="bg-slate-50 dark:bg-[#09090b] rounded-[22px] sm:rounded-[30px] p-5 sm:p-8 transition-colors duration-500 hover:bg-slate-100 dark:hover:bg-[#0c0c0f]">
@@ -296,11 +296,11 @@ export default function PdfGeneratorPage() {
                         <div className="relative group w-full">
                             {/* Border Beam Effect */}
                             <div className="absolute -inset-[2px] rounded-[26px] overflow-hidden pointer-events-none z-0">
-                                <div className="absolute top-1/2 left-1/2 w-[1000%] h-[1000%] -translate-x-1/2 -translate-y-1/2 animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_60deg,#22c55e_120deg,#10b981_180deg,transparent_240deg)] opacity-100"></div>
+                                <div className="absolute top-1/2 left-1/2 w-[200%] aspect-square -translate-x-1/2 -translate-y-1/2 animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_300deg,#22c55e_330deg,#10b981_360deg)] opacity-100" style={{ animationDuration: '4s' }}></div>
                             </div>
 
 
-                            <div className="relative bg-white dark:bg-[#09090b] rounded-[24px] border border-slate-200 dark:border-white/5 shadow-2xl shadow-slate-200/50 dark:shadow-none overflow-hidden p-[2px]">
+                            <div className="relative z-10 bg-white dark:bg-[#09090b] rounded-[24px] border border-slate-200 dark:border-white/5 shadow-2xl shadow-slate-200/50 dark:shadow-none overflow-hidden p-[2px]">
                                 <div className="bg-slate-50 dark:bg-[#09090b] rounded-[22px] p-6 transition-colors hover:bg-slate-100 dark:hover:bg-[#0c0c0f]">
 
                                     <div className="flex items-center justify-between mb-6 pb-6 border-b border-slate-200 dark:border-white/5">
