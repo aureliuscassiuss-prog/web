@@ -13,19 +13,6 @@ export default function PdfGeneratorPage() {
     const [error, setError] = useState<string | null>(null);
     const [isRateLimited, setIsRateLimited] = useState(false);
 
-    // Dynamic Stars Effect
-    const [stars, setStars] = useState<{ top: string; left: string; size: string; opacity: number }[]>([]);
-
-    useEffect(() => {
-        const newStars = Array.from({ length: 50 }).map(() => ({
-            top: `${Math.random() * 100}%`,
-            left: `${Math.random() * 100}%`,
-            size: `${Math.random() * 3}px`,
-            opacity: Math.random()
-        }));
-        setStars(newStars);
-    }, []);
-
     const handleGenerate = async () => {
         if (!prompt.trim()) return;
 
@@ -92,154 +79,181 @@ export default function PdfGeneratorPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white relative overflow-hidden font-sans selection:bg-indigo-500/30">
+        <div className="min-h-screen bg-white dark:bg-black text-slate-900 dark:text-white relative overflow-hidden font-sans selection:bg-indigo-500/30 transition-colors duration-500">
 
-            {/* Background Effects */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-indigo-600/20 blur-[120px] rounded-full pointer-events-none" />
-            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none mix-blend-overlay"></div>
+            {/* STARS: Only in Dark Mode */}
+            <div className="absolute inset-0 z-0 hidden dark:block">
+                {Array.from({ length: 40 }).map((_, i) => (
+                    <div
+                        key={i}
+                        className="absolute bg-white rounded-full animate-pulse"
+                        style={{
+                            top: `${Math.random() * 100}%`,
+                            left: `${Math.random() * 100}%`,
+                            width: `${Math.random() * 2}px`,
+                            height: `${Math.random() * 2}px`,
+                            opacity: Math.random() * 0.4 + 0.1,
+                            animationDuration: `${Math.random() * 5 + 3}s`
+                        }}
+                    />
+                ))}
+            </div>
 
-            {/* Stars */}
-            {stars.map((star, i) => (
-                <div
-                    key={i}
-                    className="absolute rounded-full bg-white animate-pulse"
-                    style={{
-                        top: star.top,
-                        left: star.left,
-                        width: star.size,
-                        height: star.size,
-                        opacity: star.opacity,
-                        animationDuration: `${Math.random() * 3 + 2}s`
-                    }}
-                />
-            ))}
+            {/* Layout Container */}
+            <div className="relative z-10 flex flex-col items-center min-h-screen px-4 pt-8 sm:pt-32">
 
-            <div className="relative z-10 max-w-4xl mx-auto px-4 py-8 sm:py-12 lg:py-16 flex flex-col items-center min-h-[calc(100vh-80px)] justify-center">
-
-                {/* Navbar (Mock) */}
+                {/* Navbar Badge */}
                 {!pdfReady && (
-                    <div className="mb-12 inline-flex items-center gap-6 px-6 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl">
-                        <span className="text-[10px] sm:text-xs font-medium text-gray-400 uppercase tracking-widest cursor-default">AI PDF Generator</span>
+                    <div className="mb-6 sm:mb-10 px-4 sm:px-5 py-1.5 sm:py-2 rounded-full border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-white/5 backdrop-blur-md shadow-sm dark:shadow-2xl">
+                        <span className="text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-[0.2em]">AI Powered</span>
                     </div>
                 )}
 
                 {!pdfReady ? (
-                    <div className="w-full text-center space-y-8 sm:space-y-12 animate-fade-in">
+                    <div className="w-full max-w-4xl text-center space-y-6 sm:space-y-12 animate-fade-in-up">
 
-                        {/* Hero Typography */}
+                        {/* Heading - Responsive Color */}
                         <div className="space-y-4 sm:space-y-6">
-                            <h1 className="font-serif text-5xl sm:text-6xl md:text-7xl lg:text-8xl leading-[0.9] tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/50 drop-shadow-lg">
-                                Generate Stunning <br />
-                                <span className="italic text-indigo-300">Documents</span>
+                            <h1 className="font-serif text-5xl sm:text-7xl lg:text-8xl leading-[0.9] text-slate-900 dark:text-white drop-shadow-sm dark:drop-shadow-2xl tracking-tight">
+                                Generate <span className="italic text-transparent bg-clip-text bg-gradient-to-br from-indigo-500 via-purple-500 to-blue-500 dark:from-indigo-300 dark:via-white dark:to-blue-300">Stunning Documents</span>
                             </h1>
-                            <p className="text-sm sm:text-base text-gray-400 max-w-lg mx-auto font-light leading-relaxed px-4">
-                                Turn your ideas into professional PDFs with just a few words. <br className="hidden sm:block" />
-                                Applications, Letters, and Notices created instantly.
+                            <p className="hidden sm:block text-slate-600 dark:text-zinc-500 text-lg sm:text-xl max-w-2xl mx-auto font-light leading-relaxed">
+                                Transform your thoughts into professional PDF documents instantly.
+                            </p>
+                            <p className="sm:hidden text-slate-600 dark:text-zinc-500 text-sm max-w-xs mx-auto font-light leading-relaxed">
+                                Create professional PDFs with AI.
                             </p>
                         </div>
 
-                        {/* Input Area */}
-                        <div className="relative max-w-2xl mx-auto group">
-                            <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-3xl opacity-20 group-hover:opacity-40 blur transition duration-500"></div>
+                        {/* REDESIGNED INPUT CONSOLE - "Sleek Module" for Light & Dark */}
+                        <div className="relative w-full max-w-2xl mx-auto group">
 
-                            <div className="relative bg-[#0A0A0A]/80 backdrop-blur-2xl rounded-2xl sm:rounded-3xl border border-white/10 p-2 sm:p-3 shadow-2xl">
-                                <textarea
-                                    value={prompt}
-                                    onChange={(e) => setPrompt(e.target.value)}
-                                    placeholder="Describe your document..."
-                                    className="w-full h-32 sm:h-40 bg-transparent text-white placeholder-gray-600 p-4 sm:p-6 text-base sm:text-lg outline-none resize-none font-light"
-                                    disabled={isGenerating}
-                                />
+                            {/* Animated Gradient: Very Subtle in Light Mode, Vibrant in Dark */}
+                            <div className="absolute -inset-[2px] rounded-[26px] sm:rounded-[34px] bg-[conic-gradient(from_0deg_at_50%_50%,#00000000_0deg,#3b82f6_180deg,#00000000_360deg)] animate-spin-slow opacity-30 dark:opacity-100"></div>
+                            <div className="absolute -inset-[2px] rounded-[26px] sm:rounded-[34px] bg-[conic-gradient(from_180deg_at_50%_50%,#00000000_0deg,#8b5cf6_180deg,#00000000_360deg)] animate-spin-slow opacity-30 dark:opacity-100" style={{ animationDelay: '-1.5s' }}></div>
 
-                                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 pb-4">
-                                    <div className="hidden sm:flex flex-wrap gap-2">
-                                        {['Application', 'Letter', 'Invoice'].map(tag => (
-                                            <button key={tag} onClick={() => setPrompt(p => p + (p ? ' ' : '') + tag)} className="text-[10px] px-2 py-1 rounded-full border border-white/10 text-gray-400 hover:bg-white/5 transition">
-                                                {tag}
-                                            </button>
-                                        ))}
+                            {/* Main Box - White in Light Mode, Black in Dark Mode */}
+                            <div className="relative bg-white dark:bg-[#09090b] rounded-[24px] sm:rounded-[32px] border border-slate-200 dark:border-white/5 shadow-2xl shadow-slate-200/50 dark:shadow-none overflow-hidden">
+
+                                <div className="p-[2px]">
+                                    <div className="bg-slate-50 dark:bg-[#09090b] rounded-[22px] sm:rounded-[30px] p-5 sm:p-8 transition-colors duration-500 hover:bg-slate-100 dark:hover:bg-[#0c0c0f]">
+                                        <textarea
+                                            value={prompt}
+                                            onChange={(e) => setPrompt(e.target.value)}
+                                            placeholder="Describe your document..."
+                                            className="w-full h-24 sm:h-32 bg-transparent text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 text-lg sm:text-xl font-normal outline-none resize-none leading-relaxed tracking-wide"
+                                            disabled={isGenerating}
+                                        />
+
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-2 pt-4 border-t border-slate-200 dark:border-white/5">
+                                            <span className="text-xs text-slate-500 dark:text-zinc-600 font-medium ml-1">Try example:</span>
+                                            {/* Premium Chips */}
+                                            <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 no-scrollbar">
+                                                {['Official Letter', 'Invoice', 'Resume'].map(tag => (
+                                                    <button
+                                                        key={tag}
+                                                        onClick={() => setPrompt(tag + " ")}
+                                                        className="whitespace-nowrap text-xs font-medium px-3 py-1.5 rounded-full bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-zinc-600 transition-all flex items-center gap-1 group/tag"
+                                                    >
+                                                        <span>+</span> {tag}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
+                                </div>
 
+                                {/* Full Width Action Bar */}
+                                <div className="p-1 pt-0">
                                     <button
                                         onClick={handleGenerate}
                                         disabled={!prompt.trim() || isGenerating}
-                                        className="w-full sm:w-auto px-8 py-3 rounded-xl sm:rounded-full bg-white text-black font-medium text-sm sm:text-base hover:scale-105 active:scale-95 transition-all shadow-lg shadow-white/10 flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100"
+                                        className="w-full rounded-[20px] sm:rounded-[28px] bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-zinc-200 text-white dark:text-black py-3 sm:py-5 font-semibold text-base sm:text-lg transition-all active:scale-[0.99] flex items-center justify-center gap-3 shadow-lg shadow-slate-200/50 dark:shadow-[0_0_40px_-10px_rgba(255,255,255,0.1)] hover:shadow-xl dark:hover:shadow-[0_0_40px_-5px_rgba(255,255,255,0.2)] disabled:opacity-50 disabled:shadow-none"
                                     >
-                                        {isGenerating ? <Sparkles size={16} className="animate-spin" /> : <Wand2 size={16} />}
-                                        {isGenerating ? 'Generating...' : 'Generate PDF'}
+                                        {isGenerating ? <Sparkles size={18} className="animate-spin text-indigo-400 dark:text-indigo-600" /> : <Wand2 size={18} />}
+                                        {isGenerating ? 'Generating Magic...' : 'Generate Document'}
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Rate Limit Alert */}
+                        {/* Error/Rate Limit */}
                         {error && (
-                            <div className={`mx-auto max-w-md p-4 rounded-xl border backdrop-blur-md ${isRateLimited
-                                ? 'bg-orange-500/10 border-orange-500/30 text-orange-200'
-                                : 'bg-red-500/10 border-red-500/30 text-red-200'
-                                } text-xs sm:text-sm animate-slide-up`}>
-                                <div className="flex items-center gap-2 justify-center mb-2">
-                                    {isRateLimited ? <Lock size={14} /> : <span className="text-xl">!</span>}
-                                    <span className="font-semibold">{error}</span>
-                                </div>
+                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-200 text-sm animate-fade-in-up">
+                                <span>{error}</span>
                                 {isRateLimited && (
-                                    <button
-                                        onClick={() => document.getElementById('auth-trigger-btn')?.click()}
-                                        className="text-xs underline hover:text-white transition"
-                                    >
-                                        Sign In for Unlimited Access
-                                    </button>
+                                    <button onClick={() => document.getElementById('auth-trigger-btn')?.click()} className="underline hover:text-red-800 dark:hover:text-white">Sign In</button>
                                 )}
                             </div>
                         )}
-                    </div>
 
+                    </div>
                 ) : (
-                    /* Success State */
-                    <div className="w-full max-w-2xl animate-fade-in text-center space-y-8 sm:space-y-12">
+                    /* Success View - Redesigned Console Style */
+                    <div className="w-full max-w-lg mx-auto text-center space-y-8 animate-fade-in-up pt-12">
+
                         <div className="space-y-4">
-                            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-500/10 text-green-400 ring-1 ring-green-500/30 mb-4 animate-scale-in">
-                                <CheckCircle size={40} className="drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]" />
+                            <div className="w-20 h-20 mx-auto bg-green-500/10 rounded-full flex items-center justify-center ring-1 ring-green-500/20 shadow-[0_0_30px_-5px_rgba(34,197,94,0.3)] animate-scale-in">
+                                <CheckCircle className="text-green-500 w-10 h-10" />
                             </div>
-                            <h2 className="font-serif text-4xl sm:text-5xl md:text-6xl text-white tracking-tight">
-                                Ready to <span className="italic text-green-400">Download</span>
-                            </h2>
-                            <p className="text-sm text-gray-400">
-                                Your professional document has been created successfully.
-                            </p>
+                            <h2 className="text-4xl font-serif text-slate-900 dark:text-white tracking-tight">Document Ready</h2>
+                            <p className="text-slate-500 dark:text-zinc-400">Your PDF has been generated successfully.</p>
                         </div>
 
-                        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
-                            <div className="text-left">
-                                <div className="text-xs uppercase tracking-widest text-gray-500 mb-1">File Name</div>
-                                <div className="text-lg sm:text-xl font-medium text-white truncate max-w-[200px]">generated_document.pdf</div>
-                                <div className="text-xs text-gray-400 mt-1">{(pdfBlob?.size ? pdfBlob.size / 1024 : 0).toFixed(1)} KB</div>
-                            </div>
+                        {/* Console Card */}
+                        <div className="relative group w-full">
+                            {/* Gradient Border */}
+                            <div className="absolute -inset-[2px] rounded-[26px] bg-[conic-gradient(from_0deg_at_50%_50%,#00000000_0deg,#22c55e_180deg,#00000000_360deg)] animate-spin-slow opacity-30 dark:opacity-100"></div>
 
-                            <button
-                                onClick={handleDownload}
-                                className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 hover:-translate-y-1 transition-all flex items-center justify-center gap-2 text-sm"
-                            >
-                                <Download size={18} />
-                                Download File
-                            </button>
+                            <div className="relative bg-white dark:bg-[#09090b] rounded-[24px] border border-slate-200 dark:border-white/5 shadow-2xl shadow-slate-200/50 dark:shadow-none overflow-hidden p-[2px]">
+                                <div className="bg-slate-50 dark:bg-[#09090b] rounded-[22px] p-6 transition-colors hover:bg-slate-100 dark:hover:bg-[#0c0c0f]">
+
+                                    <div className="flex items-center justify-between mb-6 pb-6 border-b border-slate-200 dark:border-white/5">
+                                        <div className="text-left">
+                                            <div className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-1">File Name</div>
+                                            <div className="text-base font-medium text-slate-900 dark:text-white truncate max-w-[200px]">generated_document.pdf</div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-1">Size</div>
+                                            <div className="text-base font-medium text-slate-900 dark:text-white">{(pdfBlob?.size ? pdfBlob.size / 1024 : 0).toFixed(1)} KB</div>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={handleDownload}
+                                        className="w-full rounded-[18px] bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-zinc-200 text-white dark:text-black py-4 font-semibold text-lg transition-all active:scale-[0.99] flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+                                    >
+                                        <Download size={20} />
+                                        Download PDF
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         <button
                             onClick={handleReset}
-                            className="text-sm text-gray-500 hover:text-white transition flex items-center justify-center gap-2 mx-auto"
+                            className="text-slate-500 dark:text-zinc-500 hover:text-slate-900 dark:hover:text-white text-sm transition-colors flex items-center gap-2 mx-auto hover:underline decoration-slate-300 dark:decoration-zinc-700 underline-offset-4"
                         >
-                            <ArrowLeft size={14} />
-                            Create New Document
+                            <ArrowLeft size={16} /> Create Another
                         </button>
                     </div>
                 )}
 
-                {/* Footer Credits */}
-                <div className="fixed bottom-4 text-[10px] text-gray-600 pointer-events-none">
-                    Powered by AI • Extrovert
+                {/* Footer */}
+                <div className="fixed bottom-4 sm:bottom-6 text-slate-400 dark:text-zinc-800 text-[10px] sm:text-xs pointer-events-none select-none">
+                    Powered by Extrovert AI
                 </div>
             </div>
+
+            <style>{`
+                @keyframes tilt {
+                    0%, 50%, 100% { transform: rotate(0deg); }
+                    25% { transform: rotate(0.5deg); }
+                    75% { transform: rotate(-0.5deg); }
+                }
+                .animate-tilt { animation: tilt 10s infinite linear; }
+                .animate-spin-slow { animation: spin 8s linear infinite; }
+            `}</style>
         </div>
     );
 }

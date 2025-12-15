@@ -342,8 +342,8 @@ function AppContent() {
           <Route path="/" element={
             <div className="space-y-8">
               <SEO
-                title="Extrovert - #1 Resource Hub for Medicaps University | Notes & PYQs"
-                description="Access the best collection of Medicaps University notes, previous year question papers (PYQs), and syllabus for B.Tech, MBA, and BBA students."
+                title="Extrovert - #1 Medicaps University Notes | College Notes & PYQs"
+                description="Download the best Medicaps University notes, previous year question papers (PYQs), and syllabus. The ultimate resource hub for B.Tech and MBA students."
               />
               {user ? <Dashboard /> : <Hero onGetStarted={handleGetStarted} user={user} />}
             </div>
@@ -353,8 +353,8 @@ function AppContent() {
           <Route path="/resources" element={
             <>
               <SEO
-                title="Medicaps University Notes, PYQs & Syllabus - B.Tech, MBA, BBA"
-                description="Find and download Medicaps University study materials. Filter by course, branch, and year. Comprehensive notes for CSE, IT, ME, CE, and more."
+                title="Browse Medicaps Notes & Syllabus - All Semesters"
+                description="Comprehensive collection of Medicaps University notes and study materials. Filter by branch (CSE, IT, ME) and year. Download for free."
                 url="https://extrovert.site/resources"
               />
               <BrowseResources onUploadRequest={handleUploadWithData} />
@@ -362,10 +362,26 @@ function AppContent() {
           } />
 
           {/* CGPA Calculator Route (Public) */}
-          <Route path="/cgpa-calculator" element={<CGPACalculator />} />
+          <Route path="/cgpa-calculator" element={
+            <>
+              <SEO
+                title="CGPA Calculator for Medicaps University"
+                description="Calculate your CGPA and SGPA instantly with the Extrovert CGPA Calculator. Tailored for Medicaps grading system."
+              />
+              <CGPACalculator />
+            </>
+          } />
 
           {/* Pomodoro Timer Route (Public) */}
-          <Route path="/pomodoro" element={<PomodoroPage />} />
+          <Route path="/pomodoro" element={
+            <>
+              <SEO
+                title="Study Timer & Pomodoro - Focus Mode"
+                description="Boost your productivity with our aesthetic Pomodoro timer and lo-fi beats. Perfect for long study sessions."
+              />
+              <PomodoroPage />
+            </>
+          } />
 
           {/* Attendance Manager Route (Protected) */}
           <Route path="/attendance" element={
@@ -373,6 +389,7 @@ function AppContent() {
               setAuthModalInitialView('login')
               setIsAuthModalOpen(true)
             }}>
+              <SEO title="Attendance Manager - Track Your Classes" />
               <AttendanceManager />
             </ProtectedRoute>
           } />
@@ -383,6 +400,7 @@ function AppContent() {
               setAuthModalInitialView('login')
               setIsAuthModalOpen(true)
             }}>
+              <SEO title="AI Study Assistant - Ask Doubts Instantly" />
               <AIAssistantPage />
             </ProtectedRoute>
           } />
@@ -391,8 +409,8 @@ function AppContent() {
           <Route path="/leaderboard" element={
             <>
               <SEO
-                title="Top Contributors - Medicaps University Community"
-                description="See who's leading the academic community at Medicaps University. Join the leaderboard by sharing your notes and helping fellow students."
+                title="Top Contributors Leaderboard - Medicaps Community"
+                description="See the top students contributing notes and resources to the Extrovert community."
                 url="https://extrovert.site/leaderboard"
               />
               <ResourceGrid view="leaderboard" searchQuery={searchQuery} />
@@ -420,8 +438,8 @@ function AppContent() {
           <Route path="/coffessions" element={
             <>
               <SEO
-                title="Coffessions - Anonymous Confessions | Extrovert"
-                description="Share your thoughts anonymously. Posts disappear in 48 hours."
+                title="Coffessions - Anonymous College Confessions"
+                description="Share your campus secrets and thoughts anonymously on Coffessions. Safe, fun, and disappearing in 48 hours."
               />
               <CoffessionsPage />
             </>
@@ -431,8 +449,8 @@ function AppContent() {
           <Route path="/chat" element={
             <>
               <SEO
-                title="Group Chat (GC) - Real-time Discussion"
-                description="Chat with other students in real-time. Discuss studies, events, or just hang out."
+                title="Group Chat (GC) - Medicaps Student Community"
+                description="Join the live group chat for Medicaps University students. Discuss exams, events, and campus life."
               />
               <CoffeeChat />
             </>
@@ -444,6 +462,10 @@ function AppContent() {
               setAuthModalInitialView('login')
               setIsAuthModalOpen(true)
             }}>
+              <SEO
+                title="Omex - Omegle Alternative from Extrovert | Random Video Chat"
+                description="Meet new people on Omex, the safe Omegle alternative for students. Random video chat with verified college peers."
+              />
               <VideoChat />
             </ProtectedRoute>
           } />
@@ -452,8 +474,8 @@ function AppContent() {
           <Route path="/pdf-generator" element={
             <>
               <SEO
-                title="Free AI PDF Generator - Create Letters, Applications & More"
-                description="Generate professional PDF letters, applications, and documents for free using AI. Instant download, no login required for limited use."
+                title="Free AI PDF Generator - Create Documents Instantly"
+                description="The best free AI PDF Generator. Create professional letters, applications, and reports in seconds with AI. No signup required."
               />
               <PdfGeneratorPage />
             </>
