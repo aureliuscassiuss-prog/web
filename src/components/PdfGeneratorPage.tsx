@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Sparkles, Download, CheckCircle, ArrowLeft, Wand2, ChevronDown } from 'lucide-react';
+import { Sparkles, Download, CheckCircle, ArrowLeft, ChevronDown } from 'lucide-react';
 
 export default function PdfGeneratorPage() {
     const { token } = useAuth();
@@ -180,8 +180,8 @@ export default function PdfGeneratorPage() {
                         <div className="relative w-full max-w-2xl mx-auto group">
 
                             {/* Border Beam Effect */}
-                            <div className="absolute -inset-[2px] rounded-[26px] sm:rounded-[34px] overflow-hidden">
-                                <div className="absolute top-1/2 left-1/2 w-[250%] h-[250%] -translate-x-1/2 -translate-y-1/2 animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_320deg,#6366f1_340deg,#a855f7_360deg)] opacity-100" style={{ animationDuration: '4s' }}></div>
+                            <div className="absolute -inset-[2px] rounded-[26px] sm:rounded-[34px] overflow-hidden pointer-events-none">
+                                <div className="absolute top-1/2 left-1/2 w-[400%] aspect-square -translate-x-1/2 -translate-y-1/2 animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_320deg,#6366f1_340deg,#a855f7_360deg)] opacity-100" style={{ animationDuration: '4s' }}></div>
                             </div>
 
 
@@ -247,10 +247,22 @@ export default function PdfGeneratorPage() {
                                     <button
                                         onClick={handleGenerate}
                                         disabled={!prompt.trim() || isGenerating}
-                                        className="w-full rounded-[20px] sm:rounded-[28px] bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-zinc-200 text-white dark:text-black py-3 sm:py-5 font-semibold text-base sm:text-lg transition-all active:scale-[0.99] flex items-center justify-center gap-3 shadow-lg shadow-slate-200/50 dark:shadow-[0_0_40px_-10px_rgba(255,255,255,0.1)] hover:shadow-xl dark:hover:shadow-[0_0_40px_-5px_rgba(255,255,255,0.2)] disabled:opacity-50 disabled:shadow-none"
+                                        className="group relative w-full rounded-[24px] p-[1px] overflow-hidden transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        {isGenerating ? <Sparkles size={18} className="animate-spin text-indigo-400 dark:text-indigo-600" /> : <Wand2 size={18} />}
-                                        {isGenerating ? 'Generating Magic...' : 'Generate Document'}
+                                        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 animate-gradient-xy opacity-70 group-hover:opacity-100 transition-opacity"></div>
+                                        <div className="relative w-full h-full bg-black rounded-[23px] flex items-center justify-center gap-3 py-4 sm:py-5 transition-all group-active:scale-[0.99] group-hover:bg-[#0c0c0f]">
+                                            {isGenerating ? (
+                                                <Sparkles size={20} className="animate-spin text-indigo-500" />
+                                            ) : (
+                                                <div className="relative">
+                                                    <Sparkles size={20} className="text-white z-10 relative" />
+                                                    <div className="absolute inset-0 blur-md bg-indigo-500 opacity-50"></div>
+                                                </div>
+                                            )}
+                                            <span className="font-semibold text-lg text-white tracking-wide">
+                                                {isGenerating ? 'Generating Magic...' : 'Generate Document'}
+                                            </span>
+                                        </div>
                                     </button>
                                 </div>
                             </div>
@@ -282,8 +294,8 @@ export default function PdfGeneratorPage() {
                         {/* Console Card */}
                         <div className="relative group w-full">
                             {/* Border Beam Effect */}
-                            <div className="absolute -inset-[2px] rounded-[26px] overflow-hidden">
-                                <div className="absolute top-1/2 left-1/2 w-[250%] h-[250%] -translate-x-1/2 -translate-y-1/2 animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_300deg,#22c55e_360deg)] opacity-100" style={{ animationDuration: '4s' }}></div>
+                            <div className="absolute -inset-[2px] rounded-[26px] overflow-hidden pointer-events-none">
+                                <div className="absolute top-1/2 left-1/2 w-[400%] aspect-square -translate-x-1/2 -translate-y-1/2 animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_300deg,#22c55e_360deg)] opacity-100" style={{ animationDuration: '4s' }}></div>
                             </div>
 
                             <div className="relative bg-white dark:bg-[#09090b] rounded-[24px] border border-slate-200 dark:border-white/5 shadow-2xl shadow-slate-200/50 dark:shadow-none overflow-hidden p-[2px]">
@@ -302,10 +314,13 @@ export default function PdfGeneratorPage() {
 
                                     <button
                                         onClick={handleDownload}
-                                        className="w-full rounded-[18px] bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-zinc-200 text-white dark:text-black py-4 font-semibold text-lg transition-all active:scale-[0.99] flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+                                        className="group relative w-full rounded-[20px] p-[1px] overflow-hidden transition-all active:scale-[0.99]"
                                     >
-                                        <Download size={20} />
-                                        Download PDF
+                                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-500 animate-gradient-xy opacity-70 group-hover:opacity-100 transition-opacity"></div>
+                                        <div className="relative w-full h-full bg-black rounded-[19px] flex items-center justify-center gap-2 py-4 transition-all group-hover:bg-[#0c0c0f]">
+                                            <Download size={20} className="text-white" />
+                                            <span className="font-semibold text-lg text-white">Download PDF</span>
+                                        </div>
                                     </button>
                                 </div>
                             </div>
@@ -334,6 +349,15 @@ export default function PdfGeneratorPage() {
                 }
                 .animate-tilt { animation: tilt 10s infinite linear; }
                 .animate-spin-slow { animation: spin 8s linear infinite; }
+                .animate-gradient-xy {
+                    background-size: 200% 200%;
+                    animation: gradient-xy 6s ease infinite;
+                }
+                @keyframes gradient-xy {
+                    0% { background-position: 0% 50%; }
+                    50% { background-position: 100% 50%; }
+                    100% { background-position: 0% 50%; }
+                }
             `}</style>
         </div>
     );
