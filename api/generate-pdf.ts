@@ -153,14 +153,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 **JSON STRUCTURE (The Blueprint):**
 {
   "config": {
-    "draw_border": boolean, // TRUE for Certificates, Notices, Vouchers, Menus, etc.
-    "border_style": "simple" | "double", // Hint for future use
-    "margin": number // Default 25
+    "draw_border": boolean, 
+    "margin": number, // Default 25
+    "colors": {
+       "accent": "#HEX", // Used for Headers, Titles, Table Backgrounds (e.g. #2c3e50, #000000, #e74c3c)
+       "text": "#HEX",   // Main text color (usually #000000)
+       "secondary": "#HEX" // Subtle text (e.g. #7f8c8d)
+    },
+    "styles": {
+       "heading_underline": boolean, // Should titles have a line under them?
+       "table_striping": boolean     // Zebra striping for tables?
+    }
   },
-  "title": "Main Title (Centered)", // Optional
-  "watermark": "CONFIDENTIAL", // Optional text to show as watermark
+  "title": "Main Title (Centered)", 
+  "watermark": "CONFIDENTIAL", 
   
-  // OPTIONAL: Use this for standard letter structures
+  // OPTIONAL: Standard Letter Structure
   "letter_details": {
     "sender_address": ["Line 1", "Line 2"],
     "to_block": ["To,", "Name", "Address"],
@@ -313,59 +321,76 @@ RETURN ONLY VALID JSON.`;
 
         // --- UNIVERSAL LAYOUT RENDERER ---
 
-        // Define Theme Colors
-        const accentColor = [44, 62, 80]; // Navy Blue #2c3e50
-        const secondaryColor = [127, 140, 141]; // Gray #7f8c8d
+        // Helper: Hex to RGB
+        const hexToRgb = (hex: string | undefined): [number, number, number] => {
+            if (!hex) return [0, 0, 0]; // Default Black
+            hex = hex.replace('#', '');
+            if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+            const bigint = parseInt(hex, 16);
+            return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
+        };
+
+        // Extract Theme from AI Config or defaults
+        const accentHex = docContent.config?.colors?.accent || '#2c3e50'; // Default Navy
+        const secondaryHex = docContent.config?.colors?.secondary || '#7f8c8d'; // Default Gray
+        const textHex = docContent.config?.colors?.text || '#000000'; // Default Black
+
+        const accentColor = hexToRgb(accentHex);
+        const secondaryColor = hexToRgb(secondaryHex);
+        const textColor = hexToRgb(textHex);
+
+        const headingUnderline = docContent.config?.styles?.heading_underline !== false; // Default true if not specified
+        const tableStriping = docContent.config?.styles?.table_striping !== false; // Default true
 
         // 1. Draw Border
         if (docContent.config?.draw_border) {
-            pdf.setDrawColor(0, 0, 0);
+            pdf.setDrawColor(textColor[0], textColor[1], textColor[2]);
             pdf.setLineWidth(1);
-            if (docContent.config.border_style === 'double') pdf.setLineWidth(2);
-
             const boxMargin = docContent.config.margin || 15;
             pdf.rect(boxMargin, boxMargin, pageWidth - (boxMargin * 2), pageHeight - (boxMargin * 2));
         }
 
         // 2. Watermark
         if (docContent.watermark) {
-            pdf.setTextColor(240, 240, 240); // Very light gray
+            pdf.setTextColor(240, 240, 240); // Keep very light for background
             pdf.setFontSize(50);
             pdf.setFont(selectedFont, 'bold');
             pdf.text(docContent.watermark.toUpperCase(), pageWidth / 2, pageHeight / 2, { align: 'center', angle: 45 });
-            pdf.setTextColor(0, 0, 0);
+            pdf.setTextColor(textColor[0], textColor[1], textColor[2]); // Reset
         }
 
         // 3. Document Title
         if (docContent.title) {
             pdf.setFontSize(22);
             pdf.setFont(selectedFont, 'bold');
-            pdf.setTextColor(accentColor[0], accentColor[1], accentColor[2]); // Accent Color
+            pdf.setTextColor(accentColor[0], accentColor[1], accentColor[2]); // Dynamic Accent
             pdf.text(docContent.title.toUpperCase(), pageWidth / 2, yPosition, { align: 'center' });
             yPosition += 15;
 
-            // Optional separator line under title
-            pdf.setDrawColor(accentColor[0], accentColor[1], accentColor[2]);
-            pdf.setLineWidth(0.5);
-            pdf.line(margin + 20, yPosition - 5, pageWidth - margin - 20, yPosition - 5);
-            yPosition += 5;
+            // Separator Line (if enabled or default)
+            if (headingUnderline) {
+                pdf.setDrawColor(accentColor[0], accentColor[1], accentColor[2]);
+                pdf.setLineWidth(0.5);
+                pdf.line(margin + 20, yPosition - 5, pageWidth - margin - 20, yPosition - 5);
+                yPosition += 5;
+            }
         }
 
         // 4. Letter Details
         if (docContent.letter_details) {
             const details = docContent.letter_details;
-            pdf.setTextColor(0, 0, 0);
+            pdf.setTextColor(textColor[0], textColor[1], textColor[2]); // Main Text
 
             // SENDER
             if (details.sender_address) {
                 pdf.setFontSize(10);
                 pdf.setFont(selectedFont, 'bold');
-                pdf.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+                pdf.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]); // Secondary Color
                 details.sender_address.forEach((line: string) => {
                     pdf.text(line, margin, yPosition);
                     yPosition += 5;
                 });
-                pdf.setTextColor(0, 0, 0); // Reset
+                pdf.setTextColor(textColor[0], textColor[1], textColor[2]); // Reset
                 yPosition += 5;
             }
 
@@ -436,7 +461,7 @@ RETURN ONLY VALID JSON.`;
 
                     pdf.setFontSize(headSize);
                     pdf.setFont(selectedFont, 'bold');
-                    pdf.setTextColor(accentColor[0], accentColor[1], accentColor[2]); // Accent Color
+                    pdf.setTextColor(accentColor[0], accentColor[1], accentColor[2]); // Accent
 
                     let xPos = margin;
                     if (headAlign === 'center') xPos = pageWidth / 2;
@@ -445,7 +470,7 @@ RETURN ONLY VALID JSON.`;
                     pdf.text(headText, xPos, yPosition, { align: headAlign });
 
                     pdf.setFont(selectedFont, selectedWeight);
-                    pdf.setTextColor(0, 0, 0);
+                    pdf.setTextColor(textColor[0], textColor[1], textColor[2]); // Reset
                     yPosition += 8;
                 }
 
@@ -476,11 +501,11 @@ RETURN ONLY VALID JSON.`;
                         yPosition = margin;
                     }
 
-                    pdf.setFillColor(accentColor[0], accentColor[1], accentColor[2]); // Accent BG
+                    pdf.setFillColor(accentColor[0], accentColor[1], accentColor[2]); // AI Accent BG
                     pdf.rect(margin, yPosition, contentWidth, headerHeight, 'F');
 
                     pdf.setFont(selectedFont, 'bold');
-                    pdf.setTextColor(255, 255, 255); // White text
+                    pdf.setTextColor(255, 255, 255); // Always white text on accent header
 
                     section.tableData.headers.forEach((header: string, i: number) => {
                         const cellLines = pdf.splitTextToSize(String(header), colWidth - 4);
@@ -488,7 +513,7 @@ RETURN ONLY VALID JSON.`;
                     });
 
                     yPosition += headerHeight;
-                    pdf.setTextColor(0, 0, 0);
+                    pdf.setTextColor(textColor[0], textColor[1], textColor[2]); // Reset to AI text color
                     pdf.setFont(selectedFont, selectedWeight);
 
                     // ---- Rows ----
@@ -502,9 +527,9 @@ RETURN ONLY VALID JSON.`;
                             // Optional: Reprint header here if needed, keeping simple for now
                         }
 
-                        // Zebra Striping
-                        if (rowIndex % 2 === 0) {
-                            pdf.setFillColor(245, 247, 250);
+                        // Zebra Striping (if enabled by AI)
+                        if (tableStriping && rowIndex % 2 === 0) {
+                            pdf.setFillColor(245, 247, 250); // Light gray default for zebra
                             pdf.rect(margin, yPosition, contentWidth, rowHeight, 'F');
                         }
 
