@@ -224,8 +224,8 @@ export default function PdfGeneratorPage() {
                                                                     setIsFontOpen(false);
                                                                 }}
                                                                 className={`w-full text-left px-3 py-2.5 text-sm rounded-lg transition-colors flex items-center justify-between ${font === f.id
-                                                                        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
-                                                                        : 'text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                                                                    ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
+                                                                    : 'text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800'
                                                                     }`}
                                                                 style={{ fontFamily: f.family }}
                                                             >
@@ -317,7 +317,7 @@ export default function PdfGeneratorPage() {
                 )}
 
                 {/* Footer */}
-                <div className="fixed bottom-4 sm:bottom-6 text-slate-400 dark:text-zinc-800 text-[10px] sm:text-xs pointer-events-none select-none">
+                <div className="mt-12 pb-6 text-slate-400 dark:text-zinc-800 text-[10px] sm:text-xs pointer-events-none select-none">
                     Powered by Extrovert AI
                 </div>
             </div>

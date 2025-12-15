@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { PDFDocument } from 'pdf-lib';
 import { useAuth } from '../contexts/AuthContext';
-import { Download, Loader2, FileText, CheckCircle, ArrowLeft, ChevronDown } from 'lucide-react';
+import { Download, Loader2, FileText, CheckCircle, ArrowLeft } from 'lucide-react';
 
 const MedicalGeneratorPage = () => {
     const { user } = useAuth();
@@ -302,7 +302,7 @@ const MedicalGeneratorPage = () => {
                 )}
 
                 {/* Footer */}
-                <div className="fixed bottom-4 sm:bottom-6 text-slate-400 dark:text-zinc-800 text-[10px] sm:text-xs pointer-events-none select-none">
+                <div className="mt-12 pb-6 text-slate-400 dark:text-zinc-800 text-[10px] sm:text-xs pointer-events-none select-none">
                     Powered by Extrovert Medical
                 </div>
 
