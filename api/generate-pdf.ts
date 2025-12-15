@@ -318,7 +318,7 @@ RETURN ONLY VALID JSON.`;
             pdf.setDrawColor(0, 0, 0);
             pdf.setLineWidth(1); // Standard border
             if (docContent.config.border_style === 'double') pdf.setLineWidth(2); // Thicker if requested
-            
+
             const boxMargin = docContent.config.margin || 15;
             pdf.rect(boxMargin, boxMargin, pageWidth - (boxMargin * 2), pageHeight - (boxMargin * 2));
         }
@@ -410,7 +410,7 @@ RETURN ONLY VALID JSON.`;
             if (details.signature_block) {
                 // Heuristic: Right align for strict formal types, else left
                 // Since we removed 'type', let's default left unless simple signature
-                 details.signature_block.forEach((line: string) => {
+                details.signature_block.forEach((line: string) => {
                     pdf.text(line, margin, yPosition);
                     yPosition += 6;
                 });
@@ -420,22 +420,22 @@ RETURN ONLY VALID JSON.`;
 
         // 5. Universal Sections (The Workhorse)
         if (docContent.sections) {
-             docContent.sections.forEach((section: any) => {
-                
+            docContent.sections.forEach((section: any) => {
+
                 // New: Heading Section
                 if (section.type === 'heading' || section.heading) {
                     yPosition += 5;
                     const headText = section.text || section.heading;
                     const headAlign = section.align || 'left';
                     const headSize = section.size || 14;
-                    
+
                     pdf.setFontSize(headSize);
                     pdf.setFont(selectedFont, 'bold');
-                    
+
                     let xPos = margin;
                     if (headAlign === 'center') xPos = pageWidth / 2;
                     if (headAlign === 'right') xPos = pageWidth - margin;
-                    
+
                     pdf.text(headText, xPos, yPosition, { align: headAlign });
                     pdf.setFont(selectedFont, selectedWeight); // Reset
                     yPosition += 8;
@@ -445,11 +445,11 @@ RETURN ONLY VALID JSON.`;
                 if (section.type === 'table' && section.tableData) {
                     yPosition += 5;
                     const colWidth = contentWidth / section.tableData.headers.length;
-                    
+
                     // Table Header
                     pdf.setFillColor(240, 240, 240); // Light gray header
                     pdf.rect(margin, yPosition - 5, contentWidth, 8, 'F'); // Header BG
-                    
+
                     pdf.setFont(selectedFont, 'bold');
                     section.tableData.headers.forEach((header: string, i: number) => {
                         pdf.text(header, margin + (i * colWidth) + 2, yPosition);
@@ -459,15 +459,15 @@ RETURN ONLY VALID JSON.`;
 
                     // Table Rows
                     section.tableData.rows.forEach((row: string[], rowIndex: number) => {
-                         row.forEach((cell: string, i: number) => {
+                        row.forEach((cell: string, i: number) => {
                             // Simple Grid
-                            pdf.rect(margin + (i * colWidth), yPosition - 5, colWidth, 7); 
+                            pdf.rect(margin + (i * colWidth), yPosition - 5, colWidth, 7);
                             pdf.text(cell, margin + (i * colWidth) + 2, yPosition);
                         });
                         yPosition += 7;
                     });
                     yPosition += 5;
-                } 
+                }
                 // List Section
                 else if (section.type === 'list' && (section.content || section.items)) {
                     const items = section.items || section.content;
@@ -480,8 +480,8 @@ RETURN ONLY VALID JSON.`;
                         });
                         yPosition += 2;
                     });
-                     yPosition += 5;
-                } 
+                    yPosition += 5;
+                }
                 // Text Section
                 else if (section.type === 'text' && section.content) {
                     section.content.forEach((paragraph: string) => {
@@ -491,25 +491,26 @@ RETURN ONLY VALID JSON.`;
                 }
             });
         }
-                yPosition = pageHeight - 25;
-                pdf.setFontSize(10);
-                if (docContent.metadata.date) pdf.text(`Date: ${docContent.metadata.date}`, margin, yPosition);
-            }
-
-            // Output
-            const pdfBuffer = Buffer.from(pdf.output('arraybuffer'));
-            res.setHeader('Content-Type', 'application/pdf');
-            // Encode filename for header safety if needed, though basic sanitization above handles mostly.
-            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-            res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
-            res.setHeader('Content-Length', pdfBuffer.length);
-            return res.status(200).send(pdfBuffer);
-
-        } catch (err: any) {
-            console.error('PDF generation error:', err);
-            return res.status(500).json({
-                message: 'Failed to generate PDF',
-                error: err.message
-            });
+        if (docContent.metadata) {
+            yPosition = pageHeight - 25;
+            pdf.setFontSize(10);
+            if (docContent.metadata.date) pdf.text(`Date: ${docContent.metadata.date}`, margin, yPosition);
         }
+
+        // Output
+        const pdfBuffer = Buffer.from(pdf.output('arraybuffer'));
+        res.setHeader('Content-Type', 'application/pdf');
+        // Encode filename for header safety if needed, though basic sanitization above handles mostly.
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+        res.setHeader('Content-Length', pdfBuffer.length);
+        return res.status(200).send(pdfBuffer);
+
+    } catch (err: any) {
+        console.error('PDF generation error:', err);
+        return res.status(500).json({
+            message: 'Failed to generate PDF',
+            error: err.message
+        });
     }
+}
