@@ -133,7 +133,7 @@ const MedicalGeneratorPage = () => {
                 {/* Navbar Badge */}
                 {!isSuccess && (
                     <div className="mb-6 sm:mb-8 px-4 sm:px-5 py-1.5 sm:py-2 rounded-full border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-white/5 backdrop-blur-md shadow-sm dark:shadow-2xl">
-                        <span className="text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-[0.2em]">Official</span>
+                        <span className="text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-[0.2em]">Student Tool</span>
                     </div>
                 )}
 
@@ -302,8 +302,9 @@ const MedicalGeneratorPage = () => {
                 )}
 
                 {/* Footer */}
-                <div className="mt-12 pb-6 text-slate-400 dark:text-zinc-800 text-[10px] sm:text-xs pointer-events-none select-none">
-                    Powered by Extrovert Medical
+                <div className="mt-12 pb-6 text-center text-slate-400 dark:text-zinc-600 text-[10px] sm:text-xs select-none">
+                    <p>Powered by Extrovert Medical</p>
+                    <p className="mt-1 opacity-70">This tool is for educational purposes only.</p>
                 </div>
 
             </div>
