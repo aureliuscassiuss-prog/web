@@ -76,7 +76,8 @@ export default function Sidebar({ onMobileMenuClose, isDark, toggleTheme, spotli
                 { path: '/attendance', label: 'Attendance', icon: CheckCircle2 },
                 { path: '/cgpa-calculator', label: 'CGPA Calculator', icon: Calculator },
                 { path: '/pomodoro', label: 'Pomodoro Timer', icon: Timer, badge: 'New' },
-                { path: '/pdf-generator', label: 'PDF Code Gen', icon: FileText, badge: 'AI' },
+                { path: '/pdf-generator', label: 'AI PDF', icon: FileText, badge: 'AI' },
+                { path: '/medical-generator', label: 'Medical Generator', icon: FileText, badge: 'New' },
             ]
         },
         {

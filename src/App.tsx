@@ -37,6 +37,7 @@ import CoffessionsPage from './components/CoffessionsPage';
 import CoffeeChat from './components/CoffeeChat';
 import VideoChat from './pages/VideoChat';
 import PdfGeneratorPage from './components/PdfGeneratorPage';
+import MedicalGeneratorPage from './components/MedicalGeneratorPage';
 
 import SEO from './components/SEO'
 import AttendanceManager from './components/attendance/AttendanceManager'
@@ -479,6 +480,20 @@ function AppContent() {
               />
               <PdfGeneratorPage />
             </>
+          } />
+
+          {/* Medical Generator Route (Protected) */}
+          <Route path="/medical-generator" element={
+            <ProtectedRoute onAuthRequired={() => {
+              setAuthModalInitialView('login')
+              setIsAuthModalOpen(true)
+            }}>
+              <SEO
+                title="Medical Certificate Generator"
+                description="Generate official medical certificates instantly."
+              />
+              <MedicalGeneratorPage />
+            </ProtectedRoute>
           } />
 
           {/* AI Papers Route (Protected) */}
