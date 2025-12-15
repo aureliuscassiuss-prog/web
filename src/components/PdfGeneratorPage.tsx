@@ -1,6 +1,33 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Sparkles, Download, CheckCircle, ArrowLeft, ChevronDown } from 'lucide-react';
+import { Download, CheckCircle, ArrowLeft, ChevronDown, Loader2 } from 'lucide-react';
+
+// Custom 4-Point Star Icon matching the reference image
+const FourPointStar = ({ className }: { className?: string }) => (
+    <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        className={className}
+        xmlns="http://www.w3.org/2000/svg"
+    >
+        <defs>
+            <linearGradient id="starGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#f97316" /> {/* Orange */}
+                <stop offset="50%" stopColor="#ef4444" /> {/* Redish */}
+                <stop offset="100%" stopColor="#3b82f6" /> {/* Blue */}
+            </linearGradient>
+        </defs>
+        <path
+            d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"
+            fill="url(#starGradient)"
+            stroke="url(#starGradient)"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="drop-shadow-sm"
+        />
+    </svg>
+);
 
 export default function PdfGeneratorPage() {
     const { token } = useAuth();
@@ -176,10 +203,10 @@ export default function PdfGeneratorPage() {
                             </p>
                         </div>
 
-                        {/* REDESIGNED INPUT CONSOLE */}
+                        {/* INPUT CONSOLE */}
                         <div className="relative w-full max-w-2xl mx-auto group">
 
-                            {/* --- FIXED BORDER BEAM --- */}
+                            {/* --- BORDER BEAM --- */}
                             <div className="absolute -inset-[2px] rounded-[26px] sm:rounded-[34px] overflow-hidden pointer-events-none z-0">
                                 <div
                                     className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500%] h-[500%] animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_300deg,#6366f1_330deg,#a855f7_360deg)] opacity-100"
@@ -243,25 +270,27 @@ export default function PdfGeneratorPage() {
                                     </div>
                                 </div>
 
-                                {/* Action Bar */}
-                                <div className="p-1 pt-0">
+                                {/* Custom "Send" Style Button */}
+                                <div className="p-1 pt-0 flex justify-end px-6 pb-6">
                                     <button
                                         onClick={handleGenerate}
                                         disabled={!prompt.trim() || isGenerating}
-                                        className="group relative w-full rounded-[24px] p-[1px] overflow-hidden transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="group relative inline-flex items-center justify-center p-[1px] rounded-full overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
                                     >
-                                        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 animate-gradient-xy opacity-70 group-hover:opacity-100 transition-opacity"></div>
-                                        <div className="relative w-full h-full bg-black rounded-[23px] flex items-center justify-center gap-3 py-4 sm:py-5 transition-all group-active:scale-[0.99] group-hover:bg-[#0c0c0f]">
+                                        {/* Orange-Red-Blue Gradient Border */}
+                                        <div className="absolute inset-0 bg-gradient-to-r from-orange-500 via-red-500 to-blue-600 opacity-100 transition-opacity"></div>
+
+                                        {/* Inner Black Button */}
+                                        <div className="relative px-8 py-3 bg-black rounded-full flex items-center gap-3 transition-all group-hover:bg-[#0a0a0a]">
+
                                             {isGenerating ? (
-                                                <Sparkles size={20} className="animate-spin text-indigo-500" />
+                                                <Loader2 size={20} className="text-white animate-spin" />
                                             ) : (
-                                                <div className="relative">
-                                                    <Sparkles size={20} className="text-white z-10 relative" />
-                                                    <div className="absolute inset-0 blur-md bg-indigo-500 opacity-50"></div>
-                                                </div>
+                                                <FourPointStar className="w-5 h-5 text-white" />
                                             )}
-                                            <span className="font-semibold text-lg text-white tracking-wide">
-                                                {isGenerating ? 'Generating Magic...' : 'Generate Document'}
+
+                                            <span className="font-medium text-white text-base tracking-wide">
+                                                {isGenerating ? 'Generating...' : 'Generate Document'}
                                             </span>
                                         </div>
                                     </button>
@@ -294,7 +323,7 @@ export default function PdfGeneratorPage() {
 
                         {/* Console Card */}
                         <div className="relative group w-full">
-                            {/* --- FIXED BORDER BEAM (Green) --- */}
+                            {/* --- BORDER BEAM (Green) --- */}
                             <div className="absolute -inset-[2px] rounded-[26px] overflow-hidden pointer-events-none z-0">
                                 <div
                                     className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500%] h-[500%] animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_300deg,#22c55e_330deg,#10b981_360deg)] opacity-100"
@@ -346,13 +375,11 @@ export default function PdfGeneratorPage() {
             </div>
 
             <style>{`
-                /* Added Keyframes for smooth spin */
                 @keyframes spin {
                     from { transform: translate(-50%, -50%) rotate(0deg); }
                     to { transform: translate(-50%, -50%) rotate(360deg); }
                 }
 
-                /* Updated class to use explicit keyframes and ensure transform origin is correct */
                 .animate-spin-slow {
                     animation: spin 8s linear infinite;
                     transform-origin: center center;
