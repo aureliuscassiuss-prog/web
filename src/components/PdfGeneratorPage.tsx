@@ -179,9 +179,10 @@ export default function PdfGeneratorPage() {
                         {/* REDESIGNED INPUT CONSOLE - "Sleek Module" for Light & Dark */}
                         <div className="relative w-full max-w-2xl mx-auto group">
 
-                            {/* Border Beam Effect - Animated Gradient Border */}
-                            <div className="absolute -inset-[2px] rounded-[26px] sm:rounded-[34px] bg-gradient-to-r from-indigo-500 via-purple-500 to-transparent animate-border-beam opacity-75"></div>
-                            <div className="absolute -inset-[2px] rounded-[26px] sm:rounded-[34px] bg-gradient-to-b from-purple-500 via-indigo-500 to-transparent animate-border-beam opacity-75" style={{ animationDelay: '2s' }}></div>
+                            {/* Border Beam Effect */}
+                            <div className="absolute -inset-[2px] rounded-[26px] sm:rounded-[34px] overflow-hidden pointer-events-none z-0">
+                                <div className="absolute top-1/2 left-1/2 w-[1000%] h-[1000%] -translate-x-1/2 -translate-y-1/2 animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_60deg,#6366f1_120deg,#a855f7_180deg,transparent_240deg)] opacity-100"></div>
+                            </div>
 
 
 
@@ -293,9 +294,10 @@ export default function PdfGeneratorPage() {
 
                         {/* Console Card */}
                         <div className="relative group w-full">
-                            {/* Border Beam Effect - Animated Gradient Border */}
-                            <div className="absolute -inset-[2px] rounded-[26px] bg-gradient-to-r from-emerald-500 via-green-500 to-transparent animate-border-beam opacity-75"></div>
-                            <div className="absolute -inset-[2px] rounded-[26px] bg-gradient-to-b from-green-500 via-emerald-500 to-transparent animate-border-beam opacity-75" style={{ animationDelay: '2s' }}></div>
+                            {/* Border Beam Effect */}
+                            <div className="absolute -inset-[2px] rounded-[26px] overflow-hidden pointer-events-none z-0">
+                                <div className="absolute top-1/2 left-1/2 w-[1000%] h-[1000%] -translate-x-1/2 -translate-y-1/2 animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_60deg,#22c55e_120deg,#10b981_180deg,transparent_240deg)] opacity-100"></div>
+                            </div>
 
 
                             <div className="relative bg-white dark:bg-[#09090b] rounded-[24px] border border-slate-200 dark:border-white/5 shadow-2xl shadow-slate-200/50 dark:shadow-none overflow-hidden p-[2px]">
@@ -357,31 +359,6 @@ export default function PdfGeneratorPage() {
                     0% { background-position: 0% 50%; }
                     50% { background-position: 100% 50%; }
                     100% { background-position: 0% 50%; }
-                }
-                .animate-border-beam {
-                    animation: border-beam 4s linear infinite;
-                }
-                @keyframes border-beam {
-                    0% { 
-                        opacity: 0;
-                        transform: translateX(-100%) translateY(-100%) rotate(0deg);
-                    }
-                    25% {
-                        opacity: 0.75;
-                        transform: translateX(0%) translateY(-100%) rotate(90deg);
-                    }
-                    50% {
-                        opacity: 0.75;
-                        transform: translateX(100%) translateY(0%) rotate(180deg);
-                    }
-                    75% {
-                        opacity: 0.75;
-                        transform: translateX(0%) translateY(100%) rotate(270deg);
-                    }
-                    100% {
-                        opacity: 0;
-                        transform: translateX(-100%) translateY(0%) rotate(360deg);
-                    }
                 }
             `}</style>
         </div>
