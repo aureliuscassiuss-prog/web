@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import {
     Send, Sparkles, RotateCcw, Bot, Copy, Check,
-    User, ThumbsUp, ThumbsDown, Paperclip, X
+    User, ThumbsUp, ThumbsDown, Paperclip, X, Square
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import ReactMarkdown from 'react-markdown'
@@ -47,14 +47,43 @@ export default function AIAssistantPage() {
     const chatContainerRef = useRef<HTMLDivElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
+    // Cancellation & Interval Refs
+    const abortControllerRef = useRef<AbortController | null>(null);
+    const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
     // --- Effects ---
     const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
         messagesEndRef.current?.scrollIntoView({ behavior })
     }
 
+    // Smart Scroll: Only scroll if user is already near the bottom
     useEffect(() => {
-        scrollToBottom()
+        const container = chatContainerRef.current;
+        if (!container) return;
+
+        // Calculate if we are near the bottom (threshold 150px)
+        // If we are, we stick to the bottom. If user scrolled up, we don't force it.
+        // We also force scroll if the last message is from the user (they just sent it)
+        const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+        const lastMessage = messages[messages.length - 1];
+        const isUserLast = lastMessage?.sender === 'user';
+
+        if (isNearBottom || (isUserLast && !isTyping)) {
+            scrollToBottom();
+        }
     }, [messages, isTyping, isLoadingHistory])
+
+    const handleStop = () => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            abortControllerRef.current = null;
+        }
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+        }
+        setIsTyping(false);
+    };
 
     // Fetch History on Mount
     useEffect(() => {
@@ -190,6 +219,9 @@ export default function AIAssistantPage() {
         }
         setIsTyping(true)
 
+        // Initialize AbortController
+        abortControllerRef.current = new AbortController();
+
         try {
             const headers: any = { 'Content-Type': 'application/json' }
             if (token) headers['Authorization'] = `Bearer ${token}`
@@ -212,7 +244,8 @@ export default function AIAssistantPage() {
                     question: userMessage,
                     image: userImage,
                     conversationHistory: activeHistory
-                })
+                }),
+                signal: abortControllerRef.current.signal
             })
 
             if (!response.ok) {
@@ -222,7 +255,7 @@ export default function AIAssistantPage() {
             const data = await response.json()
 
             // Simulate typing effect
-            setIsTyping(false);
+            // We DON'T set isTyping false here yet, we wait for typing to finish
             const botMsgId = (Date.now() + 1).toString();
 
             // Add empty message first
@@ -238,10 +271,12 @@ export default function AIAssistantPage() {
             const fullText = data.answer;
             const typingSpeed = 15; // ms per char
 
-            const interval = setInterval(() => {
+            intervalRef.current = setInterval(() => {
                 i++;
                 if (i >= fullText.length) {
-                    clearInterval(interval);
+                    if (intervalRef.current) clearInterval(intervalRef.current);
+                    setIsTyping(false);
+                    abortControllerRef.current = null;
                     return;
                 }
 
@@ -255,6 +290,11 @@ export default function AIAssistantPage() {
             setConversationHistory(data.conversationHistory || [])
 
         } catch (error: any) {
+            if (error.name === 'AbortError') {
+                console.log('Generation stopped by user');
+                setIsTyping(false);
+                return;
+            }
             setIsTyping(false);
             setMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
@@ -431,8 +471,8 @@ export default function AIAssistantPage() {
                                             )}
                                             <div
                                                 className={`prose prose-sm max-w-none break-words ${msg.sender === 'user'
-                                                        ? 'dark:prose-neutral'
-                                                        : 'dark:prose-invert'
+                                                    ? 'dark:prose-neutral'
+                                                    : 'dark:prose-invert'
                                                     }`}
                                                 style={msg.sender === 'user' ? {
                                                     color: 'inherit',
@@ -572,16 +612,20 @@ export default function AIAssistantPage() {
                             rows={1}
                         />
                         <button
-                            onClick={handleSend}
-                            disabled={(!input.trim() && !selectedImage) || isTyping}
+                            onClick={isTyping ? handleStop : handleSend}
+                            disabled={(!input.trim() && !selectedImage) && !isTyping}
                             className={`
                                 flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all mb-1 mr-1
-                                ${(!input.trim() && !selectedImage) || isTyping
+                                ${(!input.trim() && !selectedImage) && !isTyping
                                     ? 'bg-gray-300 text-gray-500 dark:bg-white/10 dark:text-gray-500 cursor-not-allowed'
                                     : 'bg-black text-white hover:scale-105 active:scale-95 dark:bg-white dark:text-black'}
                             `}
                         >
-                            <Send size={14} className={(input.trim() || selectedImage) ? "ml-0.5" : ""} />
+                            {isTyping ? (
+                                <Square size={14} className="fill-current animate-pulse" />
+                            ) : (
+                                <Send size={14} className={(input.trim() || selectedImage) ? "ml-0.5" : ""} />
+                            )}
                         </button>
                     </div>
                 </div>

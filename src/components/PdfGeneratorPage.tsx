@@ -78,15 +78,6 @@ export default function PdfGeneratorPage() {
 
     const selectedFontObj = fonts.find(f => f.id === font) || fonts[0];
 
-    const handleStop = () => {
-        if (abortControllerRef.current) {
-            abortControllerRef.current.abort();
-            abortControllerRef.current = null;
-            setIsGenerating(false);
-            setFileName('generated_document.pdf'); // Reset or keep? Reset implies cancelled.
-        }
-    };
-
     const handleGenerate = async () => {
         if (!prompt.trim()) return;
 
@@ -96,9 +87,6 @@ export default function PdfGeneratorPage() {
         setPdfReady(false);
         setPdfBlob(null);
         setFileName('generated_document.pdf');
-
-        // Create new AbortController
-        abortControllerRef.current = new AbortController();
 
         try {
             const headers: Record<string, string> = {
@@ -111,8 +99,7 @@ export default function PdfGeneratorPage() {
             const response = await fetch('/api/generate-pdf', {
                 method: 'POST',
                 headers,
-                body: JSON.stringify({ prompt, font }),
-                signal: abortControllerRef.current.signal
+                body: JSON.stringify({ prompt, font })
             });
 
             if (!response.ok) {
@@ -142,14 +129,9 @@ export default function PdfGeneratorPage() {
             setPdfReady(true);
 
         } catch (err: any) {
-            if (err.name === 'AbortError') {
-                console.log('Generation cancelled');
-                return;
-            }
             setError(err.message || "Something went wrong.");
         } finally {
             setIsGenerating(false);
-            abortControllerRef.current = null;
         }
     };
 
@@ -175,7 +157,7 @@ export default function PdfGeneratorPage() {
     };
 
     return (
-        <div className="min-h-screen bg-white dark:bg-black text-slate-900 dark:text-white relative font-sans selection:bg-indigo-500/30 transition-colors duration-500">
+        <div className="min-h-screen bg-white dark:bg-black text-slate-900 dark:text-white relative overflow-hidden font-sans selection:bg-indigo-500/30 transition-colors duration-500">
 
             {/* STARS: Only in Dark Mode */}
             <div className="absolute inset-0 z-0 hidden dark:block">
@@ -291,8 +273,8 @@ export default function PdfGeneratorPage() {
                                 {/* Custom "Send" Style Button - Theme Matched */}
                                 <div className="p-1 pt-0 px-1 pb-1">
                                     <button
-                                        onClick={isGenerating ? handleStop : handleGenerate}
-                                        disabled={!prompt.trim() && !isGenerating}
+                                        onClick={handleGenerate}
+                                        disabled={!prompt.trim() || isGenerating}
                                         className="group relative w-full inline-flex items-center justify-center p-[1px] rounded-full overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.99]"
                                     >
                                         {/* Indigo-Purple Gradient Border with Animation */}
@@ -300,14 +282,10 @@ export default function PdfGeneratorPage() {
 
                                         <div className="relative w-full py-4 bg-black rounded-full flex items-center justify-center gap-3 transition-all group-hover:bg-[#0c0c0f]">
 
-                                            {isGenerating ? (
-                                                <Square size={20} className="text-white fill-white animate-pulse" />
-                                            ) : (
-                                                <FourPointStar className="w-6 h-6 text-white" />
-                                            )}
+                                            <FourPointStar className={`w-6 h-6 text-white ${isGenerating ? 'animate-spin' : ''}`} />
 
                                             <span className="font-semibold text-white text-lg tracking-wide">
-                                                {isGenerating ? 'Stop Generation' : 'Generate Document'}
+                                                {isGenerating ? 'Generating...' : 'Generate Document'}
                                             </span>
                                         </div>
                                     </button>
