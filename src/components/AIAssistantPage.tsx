@@ -661,3 +661,47 @@ function ActionBtn({ onClick, icon, label, active, activeClass }: any) {
         </button>
     )
 }
+
+function CodeBlock({ inline, className, children, ...props }: any) {
+    const [isCopied, setIsCopied] = useState(false)
+    const match = /language-(\w+)/.exec(className || '')
+    const codeText = String(children).replace(/\n$/, '')
+
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(codeText)
+            setIsCopied(true)
+            setTimeout(() => setIsCopied(false), 2000)
+        } catch (err) {
+            console.error('Failed to copy code', err)
+        }
+    }
+
+    if (inline) {
+        return (
+            <code className={`${className} bg-gray-100 dark:bg-white/10 rounded px-1 py-0.5`} {...props}>
+                {children}
+            </code>
+        )
+    }
+
+    return (
+        <div className="relative group my-4 rounded-lg overflow-hidden border border-gray-200 dark:border-white/10 font-mono text-sm">
+            <div className="flex items-center justify-between px-3 py-1.5 bg-gray-100 dark:bg-zinc-900 border-b border-gray-200 dark:border-white/10">
+                <span className="text-xs text-gray-500">{match ? match[1] : 'code'}</span>
+                <button
+                    onClick={handleCopy}
+                    className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
+                >
+                    {isCopied ? <Check size={12} className="text-green-500" /> : <Copy size={12} />}
+                    {isCopied ? 'Copied' : 'Copy'}
+                </button>
+            </div>
+            <div className="overflow-x-auto bg-gray-50 dark:bg-black p-3">
+                <code className={className} {...props}>
+                    {children}
+                </code>
+            </div>
+        </div>
+    )
+}
