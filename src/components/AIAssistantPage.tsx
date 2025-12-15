@@ -494,7 +494,8 @@ export default function AIAssistantPage() {
                                                 } as React.CSSProperties : undefined}
                                             >
                                                 <ReactMarkdown components={{
-                                                    code: (props: any) => <CodeBlock {...props} sender={msg.sender} />
+                                                    code: (props: any) => <CodeBlock {...props} sender={msg.sender} />,
+                                                    pre: ({ children }: any) => <>{children}</>
                                                 }}>
                                                     {msg.text}
                                                 </ReactMarkdown>
