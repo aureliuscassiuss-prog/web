@@ -125,12 +125,17 @@ CRITICAL RULES:
 2. **DISTINGUISH FORMATS**:
    - **"application"**: For Principal, Job, Leave (Format: "To..." block at start).
    - **"formal_letter"**: For Editor, Business, Official (Format: Sender Address -> Date -> Recipient Address).
+   - **"notice"**: For Schools, Offices, Public (Format: CENTERED Title "NOTICE", Date Left, Hearing/Body, Issuer Name/Designation).
+   - **"report"**: For News, events (Format: Title, Byline, Place/Date, Body).
+   - **"note"**: For informal/semi-formal notes.
 3. **INDIAN FORMATTING**: DD/MM/YYYY dates, Indian names/cities, ₹ currency.
-4. **LENGTH**: Concise but COMPLETE (1 page).
+4. **LENGTH**: STRICTLY ADHERE to the user's requested length. If they ask for a "long" letter, write 3-4 detailed paragraphs. If "short", keep it concise. Default to ~1 page if unspecified.
+5. **FILENAME**: Generate a relevant, safe filename (e.g., "application_leave_abhi.pdf", "notice_lost_bottle.pdf"). Use underscores, lowercase, no spaces.
 
 RETURN JSON STRUCTURE:
 {
-  "type": "application|formal_letter|certificate|invoice|notice|report|general",
+  "type": "application|formal_letter|certificate|invoice|notice|report|note|general",
+  "filename": "document_name.pdf",
   "title": "Document Title",
   "letter_details": { 
     "sender_address": ["Sender Name", "Address Line 1", "City - PIN"], // Only for formal_letter
@@ -150,19 +155,19 @@ RETURN JSON STRUCTURE:
   "metadata": ...
 }
 
-EXAMPLE (Formal Letter to Editor):
+EXAMPLE (Application):
 {
-  "type": "formal_letter",
-  "title": "Letter to Editor",
+  "type": "application",
+  "filename": "application_leave_abhi.pdf",
+  "title": "Application for Leave",
   "letter_details": {
-    "sender_address": ["Amit Verma", "12/B, MG Road", "Bangalore - 560001"],
     "date": "15/12/2025",
-    "to_block": ["The Editor,", "The Times of India,", "Bangalore"],
-    "subject": "Subject: Concerns regarding increasing traffic congestion",
-    "salutation": "Sir,",
-    "body_paragraphs": ["Through the columns of your esteemed newspaper...", "..."],
+    "to_block": ["To,", "The Principal,", "DPS School,", "Delhi"],
+    "subject": "Subject: Application for 2 days leave",
+    "salutation": "Respected Sir,",
+    "body_paragraphs": ["I am Abhi, a student of class X-B...", "..."],
     "closing": "Thanking you,",
-    "signature_block": ["Yours truly,", "Amit Verma"]
+    "signature_block": ["Yours obediently,", "Abhi", "Class X-B"]
   }
 }
 
@@ -182,6 +187,11 @@ Return ONLY valid JSON.`;
         const jsonMatch = aiResponse.match(/```(?:json)?\s*([\s\S]*?)```/i);
         const cleanResponse = jsonMatch ? jsonMatch[1].trim() : aiResponse.trim();
         const docContent = JSON.parse(cleanResponse);
+
+        // Sanitize filename
+        let filename = docContent.filename || 'generated_document.pdf';
+        filename = filename.replace(/[^a-z0-9_.-]/gi, '_');
+        if (!filename.endsWith('.pdf')) filename += '.pdf';
 
         // Step 2: Generate PDF
         const pdf = new jsPDF({
@@ -398,7 +408,9 @@ Return ONLY valid JSON.`;
         // Output
         const pdfBuffer = Buffer.from(pdf.output('arraybuffer'));
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="generated_document.pdf"`);
+        // Encode filename for header safety if needed, though basic sanitization above handles mostly.
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
         res.setHeader('Content-Length', pdfBuffer.length);
         return res.status(200).send(pdfBuffer);
 

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Sparkles, Download, CheckCircle, ArrowLeft, Lock, Wand2 } from 'lucide-react';
+import { Sparkles, Download, CheckCircle, ArrowLeft, Wand2 } from 'lucide-react';
 
 export default function PdfGeneratorPage() {
     const { token } = useAuth();
@@ -12,6 +12,7 @@ export default function PdfGeneratorPage() {
     const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isRateLimited, setIsRateLimited] = useState(false);
+    const [fileName, setFileName] = useState('generated_document.pdf');
 
     const handleGenerate = async () => {
         if (!prompt.trim()) return;
@@ -21,6 +22,7 @@ export default function PdfGeneratorPage() {
         setIsRateLimited(false);
         setPdfReady(false);
         setPdfBlob(null);
+        setFileName('generated_document.pdf');
 
         try {
             const headers: Record<string, string> = {
@@ -47,6 +49,17 @@ export default function PdfGeneratorPage() {
                 throw new Error(errData.message || 'Failed to generate PDF');
             }
 
+            // Extract filename from Content-Disposition
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let downloadedFileName = 'generated_document.pdf';
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+                if (filenameMatch && filenameMatch[1]) {
+                    downloadedFileName = filenameMatch[1];
+                }
+            }
+            setFileName(downloadedFileName);
+
             const blob = await response.blob();
             setPdfBlob(blob);
             setPdfReady(true);
@@ -63,7 +76,7 @@ export default function PdfGeneratorPage() {
         const url = URL.createObjectURL(pdfBlob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'generated_document.pdf';
+        a.download = fileName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -76,6 +89,7 @@ export default function PdfGeneratorPage() {
         setPrompt('');
         setError(null);
         setIsRateLimited(false);
+        setFileName('generated_document.pdf');
     };
 
     return (
@@ -211,7 +225,7 @@ export default function PdfGeneratorPage() {
                                     <div className="flex items-center justify-between mb-6 pb-6 border-b border-slate-200 dark:border-white/5">
                                         <div className="text-left">
                                             <div className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-1">File Name</div>
-                                            <div className="text-base font-medium text-slate-900 dark:text-white truncate max-w-[200px]">generated_document.pdf</div>
+                                            <div className="text-base font-medium text-slate-900 dark:text-white truncate max-w-[200px]">{fileName}</div>
                                         </div>
                                         <div className="text-right">
                                             <div className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-1">Size</div>
