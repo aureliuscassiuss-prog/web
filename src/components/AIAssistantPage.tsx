@@ -493,7 +493,9 @@ export default function AIAssistantPage() {
                                                     '--tw-prose-th-borders': 'inherit',
                                                 } as React.CSSProperties : undefined}
                                             >
-                                                <ReactMarkdown components={{ code: CodeBlock }}>
+                                                <ReactMarkdown components={{
+                                                    code: (props: any) => <CodeBlock {...props} sender={msg.sender} />
+                                                }}>
                                                     {msg.text}
                                                 </ReactMarkdown>
                                             </div>
@@ -662,10 +664,11 @@ function ActionBtn({ onClick, icon, label, active, activeClass }: any) {
     )
 }
 
-function CodeBlock({ inline, className, children, ...props }: any) {
+function CodeBlock({ inline, className, children, sender, ...props }: any) {
     const [isCopied, setIsCopied] = useState(false)
     const match = /language-(\w+)/.exec(className || '')
     const codeText = String(children).replace(/\n$/, '')
+    const isUser = sender === 'user'
 
     const handleCopy = async () => {
         try {
@@ -686,8 +689,17 @@ function CodeBlock({ inline, className, children, ...props }: any) {
     }
 
     return (
-        <div className="relative group my-4 rounded-lg overflow-hidden border border-gray-200 dark:border-white/10 font-mono text-sm">
-            <div className="flex items-center justify-between px-3 py-1.5 bg-gray-100 dark:bg-zinc-900 border-b border-gray-200 dark:border-white/10">
+        <div className={`
+            relative group overflow-hidden border font-mono text-sm
+            ${isUser
+                ? 'my-2 -mx-3 w-[calc(100%+1.5rem)] rounded-none border-y border-gray-200 dark:border-white/10'
+                : 'my-4 rounded-lg border-gray-200 dark:border-white/10'
+            }
+        `}>
+            <div className={`
+                flex items-center justify-between px-3 py-1.5 bg-gray-100 dark:bg-zinc-900 border-b border-gray-200 dark:border-white/10
+                ${isUser ? 'bg-gray-200 dark:bg-zinc-800' : ''}
+            `}>
                 <span className="text-xs text-gray-500">{match ? match[1] : 'code'}</span>
                 <button
                     onClick={handleCopy}
