@@ -449,42 +449,79 @@ RETURN ONLY VALID JSON.`;
                     yPosition += 8;
                 }
 
-                // Table Section (Modernized)
+                // Table Section (Robust & Modern)
                 if (section.type === 'table' && section.tableData) {
                     yPosition += 5;
                     const colWidth = contentWidth / section.tableData.headers.length;
 
-                    // Table Header
+                    // Helper: Get row max height
+                    const getRowHeight = (row: string[], fontSize: number = 10) => {
+                        let maxLines = 1;
+                        pdf.setFontSize(fontSize);
+                        row.forEach((cell) => {
+                            // Ensure cell is string
+                            const cellStr = String(cell || '');
+                            const lines = pdf.splitTextToSize(cellStr, colWidth - 4);
+                            if (lines.length > maxLines) maxLines = lines.length;
+                        });
+                        return (maxLines * 5) + 4; // 5mm per line approx + padding
+                    };
+
+                    // ---- Header ----
+                    const headerHeight = getRowHeight(section.tableData.headers, 10);
+
+                    // Check Page Break for Header
+                    if (yPosition + headerHeight > pageHeight - margin) {
+                        pdf.addPage();
+                        yPosition = margin;
+                    }
+
                     pdf.setFillColor(accentColor[0], accentColor[1], accentColor[2]); // Accent BG
-                    pdf.rect(margin, yPosition - 5, contentWidth, 8, 'F');
+                    pdf.rect(margin, yPosition, contentWidth, headerHeight, 'F');
 
                     pdf.setFont(selectedFont, 'bold');
                     pdf.setTextColor(255, 255, 255); // White text
+
                     section.tableData.headers.forEach((header: string, i: number) => {
-                        pdf.text(header, margin + (i * colWidth) + 2, yPosition);
+                        const cellLines = pdf.splitTextToSize(String(header), colWidth - 4);
+                        pdf.text(cellLines, margin + (i * colWidth) + 2, yPosition + 5);
                     });
+
+                    yPosition += headerHeight;
                     pdf.setTextColor(0, 0, 0);
                     pdf.setFont(selectedFont, selectedWeight);
-                    yPosition += 8;
 
-                    // Table Rows
+                    // ---- Rows ----
                     section.tableData.rows.forEach((row: string[], rowIndex: number) => {
+                        const rowHeight = getRowHeight(row, 10);
+
+                        // Check Page Break
+                        if (yPosition + rowHeight > pageHeight - margin) {
+                            pdf.addPage();
+                            yPosition = margin;
+                            // Optional: Reprint header here if needed, keeping simple for now
+                        }
+
                         // Zebra Striping
                         if (rowIndex % 2 === 0) {
-                            pdf.setFillColor(245, 247, 250); // Very light gray/blue
-                            pdf.rect(margin, yPosition - 5, contentWidth, 7, 'F');
+                            pdf.setFillColor(245, 247, 250);
+                            pdf.rect(margin, yPosition, contentWidth, rowHeight, 'F');
                         }
 
                         row.forEach((cell: string, i: number) => {
-                            pdf.text(cell, margin + (i * colWidth) + 2, yPosition);
+                            const cellStr = String(cell || '');
+                            const cellLines = pdf.splitTextToSize(cellStr, colWidth - 4);
+                            pdf.text(cellLines, margin + (i * colWidth) + 2, yPosition + 5);
                         });
-                        yPosition += 7;
+
+                        // Row Border (Bottom)
+                        pdf.setDrawColor(230, 230, 230);
+                        pdf.line(margin, yPosition + rowHeight, pageWidth - margin, yPosition + rowHeight);
+
+                        yPosition += rowHeight;
                     });
 
-                    // Bottom Line
-                    pdf.setDrawColor(200, 200, 200);
-                    pdf.line(margin, yPosition - 2, pageWidth - margin, yPosition - 2);
-                    yPosition += 8;
+                    yPosition += 5;
                 }
                 // List Section
                 else if (section.type === 'list' && (section.content || section.items)) {
