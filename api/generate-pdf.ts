@@ -313,58 +313,66 @@ RETURN ONLY VALID JSON.`;
 
         // --- UNIVERSAL LAYOUT RENDERER ---
 
-        // 1. Draw Border if requested (AI decides based on document type like Certificate, Notice, Coupon)
+        // Define Theme Colors
+        const accentColor = [44, 62, 80]; // Navy Blue #2c3e50
+        const secondaryColor = [127, 140, 141]; // Gray #7f8c8d
+
+        // 1. Draw Border
         if (docContent.config?.draw_border) {
             pdf.setDrawColor(0, 0, 0);
-            pdf.setLineWidth(1); // Standard border
-            if (docContent.config.border_style === 'double') pdf.setLineWidth(2); // Thicker if requested
+            pdf.setLineWidth(1);
+            if (docContent.config.border_style === 'double') pdf.setLineWidth(2);
 
             const boxMargin = docContent.config.margin || 15;
             pdf.rect(boxMargin, boxMargin, pageWidth - (boxMargin * 2), pageHeight - (boxMargin * 2));
         }
 
-        // 2. Watermark (Optional)
+        // 2. Watermark
         if (docContent.watermark) {
-            pdf.setTextColor(230, 230, 230);
+            pdf.setTextColor(240, 240, 240); // Very light gray
             pdf.setFontSize(50);
             pdf.setFont(selectedFont, 'bold');
-            // Rotate and center (basic implementation)
-            // jsPDF rotation is complex without context save/restore, simplifying to bottom center for now or diagonal if easy
-            // For stability, just placing centered light text
             pdf.text(docContent.watermark.toUpperCase(), pageWidth / 2, pageHeight / 2, { align: 'center', angle: 45 });
-            pdf.setTextColor(0, 0, 0); // Reset
+            pdf.setTextColor(0, 0, 0);
         }
 
         // 3. Document Title
         if (docContent.title) {
-            pdf.setFontSize(18);
+            pdf.setFontSize(22);
             pdf.setFont(selectedFont, 'bold');
-            pdf.setTextColor(0, 0, 0);
-            pdf.text(docContent.title, pageWidth / 2, yPosition, { align: 'center' });
+            pdf.setTextColor(accentColor[0], accentColor[1], accentColor[2]); // Accent Color
+            pdf.text(docContent.title.toUpperCase(), pageWidth / 2, yPosition, { align: 'center' });
             yPosition += 15;
+
+            // Optional separator line under title
+            pdf.setDrawColor(accentColor[0], accentColor[1], accentColor[2]);
+            pdf.setLineWidth(0.5);
+            pdf.line(margin + 20, yPosition - 5, pageWidth - margin - 20, yPosition - 5);
+            yPosition += 5;
         }
 
-        // 4. Letter Details (if present)
+        // 4. Letter Details
         if (docContent.letter_details) {
             const details = docContent.letter_details;
             pdf.setTextColor(0, 0, 0);
 
-            // ... (keep existing letter rendering logic roughly same, it works well) ...
-            // Just verifying variable names match
             // SENDER
             if (details.sender_address) {
                 pdf.setFontSize(10);
-                pdf.setFont(selectedFont, selectedWeight); // Use user font
+                pdf.setFont(selectedFont, 'bold');
+                pdf.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
                 details.sender_address.forEach((line: string) => {
                     pdf.text(line, margin, yPosition);
                     yPosition += 5;
                 });
+                pdf.setTextColor(0, 0, 0); // Reset
                 yPosition += 5;
             }
 
             // DATE
             if (details.date) {
-                pdf.text(`Date: ${details.date}`, margin, yPosition);
+                pdf.setFont(selectedFont, selectedWeight);
+                pdf.text(details.date, margin, yPosition); // Just date, clear and simple
                 yPosition += 10;
             }
 
@@ -400,73 +408,83 @@ RETURN ONLY VALID JSON.`;
                 yPosition += 5;
             }
 
-            // CLOSING
+            // CLOSING & SIGNATURE
             if (details.closing) {
                 pdf.text(details.closing, margin, yPosition);
                 yPosition += 12;
             }
 
-            // SIGNATURE
             if (details.signature_block) {
-                // Heuristic: Right align for strict formal types, else left
-                // Since we removed 'type', let's default left unless simple signature
                 details.signature_block.forEach((line: string) => {
                     pdf.text(line, margin, yPosition);
                     yPosition += 6;
                 });
             }
-            yPosition += 10; // Spacing after letter block
+            yPosition += 10;
         }
 
-        // 5. Universal Sections (The Workhorse)
+        // 5. Universal Sections
         if (docContent.sections) {
             docContent.sections.forEach((section: any) => {
 
-                // New: Heading Section
+                // Heading Section
                 if (section.type === 'heading' || section.heading) {
-                    yPosition += 5;
+                    yPosition += 8;
                     const headText = section.text || section.heading;
                     const headAlign = section.align || 'left';
                     const headSize = section.size || 14;
 
                     pdf.setFontSize(headSize);
                     pdf.setFont(selectedFont, 'bold');
+                    pdf.setTextColor(accentColor[0], accentColor[1], accentColor[2]); // Accent Color
 
                     let xPos = margin;
                     if (headAlign === 'center') xPos = pageWidth / 2;
                     if (headAlign === 'right') xPos = pageWidth - margin;
 
                     pdf.text(headText, xPos, yPosition, { align: headAlign });
-                    pdf.setFont(selectedFont, selectedWeight); // Reset
+
+                    pdf.setFont(selectedFont, selectedWeight);
+                    pdf.setTextColor(0, 0, 0);
                     yPosition += 8;
                 }
 
-                // Table Section
+                // Table Section (Modernized)
                 if (section.type === 'table' && section.tableData) {
                     yPosition += 5;
                     const colWidth = contentWidth / section.tableData.headers.length;
 
                     // Table Header
-                    pdf.setFillColor(240, 240, 240); // Light gray header
-                    pdf.rect(margin, yPosition - 5, contentWidth, 8, 'F'); // Header BG
+                    pdf.setFillColor(accentColor[0], accentColor[1], accentColor[2]); // Accent BG
+                    pdf.rect(margin, yPosition - 5, contentWidth, 8, 'F');
 
                     pdf.setFont(selectedFont, 'bold');
+                    pdf.setTextColor(255, 255, 255); // White text
                     section.tableData.headers.forEach((header: string, i: number) => {
                         pdf.text(header, margin + (i * colWidth) + 2, yPosition);
                     });
+                    pdf.setTextColor(0, 0, 0);
                     pdf.setFont(selectedFont, selectedWeight);
                     yPosition += 8;
 
                     // Table Rows
                     section.tableData.rows.forEach((row: string[], rowIndex: number) => {
+                        // Zebra Striping
+                        if (rowIndex % 2 === 0) {
+                            pdf.setFillColor(245, 247, 250); // Very light gray/blue
+                            pdf.rect(margin, yPosition - 5, contentWidth, 7, 'F');
+                        }
+
                         row.forEach((cell: string, i: number) => {
-                            // Simple Grid
-                            pdf.rect(margin + (i * colWidth), yPosition - 5, colWidth, 7);
                             pdf.text(cell, margin + (i * colWidth) + 2, yPosition);
                         });
                         yPosition += 7;
                     });
-                    yPosition += 5;
+
+                    // Bottom Line
+                    pdf.setDrawColor(200, 200, 200);
+                    pdf.line(margin, yPosition - 2, pageWidth - margin, yPosition - 2);
+                    yPosition += 8;
                 }
                 // List Section
                 else if (section.type === 'list' && (section.content || section.items)) {
