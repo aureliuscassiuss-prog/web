@@ -179,25 +179,9 @@ export default function PdfGeneratorPage() {
                         {/* REDESIGNED INPUT CONSOLE - "Sleek Module" for Light & Dark */}
                         <div className="relative w-full max-w-2xl mx-auto group">
 
-                            {/* Border Beam Effect - SVG Stroke Animation */}
-                            <div className="absolute -inset-[1px] rounded-[26px] sm:rounded-[34px] overflow-hidden pointer-events-none z-20">
-                                <svg className="absolute inset-0 w-full h-full" width="100%" height="100%">
-                                    <defs>
-                                        <linearGradient id="beam-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                            <stop offset="0%" stopColor="#818cf8" />
-                                            <stop offset="50%" stopColor="#c084fc" />
-                                            <stop offset="100%" stopColor="#6366f1" />
-                                        </linearGradient>
-                                    </defs>
-                                    <rect
-                                        x="2" y="2" width="calc(100% - 4px)" height="calc(100% - 4px)"
-                                        rx="30" ry="30"
-                                        fill="none"
-                                        stroke="url(#beam-gradient)"
-                                        strokeWidth="3"
-                                        className="animate-border-beam-svg"
-                                    />
-                                </svg>
+                            {/* Border Beam Effect - Conic Gradient (Restored) */}
+                            <div className="absolute -inset-[2px] rounded-[26px] sm:rounded-[34px] overflow-hidden pointer-events-none z-0">
+                                <div className="absolute top-1/2 left-1/2 w-[200%] aspect-square -translate-x-1/2 -translate-y-1/2 animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_240deg,#6366f1_300deg,#a855f7_360deg)] opacity-100" style={{ animationDuration: '4s' }}></div>
                             </div>
 
 
@@ -310,25 +294,9 @@ export default function PdfGeneratorPage() {
 
                         {/* Console Card */}
                         <div className="relative group w-full">
-                            {/* Border Beam Effect - SVG Stroke Animation */}
-                            <div className="absolute -inset-[1px] rounded-[26px] overflow-hidden pointer-events-none z-20">
-                                <svg className="absolute inset-0 w-full h-full" width="100%" height="100%">
-                                    <defs>
-                                        <linearGradient id="beam-gradient-green" x1="0%" y1="0%" x2="100%" y2="0%">
-                                            <stop offset="0%" stopColor="#4ade80" />
-                                            <stop offset="50%" stopColor="#10b981" />
-                                            <stop offset="100%" stopColor="#22c55e" />
-                                        </linearGradient>
-                                    </defs>
-                                    <rect
-                                        x="2" y="2" width="calc(100% - 4px)" height="calc(100% - 4px)"
-                                        rx="24" ry="24"
-                                        fill="none"
-                                        stroke="url(#beam-gradient-green)"
-                                        strokeWidth="3"
-                                        className="animate-border-beam-svg"
-                                    />
-                                </svg>
+                            {/* Border Beam Effect */}
+                            <div className="absolute -inset-[2px] rounded-[26px] overflow-hidden pointer-events-none z-0">
+                                <div className="absolute top-1/2 left-1/2 w-[200%] aspect-square -translate-x-1/2 -translate-y-1/2 animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_240deg,#22c55e_300deg,#10b981_360deg)] opacity-100" style={{ animationDuration: '4s' }}></div>
                             </div>
 
 
@@ -392,17 +360,7 @@ export default function PdfGeneratorPage() {
                     50% { background-position: 100% 50%; }
                     100% { background-position: 0% 50%; }
                 }
-                .animate-border-beam-svg {
-                    stroke-dasharray: 400 600; /* 400px Dash, 600px Gap */
-                    stroke-dashoffset: 1000;
-                    stroke-linecap: round;
-                    animation: border-beam-svg 6s linear infinite;
-                }
-                @keyframes border-beam-svg {
-                    to {
-                        stroke-dashoffset: -1000;
-                    }
-                }
+
             `}</style>
         </div>
     );
