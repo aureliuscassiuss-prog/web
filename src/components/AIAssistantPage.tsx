@@ -679,7 +679,7 @@ function CodeBlock({ inline, className, children, ...props }: any) {
 
     if (inline) {
         return (
-            <code className={`${className} bg-gray-100 dark:bg-white/10 rounded px-1 py-0.5`} {...props}>
+            <code className={`${className} bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-gray-100 rounded px-1 py-0.5`} {...props}>
                 {children}
             </code>
         )
@@ -697,7 +697,7 @@ function CodeBlock({ inline, className, children, ...props }: any) {
                     {isCopied ? 'Copied' : 'Copy'}
                 </button>
             </div>
-            <div className="overflow-x-auto bg-gray-50 dark:bg-black p-3">
+            <div className="overflow-x-auto bg-gray-50 dark:bg-black p-3 text-gray-900 dark:text-gray-100">
                 <code className={className} {...props}>
                     {children}
                 </code>
