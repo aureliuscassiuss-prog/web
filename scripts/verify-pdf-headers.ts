@@ -19,7 +19,8 @@ const req = {
         authorization: 'Bearer test-token'
     },
     body: {
-        prompt: 'Application to principal for sick leave for Abhi'
+        prompt: 'Application to principal for sick leave for Abhi',
+        font: 'times'
     }
 } as any;
 

@@ -13,6 +13,7 @@ export default function PdfGeneratorPage() {
     const [error, setError] = useState<string | null>(null);
     const [isRateLimited, setIsRateLimited] = useState(false);
     const [fileName, setFileName] = useState('generated_document.pdf');
+    const [font, setFont] = useState('helvetica');
 
     const handleGenerate = async () => {
         if (!prompt.trim()) return;
@@ -35,7 +36,7 @@ export default function PdfGeneratorPage() {
             const response = await fetch('/api/generate-pdf', {
                 method: 'POST',
                 headers,
-                body: JSON.stringify({ prompt })
+                body: JSON.stringify({ prompt, font })
             });
 
             if (!response.ok) {
@@ -159,19 +160,34 @@ export default function PdfGeneratorPage() {
                                             disabled={isGenerating}
                                         />
 
-                                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-2 pt-4 border-t border-slate-200 dark:border-white/5">
-                                            <span className="text-xs text-slate-500 dark:text-zinc-600 font-medium ml-1">Try example:</span>
-                                            {/* Premium Chips */}
-                                            <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 no-scrollbar">
-                                                {['Official Letter', 'Invoice', 'Resume'].map(tag => (
-                                                    <button
-                                                        key={tag}
-                                                        onClick={() => setPrompt(tag + " ")}
-                                                        className="whitespace-nowrap text-xs font-medium px-3 py-1.5 rounded-full bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-zinc-600 transition-all flex items-center gap-1 group/tag"
-                                                    >
-                                                        <span>+</span> {tag}
-                                                    </button>
-                                                ))}
+                                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-2 pt-4 border-t border-slate-200 dark:border-white/5">
+
+                                            {/* Font Selector */}
+                                            <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto no-scrollbar">
+                                                <select
+                                                    value={font}
+                                                    onChange={(e) => setFont(e.target.value)}
+                                                    className="bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 text-xs font-medium px-3 py-1.5 rounded-lg border border-transparent hover:border-slate-200 dark:hover:border-zinc-700 outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer appearance-none"
+                                                    style={{ fontFamily: font === 'times' ? 'Times New Roman' : font === 'courier' ? 'Courier New' : 'Helvetica' }}
+                                                >
+                                                    <option value="helvetica" className="font-sans">Classic (Helvetica)</option>
+                                                    <option value="times" className="font-serif">Professional (Times)</option>
+                                                    <option value="courier" className="font-mono">Typewriter (Courier)</option>
+                                                </select>
+
+                                                <span className="text-xs text-slate-300 dark:text-zinc-700 px-1">|</span>
+
+                                                <div className="flex gap-2">
+                                                    {['Official Letter', 'Invoice', 'Resume'].map(tag => (
+                                                        <button
+                                                            key={tag}
+                                                            onClick={() => setPrompt(tag + " ")}
+                                                            className="whitespace-nowrap text-xs font-medium px-3 py-1.5 rounded-full bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-zinc-600 transition-all flex items-center gap-1 group/tag"
+                                                        >
+                                                            <span>+</span> {tag}
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

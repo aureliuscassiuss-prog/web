@@ -111,11 +111,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        const { prompt } = req.body;
+        const { prompt, font = 'helvetica' } = req.body;
 
         if (!prompt || typeof prompt !== 'string') {
             return res.status(400).json({ message: 'Invalid prompt' });
         }
+
+        // Map user fonts to jsPDF fonts
+        const fontMap: Record<string, string> = {
+            'times': 'times',
+            'courier': 'courier',
+            'helvetica': 'helvetica'
+        };
+        const selectedFont = fontMap[font.toLowerCase()] || 'helvetica';
 
         // Step 1: Use AI to generate detailed document specification
         const systemPrompt = `You are an expert professional writer creating HIGH-QUALITY, POLISHED documents with strict INDIAN FORMATTING.
@@ -184,9 +192,29 @@ Return ONLY valid JSON.`;
         });
 
         const aiResponse = completion.choices[0]?.message?.content || '{}';
-        const jsonMatch = aiResponse.match(/```(?:json)?\s*([\s\S]*?)```/i);
-        const cleanResponse = jsonMatch ? jsonMatch[1].trim() : aiResponse.trim();
-        const docContent = JSON.parse(cleanResponse);
+
+        // Robust JSON Extraction
+        let docContent: any = {};
+        try {
+            const jsonMatch = aiResponse.match(/\{[\s\S]*\}/); // Greedier simple match for object
+            const cleanResponse = jsonMatch ? jsonMatch[0] : aiResponse;
+            docContent = JSON.parse(cleanResponse);
+        } catch (parseError) {
+            console.error("JSON Parse Error:", parseError, "Raw Response:", aiResponse);
+            // Fallback content if parsing completely fails
+            docContent = {
+                type: 'note',
+                title: 'Conversion Error',
+                filename: 'error_log.pdf',
+                letter_details: {
+                    body_paragraphs: [
+                        "We encountered an error processing the AI response.",
+                        "Raw Output:",
+                        aiResponse.substring(0, 500) + "..."
+                    ]
+                }
+            };
+        }
 
         // Sanitize filename
         let filename = docContent.filename || 'generated_document.pdf';
@@ -263,7 +291,7 @@ Return ONLY valid JSON.`;
             // SENDER ADDRESS (Only for Formal Letters)
             if (docContent.type === 'formal_letter' && details.sender_address) {
                 pdf.setFontSize(11);
-                pdf.setFont('helvetica', 'normal');
+                pdf.setFont(selectedFont, 'normal');
                 details.sender_address.forEach((line: string) => {
                     pdf.text(line, margin, yPosition);
                     yPosition += 5;
@@ -274,7 +302,7 @@ Return ONLY valid JSON.`;
             // DATE
             if (details.date) {
                 pdf.setFontSize(11);
-                pdf.setFont('helvetica', 'normal'); // Normal weight for date
+                pdf.setFont(selectedFont, 'normal'); // Normal weight for date
                 pdf.text(docContent.type === 'formal_letter' ? `${details.date}` : `Date: ${details.date}`, margin, yPosition);
                 yPosition += 10;
             }
@@ -293,7 +321,7 @@ Return ONLY valid JSON.`;
             // SUBJECT
             if (details.subject) {
                 pdf.setFontSize(11); // Professional size
-                pdf.setFont('helvetica', 'bold');
+                pdf.setFont(selectedFont, 'bold');
                 // Center subject for formal letters sometimes, but Left is standard modern
                 pdf.text(details.subject, margin, yPosition);
                 yPosition += 12;
@@ -301,7 +329,7 @@ Return ONLY valid JSON.`;
 
             // SALUTATION
             if (details.salutation) {
-                pdf.setFont('helvetica', 'normal');
+                pdf.setFont(selectedFont, 'normal');
                 pdf.text(details.salutation, margin, yPosition);
                 yPosition += 10;
             }
@@ -319,7 +347,7 @@ Return ONLY valid JSON.`;
 
             // CLOSING ("Thanking you")
             if (details.closing) {
-                pdf.setFont('helvetica', 'normal');
+                pdf.setFont(selectedFont, 'normal');
                 pdf.text(details.closing, margin, yPosition);
                 yPosition += 12;
             }
