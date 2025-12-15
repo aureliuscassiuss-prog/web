@@ -1,16 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { FileText, Sparkles, AlertCircle, Download, CheckCircle, ArrowLeft, Lock } from 'lucide-react';
+import { Sparkles, Download, CheckCircle, ArrowLeft, Lock, Wand2 } from 'lucide-react';
 
 export default function PdfGeneratorPage() {
     const { token } = useAuth();
 
+    // UI State
     const [prompt, setPrompt] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
     const [pdfReady, setPdfReady] = useState(false);
     const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isRateLimited, setIsRateLimited] = useState(false);
+
+    // Dynamic Stars Effect
+    const [stars, setStars] = useState<{ top: string; left: string; size: string; opacity: number }[]>([]);
+
+    useEffect(() => {
+        const newStars = Array.from({ length: 50 }).map(() => ({
+            top: `${Math.random() * 100}%`,
+            left: `${Math.random() * 100}%`,
+            size: `${Math.random() * 3}px`,
+            opacity: Math.random()
+        }));
+        setStars(newStars);
+    }, []);
 
     const handleGenerate = async () => {
         if (!prompt.trim()) return;
@@ -46,13 +60,12 @@ export default function PdfGeneratorPage() {
                 throw new Error(errData.message || 'Failed to generate PDF');
             }
 
-            // Get PDF as blob
             const blob = await response.blob();
             setPdfBlob(blob);
             setPdfReady(true);
 
         } catch (err: any) {
-            setError(err.message || "Something went wrong. Please try again.");
+            setError(err.message || "Something went wrong.");
         } finally {
             setIsGenerating(false);
         }
@@ -60,7 +73,6 @@ export default function PdfGeneratorPage() {
 
     const handleDownload = () => {
         if (!pdfBlob) return;
-
         const url = URL.createObjectURL(pdfBlob);
         const a = document.createElement('a');
         a.href = url;
@@ -80,215 +92,153 @@ export default function PdfGeneratorPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-black p-4 sm:p-6 lg:p-8 animate-fade-in">
-            <div className="max-w-4xl mx-auto space-y-8">
+        <div className="min-h-screen bg-[#050505] text-white relative overflow-hidden font-sans selection:bg-indigo-500/30">
 
-                {/* Header */}
-                <div className="space-y-4 text-center">
-                    <div className="flex items-center justify-center gap-3">
-                        <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
-                            <FileText size={28} strokeWidth={2.5} />
-                        </div>
+            {/* Background Effects */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-indigo-600/20 blur-[120px] rounded-full pointer-events-none" />
+            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none mix-blend-overlay"></div>
+
+            {/* Stars */}
+            {stars.map((star, i) => (
+                <div
+                    key={i}
+                    className="absolute rounded-full bg-white animate-pulse"
+                    style={{
+                        top: star.top,
+                        left: star.left,
+                        width: star.size,
+                        height: star.size,
+                        opacity: star.opacity,
+                        animationDuration: `${Math.random() * 3 + 2}s`
+                    }}
+                />
+            ))}
+
+            <div className="relative z-10 max-w-4xl mx-auto px-4 py-8 sm:py-12 lg:py-16 flex flex-col items-center min-h-[calc(100vh-80px)] justify-center">
+
+                {/* Navbar (Mock) */}
+                {!pdfReady && (
+                    <div className="mb-12 inline-flex items-center gap-6 px-6 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl">
+                        <span className="text-[10px] sm:text-xs font-medium text-gray-400 uppercase tracking-widest cursor-default">AI PDF Generator</span>
                     </div>
-                    <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
-                        AI PDF Generator
-                    </h1>
-                    <p className="text-gray-600 dark:text-gray-400 font-medium max-w-2xl mx-auto">
-                        Describe your document and get a professional, ready-to-download PDF instantly.
-                    </p>
-                </div>
+                )}
 
-                {/* Main Content */}
                 {!pdfReady ? (
-                    <div className="bg-white dark:bg-[#0A0A0A] rounded-3xl p-8 border border-gray-200 dark:border-white/5 shadow-xl shadow-gray-200/50 dark:shadow-none">
+                    <div className="w-full text-center space-y-8 sm:space-y-12 animate-fade-in">
 
-                        <div className="space-y-6">
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                                    What document do you need?
-                                </label>
-                                <p className="text-xs text-gray-500 dark:text-gray-500 mb-4">
-                                    Be specific! Mention the type, purpose, and any details you want included.
-                                </p>
+                        {/* Hero Typography */}
+                        <div className="space-y-4 sm:space-y-6">
+                            <h1 className="font-serif text-5xl sm:text-6xl md:text-7xl lg:text-8xl leading-[0.9] tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/50 drop-shadow-lg">
+                                Generate Stunning <br />
+                                <span className="italic text-indigo-300">Documents</span>
+                            </h1>
+                            <p className="text-sm sm:text-base text-gray-400 max-w-lg mx-auto font-light leading-relaxed px-4">
+                                Turn your ideas into professional PDFs with just a few words. <br className="hidden sm:block" />
+                                Applications, Letters, and Notices created instantly.
+                            </p>
+                        </div>
+
+                        {/* Input Area */}
+                        <div className="relative max-w-2xl mx-auto group">
+                            <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-3xl opacity-20 group-hover:opacity-40 blur transition duration-500"></div>
+
+                            <div className="relative bg-[#0A0A0A]/80 backdrop-blur-2xl rounded-2xl sm:rounded-3xl border border-white/10 p-2 sm:p-3 shadow-2xl">
                                 <textarea
                                     value={prompt}
                                     onChange={(e) => setPrompt(e.target.value)}
-                                    placeholder="E.g., Write a sick leave application to the Principal for 2 days due to fever..."
-                                    className="w-full h-40 p-5 rounded-2xl bg-gray-50 dark:bg-white/5 border-2 border-transparent focus:border-indigo-500 dark:focus:border-indigo-500 hover:bg-gray-100 dark:hover:bg-white/10 transition-all resize-none text-base outline-none scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700"
+                                    placeholder="Describe your document..."
+                                    className="w-full h-32 sm:h-40 bg-transparent text-white placeholder-gray-600 p-4 sm:p-6 text-base sm:text-lg outline-none resize-none font-light"
                                     disabled={isGenerating}
                                 />
+
+                                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 pb-4">
+                                    <div className="hidden sm:flex flex-wrap gap-2">
+                                        {['Application', 'Letter', 'Invoice'].map(tag => (
+                                            <button key={tag} onClick={() => setPrompt(p => p + (p ? ' ' : '') + tag)} className="text-[10px] px-2 py-1 rounded-full border border-white/10 text-gray-400 hover:bg-white/5 transition">
+                                                {tag}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <button
+                                        onClick={handleGenerate}
+                                        disabled={!prompt.trim() || isGenerating}
+                                        className="w-full sm:w-auto px-8 py-3 rounded-xl sm:rounded-full bg-white text-black font-medium text-sm sm:text-base hover:scale-105 active:scale-95 transition-all shadow-lg shadow-white/10 flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100"
+                                    >
+                                        {isGenerating ? <Sparkles size={16} className="animate-spin" /> : <Wand2 size={16} />}
+                                        {isGenerating ? 'Generating...' : 'Generate PDF'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Rate Limit Alert */}
+                        {error && (
+                            <div className={`mx-auto max-w-md p-4 rounded-xl border backdrop-blur-md ${isRateLimited
+                                ? 'bg-orange-500/10 border-orange-500/30 text-orange-200'
+                                : 'bg-red-500/10 border-red-500/30 text-red-200'
+                                } text-xs sm:text-sm animate-slide-up`}>
+                                <div className="flex items-center gap-2 justify-center mb-2">
+                                    {isRateLimited ? <Lock size={14} /> : <span className="text-xl">!</span>}
+                                    <span className="font-semibold">{error}</span>
+                                </div>
+                                {isRateLimited && (
+                                    <button
+                                        onClick={() => document.getElementById('auth-trigger-btn')?.click()}
+                                        className="text-xs underline hover:text-white transition"
+                                    >
+                                        Sign In for Unlimited Access
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                ) : (
+                    /* Success State */
+                    <div className="w-full max-w-2xl animate-fade-in text-center space-y-8 sm:space-y-12">
+                        <div className="space-y-4">
+                            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-500/10 text-green-400 ring-1 ring-green-500/30 mb-4 animate-scale-in">
+                                <CheckCircle size={40} className="drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]" />
+                            </div>
+                            <h2 className="font-serif text-4xl sm:text-5xl md:text-6xl text-white tracking-tight">
+                                Ready to <span className="italic text-green-400">Download</span>
+                            </h2>
+                            <p className="text-sm text-gray-400">
+                                Your professional document has been created successfully.
+                            </p>
+                        </div>
+
+                        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+                            <div className="text-left">
+                                <div className="text-xs uppercase tracking-widest text-gray-500 mb-1">File Name</div>
+                                <div className="text-lg sm:text-xl font-medium text-white truncate max-w-[200px]">generated_document.pdf</div>
+                                <div className="text-xs text-gray-400 mt-1">{(pdfBlob?.size ? pdfBlob.size / 1024 : 0).toFixed(1)} KB</div>
                             </div>
 
                             <button
-                                onClick={handleGenerate}
-                                disabled={!prompt.trim() || isGenerating}
-                                className="w-full py-4 rounded-xl font-bold text-lg bg-black dark:bg-white text-white dark:text-black hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all shadow-xl shadow-black/5 dark:shadow-white/5 flex items-center justify-center gap-3"
+                                onClick={handleDownload}
+                                className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 hover:-translate-y-1 transition-all flex items-center justify-center gap-2 text-sm"
                             >
-                                {isGenerating ? (
-                                    <>
-                                        <Sparkles className="animate-spin" size={20} />
-                                        <span>Creating Your PDF...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <FileText size={20} />
-                                        <span>Generate PDF</span>
-                                    </>
-                                )}
+                                <Download size={18} />
+                                Download File
                             </button>
-
-                            {/* Error / Rate Limit Message */}
-                            {error && (
-                                <div className={`p-5 rounded-xl border flex items-start gap-4 ${isRateLimited
-                                    ? 'bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800'
-                                    : 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
-                                    }`}>
-                                    {isRateLimited ? (
-                                        <div className="flex-1 space-y-3">
-                                            <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400 font-semibold">
-                                                <Lock size={20} />
-                                                <span>Daily Limit Reached</span>
-                                            </div>
-                                            <p className="text-sm text-orange-600 dark:text-orange-300">
-                                                You've used your 3 free generations for today. Sign in to unlock unlimited PDF generation.
-                                            </p>
-                                            <button
-                                                onClick={() => document.getElementById('auth-trigger-btn')?.click() || alert('Please click the "Sign In" button in the top right corner.')}
-                                                className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg text-sm font-bold shadow-lg shadow-orange-500/20 hover:scale-105 transition-transform"
-                                            >
-                                                Sign In for Unlimited Access
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <AlertCircle size={20} className="text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-                                            <span className="text-red-600 dark:text-red-400 text-sm font-medium">{error}</span>
-                                        </>
-                                    )}
-                                </div>
-                            )}
-
-                            {isGenerating && (
-                                <div className="space-y-4 p-6 rounded-xl bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 border border-indigo-100 dark:border-indigo-900/20">
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex gap-1.5">
-                                            <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                                            <div className="w-2.5 h-2.5 bg-purple-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                                            <div className="w-2.5 h-2.5 bg-pink-500 rounded-full animate-bounce"></div>
-                                        </div>
-                                        <span className="text-sm font-semibold text-indigo-900 dark:text-indigo-300">
-                                            AI is crafting your document...
-                                        </span>
-                                    </div>
-                                    <div className="space-y-2 text-xs text-indigo-700 dark:text-indigo-400">
-                                        <p>✓ Analyzing document requirements</p>
-                                        <p>✓ Generating professional content</p>
-                                        <p>✓ Applying topic-appropriate layout</p>
-                                        <p className="opacity-50">✓ Finalizing PDF...</p>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                ) : (
-                    /* Success State */
-                    <div className="animate-fade-in space-y-6">
-                        <div className="bg-white dark:bg-[#0A0A0A] rounded-3xl p-8 border border-gray-200 dark:border-white/5 shadow-xl shadow-gray-200/50 dark:shadow-none text-center space-y-6">
-
-                            {/* Success Icon */}
-                            <div className="flex justify-center">
-                                <div className="h-20 w-20 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white shadow-lg shadow-green-500/30 animate-scale-in">
-                                    <CheckCircle size={40} strokeWidth={2.5} />
-                                </div>
-                            </div>
-
-                            {/* Success Message */}
-                            <div className="space-y-2">
-                                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                                    Your PDF is Ready!
-                                </h2>
-                                <p className="text-gray-600 dark:text-gray-400">
-                                    Professional document created successfully
-                                </p>
-                            </div>
-
-                            {/* PDF Info */}
-                            <div className="inline-flex items-center gap-3 px-6 py-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">
-                                <FileText size={32} className="text-indigo-600 dark:text-indigo-400" />
-                                <div className="text-left">
-                                    <p className="font-semibold text-gray-900 dark:text-white text-sm">
-                                        generated_document.pdf
-                                    </p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-500">
-                                        {pdfBlob ? (pdfBlob.size / 1024).toFixed(1) : '0.0'} KB • PDF Document
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Action Buttons */}
-                            <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                                <button
-                                    onClick={handleDownload}
-                                    className="flex-1 py-4 rounded-xl font-bold text-base bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-indigo-500/30 transition-all flex items-center justify-center gap-2"
-                                >
-                                    <Download size={20} />
-                                    Download PDF
-                                </button>
-                                <button
-                                    onClick={handleReset}
-                                    className="flex-1 py-4 rounded-xl font-bold text-base bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20 transition-all flex items-center justify-center gap-2"
-                                >
-                                    <ArrowLeft size={20} />
-                                    Create Another
-                                </button>
-                            </div>
                         </div>
 
-                        {/* Success Tips */}
-                        <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20 rounded-xl p-5 flex items-start gap-3">
-                            <CheckCircle size={20} className="text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
-                            <div className="space-y-1">
-                                <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-300">
-                                    PDF Generated Successfully
-                                </h4>
-                                <p className="text-xs text-blue-700 dark:text-blue-400 leading-relaxed">
-                                    Your document has been created with professional formatting, topic-appropriate layout, and detailed content. Click "Download PDF" to save it to your device.
-                                </p>
-                            </div>
-                        </div>
+                        <button
+                            onClick={handleReset}
+                            className="text-sm text-gray-500 hover:text-white transition flex items-center justify-center gap-2 mx-auto"
+                        >
+                            <ArrowLeft size={14} />
+                            Create New Document
+                        </button>
                     </div>
                 )}
 
-                {/* Tips Section */}
-                {!pdfReady && !isGenerating && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-50 to-indigo-100/50 dark:from-indigo-950/30 dark:to-indigo-900/10 border border-indigo-100 dark:border-indigo-900/20">
-                            <h4 className="font-semibold text-indigo-900 dark:text-indigo-300 text-sm mb-2">
-                                📝 Be Detailed
-                            </h4>
-                            <p className="text-xs text-indigo-700 dark:text-indigo-400 leading-relaxed">
-                                The more specific your description, the better the result. Include names, dates, and exact requirements.
-                            </p>
-                        </div>
-                        <div className="p-5 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/30 dark:to-purple-900/10 border border-purple-100 dark:border-purple-900/20">
-                            <h4 className="font-semibold text-purple-900 dark:text-purple-300 text-sm mb-2">
-                                🎨 Professional Design
-                            </h4>
-                            <p className="text-xs text-purple-700 dark:text-purple-400 leading-relaxed">
-                                Each document type gets a unique, professional layout automatically tailored to its purpose.
-                            </p>
-                        </div>
-                        <div className="p-5 rounded-2xl bg-gradient-to-br from-pink-50 to-pink-100/50 dark:from-pink-950/30 dark:to-pink-900/10 border border-pink-100 dark:border-pink-900/20">
-                            <h4 className="font-semibold text-pink-900 dark:text-pink-300 text-sm mb-2">
-                                ⚡ Instant Download
-                            </h4>
-                            <p className="text-xs text-pink-700 dark:text-pink-400 leading-relaxed">
-                                Your PDF is generated in seconds and ready to download immediately—no installation required.
-                            </p>
-                        </div>
-                    </div>
-                )}
-
+                {/* Footer Credits */}
+                <div className="fixed bottom-4 text-[10px] text-gray-600 pointer-events-none">
+                    Powered by AI • Extrovert
+                </div>
             </div>
         </div>
     );

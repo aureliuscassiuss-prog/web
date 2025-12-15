@@ -20,6 +20,7 @@ export default {
             fontFamily: {
                 sans: ['Inter', 'system-ui', 'sans-serif'],
                 display: ['Space Grotesk', 'system-ui', 'sans-serif'],
+                serif: ['Instrument Serif', 'serif'],
             },
             animation: {
                 'float': 'float 3s ease-in-out infinite',
