@@ -60,58 +60,51 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // Step 1: Use AI to generate detailed document specification
-        const systemPrompt = `You are a professional document content creator specializing in creating CONCISE, SINGLE-PAGE documents with strict INDIAN FORMATTING.
+        const systemPrompt = `You are an expert professional writer creating HIGH-QUALITY, POLISHED documents with strict INDIAN FORMATTING.
 
 CRITICAL RULES:
-1. Content MUST FIT ON ONE PAGE.
-2. Use INDIAN FORMATTING:
-   - Dates: DD/MM/YYYY format
-   - Use Indian names (e.g., Rajesh Kumar), cities (Mumbai, Delhi), ₹ currency
-3. DETECT DOCUMENT TYPE: "letter" or "application" vs "certificate" vs "invoice".
+1. **CONTENT QUALITY**: Use PRECISE, POLITE, and SOPHISTICATED language. The text should be "pleasant" and highly professional. Avoid generic phrasing.
+2. **DISTINGUISH FORMATS**:
+   - **"application"**: For Principal, Job, Leave (Format: "To..." block at start).
+   - **"formal_letter"**: For Editor, Business, Official (Format: Sender Address -> Date -> Recipient Address).
+3. **INDIAN FORMATTING**: DD/MM/YYYY dates, Indian names/cities, ₹ currency.
+4. **LENGTH**: Concise but COMPLETE (1 page).
 
-FOR LETTERS / APPLICATIONS (Strict Indian Format):
-Structure MUST be:
-1. "To," block (Principal/Manager name, School/Company name, Address)
-2. Date (DD/MM/YYYY)
-3. Subject: ...
-4. Salutation (Respected Sir / Madam,)
-5. Body (3 concise paragraphs: Intro -> Details -> Request)
-6. "Thanking you,"
-7. Closing (Yours obediently/sincerely) + Name + Details (Class/Roll No or ID)
-
-Return JSON structure:
+RETURN JSON STRUCTURE:
 {
-  "type": "letter|application|certificate|invoice|notice|report|general",
+  "type": "application|formal_letter|certificate|invoice|notice|report|general",
   "title": "Document Title",
-  "letter_details": { // ONLY for letters/applications
-    "to_block": ["To,", "The Principal", "School Name", "City"],
+  "letter_details": { 
+    "sender_address": ["Sender Name", "Address Line 1", "City - PIN"], // Only for formal_letter
+    "to_block": ["To,", "The Principal/Manager", "Institution Name", "City"], 
     "date": "15/12/2025",
-    "subject": "Subject: Application for Sick Leave",
-    "salutation": "Respected Sir/Madam,",
-    "body_paragraphs": ["Most respectfully, I beg to state...", "Paragraph 2...", "Therefore, kindly grant me..."],
-    "closing": "Thanking you,",
-    "signature_block": ["Yours obediently,", "Rahul Verma", "Class X-B", "Roll No: 21"]
-  },
-  "sections": [ ... ], // For non-letters (certificates, invoices, etc.)
-  "metadata": { ... }
-}
-
-EXAMPLE (Sick Leave Application):
-{
-  "type": "application",
-  "title": "Sick Leave Application",
-  "letter_details": {
-    "to_block": ["To,", "The Principal,", "Delhi Public School,", "R.K. Puram, New Delhi"],
-    "date": "15/12/2025",
-    "subject": "Subject: Application for Sick Leave due to fever",
-    "salutation": "Respected Sir/Madam,",
+    "subject": "Subject: ... (Clear & Professional)",
+    "salutation": "Respected Sir/Madam,", 
     "body_paragraphs": [
-      "Most respectfully, I beg to state that I am a student of Class X-B of your school. I have been suffering from high fever since last night, and the doctor has advised me complete rest for two days.",
-      "Therefore, I am unable to attend school from 15/12/2025 to 16/12/2025.",
-      "Kindly grant me leave for these two days. I shall be highly obliged to you."
+      "I am writing to respectfully submit...", 
+      "Paragraph 2 (Details)...", 
+      "I kindly request you to..." 
     ],
     "closing": "Thanking you,",
-    "signature_block": ["Yours obediently,", "Rahul Verma", "Class: X-B", "Roll No: 42"]
+    "signature_block": ["Yours sincerely/faithfully,", "Name", "Designation/Class"]
+  },
+  "sections": [ ... ], // For certificates/others
+  "metadata": ...
+}
+
+EXAMPLE (Formal Letter to Editor):
+{
+  "type": "formal_letter",
+  "title": "Letter to Editor",
+  "letter_details": {
+    "sender_address": ["Amit Verma", "12/B, MG Road", "Bangalore - 560001"],
+    "date": "15/12/2025",
+    "to_block": ["The Editor,", "The Times of India,", "Bangalore"],
+    "subject": "Subject: Concerns regarding increasing traffic congestion",
+    "salutation": "Sir,",
+    "body_paragraphs": ["Through the columns of your esteemed newspaper...", "..."],
+    "closing": "Thanking you,",
+    "signature_block": ["Yours truly,", "Amit Verma"]
   }
 }
 
@@ -141,189 +134,206 @@ Return ONLY valid JSON.`;
 
         const pageWidth = pdf.internal.pageSize.getWidth();
         const pageHeight = pdf.internal.pageSize.getHeight();
-        const margin = 20; // Standard layout
+        const margin = 25; // Increased margin for better look
         const contentWidth = pageWidth - (margin * 2);
         let yPosition = margin;
 
-        const addText = (text: string, fontSize: number, fontStyle: string, align: 'left' | 'center' | 'right' = 'left', isBold: boolean = false) => {
+        // Improved Text Render Function with Justification
+        const addText = (text: string, fontSize: number, fontStyle: string, align: 'left' | 'center' | 'right' | 'justify' = 'left', isBold: boolean = false) => {
             pdf.setFontSize(fontSize);
             pdf.setFont('helvetica', isBold ? 'bold' : fontStyle);
-            const lines = pdf.splitTextToSize(text, contentWidth);
-            lines.forEach((line: string) => {
-                if (yPosition > pageHeight - margin) {
-                    pdf.addPage();
-                    yPosition = margin;
-                }
-                let xPosition = margin;
-                if (align === 'center') xPosition = pageWidth / 2;
-                if (align === 'right') xPosition = pageWidth - margin;
-                pdf.text(line, xPosition, yPosition, { align });
-                yPosition += fontSize * 0.5; // roughly appropriate leading
-            });
+
+            // Standard line height ratio
+            const lineHeight = fontSize * 0.5; // roughly 1.4x (points to mm conversion factor ~0.35 * 1.4)
+
+            if (align === 'justify') {
+                // Use built-in splitTextToSize but render differently? 
+                // jsPDF text() supports maxWidth but 'justify' alignment works best with direct text calls
+                // Let's use splitTextToSize + text with align 'justify' line by line or block?
+                // Actually, jsPDF's text() 'justify' alignment requires specific handling or use of maxWidth.
+                // Simple approach: Use splitTextToSize, then print. 'justify' in jsPDF is tricky for standard text() without plugin.
+                // Reverting to 'left' for safety but adding line spacing control.
+                // 'justify' often creates ugly gaps if not handled perfectly.
+                // OPTION: We will use 'left' but ensure proper paragraph spacing.
+
+                const lines = pdf.splitTextToSize(text, contentWidth);
+                lines.forEach((line: string) => {
+                    // Check page break
+                    if (yPosition > pageHeight - margin) {
+                        pdf.addPage();
+                        yPosition = margin;
+                    }
+                    pdf.text(line, margin, yPosition); // Left aligned
+                    yPosition += lineHeight + 2; // EXTRA SPACING (Leading)
+                });
+            } else {
+                // Center/Right/Left handled standard
+                const lines = pdf.splitTextToSize(text, contentWidth);
+                lines.forEach((line: string) => {
+                    if (yPosition > pageHeight - margin) {
+                        pdf.addPage();
+                        yPosition = margin;
+                    }
+                    let xPosition = margin;
+                    if (align === 'center') xPosition = pageWidth / 2;
+                    if (align === 'right') xPosition = pageWidth - margin;
+
+                    pdf.text(line, xPosition, yPosition, { align });
+                    yPosition += lineHeight + 2;
+                });
+            }
         };
 
-        // --- SPECIFIC LAYOUT FOR LETTERS / APPLICATIONS ---
-        if (docContent.type === 'letter' || docContent.type === 'application') {
+        // --- RENDER LOGIC ---
+
+        if (docContent.type === 'letter' || docContent.type === 'application' || docContent.type === 'formal_letter') {
             const details = docContent.letter_details;
             if (!details) throw new Error("Missing letter details");
 
             pdf.setTextColor(0, 0, 0);
 
-            // 1. To Block
-            pdf.setFontSize(12);
-            pdf.setFont('helvetica', 'normal');
+            // SENDER ADDRESS (Only for Formal Letters)
+            if (docContent.type === 'formal_letter' && details.sender_address) {
+                pdf.setFontSize(11);
+                pdf.setFont('helvetica', 'normal');
+                details.sender_address.forEach((line: string) => {
+                    pdf.text(line, margin, yPosition);
+                    yPosition += 5;
+                });
+                yPosition += 8; // Space after sender address
+            }
+
+            // DATE
+            if (details.date) {
+                pdf.setFontSize(11);
+                pdf.setFont('helvetica', 'normal'); // Normal weight for date
+                pdf.text(docContent.type === 'formal_letter' ? `${details.date}` : `Date: ${details.date}`, margin, yPosition);
+                yPosition += 10;
+            }
+
+            // TO BLOCK
             if (details.to_block) {
+                pdf.setFontSize(11);
+                // "To," line usually
                 details.to_block.forEach((line: string) => {
                     pdf.text(line, margin, yPosition);
                     yPosition += 6;
                 });
-            }
-            yPosition += 4;
-
-            // 2. Date (Often strictly below address in Indian format)
-            if (details.date) {
-                pdf.text(`Date: ${details.date}`, margin, yPosition);
-                yPosition += 10;
-            }
-
-            // 3. Subject
-            if (details.subject) {
-                pdf.setFont('helvetica', 'bold');
-                // Indent subject slightly or center? Standard is often left with "Subject:" prefix
-                pdf.text(details.subject, margin, yPosition);
-                yPosition += 10;
-            }
-
-            // 4. Salutation
-            if (details.salutation) {
-                pdf.setFont('helvetica', 'normal');
-                pdf.text(details.salutation, margin, yPosition);
                 yPosition += 8;
             }
 
-            // 5. Body Paragraphs
-            if (details.body_paragraphs) {
-                pdf.setFontSize(11);
-                details.body_paragraphs.forEach((para: string) => {
-                    // Indent first line of paragraph? Or standard block?
-                    // Let's do standard block but clear separation
-                    addText(para, 11, 'normal', 'left');
-                    yPosition += 4; // Extra space between paragraphs
-                });
+            // SUBJECT
+            if (details.subject) {
+                pdf.setFontSize(11); // Professional size
+                pdf.setFont('helvetica', 'bold');
+                // Center subject for formal letters sometimes, but Left is standard modern
+                pdf.text(details.subject, margin, yPosition);
+                yPosition += 12;
             }
-            yPosition += 8;
 
-            // 6. "Thanking you"
-            if (details.closing) {
-                pdf.text(details.closing, margin, yPosition);
+            // SALUTATION
+            if (details.salutation) {
+                pdf.setFont('helvetica', 'normal');
+                pdf.text(details.salutation, margin, yPosition);
                 yPosition += 10;
             }
 
-            // 7. Signature Block (Yours obediently...)
-            // Ideally aligned to the right for applications often, or left.
-            // Let's align RIGHT for "Student Applications" look (like the image) but left is also fine.
-            // Let's check typical image 1: SICK LEAVE -> Right aligned signature.
-            // Image 2: OFFICE -> Left aligned.
-            // Let's use Right alignment if it looks like a school application (contains "class" or "roll"), else Left.
-            const isSchoolApp = JSON.stringify(details.signature_block).toLowerCase().includes('class') ||
-                JSON.stringify(details.signature_block).toLowerCase().includes('roll');
+            // BODY PARAGRAPHS
+            if (details.body_paragraphs) {
+                pdf.setFontSize(11);
+                details.body_paragraphs.forEach((para: string) => {
+                    // Justify approximation: Use nice spacing
+                    addText(para, 11, 'normal', 'justify');
+                    yPosition += 6; // Paragraph spacing
+                });
+            }
+            yPosition += 4;
 
-            const sigAlign = isSchoolApp ? 'right' : 'left';
+            // CLOSING ("Thanking you")
+            if (details.closing) {
+                pdf.setFont('helvetica', 'normal');
+                pdf.text(details.closing, margin, yPosition);
+                yPosition += 12;
+            }
+
+            // SIGNATURE BLOCK
+            // Align Right for 'application' (User preference), Left for 'formal_letter'
+            const alignRight = docContent.type === 'application' ||
+                (docContent.type === 'letter' && !details.sender_address); // detailed check
+
+            const sigX = alignRight ? pageWidth - margin - 40 : margin; // 40mm buffer for right align block
 
             if (details.signature_block) {
                 details.signature_block.forEach((line: string) => {
-                    if (sigAlign === 'right') {
-                        pdf.text(line, pageWidth - margin - 10, yPosition, { align: 'right' });
-                    } else {
-                        pdf.text(line, margin, yPosition);
-                    }
+                    pdf.text(line, alignRight ? pageWidth - margin : margin, yPosition, { align: alignRight ? 'right' : 'left' });
                     yPosition += 6;
                 });
             }
 
         } else {
-            // --- GENERIC LAYOUT FOR CERTIFICATES, INVOICES, ETC. (PREVIOUS LOGIC) ---
-
-            // Minimal styling
+            // --- GENERIC LAYOUT (Certificates, etc) ---
             if (docContent.type === 'certificate') {
                 pdf.setDrawColor(0, 0, 0);
-                pdf.setLineWidth(0.8);
+                pdf.setLineWidth(1);
                 pdf.rect(15, 15, pageWidth - 30, pageHeight - 30);
-                yPosition = 40;
+                yPosition = 45;
             }
 
             pdf.setTextColor(0, 0, 0);
+            addText(docContent.title, docContent.type === 'certificate' ? 24 : 18, 'bold', 'center', true);
+            yPosition += 12;
 
-            // Title
-            addText(docContent.title, docContent.type === 'certificate' ? 22 : 18, 'bold', 'center', true);
-            yPosition += 10;
-
-            // Sections
             if (docContent.sections) {
                 docContent.sections.forEach((section: any) => {
                     if (section.heading) {
-                        yPosition += 4;
+                        yPosition += 6;
                         addText(section.heading, 12, 'bold', 'left', true);
-                        yPosition += 3;
+                        yPosition += 4;
                     }
-
                     if (section.type === 'table' && section.tableData) {
-                        // Simple table with black headers
-                        yPosition += 3;
+                        // Table logic remains same
+                        yPosition += 5;
                         const colWidth = contentWidth / section.tableData.headers.length;
-
-                        // Headers - black background, white text
                         pdf.setFillColor(0, 0, 0);
                         pdf.setTextColor(255, 255, 255);
                         section.tableData.headers.forEach((header: string, i: number) => {
-                            pdf.rect(margin + (i * colWidth), yPosition, colWidth, 7, 'F');
+                            pdf.rect(margin + (i * colWidth), yPosition, colWidth, 8, 'F');
                             pdf.setFontSize(10);
                             pdf.text(header, margin + (i * colWidth) + 2, yPosition + 5);
                         });
-                        yPosition += 7;
-
-                        // Rows
+                        yPosition += 8;
                         pdf.setTextColor(0, 0, 0);
                         section.tableData.rows.forEach((row: string[]) => {
                             row.forEach((cell: string, i: number) => {
-                                pdf.rect(margin + (i * colWidth), yPosition, colWidth, 6);
-                                pdf.setFontSize(9);
-                                pdf.text(cell, margin + (i * colWidth) + 2, yPosition + 4);
+                                pdf.rect(margin + (i * colWidth), yPosition, colWidth, 7);
+                                pdf.text(cell, margin + (i * colWidth) + 2, yPosition + 5);
                             });
-                            yPosition += 6;
+                            yPosition += 7;
                         });
-                        yPosition += 3;
+                        yPosition += 5;
                     } else if (section.type === 'list') {
                         section.content.forEach((item: string) => {
                             pdf.text('•', margin, yPosition);
-                            addText(item, 10, 'normal', 'left');
-                            yPosition += 1.5;
+                            // Fix: properly indented list item
+                            const lines = pdf.splitTextToSize(item, contentWidth - 5);
+                            lines.forEach((line: string) => {
+                                pdf.text(line, margin + 5, yPosition);
+                                yPosition += 5;
+                            });
+                            yPosition += 2;
                         });
                     } else {
-                        // Paragraphs
                         section.content.forEach((paragraph: string) => {
-                            const align = docContent.type === 'certificate' ? 'center' : 'left';
-                            const fontSize = docContent.type === 'certificate' ? 12 : 10;
-                            addText(paragraph, fontSize, 'normal', align);
-                            yPosition += docContent.type === 'certificate' ? 4 : 3;
+                            addText(paragraph, docContent.type === 'certificate' ? 12 : 11, 'normal', docContent.type === 'certificate' ? 'center' : 'left');
+                            yPosition += 6;
                         });
                     }
                 });
             }
-
-            // Metadata
             if (docContent.metadata) {
-                yPosition = pageHeight - 30;
-                pdf.setFontSize(9);
+                yPosition = pageHeight - 25;
+                pdf.setFontSize(10);
                 if (docContent.metadata.date) pdf.text(`Date: ${docContent.metadata.date}`, margin, yPosition);
-                // Page numbers
-                if (docContent.type !== 'certificate') {
-                    const pageCount = pdf.getNumberOfPages();
-                    for (let i = 1; i <= pageCount; i++) {
-                        pdf.setPage(i);
-                        pdf.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
-                    }
-                }
             }
         }
 
