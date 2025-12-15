@@ -3,6 +3,33 @@ import { PDFDocument } from 'pdf-lib';
 import { useAuth } from '../contexts/AuthContext';
 import { Download, Loader2, FileText, CheckCircle, ArrowLeft } from 'lucide-react';
 
+// Custom 4-Point Star Icon matching the reference image
+const FourPointStar = ({ className }: { className?: string }) => (
+    <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        className={className}
+        xmlns="http://www.w3.org/2000/svg"
+    >
+        <defs>
+            <linearGradient id="starGradientMedical" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#14b8a6" /> {/* Teal-500 */}
+                <stop offset="50%" stopColor="#10b981" /> {/* Emerald-500 */}
+                <stop offset="100%" stopColor="#06b6d4" /> {/* Cyan-500 */}
+            </linearGradient>
+        </defs>
+        <path
+            d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"
+            fill="url(#starGradientMedical)"
+            stroke="url(#starGradientMedical)"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="drop-shadow-sm"
+        />
+    </svg>
+);
+
 const MedicalGeneratorPage = () => {
     const { user } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
@@ -151,9 +178,13 @@ const MedicalGeneratorPage = () => {
 
                         {/* INPUT CONSOLE */}
                         <div className="relative w-full max-w-3xl mx-auto group">
-                            {/* Gradient Border */}
-                            <div className="absolute -inset-[2px] rounded-[26px] sm:rounded-[34px] bg-[conic-gradient(from_0deg_at_50%_50%,#00000000_0deg,#3b82f6_180deg,#00000000_360deg)] animate-spin-slow opacity-30 dark:opacity-100"></div>
-                            <div className="absolute -inset-[2px] rounded-[26px] sm:rounded-[34px] bg-[conic-gradient(from_180deg_at_50%_50%,#00000000_0deg,#0ea5e9_180deg,#00000000_360deg)] animate-spin-slow opacity-30 dark:opacity-100" style={{ animationDelay: '-1.5s' }}></div>
+                            {/* --- BORDER BEAM (Medical Theme) --- */}
+                            <div className="absolute -inset-[2px] rounded-[26px] sm:rounded-[34px] overflow-hidden pointer-events-none z-0">
+                                <div
+                                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500%] h-[500%] animate-spin-slow bg-[conic-gradient(from_0deg,transparent_0_300deg,#14b8a6_330deg,#10b981_360deg)] opacity-100"
+                                    style={{ animationDuration: '4s' }}
+                                />
+                            </div>
 
                             <div className="relative bg-white dark:bg-[#09090b] rounded-[24px] sm:rounded-[32px] border border-slate-200 dark:border-white/5 shadow-2xl shadow-slate-200/50 dark:shadow-none p-[2px]">
                                 <div className="bg-slate-50 dark:bg-[#09090b] rounded-[22px] sm:rounded-[30px] p-6 sm:p-10 transition-colors duration-500 hover:bg-slate-100 dark:hover:bg-[#0c0c0f]">
@@ -198,7 +229,7 @@ const MedicalGeneratorPage = () => {
                                                         type="button"
                                                         onClick={() => handleGenderChange(gender)}
                                                         className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${formData.patient_gender === gender
-                                                            ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm'
+                                                            ? 'bg-white dark:bg-zinc-800 text-teal-600 dark:text-teal-400 shadow-sm'
                                                             : 'text-slate-500 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-300'
                                                             }`}
                                                     >
@@ -259,18 +290,19 @@ const MedicalGeneratorPage = () => {
                                             </div>
                                         </div>
 
-                                        <div className="pt-6">
+                                        <div className="pt-2 px-1 pb-1">
                                             <button
                                                 type="submit"
                                                 disabled={isLoading}
-                                                className="w-full rounded-[20px] sm:rounded-[28px] bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-zinc-200 text-white dark:text-black py-4 font-semibold text-lg transition-all active:scale-[0.99] flex items-center justify-center gap-3 shadow-lg shadow-slate-200/50 dark:shadow-[0_0_40px_-10px_rgba(255,255,255,0.1)] hover:shadow-xl dark:hover:shadow-[0_0_40px_-5px_rgba(255,255,255,0.2)] disabled:opacity-50 disabled:shadow-none"
+                                                className="group relative w-full inline-flex items-center justify-center p-[1px] rounded-full overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.99]"
                                             >
-                                                {isLoading ? (
-                                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                                ) : (
-                                                    <Download className="w-5 h-5" />
-                                                )}
-                                                {isLoading ? 'Generating Certificate...' : 'Generate Certificate'}
+                                                <div className="absolute inset-0 bg-gradient-to-r from-teal-500 via-emerald-500 to-teal-500 animate-gradient-xy opacity-100"></div>
+                                                <div className="relative w-full py-4 bg-black rounded-full flex items-center justify-center gap-3 transition-all group-hover:bg-[#0c0c0f]">
+                                                    <FourPointStar className={`w-6 h-6 text-white ${isLoading ? 'animate-spin' : ''}`} />
+                                                    <span className="font-semibold text-white text-lg tracking-wide">
+                                                        {isLoading ? 'Generating Certificate...' : 'Generate Certificate'}
+                                                    </span>
+                                                </div>
                                             </button>
                                         </div>
 
@@ -310,13 +342,32 @@ const MedicalGeneratorPage = () => {
             </div>
 
             <style>{`
+                @keyframes spin-beam {
+                    from { transform: translate(-50%, -50%) rotate(0deg); }
+                    to { transform: translate(-50%, -50%) rotate(360deg); }
+                }
+
+                .animate-spin-slow {
+                    animation: spin-beam 8s linear infinite;
+                    transform-origin: center center;
+                }
+
                 @keyframes tilt {
                     0%, 50%, 100% { transform: rotate(0deg); }
                     25% { transform: rotate(0.5deg); }
                     75% { transform: rotate(-0.5deg); }
                 }
                 .animate-tilt { animation: tilt 10s infinite linear; }
-                .animate-spin-slow { animation: spin 8s linear infinite; }
+                
+                .animate-gradient-xy {
+                    background-size: 200% 200%;
+                    animation: gradient-xy 6s ease infinite;
+                }
+                @keyframes gradient-xy {
+                    0% { background-position: 0% 50%; }
+                    50% { background-position: 100% 50%; }
+                    100% { background-position: 0% 50%; }
+                }
             `}</style>
         </div>
     );
