@@ -12,9 +12,9 @@ const FourPointStar = ({ className }: { className?: string }) => (
     >
         <defs>
             <linearGradient id="starGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#f97316" /> {/* Orange */}
-                <stop offset="50%" stopColor="#ef4444" /> {/* Redish */}
-                <stop offset="100%" stopColor="#3b82f6" /> {/* Blue */}
+                <stop offset="0%" stopColor="#6366f1" /> {/* Indigo-500 */}
+                <stop offset="50%" stopColor="#a855f7" /> {/* Purple-500 */}
+                <stop offset="100%" stopColor="#3b82f6" /> {/* Blue-500 */}
             </linearGradient>
         </defs>
         <path
@@ -270,26 +270,26 @@ export default function PdfGeneratorPage() {
                                     </div>
                                 </div>
 
-                                {/* Custom "Send" Style Button */}
-                                <div className="p-1 pt-0 flex justify-end px-6 pb-6">
+                                {/* Custom "Send" Style Button - Theme Matched */}
+                                <div className="p-1 pt-0 px-1 pb-1">
                                     <button
                                         onClick={handleGenerate}
                                         disabled={!prompt.trim() || isGenerating}
-                                        className="group relative inline-flex items-center justify-center p-[1px] rounded-full overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
+                                        className="group relative w-full inline-flex items-center justify-center p-[1px] rounded-full overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.99]"
                                     >
-                                        {/* Orange-Red-Blue Gradient Border */}
-                                        <div className="absolute inset-0 bg-gradient-to-r from-orange-500 via-red-500 to-blue-600 opacity-100 transition-opacity"></div>
+                                        {/* Indigo-Purple Gradient Border with Animation */}
+                                        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 animate-gradient-xy opacity-100"></div>
 
                                         {/* Inner Black Button */}
-                                        <div className="relative px-8 py-3 bg-black rounded-full flex items-center gap-3 transition-all group-hover:bg-[#0a0a0a]">
+                                        <div className="relative w-full py-4 bg-black rounded-full flex items-center justify-center gap-3 transition-all group-hover:bg-[#0c0c0f]">
 
                                             {isGenerating ? (
                                                 <Loader2 size={20} className="text-white animate-spin" />
                                             ) : (
-                                                <FourPointStar className="w-5 h-5 text-white" />
+                                                <FourPointStar className="w-6 h-6 text-white" />
                                             )}
 
-                                            <span className="font-medium text-white text-base tracking-wide">
+                                            <span className="font-semibold text-white text-lg tracking-wide">
                                                 {isGenerating ? 'Generating...' : 'Generate Document'}
                                             </span>
                                         </div>
