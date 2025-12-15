@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { PDFDocument } from 'pdf-lib';
 import { useAuth } from '../contexts/AuthContext';
-import { Download, Loader2, FileText, CheckCircle, ArrowLeft } from 'lucide-react';
+import { FileText, CheckCircle, ArrowLeft } from 'lucide-react';
 
 // Custom 4-Point Star Icon matching the reference image
 const FourPointStar = ({ className }: { className?: string }) => (
