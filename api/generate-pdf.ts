@@ -282,27 +282,40 @@ Return ONLY valid JSON.`;
 
         // --- RENDER LOGIC ---
 
-        if (docContent.type === 'letter' || docContent.type === 'application' || docContent.type === 'formal_letter') {
-            const details = docContent.letter_details;
-            if (!details) throw new Error("Missing letter details");
+        // --- RENDER LOGIC ---
 
+        // ALWAYS Render Title if present
+        if (docContent.title) {
+            pdf.setFontSize(18);
+            pdf.setFont(selectedFont, 'bold');
+            pdf.setTextColor(0, 0, 0);
+            // Center title
+            pdf.text(docContent.title, pageWidth / 2, yPosition, { align: 'center' });
+            yPosition += 15;
+        }
+
+        // Render Letter Details if present (regardless of type 'notice', 'letter', etc.)
+        if (docContent.letter_details) {
+            const details = docContent.letter_details;
             pdf.setTextColor(0, 0, 0);
 
-            // SENDER ADDRESS (Only for Formal Letters)
-            if (docContent.type === 'formal_letter' && details.sender_address) {
+            // SENDER ADDRESS (Only if present)
+            if (details.sender_address) {
                 pdf.setFontSize(11);
                 pdf.setFont(selectedFont, 'normal');
                 details.sender_address.forEach((line: string) => {
                     pdf.text(line, margin, yPosition);
                     yPosition += 5;
                 });
-                yPosition += 8; // Space after sender address
+                yPosition += 8;
             }
 
             // DATE
             if (details.date) {
                 pdf.setFontSize(11);
-                pdf.setFont(selectedFont, 'normal'); // Normal weight for date
+                pdf.setFont(selectedFont, 'normal');
+                // Align date right for some formats? Default Left for now.
+                // For 'notice', date typically on left below title.
                 pdf.text(docContent.type === 'formal_letter' ? `${details.date}` : `Date: ${details.date}`, margin, yPosition);
                 yPosition += 10;
             }
@@ -310,7 +323,6 @@ Return ONLY valid JSON.`;
             // TO BLOCK
             if (details.to_block) {
                 pdf.setFontSize(11);
-                // "To," line usually
                 details.to_block.forEach((line: string) => {
                     pdf.text(line, margin, yPosition);
                     yPosition += 6;
@@ -320,9 +332,8 @@ Return ONLY valid JSON.`;
 
             // SUBJECT
             if (details.subject) {
-                pdf.setFontSize(11); // Professional size
+                pdf.setFontSize(11);
                 pdf.setFont(selectedFont, 'bold');
-                // Center subject for formal letters sometimes, but Left is standard modern
                 pdf.text(details.subject, margin, yPosition);
                 yPosition += 12;
             }
@@ -331,21 +342,20 @@ Return ONLY valid JSON.`;
             if (details.salutation) {
                 pdf.setFont(selectedFont, 'normal');
                 pdf.text(details.salutation, margin, yPosition);
-                yPosition += 10;
+                yPosition += 8;
             }
 
             // BODY PARAGRAPHS
             if (details.body_paragraphs) {
                 pdf.setFontSize(11);
                 details.body_paragraphs.forEach((para: string) => {
-                    // Justify approximation: Use nice spacing
                     addText(para, 11, 'normal', 'justify');
-                    yPosition += 6; // Paragraph spacing
+                    yPosition += 6;
                 });
             }
             yPosition += 4;
 
-            // CLOSING ("Thanking you")
+            // CLOSING
             if (details.closing) {
                 pdf.setFont(selectedFont, 'normal');
                 pdf.text(details.closing, margin, yPosition);
@@ -353,11 +363,8 @@ Return ONLY valid JSON.`;
             }
 
             // SIGNATURE BLOCK
-            // Align Right for 'application' (User preference), Left for 'formal_letter'
-            const alignRight = docContent.type === 'application' ||
-                (docContent.type === 'letter' && !details.sender_address); // detailed check
-
-            const sigX = alignRight ? pageWidth - margin - 40 : margin; // 40mm buffer for right align block
+            // Right align for applications, left for others usually.
+            const alignRight = docContent.type === 'application';
 
             if (details.signature_block) {
                 details.signature_block.forEach((line: string) => {
@@ -365,72 +372,68 @@ Return ONLY valid JSON.`;
                     yPosition += 6;
                 });
             }
+        }
 
-        } else {
-            // --- GENERIC LAYOUT (Certificates, etc) ---
+        // Render Sections (for Certificates, Reports, or extra content)
+        if (docContent.sections) {
+            // ... existing section logic ...
             if (docContent.type === 'certificate') {
                 pdf.setDrawColor(0, 0, 0);
                 pdf.setLineWidth(1);
                 pdf.rect(15, 15, pageWidth - 30, pageHeight - 30);
-                yPosition = 45;
+                // Reset Y if just starting
+                if (yPosition < 45) yPosition = 45;
             }
 
-            pdf.setTextColor(0, 0, 0);
-            addText(docContent.title, docContent.type === 'certificate' ? 24 : 18, 'bold', 'center', true);
-            yPosition += 12;
-
-            if (docContent.sections) {
-                docContent.sections.forEach((section: any) => {
-                    if (section.heading) {
+            docContent.sections.forEach((section: any) => {
+                if (section.heading) {
+                    yPosition += 6;
+                    addText(section.heading, 12, 'bold', 'left', true);
+                    yPosition += 4;
+                }
+                if (section.type === 'table' && section.tableData) {
+                    yPosition += 5;
+                    const colWidth = contentWidth / section.tableData.headers.length;
+                    pdf.setFillColor(0, 0, 0);
+                    pdf.setTextColor(255, 255, 255);
+                    section.tableData.headers.forEach((header: string, i: number) => {
+                        pdf.rect(margin + (i * colWidth), yPosition, colWidth, 8, 'F');
+                        pdf.setFontSize(10);
+                        pdf.text(header, margin + (i * colWidth) + 2, yPosition + 5);
+                    });
+                    yPosition += 8;
+                    pdf.setTextColor(0, 0, 0);
+                    section.tableData.rows.forEach((row: string[]) => {
+                        row.forEach((cell: string, i: number) => {
+                            pdf.rect(margin + (i * colWidth), yPosition, colWidth, 7);
+                            pdf.text(cell, margin + (i * colWidth) + 2, yPosition + 5);
+                        });
+                        yPosition += 7;
+                    });
+                    yPosition += 5;
+                } else if (section.type === 'list') {
+                    section.content.forEach((item: string) => {
+                        pdf.text('•', margin, yPosition);
+                        const lines = pdf.splitTextToSize(item, contentWidth - 5);
+                        lines.forEach((line: string) => {
+                            pdf.text(line, margin + 5, yPosition);
+                            yPosition += 5;
+                        });
+                        yPosition += 2;
+                    });
+                } else if (section.content) {
+                    section.content.forEach((paragraph: string) => {
+                        addText(paragraph, 11, 'normal', docContent.type === 'certificate' ? 'center' : 'left');
                         yPosition += 6;
-                        addText(section.heading, 12, 'bold', 'left', true);
-                        yPosition += 4;
-                    }
-                    if (section.type === 'table' && section.tableData) {
-                        // Table logic remains same
-                        yPosition += 5;
-                        const colWidth = contentWidth / section.tableData.headers.length;
-                        pdf.setFillColor(0, 0, 0);
-                        pdf.setTextColor(255, 255, 255);
-                        section.tableData.headers.forEach((header: string, i: number) => {
-                            pdf.rect(margin + (i * colWidth), yPosition, colWidth, 8, 'F');
-                            pdf.setFontSize(10);
-                            pdf.text(header, margin + (i * colWidth) + 2, yPosition + 5);
-                        });
-                        yPosition += 8;
-                        pdf.setTextColor(0, 0, 0);
-                        section.tableData.rows.forEach((row: string[]) => {
-                            row.forEach((cell: string, i: number) => {
-                                pdf.rect(margin + (i * colWidth), yPosition, colWidth, 7);
-                                pdf.text(cell, margin + (i * colWidth) + 2, yPosition + 5);
-                            });
-                            yPosition += 7;
-                        });
-                        yPosition += 5;
-                    } else if (section.type === 'list') {
-                        section.content.forEach((item: string) => {
-                            pdf.text('•', margin, yPosition);
-                            // Fix: properly indented list item
-                            const lines = pdf.splitTextToSize(item, contentWidth - 5);
-                            lines.forEach((line: string) => {
-                                pdf.text(line, margin + 5, yPosition);
-                                yPosition += 5;
-                            });
-                            yPosition += 2;
-                        });
-                    } else {
-                        section.content.forEach((paragraph: string) => {
-                            addText(paragraph, docContent.type === 'certificate' ? 12 : 11, 'normal', docContent.type === 'certificate' ? 'center' : 'left');
-                            yPosition += 6;
-                        });
-                    }
-                });
-            }
-            if (docContent.metadata) {
-                yPosition = pageHeight - 25;
-                pdf.setFontSize(10);
-                if (docContent.metadata.date) pdf.text(`Date: ${docContent.metadata.date}`, margin, yPosition);
-            }
+                    });
+                }
+            });
+        }
+
+        if (docContent.metadata) {
+            yPosition = pageHeight - 25;
+            pdf.setFontSize(10);
+            if (docContent.metadata.date) pdf.text(`Date: ${docContent.metadata.date}`, margin, yPosition);
         }
 
         // Output

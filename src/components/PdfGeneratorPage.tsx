@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Sparkles, Download, CheckCircle, ArrowLeft, Wand2 } from 'lucide-react';
+import { Sparkles, Download, CheckCircle, ArrowLeft, Wand2, ChevronDown } from 'lucide-react';
 
 export default function PdfGeneratorPage() {
     const { token } = useAuth();
@@ -14,6 +14,30 @@ export default function PdfGeneratorPage() {
     const [isRateLimited, setIsRateLimited] = useState(false);
     const [fileName, setFileName] = useState('generated_document.pdf');
     const [font, setFont] = useState('helvetica');
+
+    const [isFontOpen, setIsFontOpen] = useState(false);
+    const fontDropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (fontDropdownRef.current && !fontDropdownRef.current.contains(event.target as Node)) {
+                setIsFontOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
+    const fonts = [
+        { id: 'helvetica', name: 'Classic', family: 'Helvetica, Arial, sans-serif' },
+        { id: 'times', name: 'Professional', family: '"Times New Roman", Times, serif' },
+        { id: 'courier', name: 'Typewriter', family: '"Courier New", Courier, monospace' },
+    ];
+
+    const selectedFontObj = fonts.find(f => f.id === font) || fonts[0];
 
     const handleGenerate = async () => {
         if (!prompt.trim()) return;
@@ -162,22 +186,47 @@ export default function PdfGeneratorPage() {
 
                                         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-2 pt-4 border-t border-slate-200 dark:border-white/5">
 
-                                            {/* Font Selector */}
-                                            <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto no-scrollbar">
-                                                <select
-                                                    value={font}
-                                                    onChange={(e) => setFont(e.target.value)}
-                                                    className="bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 text-xs font-medium px-3 py-1.5 rounded-lg border border-transparent hover:border-slate-200 dark:hover:border-zinc-700 outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer appearance-none"
-                                                    style={{ fontFamily: font === 'times' ? 'Times New Roman' : font === 'courier' ? 'Courier New' : 'Helvetica' }}
-                                                >
-                                                    <option value="helvetica" className="font-sans">Classic (Helvetica)</option>
-                                                    <option value="times" className="font-serif">Professional (Times)</option>
-                                                    <option value="courier" className="font-mono">Typewriter (Courier)</option>
-                                                </select>
+                                            {/* Font Selector & Tags Container - No Scrollbar */}
+                                            <div className="flex items-center gap-4 w-full sm:w-auto">
 
-                                                <span className="text-xs text-slate-300 dark:text-zinc-700 px-1">|</span>
+                                                {/* Custom Font Dropdown */}
+                                                <div className="relative" ref={fontDropdownRef}>
+                                                    <button
+                                                        onClick={() => setIsFontOpen(!isFontOpen)}
+                                                        className="flex items-center gap-2 bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 text-xs font-medium px-3 py-1.5 rounded-lg border border-transparent hover:border-slate-200 dark:hover:border-zinc-700 hover:bg-slate-200 dark:hover:bg-zinc-800 transition-all outline-none"
+                                                        style={{ fontFamily: selectedFontObj.family }}
+                                                    >
+                                                        {selectedFontObj.name}
+                                                        <ChevronDown size={14} className={`text-slate-400 dark:text-zinc-500 transition-transform ${isFontOpen ? 'rotate-180' : ''}`} />
+                                                    </button>
 
-                                                <div className="flex gap-2">
+                                                    {/* Dropdown Menu */}
+                                                    {isFontOpen && (
+                                                        <div className="absolute top-full left-0 mt-2 w-40 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-slate-200 dark:border-zinc-800 p-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                                                            {fonts.map((f) => (
+                                                                <button
+                                                                    key={f.id}
+                                                                    onClick={() => {
+                                                                        setFont(f.id);
+                                                                        setIsFontOpen(false);
+                                                                    }}
+                                                                    className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors flex items-center justify-between ${font === f.id
+                                                                            ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
+                                                                            : 'text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                                                                        }`}
+                                                                    style={{ fontFamily: f.family }}
+                                                                >
+                                                                    {f.name}
+                                                                    {font === f.id && <CheckCircle size={12} />}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <span className="hidden sm:block text-slate-300 dark:text-zinc-700 text-lg font-light">|</span>
+
+                                                <div className="flex gap-2 overflow-hidden flex-wrap sm:flex-nowrap">
                                                     {['Official Letter', 'Invoice', 'Resume'].map(tag => (
                                                         <button
                                                             key={tag}
