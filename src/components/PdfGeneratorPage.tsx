@@ -1,35 +1,48 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { FileText, Sparkles, AlertCircle, Download, CheckCircle, ArrowLeft } from 'lucide-react';
+import { FileText, Sparkles, AlertCircle, Download, CheckCircle, ArrowLeft, Lock } from 'lucide-react';
 
 export default function PdfGeneratorPage() {
     const { token } = useAuth();
+
     const [prompt, setPrompt] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
     const [pdfReady, setPdfReady] = useState(false);
     const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [isRateLimited, setIsRateLimited] = useState(false);
 
     const handleGenerate = async () => {
         if (!prompt.trim()) return;
 
         setIsGenerating(true);
         setError(null);
+        setIsRateLimited(false);
         setPdfReady(false);
         setPdfBlob(null);
 
         try {
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json'
+            };
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
             const response = await fetch('/api/generate-pdf', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
+                headers,
                 body: JSON.stringify({ prompt })
             });
 
             if (!response.ok) {
                 const errData = await response.json().catch(() => ({}));
+
+                if (response.status === 429) {
+                    setIsRateLimited(true);
+                    throw new Error(errData.message || 'Daily limit reached.');
+                }
+
                 throw new Error(errData.message || 'Failed to generate PDF');
             }
 
@@ -63,6 +76,7 @@ export default function PdfGeneratorPage() {
         setPdfBlob(null);
         setPrompt('');
         setError(null);
+        setIsRateLimited(false);
     };
 
     return (
@@ -99,21 +113,16 @@ export default function PdfGeneratorPage() {
                                 <textarea
                                     value={prompt}
                                     onChange={(e) => setPrompt(e.target.value)}
-                                    placeholder="Examples:&#10;• A professional certificate of completion for a Python programming course&#10;• An invoice for web design services with 3 itemized charges&#10;• A formal business letter requesting a meeting with the marketing director&#10;• A lost pet notice for a golden retriever with reward information&#10;• A meeting agenda for a product launch brainstorming session"
-                                    className="w-full h-72 p-5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all resize-none text-sm leading-relaxed"
+                                    placeholder="E.g., Write a sick leave application to the Principal for 2 days due to fever..."
+                                    className="w-full h-40 p-5 rounded-2xl bg-gray-50 dark:bg-white/5 border-2 border-transparent focus:border-indigo-500 dark:focus:border-indigo-500 hover:bg-gray-100 dark:hover:bg-white/10 transition-all resize-none text-base outline-none scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700"
+                                    disabled={isGenerating}
                                 />
                             </div>
 
                             <button
                                 onClick={handleGenerate}
                                 disabled={!prompt.trim() || isGenerating}
-                                className={`
-                                    w-full py-5 rounded-xl font-bold text-base tracking-wide transition-all duration-300 flex items-center justify-center gap-3
-                                    ${!prompt.trim() || isGenerating
-                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-white/5 dark:text-gray-600'
-                                        : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-indigo-500/30'
-                                    }
-                                `}
+                                className="w-full py-4 rounded-xl font-bold text-lg bg-black dark:bg-white text-white dark:text-black hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all shadow-xl shadow-black/5 dark:shadow-white/5 flex items-center justify-center gap-3"
                             >
                                 {isGenerating ? (
                                     <>
@@ -128,10 +137,34 @@ export default function PdfGeneratorPage() {
                                 )}
                             </button>
 
+                            {/* Error / Rate Limit Message */}
                             {error && (
-                                <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 flex items-center gap-3 text-red-600 dark:text-red-400 text-sm font-medium">
-                                    <AlertCircle size={18} />
-                                    {error}
+                                <div className={`p-5 rounded-xl border flex items-start gap-4 ${isRateLimited
+                                    ? 'bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800'
+                                    : 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
+                                    }`}>
+                                    {isRateLimited ? (
+                                        <div className="flex-1 space-y-3">
+                                            <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400 font-semibold">
+                                                <Lock size={20} />
+                                                <span>Daily Limit Reached</span>
+                                            </div>
+                                            <p className="text-sm text-orange-600 dark:text-orange-300">
+                                                You've used your 3 free generations for today. Sign in to unlock unlimited PDF generation.
+                                            </p>
+                                            <button
+                                                onClick={() => document.getElementById('auth-trigger-btn')?.click() || alert('Please click the "Sign In" button in the top right corner.')}
+                                                className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg text-sm font-bold shadow-lg shadow-orange-500/20 hover:scale-105 transition-transform"
+                                            >
+                                                Sign In for Unlimited Access
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <AlertCircle size={20} className="text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                                            <span className="text-red-600 dark:text-red-400 text-sm font-medium">{error}</span>
+                                        </>
+                                    )}
                                 </div>
                             )}
 
@@ -187,7 +220,7 @@ export default function PdfGeneratorPage() {
                                         generated_document.pdf
                                     </p>
                                     <p className="text-xs text-gray-500 dark:text-gray-500">
-                                        {(pdfBlob.size / 1024).toFixed(1)} KB • PDF Document
+                                        {pdfBlob ? (pdfBlob.size / 1024).toFixed(1) : '0.0'} KB • PDF Document
                                     </p>
                                 </div>
                             </div>

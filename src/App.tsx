@@ -448,14 +448,15 @@ function AppContent() {
             </ProtectedRoute>
           } />
 
-          {/* PDF Generator Route (Protected) */}
+          {/* PDF Generator Route (Public with rate limit) */}
           <Route path="/pdf-generator" element={
-            <ProtectedRoute onAuthRequired={() => {
-              setAuthModalInitialView('login')
-              setIsAuthModalOpen(true)
-            }}>
+            <>
+              <SEO
+                title="Free AI PDF Generator - Create Letters, Applications & More"
+                description="Generate professional PDF letters, applications, and documents for free using AI. Instant download, no login required for limited use."
+              />
               <PdfGeneratorPage />
-            </ProtectedRoute>
+            </>
           } />
 
           {/* AI Papers Route (Protected) */}
