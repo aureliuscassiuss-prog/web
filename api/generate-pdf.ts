@@ -143,62 +143,68 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const selectedWeight = fontConfig.weight;
 
         // Step 1: Use AI to generate detailed document specification
-        const systemPrompt = `You are an expert professional writer and document architect creating HIGH-QUALITY, POLISHED documents.
+        const systemPrompt = `You are a UNIVERSAL DOCUMENT ARCHITECT. Your goal is to create the PERFECT PDF structure for ANY user request.
 
-CRITICAL RULES:
-1. **MISSING INFO POLICY (Make it Up!)**: If the user prompt lacks details (names, dates, addresses, items), **YOU MUST INVENT REALISTIC, PROFESSIONAL DATA**.
-    - NEVER use placeholders like "[Name]", "[Date]", "XYZ Corp".
-    - USE specific, realistic details: "Amit Kumar", "12th Oct 2025", "Greenwood High School, Bangalore", "Invoice #INV-2024-001".
-    - For invoices, generate *real* items like "Web Development Services - ₹15,000".
+**CORE PHILOSOPHY**:
+- **DO NOT limit yourself to fixed templates.** You can build ANY document (Resume, Menu, Itinerary, legal Brief, Script) by combining blocks.
+- **VISUAL INTELLIGENCE**: You decide the look. Does a "Gift Voucher" need a border? YES. Does a "Business Letter" need a border? NO.
+- **MISSING DATA**: If details are missing, **INVENT REALISTIC CONTENT**. Never leave blanks.
 
-2. **LAYOUT & FORMATTING**:
-    - **"report"**: Title, Byline, Place/Date, then content.
-    - **"notice"**: **MUST** result in a BOXED layout. Title "NOTICE" centered at top.
-    - **"invoice"**: **MUST** use a 'table' section for items.
-    - **"application"**: Strict formal block format.
-
-3. **INDIAN FORMATTING**: DD/MM/YYYY dates, Indian names/cities (if context implies), ₹ currency.
-
-RETURN JSON STRUCTURE:
+**JSON STRUCTURE (The Blueprint):**
 {
-  "type": "application|formal_letter|certificate|invoice|notice|report|note|general",
-  "filename": "document_name.pdf",
-  "title": "Document Title", // e.g. "NOTICE", "INVOICE", "Application for Leave"
-  "letter_details": { 
-     // OPTIONAL: Only for letters/applications/notices
-     "sender_address": ["From Address Line 1", "City - PIN"], 
-     "to_block": ["To,", "Recipient Name", "Company/School", "City"], 
-     "date": "15/12/2025",
-     "subject": "Subject: ...",
-     "salutation": "Respected Sir/Madam,",
-     "body_paragraphs": ["Para 1...", "Para 2..."],
-     "closing": "Thanking you,",
-     "signature_block": ["Yours sincerely,", "Name", "Designation"]
+  "config": {
+    "draw_border": boolean, // TRUE for Certificates, Notices, Vouchers, Menus, etc.
+    "border_style": "simple" | "double", // Hint for future use
+    "margin": number // Default 25
   },
+  "title": "Main Title (Centered)", // Optional
+  "watermark": "CONFIDENTIAL", // Optional text to show as watermark
+  
+  // OPTIONAL: Use this for standard letter structures
+  "letter_details": {
+    "sender_address": ["Line 1", "Line 2"],
+    "to_block": ["To,", "Name", "Address"],
+    "date": "DD/MM/YYYY",
+    "subject": "Subject: ...",
+    "salutation": "Dear...",
+    "body_paragraphs": ["..."],
+    "closing": "Sincerely,",
+    "signature_block": ["Name", "Title"]
+  },
+
+  // THE CORE: List of sections to build the document. 
+  // USE THIS for Resumes, Invoices, Itineraries, Reports, etc.
   "sections": [
-    // USE THIS FOR INVOICES, RESUMES, REPORTS, CERTIFICATES
     {
-      "type": "table",
-      "heading": "Item Details", 
-      "tableData": {
-        "headers": ["Item Description", "Qty", "Price", "Total"],
-        "rows": [
-           ["Service Charge", "1", "15000", "15000"],
-           ["Tax (18%)", "-", "2700", "2700"]
-        ]
-      }
+      "type": "heading",
+      "text": "Experience / Ingredients / Day 1",
+      "align": "left" | "center" | "right",
+      "size": 14 // Optional font size override
     },
     {
       "type": "text",
-      "content": ["Paragraph of text..."]
+      "content": ["Paragraph 1...", "Paragraph 2..."],
+      "align": "justify" // or left/center
     },
     {
-        "type": "list",
-        "content": ["Point 1", "Point 2"]
+      "type": "table", // PERFECT for Invoices, Data, Schedules
+      "tableData": {
+        "headers": ["Date", "Activity", "Cost"],
+        "rows": [ ["12/10", "Flight", "$500"] ]
+      }
+    },
+    {
+      "type": "list", // Good for resumes, ingredients, rules
+      "items": ["Point 1", "Point 2"]
     }
   ],
-  "metadata": { "date": "..." }
+  "filename": "smart_filename.pdf"
 }
+
+**EXAMPLE LOGIC**:
+- **User**: "Make a coupon for free pizza" -> Config: { draw_border: true }, Title: "FREE PIZZA COUPON", Section: Text "Valid until...", Section: Text "Code: PIZZA100".
+- **User**: "Formal complaint letter" -> Config: { draw_border: false }, Use "letter_details".
+- **User**: "Resume for Dev" -> Config: { draw_border: false }, Sections: Heading "Skills", List "React, Node", Heading "Exp", Text "Built..."
 
 RETURN ONLY VALID JSON.`;
 
@@ -305,175 +311,186 @@ RETURN ONLY VALID JSON.`;
 
         // --- RENDER LOGIC ---
 
-        // --- RENDER LOGIC ---
+        // --- UNIVERSAL LAYOUT RENDERER ---
 
-        // ALWAYS Render Title if present
+        // 1. Draw Border if requested (AI decides based on document type like Certificate, Notice, Coupon)
+        if (docContent.config?.draw_border) {
+            pdf.setDrawColor(0, 0, 0);
+            pdf.setLineWidth(1); // Standard border
+            if (docContent.config.border_style === 'double') pdf.setLineWidth(2); // Thicker if requested
+            
+            const boxMargin = docContent.config.margin || 15;
+            pdf.rect(boxMargin, boxMargin, pageWidth - (boxMargin * 2), pageHeight - (boxMargin * 2));
+        }
+
+        // 2. Watermark (Optional)
+        if (docContent.watermark) {
+            pdf.setTextColor(230, 230, 230);
+            pdf.setFontSize(50);
+            pdf.setFont(selectedFont, 'bold');
+            // Rotate and center (basic implementation)
+            // jsPDF rotation is complex without context save/restore, simplifying to bottom center for now or diagonal if easy
+            // For stability, just placing centered light text
+            pdf.text(docContent.watermark.toUpperCase(), pageWidth / 2, pageHeight / 2, { align: 'center', angle: 45 });
+            pdf.setTextColor(0, 0, 0); // Reset
+        }
+
+        // 3. Document Title
         if (docContent.title) {
             pdf.setFontSize(18);
             pdf.setFont(selectedFont, 'bold');
             pdf.setTextColor(0, 0, 0);
-            // Center title
             pdf.text(docContent.title, pageWidth / 2, yPosition, { align: 'center' });
             yPosition += 15;
         }
 
-        // Render Letter Details if present (regardless of type 'notice', 'letter', etc.)
+        // 4. Letter Details (if present)
         if (docContent.letter_details) {
             const details = docContent.letter_details;
             pdf.setTextColor(0, 0, 0);
 
-            // SENDER ADDRESS (Only if present)
+            // ... (keep existing letter rendering logic roughly same, it works well) ...
+            // Just verifying variable names match
+            // SENDER
             if (details.sender_address) {
-                pdf.setFontSize(11);
-                pdf.setFont(selectedFont, 'normal');
+                pdf.setFontSize(10);
+                pdf.setFont(selectedFont, selectedWeight); // Use user font
                 details.sender_address.forEach((line: string) => {
                     pdf.text(line, margin, yPosition);
                     yPosition += 5;
                 });
-                yPosition += 8;
+                yPosition += 5;
             }
 
             // DATE
             if (details.date) {
-                pdf.setFontSize(11);
-                pdf.setFont(selectedFont, 'normal');
-                // Align date right for some formats? Default Left for now.
-                // For 'notice', date typically on left below title.
-                pdf.text(docContent.type === 'formal_letter' ? `${details.date}` : `Date: ${details.date}`, margin, yPosition);
+                pdf.text(`Date: ${details.date}`, margin, yPosition);
                 yPosition += 10;
             }
 
             // TO BLOCK
             if (details.to_block) {
-                pdf.setFontSize(11);
                 details.to_block.forEach((line: string) => {
                     pdf.text(line, margin, yPosition);
                     yPosition += 6;
                 });
-                yPosition += 8;
+                yPosition += 10;
             }
 
             // SUBJECT
             if (details.subject) {
-                pdf.setFontSize(11);
                 pdf.setFont(selectedFont, 'bold');
                 pdf.text(details.subject, margin, yPosition);
-                yPosition += 12;
+                pdf.setFont(selectedFont, selectedWeight);
+                yPosition += 10;
             }
 
             // SALUTATION
             if (details.salutation) {
-                pdf.setFont(selectedFont, 'normal');
                 pdf.text(details.salutation, margin, yPosition);
-                yPosition += 8;
+                yPosition += 10;
             }
 
-            // BODY PARAGRAPHS
+            // BODY
             if (details.body_paragraphs) {
-                pdf.setFontSize(11);
                 details.body_paragraphs.forEach((para: string) => {
-                    addText(para, 11, 'normal', 'justify');
-                    yPosition += 6;
+                    addText(para, 12, 'normal', 'justify');
+                    yPosition += 8;
                 });
+                yPosition += 5;
             }
-            yPosition += 4;
 
             // CLOSING
             if (details.closing) {
-                pdf.setFont(selectedFont, 'normal');
                 pdf.text(details.closing, margin, yPosition);
                 yPosition += 12;
             }
 
-            // SIGNATURE BLOCK
-            // Right align for applications, left for others usually.
-            const alignRight = docContent.type === 'application';
-
+            // SIGNATURE
             if (details.signature_block) {
-                details.signature_block.forEach((line: string) => {
-                    pdf.text(line, alignRight ? pageWidth - margin : margin, yPosition, { align: alignRight ? 'right' : 'left' });
+                // Heuristic: Right align for strict formal types, else left
+                // Since we removed 'type', let's default left unless simple signature
+                 details.signature_block.forEach((line: string) => {
+                    pdf.text(line, margin, yPosition);
                     yPosition += 6;
                 });
             }
+            yPosition += 10; // Spacing after letter block
         }
 
-        // Render Sections (for Certificates, Reports, or extra content)
-        if (docContent.sections || docContent.type === 'notice' || docContent.type === 'certificate') {
-
-            // Special Layout: NOTICE (Boxed)
-            if (docContent.type === 'notice') {
-                pdf.setDrawColor(0, 0, 0); // Black border
-                pdf.setLineWidth(1);
-                // Draw box with padding
-                const boxMargin = margin - 5;
-                const boxWidth = pageWidth - (boxMargin * 2);
-                const boxHeight = pageHeight - (boxMargin * 2);
-                pdf.rect(boxMargin, boxMargin, boxWidth, boxHeight);
-
-                // Ensure title is centered if it wasn't already
-                if (!docContent.title) {
-                    pdf.setFontSize(20);
+        // 5. Universal Sections (The Workhorse)
+        if (docContent.sections) {
+             docContent.sections.forEach((section: any) => {
+                
+                // New: Heading Section
+                if (section.type === 'heading' || section.heading) {
+                    yPosition += 5;
+                    const headText = section.text || section.heading;
+                    const headAlign = section.align || 'left';
+                    const headSize = section.size || 14;
+                    
+                    pdf.setFontSize(headSize);
                     pdf.setFont(selectedFont, 'bold');
-                    pdf.text("NOTICE", pageWidth / 2, yPosition, { align: 'center' });
-                    yPosition += 15;
+                    
+                    let xPos = margin;
+                    if (headAlign === 'center') xPos = pageWidth / 2;
+                    if (headAlign === 'right') xPos = pageWidth - margin;
+                    
+                    pdf.text(headText, xPos, yPosition, { align: headAlign });
+                    pdf.setFont(selectedFont, selectedWeight); // Reset
+                    yPosition += 8;
                 }
-            }
 
-            // Special Layout: CERTIFICATE (Border)
-            if (docContent.type === 'certificate') {
-                pdf.setDrawColor(0, 0, 0);
-                pdf.setLineWidth(1);
-                pdf.rect(15, 15, pageWidth - 30, pageHeight - 30);
-                if (yPosition < 45) yPosition = 45;
-            }
+                // Table Section
+                if (section.type === 'table' && section.tableData) {
+                    yPosition += 5;
+                    const colWidth = contentWidth / section.tableData.headers.length;
+                    
+                    // Table Header
+                    pdf.setFillColor(240, 240, 240); // Light gray header
+                    pdf.rect(margin, yPosition - 5, contentWidth, 8, 'F'); // Header BG
+                    
+                    pdf.setFont(selectedFont, 'bold');
+                    section.tableData.headers.forEach((header: string, i: number) => {
+                        pdf.text(header, margin + (i * colWidth) + 2, yPosition);
+                    });
+                    pdf.setFont(selectedFont, selectedWeight);
+                    yPosition += 8;
 
-            if (docContent.sections) {
-                docContent.sections.forEach((section: any) => {
-                    if (section.heading) {
+                    // Table Rows
+                    section.tableData.rows.forEach((row: string[], rowIndex: number) => {
+                         row.forEach((cell: string, i: number) => {
+                            // Simple Grid
+                            pdf.rect(margin + (i * colWidth), yPosition - 5, colWidth, 7); 
+                            pdf.text(cell, margin + (i * colWidth) + 2, yPosition);
+                        });
+                        yPosition += 7;
+                    });
+                    yPosition += 5;
+                } 
+                // List Section
+                else if (section.type === 'list' && (section.content || section.items)) {
+                    const items = section.items || section.content;
+                    items.forEach((item: string) => {
+                        pdf.text('•', margin + 5, yPosition);
+                        const lines = pdf.splitTextToSize(item, contentWidth - 15);
+                        lines.forEach((line: string) => {
+                            pdf.text(line, margin + 10, yPosition);
+                            yPosition += 5;
+                        });
+                        yPosition += 2;
+                    });
+                     yPosition += 5;
+                } 
+                // Text Section
+                else if (section.type === 'text' && section.content) {
+                    section.content.forEach((paragraph: string) => {
+                        addText(paragraph, 12, 'normal', section.align || 'left');
                         yPosition += 6;
-                        addText(section.heading, 12, 'bold', 'left', true);
-                        yPosition += 4;
-                    }
-                    if (section.type === 'table' && section.tableData) {
-                        yPosition += 5;
-                        const colWidth = contentWidth / section.tableData.headers.length;
-                        pdf.setFillColor(0, 0, 0);
-                        pdf.setTextColor(255, 255, 255);
-                        section.tableData.headers.forEach((header: string, i: number) => {
-                            pdf.rect(margin + (i * colWidth), yPosition, colWidth, 8, 'F');
-                            pdf.setFontSize(10);
-                            pdf.text(header, margin + (i * colWidth) + 2, yPosition + 5);
-                        });
-                        yPosition += 8;
-                        pdf.setTextColor(0, 0, 0);
-                        section.tableData.rows.forEach((row: string[]) => {
-                            row.forEach((cell: string, i: number) => {
-                                pdf.rect(margin + (i * colWidth), yPosition, colWidth, 7);
-                                pdf.text(cell, margin + (i * colWidth) + 2, yPosition + 5);
-                            });
-                            yPosition += 7;
-                        });
-                        yPosition += 5;
-                    } else if (section.type === 'list') {
-                        section.content.forEach((item: string) => {
-                            pdf.text('•', margin, yPosition);
-                            const lines = pdf.splitTextToSize(item, contentWidth - 5);
-                            lines.forEach((line: string) => {
-                                pdf.text(line, margin + 5, yPosition);
-                                yPosition += 5;
-                            });
-                            yPosition += 2;
-                        });
-                    } else if (section.content) {
-                        section.content.forEach((paragraph: string) => {
-                            addText(paragraph, 11, 'normal', docContent.type === 'certificate' ? 'center' : 'left');
-                            yPosition += 6;
-                        });
-                    }
-                });
-            }
-
-            if (docContent.metadata) {
+                    });
+                }
+            });
+        }
                 yPosition = pageHeight - 25;
                 pdf.setFontSize(10);
                 if (docContent.metadata.date) pdf.text(`Date: ${docContent.metadata.date}`, margin, yPosition);
