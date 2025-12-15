@@ -143,60 +143,64 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const selectedWeight = fontConfig.weight;
 
         // Step 1: Use AI to generate detailed document specification
-        const systemPrompt = `You are an expert professional writer creating HIGH-QUALITY, POLISHED documents with strict INDIAN FORMATTING.
+        const systemPrompt = `You are an expert professional writer and document architect creating HIGH-QUALITY, POLISHED documents.
 
 CRITICAL RULES:
-1. **CONTENT QUALITY**: Use PRECISE, POLITE, and SOPHISTICATED language. The text should be "pleasant" and highly professional. Avoid generic phrasing.
-2. **DISTINGUISH FORMATS**:
-   - **"application"**: For Principal, Job, Leave (Format: "To..." block at start).
-   - **"formal_letter"**: For Editor, Business, Official (Format: Sender Address -> Date -> Recipient Address).
-   - **"notice"**: For Schools, Offices, Public (Format: CENTERED Title "NOTICE", Date Left, Hearing/Body, Issuer Name/Designation).
-   - **"report"**: For News, events (Format: Title, Byline, Place/Date, Body).
-   - **"note"**: For informal/semi-formal notes.
-3. **INDIAN FORMATTING**: DD/MM/YYYY dates, Indian names/cities, ₹ currency.
-4. **LENGTH**: STRICTLY ADHERE to the user's requested length. If they ask for a "long" letter, write 3-4 detailed paragraphs. If "short", keep it concise. Default to ~1 page if unspecified.
-5. **FILENAME**: Generate a relevant, safe filename (e.g., "application_leave_abhi.pdf", "notice_lost_bottle.pdf"). Use underscores, lowercase, no spaces.
+1. **MISSING INFO POLICY (Make it Up!)**: If the user prompt lacks details (names, dates, addresses, items), **YOU MUST INVENT REALISTIC, PROFESSIONAL DATA**.
+    - NEVER use placeholders like "[Name]", "[Date]", "XYZ Corp".
+    - USE specific, realistic details: "Amit Kumar", "12th Oct 2025", "Greenwood High School, Bangalore", "Invoice #INV-2024-001".
+    - For invoices, generate *real* items like "Web Development Services - ₹15,000".
+
+2. **LAYOUT & FORMATTING**:
+    - **"report"**: Title, Byline, Place/Date, then content.
+    - **"notice"**: **MUST** result in a BOXED layout. Title "NOTICE" centered at top.
+    - **"invoice"**: **MUST** use a 'table' section for items.
+    - **"application"**: Strict formal block format.
+
+3. **INDIAN FORMATTING**: DD/MM/YYYY dates, Indian names/cities (if context implies), ₹ currency.
 
 RETURN JSON STRUCTURE:
 {
   "type": "application|formal_letter|certificate|invoice|notice|report|note|general",
   "filename": "document_name.pdf",
-  "title": "Document Title",
+  "title": "Document Title", // e.g. "NOTICE", "INVOICE", "Application for Leave"
   "letter_details": { 
-    "sender_address": ["Sender Name", "Address Line 1", "City - PIN"], // Only for formal_letter
-    "to_block": ["To,", "The Principal/Manager", "Institution Name", "City"], 
-    "date": "15/12/2025",
-    "subject": "Subject: ... (Clear & Professional)",
-    "salutation": "Respected Sir/Madam,", 
-    "body_paragraphs": [
-      "I am writing to respectfully submit...", 
-      "Paragraph 2 (Details)...", 
-      "I kindly request you to..." 
-    ],
-    "closing": "Thanking you,",
-    "signature_block": ["Yours sincerely/faithfully,", "Name", "Designation/Class"]
+     // OPTIONAL: Only for letters/applications/notices
+     "sender_address": ["From Address Line 1", "City - PIN"], 
+     "to_block": ["To,", "Recipient Name", "Company/School", "City"], 
+     "date": "15/12/2025",
+     "subject": "Subject: ...",
+     "salutation": "Respected Sir/Madam,",
+     "body_paragraphs": ["Para 1...", "Para 2..."],
+     "closing": "Thanking you,",
+     "signature_block": ["Yours sincerely,", "Name", "Designation"]
   },
-  "sections": [ ... ], // For certificates/others
-  "metadata": ...
+  "sections": [
+    // USE THIS FOR INVOICES, RESUMES, REPORTS, CERTIFICATES
+    {
+      "type": "table",
+      "heading": "Item Details", 
+      "tableData": {
+        "headers": ["Item Description", "Qty", "Price", "Total"],
+        "rows": [
+           ["Service Charge", "1", "15000", "15000"],
+           ["Tax (18%)", "-", "2700", "2700"]
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "content": ["Paragraph of text..."]
+    },
+    {
+        "type": "list",
+        "content": ["Point 1", "Point 2"]
+    }
+  ],
+  "metadata": { "date": "..." }
 }
 
-EXAMPLE (Application):
-{
-  "type": "application",
-  "filename": "application_leave_abhi.pdf",
-  "title": "Application for Leave",
-  "letter_details": {
-    "date": "15/12/2025",
-    "to_block": ["To,", "The Principal,", "DPS School,", "Delhi"],
-    "subject": "Subject: Application for 2 days leave",
-    "salutation": "Respected Sir,",
-    "body_paragraphs": ["I am Abhi, a student of class X-B...", "..."],
-    "closing": "Thanking you,",
-    "signature_block": ["Yours obediently,", "Abhi", "Class X-B"]
-  }
-}
-
-Return ONLY valid JSON.`;
+RETURN ONLY VALID JSON.`;
 
         const completion = await groq.chat.completions.create({
             messages: [
@@ -394,81 +398,101 @@ Return ONLY valid JSON.`;
         }
 
         // Render Sections (for Certificates, Reports, or extra content)
-        if (docContent.sections) {
-            // ... existing section logic ...
+        if (docContent.sections || docContent.type === 'notice' || docContent.type === 'certificate') {
+
+            // Special Layout: NOTICE (Boxed)
+            if (docContent.type === 'notice') {
+                pdf.setDrawColor(0, 0, 0); // Black border
+                pdf.setLineWidth(1);
+                // Draw box with padding
+                const boxMargin = margin - 5;
+                const boxWidth = pageWidth - (boxMargin * 2);
+                const boxHeight = pageHeight - (boxMargin * 2);
+                pdf.rect(boxMargin, boxMargin, boxWidth, boxHeight);
+
+                // Ensure title is centered if it wasn't already
+                if (!docContent.title) {
+                    pdf.setFontSize(20);
+                    pdf.setFont(selectedFont, 'bold');
+                    pdf.text("NOTICE", pageWidth / 2, yPosition, { align: 'center' });
+                    yPosition += 15;
+                }
+            }
+
+            // Special Layout: CERTIFICATE (Border)
             if (docContent.type === 'certificate') {
                 pdf.setDrawColor(0, 0, 0);
                 pdf.setLineWidth(1);
                 pdf.rect(15, 15, pageWidth - 30, pageHeight - 30);
-                // Reset Y if just starting
                 if (yPosition < 45) yPosition = 45;
             }
 
-            docContent.sections.forEach((section: any) => {
-                if (section.heading) {
-                    yPosition += 6;
-                    addText(section.heading, 12, 'bold', 'left', true);
-                    yPosition += 4;
-                }
-                if (section.type === 'table' && section.tableData) {
-                    yPosition += 5;
-                    const colWidth = contentWidth / section.tableData.headers.length;
-                    pdf.setFillColor(0, 0, 0);
-                    pdf.setTextColor(255, 255, 255);
-                    section.tableData.headers.forEach((header: string, i: number) => {
-                        pdf.rect(margin + (i * colWidth), yPosition, colWidth, 8, 'F');
-                        pdf.setFontSize(10);
-                        pdf.text(header, margin + (i * colWidth) + 2, yPosition + 5);
-                    });
-                    yPosition += 8;
-                    pdf.setTextColor(0, 0, 0);
-                    section.tableData.rows.forEach((row: string[]) => {
-                        row.forEach((cell: string, i: number) => {
-                            pdf.rect(margin + (i * colWidth), yPosition, colWidth, 7);
-                            pdf.text(cell, margin + (i * colWidth) + 2, yPosition + 5);
-                        });
-                        yPosition += 7;
-                    });
-                    yPosition += 5;
-                } else if (section.type === 'list') {
-                    section.content.forEach((item: string) => {
-                        pdf.text('•', margin, yPosition);
-                        const lines = pdf.splitTextToSize(item, contentWidth - 5);
-                        lines.forEach((line: string) => {
-                            pdf.text(line, margin + 5, yPosition);
-                            yPosition += 5;
-                        });
-                        yPosition += 2;
-                    });
-                } else if (section.content) {
-                    section.content.forEach((paragraph: string) => {
-                        addText(paragraph, 11, 'normal', docContent.type === 'certificate' ? 'center' : 'left');
+            if (docContent.sections) {
+                docContent.sections.forEach((section: any) => {
+                    if (section.heading) {
                         yPosition += 6;
-                    });
-                }
+                        addText(section.heading, 12, 'bold', 'left', true);
+                        yPosition += 4;
+                    }
+                    if (section.type === 'table' && section.tableData) {
+                        yPosition += 5;
+                        const colWidth = contentWidth / section.tableData.headers.length;
+                        pdf.setFillColor(0, 0, 0);
+                        pdf.setTextColor(255, 255, 255);
+                        section.tableData.headers.forEach((header: string, i: number) => {
+                            pdf.rect(margin + (i * colWidth), yPosition, colWidth, 8, 'F');
+                            pdf.setFontSize(10);
+                            pdf.text(header, margin + (i * colWidth) + 2, yPosition + 5);
+                        });
+                        yPosition += 8;
+                        pdf.setTextColor(0, 0, 0);
+                        section.tableData.rows.forEach((row: string[]) => {
+                            row.forEach((cell: string, i: number) => {
+                                pdf.rect(margin + (i * colWidth), yPosition, colWidth, 7);
+                                pdf.text(cell, margin + (i * colWidth) + 2, yPosition + 5);
+                            });
+                            yPosition += 7;
+                        });
+                        yPosition += 5;
+                    } else if (section.type === 'list') {
+                        section.content.forEach((item: string) => {
+                            pdf.text('•', margin, yPosition);
+                            const lines = pdf.splitTextToSize(item, contentWidth - 5);
+                            lines.forEach((line: string) => {
+                                pdf.text(line, margin + 5, yPosition);
+                                yPosition += 5;
+                            });
+                            yPosition += 2;
+                        });
+                    } else if (section.content) {
+                        section.content.forEach((paragraph: string) => {
+                            addText(paragraph, 11, 'normal', docContent.type === 'certificate' ? 'center' : 'left');
+                            yPosition += 6;
+                        });
+                    }
+                });
+            }
+
+            if (docContent.metadata) {
+                yPosition = pageHeight - 25;
+                pdf.setFontSize(10);
+                if (docContent.metadata.date) pdf.text(`Date: ${docContent.metadata.date}`, margin, yPosition);
+            }
+
+            // Output
+            const pdfBuffer = Buffer.from(pdf.output('arraybuffer'));
+            res.setHeader('Content-Type', 'application/pdf');
+            // Encode filename for header safety if needed, though basic sanitization above handles mostly.
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+            res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+            res.setHeader('Content-Length', pdfBuffer.length);
+            return res.status(200).send(pdfBuffer);
+
+        } catch (err: any) {
+            console.error('PDF generation error:', err);
+            return res.status(500).json({
+                message: 'Failed to generate PDF',
+                error: err.message
             });
         }
-
-        if (docContent.metadata) {
-            yPosition = pageHeight - 25;
-            pdf.setFontSize(10);
-            if (docContent.metadata.date) pdf.text(`Date: ${docContent.metadata.date}`, margin, yPosition);
-        }
-
-        // Output
-        const pdfBuffer = Buffer.from(pdf.output('arraybuffer'));
-        res.setHeader('Content-Type', 'application/pdf');
-        // Encode filename for header safety if needed, though basic sanitization above handles mostly.
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
-        res.setHeader('Content-Length', pdfBuffer.length);
-        return res.status(200).send(pdfBuffer);
-
-    } catch (err: any) {
-        console.error('PDF generation error:', err);
-        return res.status(500).json({
-            message: 'Failed to generate PDF',
-            error: err.message
-        });
     }
-}
