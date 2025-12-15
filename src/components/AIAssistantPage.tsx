@@ -49,7 +49,7 @@ export default function AIAssistantPage() {
 
     // Cancellation & Interval Refs
     const abortControllerRef = useRef<AbortController | null>(null);
-    const intervalRef = useRef<NodeJS.Timeout | null>(null);
+    const intervalRef = useRef<any>(null);
 
     // --- Effects ---
     const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
