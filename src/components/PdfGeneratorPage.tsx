@@ -184,17 +184,17 @@ export default function PdfGeneratorPage() {
                                 <svg className="absolute inset-0 w-full h-full" width="100%" height="100%">
                                     <defs>
                                         <linearGradient id="beam-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                            <stop offset="0%" stopColor="#6366f1" stopOpacity="0" />
-                                            <stop offset="50%" stopColor="#8b5cf6" />
-                                            <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
+                                            <stop offset="0%" stopColor="#818cf8" />
+                                            <stop offset="50%" stopColor="#c084fc" />
+                                            <stop offset="100%" stopColor="#6366f1" />
                                         </linearGradient>
                                     </defs>
                                     <rect
-                                        x="1" y="1" width="99.5%" height="99%"
+                                        x="2" y="2" width="calc(100% - 4px)" height="calc(100% - 4px)"
                                         rx="30" ry="30"
                                         fill="none"
                                         stroke="url(#beam-gradient)"
-                                        strokeWidth="2"
+                                        strokeWidth="3"
                                         className="animate-border-beam-svg"
                                     />
                                 </svg>
@@ -315,17 +315,17 @@ export default function PdfGeneratorPage() {
                                 <svg className="absolute inset-0 w-full h-full" width="100%" height="100%">
                                     <defs>
                                         <linearGradient id="beam-gradient-green" x1="0%" y1="0%" x2="100%" y2="0%">
-                                            <stop offset="0%" stopColor="#22c55e" stopOpacity="0" />
+                                            <stop offset="0%" stopColor="#4ade80" />
                                             <stop offset="50%" stopColor="#10b981" />
-                                            <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
+                                            <stop offset="100%" stopColor="#22c55e" />
                                         </linearGradient>
                                     </defs>
                                     <rect
-                                        x="1" y="1" width="99.5%" height="99%"
+                                        x="2" y="2" width="calc(100% - 4px)" height="calc(100% - 4px)"
                                         rx="24" ry="24"
                                         fill="none"
                                         stroke="url(#beam-gradient-green)"
-                                        strokeWidth="2"
+                                        strokeWidth="3"
                                         className="animate-border-beam-svg"
                                     />
                                 </svg>
@@ -393,13 +393,14 @@ export default function PdfGeneratorPage() {
                     100% { background-position: 0% 50%; }
                 }
                 .animate-border-beam-svg {
-                    stroke-dasharray: 600; /* Visible dash length */
-                    stroke-dashoffset: 1200;
+                    stroke-dasharray: 400 600; /* 400px Dash, 600px Gap */
+                    stroke-dashoffset: 1000;
+                    stroke-linecap: round;
                     animation: border-beam-svg 6s linear infinite;
                 }
                 @keyframes border-beam-svg {
                     to {
-                        stroke-dashoffset: -1200; /* Move full loop */
+                        stroke-dashoffset: -1000;
                     }
                 }
             `}</style>
