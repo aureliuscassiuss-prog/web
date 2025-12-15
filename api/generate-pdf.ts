@@ -117,13 +117,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(400).json({ message: 'Invalid prompt' });
         }
 
-        // Map user fonts to jsPDF fonts
-        const fontMap: Record<string, string> = {
-            'times': 'times',
-            'courier': 'courier',
-            'helvetica': 'helvetica'
+        // Map user fonts to jsPDF fonts (jsPDF only has 3 base fonts, so we create variations)
+        const fontMap: Record<string, { font: string, weight: string }> = {
+            // Serif Fonts (Times-based)
+            'times': { font: 'times', weight: 'normal' },
+            'times-bold': { font: 'times', weight: 'bold' },
+            'garamond': { font: 'times', weight: 'italic' }, // Times Italic as Garamond alternative
+
+            // Sans-Serif Fonts (Helvetica-based)
+            'helvetica': { font: 'helvetica', weight: 'normal' },
+            'arial': { font: 'helvetica', weight: 'normal' }, // Helvetica is similar to Arial
+            'calibri': { font: 'helvetica', weight: 'bold' }, // Helvetica Bold as Calibri alternative
+
+            // Monospace Fonts (Courier-based)
+            'courier': { font: 'courier', weight: 'normal' },
+            'consolas': { font: 'courier', weight: 'bold' }, // Courier Bold as Consolas alternative
+
+            // Additional variations
+            'georgia': { font: 'times', weight: 'normal' }, // Times as Georgia alternative
+            'verdana': { font: 'helvetica', weight: 'bolditalic' } // Helvetica Bold Italic as Verdana
         };
-        const selectedFont = fontMap[font.toLowerCase()] || 'helvetica';
+
+        const fontConfig = fontMap[font.toLowerCase()] || { font: 'helvetica', weight: 'normal' };
+        const selectedFont = fontConfig.font;
+        const selectedWeight = fontConfig.weight;
 
         // Step 1: Use AI to generate detailed document specification
         const systemPrompt = `You are an expert professional writer creating HIGH-QUALITY, POLISHED documents with strict INDIAN FORMATTING.
@@ -237,7 +254,9 @@ Return ONLY valid JSON.`;
         // Improved Text Render Function with Justification
         const addText = (text: string, fontSize: number, fontStyle: string, align: 'left' | 'center' | 'right' | 'justify' = 'left', isBold: boolean = false) => {
             pdf.setFontSize(fontSize);
-            pdf.setFont('helvetica', isBold ? 'bold' : fontStyle);
+            // Use selected font and weight, override with bold if requested
+            const weight = isBold ? 'bold' : (fontStyle === 'bold' ? 'bold' : selectedWeight);
+            pdf.setFont(selectedFont, weight);
 
             // Standard line height ratio
             const lineHeight = fontSize * 0.5; // roughly 1.4x (points to mm conversion factor ~0.35 * 1.4)

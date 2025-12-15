@@ -32,9 +32,21 @@ export default function PdfGeneratorPage() {
     }, []);
 
     const fonts = [
-        { id: 'helvetica', name: 'Classic', family: 'Helvetica, Arial, sans-serif' },
-        { id: 'times', name: 'Professional', family: '"Times New Roman", Times, serif' },
-        { id: 'courier', name: 'Typewriter', family: '"Courier New", Courier, monospace' },
+        // Serif - Professional Documents
+        { id: 'times', name: 'Times New Roman', family: '"Times New Roman", Times, serif', category: 'Serif' },
+        { id: 'times-bold', name: 'Times (Bold)', family: '"Times New Roman", Times, serif', category: 'Serif' },
+        { id: 'garamond', name: 'Garamond', family: 'Garamond, "Times New Roman", serif', category: 'Serif' },
+        { id: 'georgia', name: 'Georgia', family: 'Georgia, serif', category: 'Serif' },
+
+        // Sans-Serif - Modern & Corporate
+        { id: 'helvetica', name: 'Helvetica', family: 'Helvetica, Arial, sans-serif', category: 'Sans' },
+        { id: 'arial', name: 'Arial', family: 'Arial, Helvetica, sans-serif', category: 'Sans' },
+        { id: 'calibri', name: 'Calibri', family: 'Calibri, Arial, sans-serif', category: 'Sans' },
+        { id: 'verdana', name: 'Verdana', family: 'Verdana, Geneva, sans-serif', category: 'Sans' },
+
+        // Monospace - Technical
+        { id: 'courier', name: 'Courier New', family: '"Courier New", Courier, monospace', category: 'Mono' },
+        { id: 'consolas', name: 'Consolas', family: 'Consolas, "Courier New", monospace', category: 'Mono' },
     ];
 
     const selectedFontObj = fonts.find(f => f.id === font) || fonts[0];
@@ -197,9 +209,9 @@ export default function PdfGeneratorPage() {
                                                     <ChevronDown size={14} className={`text-slate-400 dark:text-zinc-500 transition-transform ${isFontOpen ? 'rotate-180' : ''}`} />
                                                 </button>
 
-                                                {/* Smart Dropdown Menu - appears below by default, above if not enough space */}
+                                                {/* Smart Dropdown Menu - appears above with proper width */}
                                                 {isFontOpen && (
-                                                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-44 bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border border-slate-200 dark:border-zinc-800 p-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-52 bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border border-slate-200 dark:border-zinc-800 p-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 max-h-72 overflow-y-auto">
                                                         {fonts.map((f) => (
                                                             <button
                                                                 key={f.id}
@@ -213,8 +225,8 @@ export default function PdfGeneratorPage() {
                                                                     }`}
                                                                 style={{ fontFamily: f.family }}
                                                             >
-                                                                {f.name}
-                                                                {font === f.id && <CheckCircle size={14} />}
+                                                                <span>{f.name}</span>
+                                                                {font === f.id && <CheckCircle size={14} className="ml-2 flex-shrink-0" />}
                                                             </button>
                                                         ))}
                                                     </div>
