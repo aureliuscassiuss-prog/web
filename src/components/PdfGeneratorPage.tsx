@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Download, CheckCircle, ArrowLeft, ChevronDown, Loader2 } from 'lucide-react';
+import { Download, CheckCircle, ArrowLeft, ChevronDown } from 'lucide-react';
 
 // Custom 4-Point Star Icon matching the reference image
 const FourPointStar = ({ className }: { className?: string }) => (
@@ -280,14 +280,9 @@ export default function PdfGeneratorPage() {
                                         {/* Indigo-Purple Gradient Border with Animation */}
                                         <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 animate-gradient-xy opacity-100"></div>
 
-                                        {/* Inner Black Button */}
                                         <div className="relative w-full py-4 bg-black rounded-full flex items-center justify-center gap-3 transition-all group-hover:bg-[#0c0c0f]">
 
-                                            {isGenerating ? (
-                                                <Loader2 size={20} className="text-white animate-spin" />
-                                            ) : (
-                                                <FourPointStar className="w-6 h-6 text-white" />
-                                            )}
+                                            <FourPointStar className={`w-6 h-6 text-white ${isGenerating ? 'animate-spin' : ''}`} />
 
                                             <span className="font-semibold text-white text-lg tracking-wide">
                                                 {isGenerating ? 'Generating...' : 'Generate Document'}
@@ -375,13 +370,13 @@ export default function PdfGeneratorPage() {
             </div>
 
             <style>{`
-                @keyframes spin {
+                @keyframes spin-beam {
                     from { transform: translate(-50%, -50%) rotate(0deg); }
                     to { transform: translate(-50%, -50%) rotate(360deg); }
                 }
 
                 .animate-spin-slow {
-                    animation: spin 8s linear infinite;
+                    animation: spin-beam 8s linear infinite;
                     transform-origin: center center;
                 }
 
