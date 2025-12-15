@@ -18,6 +18,7 @@ export default function SEO({
     type = "website"
 }: SEOProps) {
     const siteTitle = title === "Extrovert - Educational Resource Sharing Platform" ? title : `${title} | Extrovert`;
+    const fullImage = image.startsWith('http') ? image : `https://extrovert.site${image.startsWith('/') ? '' : '/'}${image}`;
 
     return (
         <Helmet>
@@ -29,7 +30,7 @@ export default function SEO({
             {/* Open Graph tags (Facebook, LinkedIn, etc.) */}
             <meta property="og:title" content={siteTitle} />
             <meta property="og:description" content={description} />
-            <meta property="og:image" content={image} />
+            <meta property="og:image" content={fullImage} />
             <meta property="og:url" content={url} />
             <meta property="og:type" content={type} />
 
@@ -37,7 +38,7 @@ export default function SEO({
             <meta name="twitter:card" content="summary_large_image" />
             <meta name="twitter:title" content={siteTitle} />
             <meta name="twitter:description" content={description} />
-            <meta name="twitter:image" content={image} />
+            <meta name="twitter:image" content={fullImage} />
 
             {/* Canonical URL */}
             <link rel="canonical" href={url} />

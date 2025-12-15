@@ -126,7 +126,7 @@ function Layout({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
+              className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm md:hidden"
               onClick={() => setIsMobileMenuOpen(false)}
             />
 
@@ -137,7 +137,7 @@ function Layout({
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 left-0 z-50 w-3/4 max-w-sm bg-white dark:bg-black shadow-2xl flex flex-col md:hidden"
+              className="fixed inset-y-0 left-0 z-[70] w-3/4 max-w-sm bg-white dark:bg-black shadow-2xl flex flex-col md:hidden"
               onClick={e => e.stopPropagation()}
             >
               {/* Header with Logo and Close Button */}
