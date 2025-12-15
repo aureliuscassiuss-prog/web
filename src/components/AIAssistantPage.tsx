@@ -493,7 +493,7 @@ export default function AIAssistantPage() {
                                                     '--tw-prose-th-borders': 'inherit',
                                                 } as React.CSSProperties : undefined}
                                             >
-                                                <ReactMarkdown>
+                                                <ReactMarkdown components={{ code: CodeBlock }}>
                                                     {msg.text}
                                                 </ReactMarkdown>
                                             </div>
