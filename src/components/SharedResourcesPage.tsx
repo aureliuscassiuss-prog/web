@@ -143,8 +143,8 @@ export default function SharedResourcesPage() {
                             <div className={`absolute inset-0 bg-gradient-to-br ${timeOfDay === 'evening' ? 'from-indigo-500 to-purple-600' : 'from-orange-400 to-yellow-500'} rounded-full blur opacity-40 group-hover:opacity-60 transition-opacity duration-500`} />
                             <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full p-1 bg-white/80 dark:bg-black/30 backdrop-blur-md shadow-xl border border-white/50 dark:border-white/10">
                                 <div className="w-full h-full rounded-full bg-white dark:bg-gray-800 overflow-hidden flex items-center justify-center">
-                                    {data.user.avatar ? (
-                                        <img src={data.user.avatar} alt={data.user.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-out" />
+                                    {data?.user?.avatar ? (
+                                        <img src={data.user.avatar} alt={data.user.name || 'User'} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-out" />
                                     ) : (
                                         <User className="w-10 h-10 text-gray-400" />
                                     )}
@@ -162,24 +162,24 @@ export default function SharedResourcesPage() {
                             </div>
                             <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 dark:text-white leading-tight tracking-tight mb-2">
                                 <span className="text-transparent bg-clip-text bg-gradient-to-br from-gray-900 to-gray-600 dark:from-white dark:to-gray-400">
-                                    {data.user.name}'s
+                                    {data?.user?.name || 'User'}'s
                                 </span> Library
                             </h1>
                             <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-2xl leading-relaxed">
-                                A curated collection of <span className="font-semibold text-gray-900 dark:text-white">{data.resources.length}</span> resources, shared from Extrovert Community.
+                                A curated collection of <span className="font-semibold text-gray-900 dark:text-white">{data?.resources?.length || 0}</span> resources, shared from Extrovert Community.
                             </p>
                         </div>
                     </div>
 
                     {/* Special Note Card */}
-                    {data.list?.note && (
+                    {data?.list?.note && (
                         <div className="relative z-10 mt-6 bg-white/60 dark:bg-black/20 backdrop-blur-md border border-white/40 dark:border-white/5 rounded-xl p-4 sm:p-5 flex gap-3 text-left shadow-sm">
                             <div className="shrink-0 pt-0.5">
                                 <FileText className="w-5 h-5 text-yellow-600 dark:text-yellow-500" />
                             </div>
                             <div>
                                 <h4 className="text-xs font-bold uppercase tracking-wider text-yellow-600 dark:text-yellow-500 mb-1">
-                                    Message from {data.user.name.split(' ')[0]}
+                                    Message from {data.user?.name?.split(' ')[0] || 'User'}
                                 </h4>
                                 <p className="text-sm sm:text-base text-gray-800 dark:text-gray-200 leading-relaxed font-medium">
                                     "{data.list.note}"

@@ -122,7 +122,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        const { action } = req.query;
+        let { action } = req.query;
+        // Infer share action if slug is present (robustness for lost query params)
+        if (!action && req.query.slug) {
+            action = 'share';
+            console.log('[API] Inferred action=share from slug presence');
+        }
 
         // --- GET REQUESTS ---
         if (req.method === 'GET') {
