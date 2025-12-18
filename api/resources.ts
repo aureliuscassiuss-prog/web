@@ -325,12 +325,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             try {
                 // 1. Check Shared List
                 const { data: sharedList } = await supabase.from('shared_lists').select('*').eq('slug', slug).single();
+                console.log('[API] Shared List Fetch:', { slug, found: !!sharedList, ownerId: sharedList?.ownerId });
 
                 let resources: any[] = [];
                 let ownerUser: any = null;
 
                 if (sharedList) {
-                    const { data: owner } = await supabase.from('users').select('name, avatar, _id').eq('_id', sharedList.ownerId).single();
+                    const { data: owner, error: ownerError } = await supabase.from('users').select('name, avatar, _id').eq('_id', sharedList.ownerId).single();
+                    console.log('[API] Owner Fetch:', { ownerId: sharedList.ownerId, ownerFound: !!owner, error: ownerError });
                     ownerUser = owner;
                     if (sharedList.resources && sharedList.resources.length > 0) {
                         const { data: resData } = await supabase
