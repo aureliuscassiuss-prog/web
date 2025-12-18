@@ -116,16 +116,24 @@ export default function SavedResources() {
                 body: JSON.stringify(body)
             });
 
-            if (res.ok) {
-                const data = await res.json();
+            const data = await res.json();
+
+            if (!res.ok) {
+                console.error('Share API Error:', data);
+                alert(`Share Failed: ${data.message || 'Unknown error'}\n${data.debug ? JSON.stringify(data.debug, null, 2) : ''}`);
+                return;
+            }
+
+            if (data.slug) {
                 const url = `${window.location.origin}/shared/${data.slug}`;
                 setShareUrl(url);
                 navigator.clipboard.writeText(url);
                 setJustCopied(true);
                 setTimeout(() => setJustCopied(false), 2000);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to generate share link', error);
+            alert(`Error: ${error.message}`);
         } finally {
             setIsSharing(false);
         }
