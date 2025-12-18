@@ -183,103 +183,105 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             // 2. Standard Resource Fetching
-            const {
-                type, resourceType, examYear, search,
-                branch, course, year, semester, subject, unit
-            } = req.query;
+            if (!action) {
+                const {
+                    type, resourceType, examYear, search,
+                    branch, course, year, semester, subject, unit
+                } = req.query;
 
-            let query = supabase
-                .from('resources')
-                .select('*, uploaderRel:users(avatar)') // Join with users to get avatar. requires FK
-                .eq('status', 'approved')
-                .limit(100);
+                let query = supabase
+                    .from('resources')
+                    .select('*, uploaderRel:users(avatar)') // Join with users to get avatar. requires FK
+                    .eq('status', 'approved')
+                    .limit(100);
 
-            // Filtering
-            if (typeof type === 'string') query = query.eq('resourceType', type);
-            if (typeof resourceType === 'string') query = query.eq('resourceType', resourceType);
-            if (typeof examYear === 'string') query = query.eq('examYear', examYear);
-            if (typeof branch === 'string') query = query.eq('branch', branch);
-            if (typeof course === 'string') query = query.eq('course', course);
-            if (typeof semester === 'string') query = query.eq('semester', semester);
-            if (typeof subject === 'string') query = query.eq('subject', subject);
+                // Filtering
+                if (typeof type === 'string') query = query.eq('resourceType', type);
+                if (typeof resourceType === 'string') query = query.eq('resourceType', resourceType);
+                if (typeof examYear === 'string') query = query.eq('examYear', examYear);
+                if (typeof branch === 'string') query = query.eq('branch', branch);
+                if (typeof course === 'string') query = query.eq('course', course);
+                if (typeof semester === 'string') query = query.eq('semester', semester);
+                if (typeof subject === 'string') query = query.eq('subject', subject);
 
-            if (year) {
-                const yearStr = year.toString();
-                const yearNum = parseInt(yearStr.replace(/\D/g, ''));
-                if (!isNaN(yearNum)) {
-                    // In supabase we stored 'year' as text column in schema script to be flexible
-                    // But if we want to match multiple formats, we might need an OR
-                    // .or(`year.eq.${yearNum},year.eq.${yearStr},...`)
-                    // For simplicity, let's just try exact match first or check the schema type
-                    // Schema says "year text". So we search for the string.
-                    query = query.or(`year.eq.${yearNum},year.eq.${yearStr},year.eq.${yearNum}${yearNum === 1 ? 'st' : yearNum === 2 ? 'nd' : yearNum === 3 ? 'rd' : 'th'} Year`);
-                } else {
-                    query = query.eq('year', yearStr);
+                if (year) {
+                    const yearStr = year.toString();
+                    const yearNum = parseInt(yearStr.replace(/\D/g, ''));
+                    if (!isNaN(yearNum)) {
+                        // In supabase we stored 'year' as text column in schema script to be flexible
+                        // But if we want to match multiple formats, we might need an OR
+                        // .or(`year.eq.${yearNum},year.eq.${yearStr},...`)
+                        // For simplicity, let's just try exact match first or check the schema type
+                        // Schema says "year text". So we search for the string.
+                        query = query.or(`year.eq.${yearNum},year.eq.${yearStr},year.eq.${yearNum}${yearNum === 1 ? 'st' : yearNum === 2 ? 'nd' : yearNum === 3 ? 'rd' : 'th'} Year`);
+                    } else {
+                        query = query.eq('year', yearStr);
+                    }
                 }
-            }
 
-            // Unit Filtering (partial match)
-            if (typeof unit === 'string') {
-                const numberOnly = unit.replace(/unit\s*/i, '');
-                // ilike %numberOnly
-                query = query.ilike('unit', `%${numberOnly}%`);
-            }
-
-            // Search (OR condition)
-            if (typeof search === 'string') {
-                const s = search; // simplify
-                // ILIKE on title, description, subject, uploader
-                // Note: uploader is a column in resources (denormalized name)
-                query = query.or(`title.ilike.%${s}%,description.ilike.%${s}%,subject.ilike.%${s}%,uploader.ilike.%${s}%`);
-            }
-
-            // Execute
-            const { data: resources, error } = await query.order('createdAt', { ascending: false });
-
-            if (error) {
-                console.error('Resource fetch error:', error);
-                return res.status(500).json({ message: 'Failed to fetch resources' });
-            }
-
-            // Map results
-
-            // Get user ID if authenticated
-            let userId: string | null = null;
-            try {
-                const token = req.headers.authorization?.replace('Bearer ', '');
-                if (token && process.env.JWT_SECRET) {
-                    const decoded = jwt.verify(token, process.env.JWT_SECRET) as { userId: string };
-                    userId = decoded.userId;
+                // Unit Filtering (partial match)
+                if (typeof unit === 'string') {
+                    const numberOnly = unit.replace(/unit\s*/i, '');
+                    // ilike %numberOnly
+                    query = query.ilike('unit', `%${numberOnly}%`);
                 }
-            } catch (e) { }
 
-            const resourcesWithStates = (resources || []).map((resource: any) => {
-                // Flatten avatar from join
-                const avatar = resource.uploaderRel?.avatar;
+                // Search (OR condition)
+                if (typeof search === 'string') {
+                    const s = search; // simplify
+                    // ILIKE on title, description, subject, uploader
+                    // Note: uploader is a column in resources (denormalized name)
+                    query = query.or(`title.ilike.%${s}%,description.ilike.%${s}%,subject.ilike.%${s}%,uploader.ilike.%${s}%`);
+                }
 
-                // Calculate counts from arrays
-                const likedBy = resource.likedBy || [];
-                const dislikedBy = resource.dislikedBy || [];
-                const savedBy = resource.savedBy || [];
-                const flaggedBy = resource.flaggedBy || [];
+                // Execute
+                const { data: resources, error } = await query.order('createdAt', { ascending: false });
 
-                return {
-                    ...resource,
-                    uploaderAvatar: avatar,
-                    // Counts
-                    likes: likedBy.length,
-                    dislikes: dislikedBy.length,
-                    flags: flaggedBy.length,
-                    downloads: resource.downloads || 0,
-                    // User-specific states
-                    userLiked: userId && likedBy.includes(userId),
-                    userDisliked: userId && dislikedBy.includes(userId),
-                    userSaved: userId && savedBy.includes(userId),
-                    userFlagged: userId && flaggedBy.includes(userId)
-                };
-            });
+                if (error) {
+                    console.error('Resource fetch error:', error);
+                    return res.status(500).json({ message: 'Failed to fetch resources' });
+                }
 
-            return res.status(200).json({ resources: resourcesWithStates });
+                // Map results
+
+                // Get user ID if authenticated
+                let userId: string | null = null;
+                try {
+                    const token = req.headers.authorization?.replace('Bearer ', '');
+                    if (token && process.env.JWT_SECRET) {
+                        const decoded = jwt.verify(token, process.env.JWT_SECRET) as { userId: string };
+                        userId = decoded.userId;
+                    }
+                } catch (e) { }
+
+                const resourcesWithStates = (resources || []).map((resource: any) => {
+                    // Flatten avatar from join
+                    const avatar = resource.uploaderRel?.avatar;
+
+                    // Calculate counts from arrays
+                    const likedBy = resource.likedBy || [];
+                    const dislikedBy = resource.dislikedBy || [];
+                    const savedBy = resource.savedBy || [];
+                    const flaggedBy = resource.flaggedBy || [];
+
+                    return {
+                        ...resource,
+                        uploaderAvatar: avatar,
+                        // Counts
+                        likes: likedBy.length,
+                        dislikes: dislikedBy.length,
+                        flags: flaggedBy.length,
+                        downloads: resource.downloads || 0,
+                        // User-specific states
+                        userLiked: userId && likedBy.includes(userId),
+                        userDisliked: userId && dislikedBy.includes(userId),
+                        userSaved: userId && savedBy.includes(userId),
+                        userFlagged: userId && flaggedBy.includes(userId)
+                    };
+                });
+
+                return res.status(200).json({ resources: resourcesWithStates });
+            }
         }
 
         // 3. Fetched Saved Resources
