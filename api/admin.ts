@@ -82,6 +82,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (userAction) {
                 if (!hasPermission(['admin'])) return res.status(403).json({ message: 'Forbidden' });
                 return await handleUserAction(body, res);
+            } else if (bodyAction === 'approve-event' || bodyAction === 'reject-event') {
+                if (!hasPermission(['admin', 'semi-admin', 'content-reviewer'])) return res.status(403).json({ message: 'Forbidden' });
+                return await handleEventAction(body, res);
             } else if (bodyAction === 'approve' || bodyAction === 'reject') {
                 if (!hasPermission(['admin', 'semi-admin', 'content-reviewer'])) return res.status(403).json({ message: 'Forbidden' });
                 return await handleResourceAction(body, res);
@@ -109,26 +112,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 }
 
 async function handleGetPending(res: VercelResponse) {
-    // Fetch pending resources with uploader info
+    // Fetch pending resources
     const { data: resources, error } = await supabase
         .from('resources')
         .select('*, uploader:users(name, avatar)')
         .eq('status', 'pending')
         .order('createdAt', { ascending: false });
 
-    if (error) {
-        console.error('Pending fetch error:', error);
-        return res.status(500).json({ resources: [] });
+    // Fetch pending events
+    const { data: events, error: eventError } = await supabase
+        .from('events')
+        .select('*, organizer:users(name, avatar)')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+    if (error || eventError) {
+        console.error('Pending fetch error:', error || eventError);
+        return res.status(500).json({ resources: [], events: [] });
     }
 
-    const formatted = resources.map((r: any) => ({
+    const formattedResources = resources.map((r: any) => ({
         ...r,
         uploaderName: r.uploader?.name || 'Unknown',
         uploaderAvatar: r.uploader?.avatar,
         type: r.resourceType || 'Not specified'
     }));
 
-    return res.status(200).json({ resources: formatted });
+    const formattedEvents = events.map((e: any) => ({
+        ...e,
+        uploaderName: e.organizer?.name || 'Unknown',
+        uploaderAvatar: e.organizer?.avatar,
+        type: 'Event' // Normalize for UI
+    }));
+
+    return res.status(200).json({ resources: formattedResources, events: formattedEvents });
 }
 
 async function handleGetStructure(res: VercelResponse) {
@@ -241,6 +258,33 @@ async function handleResourceAction(body: any, res: VercelResponse) {
         return res.status(200).json({ message: 'Rejected' });
     }
     return res.status(400).json({ message: 'Invalid action' });
+}
+
+async function handleEventAction(body: any, res: VercelResponse) {
+    const { action, eventId } = body; // action is 'approve-event' or 'reject-event' from the dispatcher, but here we just check 'approve' logic if we want, OR we use the full string.
+    // The dispatcher sends 'approve-event' as bodyAction. Let's normalize inside.
+
+    // Actually, in the dispatcher I passed the whole body.
+    const effectiveAction = body.action === 'approve-event' ? 'approve' : 'reject';
+
+    if (!eventId) return res.status(400).json({ message: 'Event ID required' });
+
+    if (effectiveAction === 'approve') {
+        const { error } = await supabase
+            .from('events')
+            .update({ status: 'approved' })
+            .eq('_id', eventId);
+
+        if (error) return res.status(500).json({ message: 'Failed to approve event' });
+        return res.status(200).json({ message: 'Event Approved' });
+
+    } else if (effectiveAction === 'reject') {
+        // Delete or mark rejected
+        const { error } = await supabase.from('events').delete().eq('_id', eventId);
+        if (error) return res.status(500).json({ message: 'Failed to find/delete event' });
+        return res.status(200).json({ message: 'Event Rejected' });
+    }
+    return res.status(400).json({ message: 'Invalid event action' });
 }
 
 async function handleUserAction(body: any, res: VercelResponse) {

@@ -25,6 +25,24 @@ interface PendingResource {
     createdAt: string
 }
 
+interface PendingEvent {
+    _id: string
+    title: string
+    description: string
+    image: string
+    date: string
+    location: string
+    price: number
+    currency: string
+    organizer: {
+        name: string
+        avatar?: string
+    }
+    organizer_id: string
+    status: string
+    created_at: string
+}
+
 interface UserData {
     _id: string
     name: string
@@ -43,7 +61,7 @@ interface UserData {
 
 interface CombinedRequest {
     type: 'resource' | 'role'
-    data: PendingResource | UserData
+    data: PendingResource | UserData | PendingEvent
     date: string
 }
 
@@ -103,6 +121,7 @@ export default function AdminPanel() {
         localStorage.setItem('adminActiveTab', activeTab)
     }, [activeTab])
     const [pendingResources, setPendingResources] = useState<PendingResource[]>([])
+    const [pendingEvents, setPendingEvents] = useState<PendingEvent[]>([])
     const [users, setUsers] = useState<UserData[]>([])
     // combined logic removed as multiple sources merged in DB
     const [structure, setStructure] = useState<{ programs: Program[] }>({ programs: [] })
@@ -215,7 +234,10 @@ export default function AdminPanel() {
     const fetchPendingResources = async () => {
         const res = await fetch('/api/admin?action=pending', { headers: { 'Authorization': `Bearer ${token}` } })
         const data = await res.json()
-        if (res.ok) setPendingResources(data.resources || [])
+        if (res.ok) {
+            setPendingResources(data.resources || [])
+            setPendingEvents(data.events || [])
+        }
     }
 
     const fetchUsers = async () => {
@@ -254,6 +276,23 @@ export default function AdminPanel() {
             if (res.ok) {
                 setPendingResources(prev => prev.filter(r => r._id !== resourceId))
                 showToast(`Item ${action}ed successfully`)
+            }
+        } catch (err) { console.error(err); showToast('Action failed', 'error') } finally { setProcessingId(null) }
+    }
+
+    const handleEventAction = async (eventId: string, action: 'approve' | 'reject') => {
+        setProcessingId(eventId)
+        try {
+            const res = await fetch('/api/admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ action: `${action}-event`, eventId })
+            })
+            if (res.ok) {
+                setPendingEvents(prev => prev.filter(e => e._id !== eventId))
+                showToast(`Event ${action}ed successfully`)
+            } else {
+                showToast('Action failed', 'error')
             }
         } catch (err) { console.error(err); showToast('Action failed', 'error') } finally { setProcessingId(null) }
     }
@@ -855,7 +894,7 @@ export default function AdminPanel() {
                         </div>
                     ) : (
                         <>
-                            {activeTab === 'pending' && <motion.div key="pending" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}><PendingView resources={pendingResources} processingId={processingId} onAction={handleResourceAction} /></motion.div>}
+                            {activeTab === 'pending' && <motion.div key="pending" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}><PendingView resources={pendingResources} events={pendingEvents} processingId={processingId} onAction={handleResourceAction} onEventAction={handleEventAction} /></motion.div>}
                             {activeTab === 'users' && <motion.div key="users" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}><UsersView users={users} processingId={processingId} onAction={handleUserAction} /></motion.div>}
                             {activeTab === 'structure' && <motion.div key="structure" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}>
                                 <div className="grid grid-cols-1 md:flex md:gap-6 md:overflow-x-auto md:pb-8 gap-6">
@@ -1124,7 +1163,7 @@ function StructureCard({ title, step, items, value, setValue, extraInput, onAdd,
     )
 }
 
-function PendingView({ resources, processingId, onAction }: { resources: PendingResource[], processingId: string | null, onAction: any }) {
+function PendingView({ resources, events, processingId, onAction, onEventAction }: { resources: PendingResource[], events: PendingEvent[], processingId: string | null, onAction: any, onEventAction: any }) {
     const [expandedIds, setExpandedIds] = useState<string[]>([])
 
     const toggleExpand = (id: string) => {
@@ -1139,7 +1178,7 @@ function PendingView({ resources, processingId, onAction }: { resources: Pending
         </svg>
     )
 
-    if (!Array.isArray(resources) || resources.length === 0) {
+    if ((!Array.isArray(resources) || resources.length === 0) && (!Array.isArray(events) || events.length === 0)) {
         return (
             <div className="flex flex-col items-center justify-center h-64 text-gray-400 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
                 <Check size={48} className="mb-4 opacity-20" />
@@ -1149,37 +1188,184 @@ function PendingView({ resources, processingId, onAction }: { resources: Pending
     }
 
     return (
-        <div className="space-y-2">
-            {resources.map((resource: PendingResource) => {
-                const isExpanded = expandedIds.includes(resource._id)
-                const isProcessing = processingId === resource._id
+        <div className="space-y-6">
+            {events && events.length > 0 && (
+                <div className="space-y-2">
+                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest pl-1">Event Requests</h3>
+                    {events.map((event) => {
+                        const isExpanded = expandedIds.includes(event._id)
+                        const isProcessing = processingId === event._id
 
-                // Helper to render date
-                const renderDate = (dateStr: string) => {
-                    try {
-                        const date = new Date(dateStr)
-                        if (!isNaN(date.getTime())) {
-                            return `${date.toLocaleDateString()} • ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                        }
-                    } catch (e) { }
-                    return 'Unknown Date'
-                }
+                        return (
+                            <motion.div
+                                key={event._id}
+                                initial={false}
+                                className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden relative"
+                            >
+                                <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500/50" />
+                                <button
+                                    onClick={() => toggleExpand(event._id)}
+                                    className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left"
+                                >
+                                    <div className="h-9 w-9 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                                        {event.organizer?.avatar ? (
+                                            <img src={event.organizer.avatar} alt={event.organizer.name} className="h-full w-full object-cover" />
+                                        ) : (
+                                            <NeutralAvatar className="h-full w-full" />
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">{event.title}</div>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{event.organizer?.name} • Event</div>
+                                    </div>
+                                    <div className="flex-shrink-0">
+                                        <StatusBadge type="admin" label="New Event" />
+                                    </div>
+                                    <motion.div animate={{ rotate: isExpanded ? 90 : 0 }} transition={{ duration: 0.2 }} className="flex-shrink-0">
+                                        <ChevronRight className="text-gray-400" size={18} />
+                                    </motion.div>
+                                </button>
 
-                const dateDisplay = renderDate(resource.createdAt)
+                                <motion.div
+                                    initial={false}
+                                    animate={{ height: isExpanded ? 'auto' : 0, opacity: isExpanded ? 1 : 0 }}
+                                    transition={{ duration: 0.3 }}
+                                    className="overflow-hidden"
+                                >
+                                    <div className="px-3 pb-3 pt-1 border-t border-gray-100 dark:border-gray-800 space-y-3 pl-7">
+                                        <div className="flex gap-4">
+                                            <img src={event.image || "/placeholder-event.jpg"} className="w-24 h-16 object-cover rounded-md bg-gray-100" />
+                                            <div className="flex-1 space-y-1">
+                                                <p className="text-sm text-gray-900 dark:text-white font-medium">{event.description}</p>
+                                                <div className="text-xs text-gray-500">
+                                                    <div>Date: {new Date(event.date).toLocaleDateString()}</div>
+                                                    <div>Location: {event.location}</div>
+                                                    <div>Price: {event.currency} {event.price}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <button
+                                                onClick={() => onEventAction(event._id, 'approve')}
+                                                disabled={isProcessing}
+                                                className="px-3 py-2 rounded-md text-xs font-medium bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800 flex items-center justify-center gap-2"
+                                            >
+                                                {isProcessing ? <TyreLoader size={14} /> : <Check size={14} />} Approve Event
+                                            </button>
+                                            <button
+                                                onClick={() => onEventAction(event._id, 'reject')}
+                                                disabled={isProcessing}
+                                                className="px-3 py-2 rounded-md text-xs font-medium bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 flex items-center justify-center gap-2"
+                                            >
+                                                <X size={14} /> Reject Event
+                                            </button>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            </motion.div>
+                        )
+                    })}
+                </div>
+            )}
 
-                // --- ROLE REQUEST CARD (via Resource Type) ---
-                if (resource.resourceType === 'role-request') {
-                    // Extract info - in resources table, title is role, description is reason
-                    const requestingRole = resource.title
-                    const requestingReason = resource.description
+            <div className="space-y-2">
+                {resources && resources.length > 0 && <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest pl-1">Resource & Role Requests</h3>}
+                {resources.map((resource: PendingResource) => {
+                    const isExpanded = expandedIds.includes(resource._id)
+                    const isProcessing = processingId === resource._id
+
+                    // Helper to render date
+                    const renderDate = (dateStr: string) => {
+                        try {
+                            const date = new Date(dateStr)
+                            if (!isNaN(date.getTime())) {
+                                return `${date.toLocaleDateString()} • ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                            }
+                        } catch (e) { }
+                        return 'Unknown Date'
+                    }
+
+                    const dateDisplay = renderDate(resource.createdAt)
+
+                    // --- ROLE REQUEST CARD (via Resource Type) ---
+                    if (resource.type === 'role-request') {
+                        // Extract info - in resources table, title is role, description is reason
+                        const requestingRole = resource.title
+                        const requestingReason = resource.description
+                        return (
+                            <motion.div
+                                key={resource._id}
+                                initial={false}
+                                className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden relative"
+                            >
+                                <div className="absolute top-0 left-0 w-1 h-full bg-purple-500/50" /> {/* Indicator strip */}
+
+                                <button
+                                    onClick={() => toggleExpand(resource._id)}
+                                    className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left"
+                                >
+                                    <div className="h-9 w-9 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                                        {resource.uploaderAvatar ? (
+                                            <img src={resource.uploaderAvatar} alt={resource.uploaderName} className="h-full w-full object-cover" />
+                                        ) : (
+                                            <NeutralAvatar className="h-full w-full" />
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">{resource.uploaderName}</div>
+                                            <StatusBadge type="admin" label="Role Request" />
+                                        </div>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                            Wants to be: <span className="font-medium text-purple-600 dark:text-purple-400">{requestingRole}</span>
+                                        </div>
+                                    </div>
+
+                                    <motion.div animate={{ rotate: isExpanded ? 90 : 0 }} transition={{ duration: 0.2 }} className="flex-shrink-0">
+                                        <ChevronRight className="text-gray-400" size={18} />
+                                    </motion.div>
+                                </button>
+
+                                <motion.div
+                                    initial={false}
+                                    animate={{ height: isExpanded ? 'auto' : 0, opacity: isExpanded ? 1 : 0 }}
+                                    transition={{ duration: 0.3 }}
+                                    className="overflow-hidden"
+                                >
+                                    <div className="px-3 pb-3 pt-1 border-t border-gray-100 dark:border-gray-800 space-y-3 pl-7">
+                                        <div>
+                                            <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Reason for Applying</div>
+                                            <p className="text-sm text-gray-700 dark:text-gray-300 italic">"{requestingReason}"</p>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <button
+                                                onClick={() => onAction(resource._id, 'approve')}
+                                                disabled={isProcessing}
+                                                className="px-3 py-2 rounded-md text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800 flex items-center justify-center gap-2"
+                                            >
+                                                {isProcessing ? <TyreLoader size={14} /> : <Check size={14} />} Approve Role
+                                            </button>
+                                            <button
+                                                onClick={() => onAction(resource._id, 'reject')}
+                                                disabled={isProcessing}
+                                                className="px-3 py-2 rounded-md text-xs font-medium bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 flex items-center justify-center gap-2"
+                                            >
+                                                <X size={14} /> Reject Request
+                                            </button>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            </motion.div>
+                        )
+                    }
+
+                    // --- REGULAR RESOURCE CARD ---
                     return (
                         <motion.div
                             key={resource._id}
                             initial={false}
-                            className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden relative"
+                            className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden"
                         >
-                            <div className="absolute top-0 left-0 w-1 h-full bg-purple-500/50" /> {/* Indicator strip */}
-
                             <button
                                 onClick={() => toggleExpand(resource._id)}
                                 className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left"
@@ -1192,15 +1378,12 @@ function PendingView({ resources, processingId, onAction }: { resources: Pending
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">{resource.uploaderName}</div>
-                                        <StatusBadge type="admin" label="Role Request" />
-                                    </div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                        Wants to be: <span className="font-medium text-purple-600 dark:text-purple-400">{requestingRole}</span>
-                                    </div>
+                                    <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">{resource.title}</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{resource.uploaderName} • Resource</div>
                                 </div>
-
+                                <div className="flex-shrink-0">
+                                    <StatusBadge type="warning" label="Review" />
+                                </div>
                                 <motion.div animate={{ rotate: isExpanded ? 90 : 0 }} transition={{ duration: 0.2 }} className="flex-shrink-0">
                                     <ChevronRight className="text-gray-400" size={18} />
                                 </motion.div>
@@ -1212,99 +1395,37 @@ function PendingView({ resources, processingId, onAction }: { resources: Pending
                                 transition={{ duration: 0.3 }}
                                 className="overflow-hidden"
                             >
-                                <div className="px-3 pb-3 pt-1 border-t border-gray-100 dark:border-gray-800 space-y-3 pl-7">
+                                <div className="px-3 pb-3 pt-1 border-t border-gray-100 dark:border-gray-800 space-y-3">
                                     <div>
-                                        <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Reason for Applying</div>
-                                        <p className="text-sm text-gray-700 dark:text-gray-300 italic">"{requestingReason}"</p>
+                                        <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Details</div>
+                                        <div className="space-y-1.5 text-xs text-gray-700 dark:text-gray-300">
+                                            <div><span className="font-semibold">Subject:</span> {resource.subject}</div>
+                                            <div><span className="font-semibold">Class:</span> {resource.year} Year - {resource.branch}</div>
+                                            {resource.unit && <div><span className="font-semibold">Unit:</span> {resource.unit}</div>}
+                                            <div><span className="font-semibold">Type:</span> {resource.type}</div>
+                                            {resource.description && <div><span className="font-semibold">Description:</span> {resource.description}</div>}
+                                        </div>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <button
-                                            onClick={() => onAction(resource._id, 'approve')}
-                                            disabled={isProcessing}
-                                            className="px-3 py-2 rounded-md text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800 flex items-center justify-center gap-2"
-                                        >
-                                            {isProcessing ? <TyreLoader size={14} /> : <Check size={14} />} Approve Role
-                                        </button>
-                                        <button
-                                            onClick={() => onAction(resource._id, 'reject')}
-                                            disabled={isProcessing}
-                                            className="px-3 py-2 rounded-md text-xs font-medium bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 flex items-center justify-center gap-2"
-                                        >
-                                            <X size={14} /> Reject Request
-                                        </button>
+                                    <div>
+                                        <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Actions</div>
+                                        <div className="grid grid-cols-3 gap-1.5">
+                                            <a href={resource.driveLink} target="_blank" rel="noopener noreferrer" className="px-2 py-1.5 rounded-md text-xs font-medium flex items-center justify-center gap-1 bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800">
+                                                <ExternalLink size={14} /> <span className="hidden sm:inline">Review</span>
+                                            </a>
+                                            <button onClick={() => onAction(resource._id, 'approve')} disabled={isProcessing} className="px-2 py-1.5 rounded-md text-xs font-medium flex items-center justify-center gap-1 bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
+                                                {isProcessing ? <TyreLoader size={14} /> : <Check size={14} />} <span className="hidden sm:inline">Approve</span>
+                                            </button>
+                                            <button onClick={() => onAction(resource._id, 'reject')} disabled={isProcessing} className="px-2 py-1.5 rounded-md text-xs font-medium flex items-center justify-center gap-1 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800">
+                                                <X size={14} /> <span className="hidden sm:inline">Reject</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </motion.div>
                         </motion.div>
                     )
-                }
-
-                // --- REGULAR RESOURCE CARD ---
-                return (
-                    <motion.div
-                        key={resource._id}
-                        initial={false}
-                        className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden"
-                    >
-                        <button
-                            onClick={() => toggleExpand(resource._id)}
-                            className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left"
-                        >
-                            <div className="h-9 w-9 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                                {resource.uploaderAvatar ? (
-                                    <img src={resource.uploaderAvatar} alt={resource.uploaderName} className="h-full w-full object-cover" />
-                                ) : (
-                                    <NeutralAvatar className="h-full w-full" />
-                                )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">{resource.title}</div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{resource.uploaderName} • Resource</div>
-                            </div>
-                            <div className="flex-shrink-0">
-                                <StatusBadge type="warning" label="Review" />
-                            </div>
-                            <motion.div animate={{ rotate: isExpanded ? 90 : 0 }} transition={{ duration: 0.2 }} className="flex-shrink-0">
-                                <ChevronRight className="text-gray-400" size={18} />
-                            </motion.div>
-                        </button>
-
-                        <motion.div
-                            initial={false}
-                            animate={{ height: isExpanded ? 'auto' : 0, opacity: isExpanded ? 1 : 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="overflow-hidden"
-                        >
-                            <div className="px-3 pb-3 pt-1 border-t border-gray-100 dark:border-gray-800 space-y-3">
-                                <div>
-                                    <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Details</div>
-                                    <div className="space-y-1.5 text-xs text-gray-700 dark:text-gray-300">
-                                        <div><span className="font-semibold">Subject:</span> {resource.subject}</div>
-                                        <div><span className="font-semibold">Class:</span> {resource.year} Year - {resource.branch}</div>
-                                        {resource.unit && <div><span className="font-semibold">Unit:</span> {resource.unit}</div>}
-                                        <div><span className="font-semibold">Type:</span> {resource.type}</div>
-                                        {resource.description && <div><span className="font-semibold">Description:</span> {resource.description}</div>}
-                                    </div>
-                                </div>
-                                <div>
-                                    <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Actions</div>
-                                    <div className="grid grid-cols-3 gap-1.5">
-                                        <a href={resource.driveLink} target="_blank" rel="noopener noreferrer" className="px-2 py-1.5 rounded-md text-xs font-medium flex items-center justify-center gap-1 bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800">
-                                            <ExternalLink size={14} /> <span className="hidden sm:inline">Review</span>
-                                        </a>
-                                        <button onClick={() => onAction(resource._id, 'approve')} disabled={isProcessing} className="px-2 py-1.5 rounded-md text-xs font-medium flex items-center justify-center gap-1 bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
-                                            {isProcessing ? <TyreLoader size={14} /> : <Check size={14} />} <span className="hidden sm:inline">Approve</span>
-                                        </button>
-                                        <button onClick={() => onAction(resource._id, 'reject')} disabled={isProcessing} className="px-2 py-1.5 rounded-md text-xs font-medium flex items-center justify-center gap-1 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800">
-                                            <X size={14} /> <span className="hidden sm:inline">Reject</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )
-            })}
+                })}
+            </div>
         </div>
     )
 }
