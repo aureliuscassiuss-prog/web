@@ -107,7 +107,8 @@ export default function SavedResources() {
 
             if (note) body.note = note;
 
-            const res = await fetch('/api/resources?action=share', {
+            // We send action in body now to avoid URL query params triggering GET logic on redirects
+            const res = await fetch(`/api/resources?t=${Date.now()}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
