@@ -827,7 +827,17 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
 
 
     if (view === 'uploads') return <UploadsView uploads={uploads} onUploadRequest={onUploadRequest} onDelete={handleDelete} />
-    if (view === 'leaderboard') return <LeaderboardView leaderboard={leaderboard} />
+    if (view === 'leaderboard') {
+        if (isLoading) {
+            return (
+                <div className="flex h-64 flex-col items-center justify-center space-y-4 animate-fade-in w-full max-w-4xl mx-auto mt-8">
+                    <TyreLoader size={50} />
+                    <p className="text-sm font-medium text-gray-400 animate-pulse tracking-widest uppercase text-[10px]">Loading Leaderboard</p>
+                </div>
+            )
+        }
+        return <LeaderboardView leaderboard={leaderboard} />
+    }
 
     return (
         <div className="animate-fade-in w-full max-w-4xl mx-auto">
