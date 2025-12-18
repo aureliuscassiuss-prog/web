@@ -143,30 +143,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const selectedWeight = fontConfig.weight;
 
         // Step 1: Use AI to generate detailed document specification
-        const systemPrompt = `You are a UNIVERSAL DOCUMENT ARCHITECT. Your goal is to create the PERFECT PDF structure for ANY user request.
+        const systemPrompt = `You are a PROFESSIONAL DOCUMENT FORMATTER. Your goal is to create a STRICTLY PROFESSIONAL, COMPACT PDF structure.
 
 **CORE PHILOSOPHY**:
-- **DO NOT limit yourself to fixed templates.** You can build ANY document (Resume, Menu, Itinerary, legal Brief, Script) by combining blocks.
-- **VISUAL INTELLIGENCE**: You decide the look. Does a "Gift Voucher" need a border? YES. Does a "Business Letter" need a border? NO.
-- **MISSING DATA**: If details are missing, **INVENT REALISTIC CONTENT**. Never leave blanks.
+- **PROFESSIONALISM**: Use ONLY Black & White (Grayscale). NO colors.
+- **COMPACTNESS**: fit as much on ONE PAGE as possible. Single spacing.
+- **HEADINGS**: Standard Formal Headings (Size 12-14). NO HUGE SCARY HEADERS.
+- **NO ACCENTS**: Do not use colored accent backgrounds. Keep it clean and formal (Indian Standard).
 
 **JSON STRUCTURE (The Blueprint):**
 {
   "config": {
-    "draw_border": boolean, 
-    "margin": number, // Default 25
+    "draw_border": boolean, // Default false
+    "margin": number, // Default 15
     "colors": {
-       "accent": "#HEX", // Used for Headers, Titles, Table Backgrounds (e.g. #2c3e50, #000000, #e74c3c)
-       "text": "#HEX",   // Main text color (usually #000000)
-       "secondary": "#HEX" // Subtle text (e.g. #7f8c8d)
+       "accent": "#000000", // STRICTLY BLACK
+       "text": "#000000",   // STRICTLY BLACK
+       "secondary": "#333333" // Dark Gray
     },
     "styles": {
-       "heading_underline": boolean, // Should titles have a line under them?
-       "table_striping": boolean     // Zebra striping for tables?
+       "heading_underline": boolean, 
+       "table_striping": boolean     // Default false for formal look
     }
   },
-  "title": "Main Title (Centered)", 
-  "watermark": "CONFIDENTIAL", 
+  "title": "Main Title (Centered, uppercase, size 16)", 
+  "watermark": "", // Avoid unless requested
   
   // OPTIONAL: Standard Letter Structure
   "letter_details": {
@@ -181,38 +182,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   },
 
   // THE CORE: List of sections to build the document. 
-  // USE THIS for Resumes, Invoices, Itineraries, Reports, etc.
   "sections": [
     {
       "type": "heading",
-      "text": "Experience / Ingredients / Day 1",
-      "align": "left" | "center" | "right",
-      "size": 14 // Optional font size override
+      "text": "Experience / Subject",
+      "align": "left",
+      "size": 12 // Max 14
     },
     {
       "type": "text",
       "content": ["Paragraph 1...", "Paragraph 2..."],
-      "align": "justify" // or left/center
+      "align": "justify" 
     },
     {
-      "type": "table", // PERFECT for Invoices, Data, Schedules
+      "type": "table",
       "tableData": {
         "headers": ["Date", "Activity", "Cost"],
         "rows": [ ["12/10", "Flight", "$500"] ]
       }
     },
     {
-      "type": "list", // Good for resumes, ingredients, rules
+      "type": "list",
       "items": ["Point 1", "Point 2"]
     }
   ],
-  "filename": "smart_filename.pdf"
+  "filename": "document.pdf"
 }
-
-**EXAMPLE LOGIC**:
-- **User**: "Make a coupon for free pizza" -> Config: { draw_border: true }, Title: "FREE PIZZA COUPON", Section: Text "Valid until...", Section: Text "Code: PIZZA100".
-- **User**: "Formal complaint letter" -> Config: { draw_border: false }, Use "letter_details".
-- **User**: "Resume for Dev" -> Config: { draw_border: false }, Sections: Heading "Skills", List "React, Node", Heading "Exp", Text "Built..."
 
 RETURN ONLY VALID JSON.`;
 
@@ -222,7 +217,7 @@ RETURN ONLY VALID JSON.`;
                 { role: 'user', content: prompt }
             ],
             model: 'llama-3.3-70b-versatile',
-            temperature: 0.7,
+            temperature: 0.3, // Lower temp for more consistent/formal output
             max_tokens: 3000,
         });
 
@@ -265,7 +260,7 @@ RETURN ONLY VALID JSON.`;
 
         const pageWidth = pdf.internal.pageSize.getWidth();
         const pageHeight = pdf.internal.pageSize.getHeight();
-        const margin = 25; // Increased margin for better look
+        const margin = 15; // Standard, professional margin
         const contentWidth = pageWidth - (margin * 2);
         let yPosition = margin;
 
@@ -276,19 +271,10 @@ RETURN ONLY VALID JSON.`;
             const weight = isBold ? 'bold' : (fontStyle === 'bold' ? 'bold' : selectedWeight);
             pdf.setFont(selectedFont, weight);
 
-            // Standard line height ratio
-            const lineHeight = fontSize * 0.5; // roughly 1.4x (points to mm conversion factor ~0.35 * 1.4)
+            // Tighter line height for compactness
+            const lineHeight = fontSize * 0.4;
 
             if (align === 'justify') {
-                // Use built-in splitTextToSize but render differently? 
-                // jsPDF text() supports maxWidth but 'justify' alignment works best with direct text calls
-                // Let's use splitTextToSize + text with align 'justify' line by line or block?
-                // Actually, jsPDF's text() 'justify' alignment requires specific handling or use of maxWidth.
-                // Simple approach: Use splitTextToSize, then print. 'justify' in jsPDF is tricky for standard text() without plugin.
-                // Reverting to 'left' for safety but adding line spacing control.
-                // 'justify' often creates ugly gaps if not handled perfectly.
-                // OPTION: We will use 'left' but ensure proper paragraph spacing.
-
                 const lines = pdf.splitTextToSize(text, contentWidth);
                 lines.forEach((line: string) => {
                     // Check page break
@@ -297,7 +283,7 @@ RETURN ONLY VALID JSON.`;
                         yPosition = margin;
                     }
                     pdf.text(line, margin, yPosition); // Left aligned
-                    yPosition += lineHeight + 2; // EXTRA SPACING (Leading)
+                    yPosition += lineHeight + 1; // Compact spacing
                 });
             } else {
                 // Center/Right/Left handled standard
@@ -312,7 +298,7 @@ RETURN ONLY VALID JSON.`;
                     if (align === 'right') xPosition = pageWidth - margin;
 
                     pdf.text(line, xPosition, yPosition, { align });
-                    yPosition += lineHeight + 2;
+                    yPosition += lineHeight + 1; // Compact spacing
                 });
             }
         };
@@ -330,30 +316,30 @@ RETURN ONLY VALID JSON.`;
             return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
         };
 
-        // Extract Theme from AI Config or defaults
-        const accentHex = docContent.config?.colors?.accent || '#2c3e50'; // Default Navy
-        const secondaryHex = docContent.config?.colors?.secondary || '#7f8c8d'; // Default Gray
-        const textHex = docContent.config?.colors?.text || '#000000'; // Default Black
+        // Enforce Professional Colors (Black/Dark Gray)
+        const accentHex = '#000000';
+        const secondaryHex = '#333333';
+        const textHex = '#000000';
 
         const accentColor = hexToRgb(accentHex);
         const secondaryColor = hexToRgb(secondaryHex);
         const textColor = hexToRgb(textHex);
 
         const headingUnderline = docContent.config?.styles?.heading_underline !== false; // Default true if not specified
-        const tableStriping = docContent.config?.styles?.table_striping !== false; // Default true
+        const tableStriping = false; // No striping for formal documents usually
 
-        // 1. Draw Border
+        // 1. Draw Border (Only if strictly requested, usually NO)
         if (docContent.config?.draw_border) {
-            pdf.setDrawColor(textColor[0], textColor[1], textColor[2]);
-            pdf.setLineWidth(1);
-            const boxMargin = docContent.config.margin || 15;
+            pdf.setDrawColor(0, 0, 0);
+            pdf.setLineWidth(0.5);
+            const boxMargin = docContent.config.margin || 10;
             pdf.rect(boxMargin, boxMargin, pageWidth - (boxMargin * 2), pageHeight - (boxMargin * 2));
         }
 
         // 2. Watermark
         if (docContent.watermark) {
-            pdf.setTextColor(240, 240, 240); // Keep very light for background
-            pdf.setFontSize(50);
+            pdf.setTextColor(245, 245, 245); // Very light gray
+            pdf.setFontSize(40);
             pdf.setFont(selectedFont, 'bold');
             pdf.text(docContent.watermark.toUpperCase(), pageWidth / 2, pageHeight / 2, { align: 'center', angle: 45 });
             pdf.setTextColor(textColor[0], textColor[1], textColor[2]); // Reset
@@ -361,53 +347,53 @@ RETURN ONLY VALID JSON.`;
 
         // 3. Document Title
         if (docContent.title) {
-            pdf.setFontSize(22);
+            pdf.setFontSize(16); // Professional Size
             pdf.setFont(selectedFont, 'bold');
-            pdf.setTextColor(accentColor[0], accentColor[1], accentColor[2]); // Dynamic Accent
+            pdf.setTextColor(0, 0, 0);
             pdf.text(docContent.title.toUpperCase(), pageWidth / 2, yPosition, { align: 'center' });
-            yPosition += 15;
+            yPosition += 10;
 
             // Separator Line (if enabled or default)
             if (headingUnderline) {
-                pdf.setDrawColor(accentColor[0], accentColor[1], accentColor[2]);
+                pdf.setDrawColor(0, 0, 0);
                 pdf.setLineWidth(0.5);
-                pdf.line(margin + 20, yPosition - 5, pageWidth - margin - 20, yPosition - 5);
-                yPosition += 5;
+                pdf.line(margin + 40, yPosition - 4, pageWidth - margin - 40, yPosition - 4);
+                yPosition += 4;
             }
         }
 
         // 4. Letter Details
         if (docContent.letter_details) {
             const details = docContent.letter_details;
-            pdf.setTextColor(textColor[0], textColor[1], textColor[2]); // Main Text
+            pdf.setTextColor(0, 0, 0);
 
             // SENDER
             if (details.sender_address) {
                 pdf.setFontSize(10);
                 pdf.setFont(selectedFont, 'bold');
-                pdf.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]); // Secondary Color
+                pdf.setTextColor(0, 0, 0);
                 details.sender_address.forEach((line: string) => {
                     pdf.text(line, margin, yPosition);
-                    yPosition += 5;
+                    yPosition += 4;
                 });
-                pdf.setTextColor(textColor[0], textColor[1], textColor[2]); // Reset
-                yPosition += 5;
+                pdf.setTextColor(0, 0, 0);
+                yPosition += 4;
             }
 
             // DATE
             if (details.date) {
                 pdf.setFont(selectedFont, selectedWeight);
-                pdf.text(details.date, margin, yPosition); // Just date, clear and simple
-                yPosition += 10;
+                pdf.text(details.date, margin, yPosition);
+                yPosition += 8;
             }
 
             // TO BLOCK
             if (details.to_block) {
                 details.to_block.forEach((line: string) => {
                     pdf.text(line, margin, yPosition);
-                    yPosition += 6;
+                    yPosition += 5;
                 });
-                yPosition += 10;
+                yPosition += 8;
             }
 
             // SUBJECT
@@ -415,37 +401,37 @@ RETURN ONLY VALID JSON.`;
                 pdf.setFont(selectedFont, 'bold');
                 pdf.text(details.subject, margin, yPosition);
                 pdf.setFont(selectedFont, selectedWeight);
-                yPosition += 10;
+                yPosition += 8;
             }
 
             // SALUTATION
             if (details.salutation) {
                 pdf.text(details.salutation, margin, yPosition);
-                yPosition += 10;
+                yPosition += 8;
             }
 
             // BODY
             if (details.body_paragraphs) {
                 details.body_paragraphs.forEach((para: string) => {
-                    addText(para, 12, 'normal', 'justify');
-                    yPosition += 8;
+                    addText(para, 11, 'normal', 'justify'); // Size 11 text
+                    yPosition += 4; // Minimal paragraph gap
                 });
-                yPosition += 5;
+                yPosition += 4;
             }
 
             // CLOSING & SIGNATURE
             if (details.closing) {
                 pdf.text(details.closing, margin, yPosition);
-                yPosition += 12;
+                yPosition += 10;
             }
 
             if (details.signature_block) {
                 details.signature_block.forEach((line: string) => {
                     pdf.text(line, margin, yPosition);
-                    yPosition += 6;
+                    yPosition += 5;
                 });
             }
-            yPosition += 10;
+            yPosition += 8;
         }
 
         // 5. Universal Sections
@@ -454,14 +440,14 @@ RETURN ONLY VALID JSON.`;
 
                 // Heading Section
                 if (section.type === 'heading' || section.heading) {
-                    yPosition += 8;
+                    yPosition += 4;
                     const headText = section.text || section.heading;
                     const headAlign = section.align || 'left';
-                    const headSize = section.size || 14;
+                    const headSize = section.size ? Math.min(section.size, 14) : 12; // Cap size
 
                     pdf.setFontSize(headSize);
                     pdf.setFont(selectedFont, 'bold');
-                    pdf.setTextColor(accentColor[0], accentColor[1], accentColor[2]); // Accent
+                    pdf.setTextColor(0, 0, 0);
 
                     let xPos = margin;
                     if (headAlign === 'center') xPos = pageWidth / 2;
@@ -470,13 +456,13 @@ RETURN ONLY VALID JSON.`;
                     pdf.text(headText, xPos, yPosition, { align: headAlign });
 
                     pdf.setFont(selectedFont, selectedWeight);
-                    pdf.setTextColor(textColor[0], textColor[1], textColor[2]); // Reset
-                    yPosition += 8;
+                    pdf.setTextColor(0, 0, 0);
+                    yPosition += 5;
                 }
 
                 // Table Section (Robust & Modern)
                 if (section.type === 'table' && section.tableData) {
-                    yPosition += 5;
+                    yPosition += 2;
                     const colWidth = contentWidth / section.tableData.headers.length;
 
                     // Helper: Get row max height
@@ -486,10 +472,10 @@ RETURN ONLY VALID JSON.`;
                         row.forEach((cell) => {
                             // Ensure cell is string
                             const cellStr = String(cell || '');
-                            const lines = pdf.splitTextToSize(cellStr, colWidth - 4);
+                            const lines = pdf.splitTextToSize(cellStr, colWidth - 2);
                             if (lines.length > maxLines) maxLines = lines.length;
                         });
-                        return (maxLines * 5) + 4; // 5mm per line approx + padding
+                        return (maxLines * 4) + 2; // Compact
                     };
 
                     // ---- Header ----
@@ -501,19 +487,21 @@ RETURN ONLY VALID JSON.`;
                         yPosition = margin;
                     }
 
-                    pdf.setFillColor(accentColor[0], accentColor[1], accentColor[2]); // AI Accent BG
-                    pdf.rect(margin, yPosition, contentWidth, headerHeight, 'F');
+                    // Header Line only, no color block
+                    pdf.setDrawColor(0, 0, 0);
+                    pdf.setLineWidth(0.5);
+                    pdf.line(margin, yPosition + headerHeight, pageWidth - margin, yPosition + headerHeight);
 
                     pdf.setFont(selectedFont, 'bold');
-                    pdf.setTextColor(255, 255, 255); // Always white text on accent header
+                    pdf.setTextColor(0, 0, 0);
 
                     section.tableData.headers.forEach((header: string, i: number) => {
-                        const cellLines = pdf.splitTextToSize(String(header), colWidth - 4);
-                        pdf.text(cellLines, margin + (i * colWidth) + 2, yPosition + 5);
+                        const cellLines = pdf.splitTextToSize(String(header), colWidth - 2);
+                        pdf.text(cellLines, margin + (i * colWidth) + 1, yPosition + 4);
                     });
 
                     yPosition += headerHeight;
-                    pdf.setTextColor(textColor[0], textColor[1], textColor[2]); // Reset to AI text color
+                    pdf.setTextColor(0, 0, 0);
                     pdf.setFont(selectedFont, selectedWeight);
 
                     // ---- Rows ----
@@ -524,56 +512,50 @@ RETURN ONLY VALID JSON.`;
                         if (yPosition + rowHeight > pageHeight - margin) {
                             pdf.addPage();
                             yPosition = margin;
-                            // Optional: Reprint header here if needed, keeping simple for now
-                        }
-
-                        // Zebra Striping (if enabled by AI)
-                        if (tableStriping && rowIndex % 2 === 0) {
-                            pdf.setFillColor(245, 247, 250); // Light gray default for zebra
-                            pdf.rect(margin, yPosition, contentWidth, rowHeight, 'F');
                         }
 
                         row.forEach((cell: string, i: number) => {
                             const cellStr = String(cell || '');
-                            const cellLines = pdf.splitTextToSize(cellStr, colWidth - 4);
-                            pdf.text(cellLines, margin + (i * colWidth) + 2, yPosition + 5);
+                            const cellLines = pdf.splitTextToSize(cellStr, colWidth - 2);
+                            pdf.text(cellLines, margin + (i * colWidth) + 1, yPosition + 3);
                         });
 
-                        // Row Border (Bottom)
-                        pdf.setDrawColor(230, 230, 230);
+                        // Simple separator line
+                        pdf.setDrawColor(200, 200, 200);
                         pdf.line(margin, yPosition + rowHeight, pageWidth - margin, yPosition + rowHeight);
 
                         yPosition += rowHeight;
                     });
 
-                    yPosition += 5;
+                    yPosition += 4;
                 }
                 // List Section
                 else if (section.type === 'list' && (section.content || section.items)) {
                     const items = section.items || section.content;
                     items.forEach((item: string) => {
                         pdf.text('•', margin + 5, yPosition);
-                        const lines = pdf.splitTextToSize(item, contentWidth - 15);
+                        const lines = pdf.splitTextToSize(item, contentWidth - 10);
                         lines.forEach((line: string) => {
-                            pdf.text(line, margin + 10, yPosition);
-                            yPosition += 5;
+                            pdf.text(line, margin + 8, yPosition);
+                            yPosition += 4;
                         });
-                        yPosition += 2;
+                        yPosition += 1;
                     });
-                    yPosition += 5;
+                    yPosition += 4;
                 }
                 // Text Section
                 else if (section.type === 'text' && section.content) {
                     section.content.forEach((paragraph: string) => {
-                        addText(paragraph, 12, 'normal', section.align || 'left');
-                        yPosition += 6;
+                        addText(paragraph, 11, 'normal', section.align || 'justify');
+                        yPosition += 2;
                     });
+                    yPosition += 4;
                 }
             });
         }
         if (docContent.metadata) {
-            yPosition = pageHeight - 25;
-            pdf.setFontSize(10);
+            yPosition = pageHeight - 15;
+            pdf.setFontSize(9);
             if (docContent.metadata.date) pdf.text(`Date: ${docContent.metadata.date}`, margin, yPosition);
         }
 
@@ -582,6 +564,7 @@ RETURN ONLY VALID JSON.`;
         res.setHeader('Content-Type', 'application/pdf');
         // Encode filename for header safety if needed, though basic sanitization above handles mostly.
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
         res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
         res.setHeader('Content-Length', pdfBuffer.length);
         return res.status(200).send(pdfBuffer);
