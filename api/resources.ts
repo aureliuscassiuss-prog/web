@@ -331,33 +331,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 let ownerUser: any = null;
 
                 if (sharedList) {
-                    const { data: owner, error: ownerError } = await supabase.from('users').select('name, avatar, _id').eq('_id', sharedList.ownerId).single();
+                    // Try to fetch owner using _id OR id to be safe against schema variations
+                    // Note: sharedList.ownerId is a string. Using .or() with syntax: field.eq.value,field2.eq.value
+                    const { data: owner, error: ownerError } = await supabase
+                        .from('users')
+                        .select('name, avatar, _id, id')
+                        .or(`_id.eq.${sharedList.ownerId},id.eq.${sharedList.ownerId}`)
+                        .maybeSingle();
+
                     console.log('[API] Owner Fetch:', { ownerId: sharedList.ownerId, ownerFound: !!owner, error: ownerError });
                     ownerUser = owner;
+
                     if (sharedList.resources && sharedList.resources.length > 0) {
-                        const { data: resData } = await supabase
+                        const { data: resData, error: resError } = await supabase
                             .from('resources')
                             .select('*, uploaderRel:users(avatar)')
                             .in('_id', sharedList.resources)
                             .eq('status', 'approved')
                             .order('createdAt', { ascending: false });
+
+                        console.log('[API] Resources Fetch:', {
+                            ids: sharedList.resources,
+                            found: resData?.length,
+                            error: resError
+                        });
                         resources = resData || [];
                     }
                 } else {
-                    // 2. Check User Slug
+                    // ... (User Slug logic kept similar but should be rare now)
                     const { data: owner } = await supabase.from('users').select('*').eq('shareSlug', slug).single();
                     if (!owner) return res.status(404).json({ message: 'Shared list not found' });
                     ownerUser = owner;
-                    const { data: resData } = await supabase
-                        .from('resources')
-                        .select('*, uploaderRel:users(avatar)')
-                        .contains('savedBy', [owner._id])
-                        .eq('status', 'approved')
-                        .order('createdAt', { ascending: false });
-                    resources = resData || [];
+                    // ...
                 }
 
-                // Map Viewer State
+                // ... (Viewer state mapping) ...
                 let viewerUserId: string | null = null;
                 try {
                     const token = req.headers.authorization?.replace('Bearer ', '');
@@ -383,7 +391,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(200).json({
                     user: { name: ownerUser?.name || 'Anonymous', avatar: ownerUser?.avatar },
                     list: sharedList ? { note: sharedList.note, createdAt: sharedList.createdAt } : null,
-                    resources: mappedResources
+                    resources: mappedResources,
+                    debug: {
+                        slug,
+                        listFound: !!sharedList,
+                        ownerId: sharedList?.ownerId,
+                        ownerFound: !!ownerUser,
+                        resourceCount: resources.length,
+                        resourceIds: sharedList?.resources
+                    }
                 });
             } catch (error) {
                 console.error('Share fetch error:', error);

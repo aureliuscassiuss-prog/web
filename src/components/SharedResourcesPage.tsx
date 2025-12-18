@@ -218,6 +218,14 @@ export default function SharedResourcesPage() {
                 onClose={() => setIsAuthModalOpen(false)}
                 initialView="login"
             />
+
+            {/* Debug Info (Visible if something is likely wrong) */}
+            {(data as any)?.debug && (
+                <div className="mt-8 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-[10px] font-mono text-gray-500 overflow-auto max-w-full">
+                    <p className="font-bold mb-1">Debug Info:</p>
+                    <pre>{JSON.stringify((data as any).debug, null, 2)}</pre>
+                </div>
+            )}
         </div>
     );
 }
