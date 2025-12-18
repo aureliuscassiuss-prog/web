@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, Settings, LayoutGrid, Calendar, Ticket, ArrowRight, Sparkles } from 'lucide-react';
+import { Plus, Settings, Calendar, Ticket, ArrowRight, Sparkles } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import EventCard from './EventCard';
 import EventDetailsModal from './EventDetailsModal';
@@ -303,14 +303,17 @@ export default function EventsPage() {
                                 <Settings size={24} />
                             </div>
                             <div>
-                                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Payment Setup</h3>
-                                <p className="text-xs text-gray-500 font-medium">Configure Razorpay credentials</p>
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Payment Setup (Razorpay)</h3>
+                                <p className="text-xs text-gray-500 font-medium">Configure Razorpay API Keys</p>
                             </div>
                         </div>
 
                         <div className="space-y-4">
+                            <div className="p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-lg text-xs text-amber-800 dark:text-amber-200">
+                                UniNotes uses <strong>Razorpay</strong> for payments. Enter your keys below.
+                            </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Key ID</label>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Razorpay Key ID</label>
                                 <input
                                     type="text"
                                     value={configData.keyId}
@@ -320,7 +323,7 @@ export default function EventsPage() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Key Secret</label>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Razorpay Key Secret</label>
                                 <input
                                     type="password"
                                     value={configData.keySecret}
@@ -340,9 +343,9 @@ export default function EventsPage() {
                             </button>
                             <button
                                 onClick={handleSaveConfig}
-                                className="px-6 py-2.5 bg-black text-white dark:bg-white dark:text-black rounded-xl text-sm font-bold shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all"
+                                className="px-6 py-2.5 bg-[#3399cc] text-white rounded-xl text-sm font-bold shadow-lg hover:shadow-cyan-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
                             >
-                                Save Configuration
+                                Save Keys
                             </button>
                         </div>
                     </div>

@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion';
-import { Calendar, MapPin, QrCode, Download, Clock } from 'lucide-react';
-import { useRef } from 'react';
+import { Calendar, MapPin, QrCode, Clock } from 'lucide-react';
 
 interface Ticket {
     id: string;
@@ -13,7 +12,7 @@ interface Ticket {
         currency: string;
     };
     qr_code_data: string;
-    status: string;
+    status: 'pending' | 'confirmed' | 'failed' | 'cancelled';
     created_at: string;
 }
 
@@ -49,8 +48,11 @@ export default function TicketCard({ ticket }: { ticket: Ticket }) {
                     alt={ticket.event.title}
                     className="w-full h-full object-cover"
                 />
-                <div className="absolute top-3 left-3 px-2 py-1 bg-green-500 text-white text-[10px] font-bold rounded shadow-sm uppercase tracking-wider">
-                    {ticket.status}
+                <div className={`absolute top-3 left-3 px-2.5 py-1 text-[10px] font-bold rounded-md shadow-sm uppercase tracking-wider ${ticket.status === 'confirmed' ? 'bg-green-500 text-white' :
+                    ticket.status === 'pending' ? 'bg-yellow-500 text-white' :
+                        'bg-red-500 text-white'
+                    }`}>
+                    {ticket.status === 'confirmed' ? 'Paid' : ticket.status}
                 </div>
             </div>
 
@@ -77,8 +79,18 @@ export default function TicketCard({ ticket }: { ticket: Ticket }) {
                 </div>
 
                 <div className="mt-4 flex items-center gap-2 text-xs text-gray-400">
-                    <QrCode size={14} />
-                    <span>QR Code sent to your email</span>
+                    {ticket.status === 'confirmed' && (
+                        <>
+                            <QrCode size={14} />
+                            <span>QR Code sent to email</span>
+                        </>
+                    )}
+                    {ticket.status === 'failed' && (
+                        <span className="text-red-500 font-bold">Payment Failed</span>
+                    )}
+                    {ticket.status === 'pending' && (
+                        <span className="text-yellow-600 font-bold">Payment Pending</span>
+                    )}
                 </div>
             </div>
         </motion.div>

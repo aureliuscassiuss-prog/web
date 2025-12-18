@@ -5,10 +5,7 @@ import 'react-quill/dist/quill.snow.css'; // Import styles
 import ImageCropper from './ImageCropper';
 import TyreLoader from './TyreLoader';
 
-const PAYMENT_PROVIDERS = [
-    { id: 'razorpay', label: 'Razorpay', icon: '₹' },
-    // { id: 'stripe', label: 'Stripe', icon: '$' } // Future
-];
+
 
 interface CreateEventModalProps {
     isOpen: boolean;
@@ -62,11 +59,10 @@ export default function CreateEventModal({ isOpen, onClose, onSuccess, token }: 
     };
 
     const togglePaymentMethod = (method: string) => {
+        // Exclusive Selection: Razorpay OR Manual
         setFormData(prev => ({
             ...prev,
-            accepted_payment_methods: prev.accepted_payment_methods.includes(method)
-                ? prev.accepted_payment_methods.filter(m => m !== method)
-                : [...prev.accepted_payment_methods, method]
+            accepted_payment_methods: [method]
         }));
     };
 
@@ -278,20 +274,31 @@ export default function CreateEventModal({ isOpen, onClose, onSuccess, token }: 
                                 {/* Payment Gateways */}
                                 <div>
                                     <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1.5 ml-1">Accepted Payment Methods</label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {['razorpay', 'cashfree', 'manual'].map(method => (
-                                            <button
-                                                key={method}
-                                                type="button"
-                                                onClick={() => togglePaymentMethod(method)}
-                                                className={`px-3 py-1.5 rounded-lg border text-xs font-medium capitalize flex items-center gap-2 transition-all ${formData.accepted_payment_methods.includes(method)
-                                                    ? 'bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400'
-                                                    : 'bg-white border-gray-200 text-gray-600 dark:bg-zinc-950 dark:border-zinc-700 dark:text-gray-400'
-                                                    }`}
-                                            >
-                                                <CreditCard size={14} /> {method}
-                                            </button>
-                                        ))}
+                                    <div className="flex flex-col gap-2">
+                                        {/* Exclusive Choice (Radio-like behavior) */}
+                                        <button
+                                            type="button"
+                                            onClick={() => togglePaymentMethod('razorpay')}
+                                            className={`px-4 py-3 rounded-xl border text-sm font-medium flex items-center justify-between transition-all ${formData.accepted_payment_methods.includes('razorpay')
+                                                ? 'bg-[#3399cc]/10 border-[#3399cc] text-[#3399cc]'
+                                                : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-800'
+                                                }`}
+                                        >
+                                            <span className="flex items-center gap-2"><CreditCard size={18} /> Razorpay (Online)</span>
+                                            {formData.accepted_payment_methods.includes('razorpay') && <Sparkles size={16} />}
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => togglePaymentMethod('manual')}
+                                            className={`px-4 py-3 rounded-xl border text-sm font-medium flex items-center justify-between transition-all ${formData.accepted_payment_methods.includes('manual')
+                                                ? 'bg-green-50, border-green-500 text-green-600' // green-50 has syntax error in prev logic? No, fix string
+                                                : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-800'
+                                                } ${formData.accepted_payment_methods.includes('manual') ? 'bg-green-50 dark:bg-green-900/20 border-green-500 dark:border-green-500 text-green-700 dark:text-green-400' : ''}`} // Fix logic
+                                        >
+                                            <span className="flex items-center gap-2"><DollarSign size={18} /> Manual / Cash (On Venue)</span>
+                                            {formData.accepted_payment_methods.includes('manual') && <Sparkles size={16} />}
+                                        </button>
                                     </div>
                                 </div>
                             </div>

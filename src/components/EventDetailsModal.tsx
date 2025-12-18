@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Calendar, MapPin, Ticket, Clock, Info, ShieldCheck, Mail, ArrowLeft, Share2 } from 'lucide-react';
+import { X, Calendar, MapPin, Clock, Info, ShieldCheck, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import TyreLoader from './TyreLoader';
@@ -35,8 +35,11 @@ export default function EventDetailsModal({ event, onClose, onBookingSuccess }: 
     const isSoldOut = availableSlots <= 0;
     const isDeadlinePassed = event.registration_deadline ? new Date() > new Date(event.registration_deadline) : false;
 
+    const [simulateFailure, setSimulateFailure] = useState(false); // For Dev Testing
+
     const handleBook = async () => {
-        if (!process.env.NODE_ENV && !user) return; // Should be protected anyway
+        // @ts-ignore
+        if (typeof process !== 'undefined' && process.env.NODE_ENV && !user) return; // Should be protected anyway
 
         setIsProcessing(true);
         try {
@@ -50,15 +53,26 @@ export default function EventDetailsModal({ event, onClose, onBookingSuccess }: 
                     action: 'book-ticket',
                     eventId: event._id,
                     gateway: selectedGateway,
-                    paymentData: { method: 'mock', payment_id: 'mock_' + Date.now() } // Mock verification
+                    paymentData: {
+                        method: 'mock',
+                        payment_id: 'mock_' + Date.now(),
+                        force_fail: simulateFailure
+                    }
                 })
             });
 
             const data = await res.json();
+
             if (res.ok) {
-                // alert("Ticket booked successfully! Check your email for QR code."); // Replaced with nicer UI feedback if possible, but alert is fine for now
-                onBookingSuccess();
-                onClose();
+                if (data.status === 'confirmed') {
+                    // Success
+                    onBookingSuccess();
+                    alert("🎉 Ticket Confirmed! Check your email.");
+                    onClose();
+                } else {
+                    // Failed
+                    alert("❌ Payment Failed. Please try again.");
+                }
             } else {
                 alert(data.message || "Booking failed");
             }
@@ -179,8 +193,8 @@ export default function EventDetailsModal({ event, onClose, onBookingSuccess }: 
                                     onClick={() => setStep('payment')}
                                     disabled={isSoldOut || isDeadlinePassed}
                                     className={`px-8 py-3.5 rounded-2xl font-bold text-base flex-1 shadow-xl flex items-center justify-center gap-2 transform transition-all active:scale-[0.98] ${isSoldOut || isDeadlinePassed
-                                            ? 'bg-gray-100 dark:bg-zinc-800 text-gray-400 cursor-not-allowed'
-                                            : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-blue-500/25'
+                                        ? 'bg-gray-100 dark:bg-zinc-800 text-gray-400 cursor-not-allowed'
+                                        : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-blue-500/25'
                                         }`}
                                 >
                                     {isSoldOut ? 'Sold Out' : isDeadlinePassed ? 'Registration Closed' : 'Book Ticket'}
@@ -209,6 +223,17 @@ export default function EventDetailsModal({ event, onClose, onBookingSuccess }: 
                                     ))}
                                 </div>
 
+                                {/* DEV: SIMULATE FAILURE TOGGLE */}
+                                <label className="flex items-center gap-2 text-xs text-gray-500 font-medium cursor-pointer p-1">
+                                    <input
+                                        type="checkbox"
+                                        checked={simulateFailure}
+                                        onChange={e => setSimulateFailure(e.target.checked)}
+                                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    Simulate Payment Failure (Dev Mode)
+                                </label>
+
                                 <div className="grid grid-cols-2 gap-3">
                                     <button
                                         onClick={() => setStep('details')}
@@ -222,7 +247,7 @@ export default function EventDetailsModal({ event, onClose, onBookingSuccess }: 
                                         className="py-3.5 rounded-2xl font-bold bg-black text-white dark:bg-white dark:text-black hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
                                     >
                                         {isProcessing ? <TyreLoader size={20} /> : <ShieldCheck size={18} />}
-                                        Confirm Payment
+                                        {isProcessing ? 'Processing...' : 'Pay & Book'}
                                     </button>
                                 </div>
                             </motion.div>

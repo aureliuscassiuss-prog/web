@@ -279,82 +279,147 @@ async function handleBookTicket(user: any, body: any, res: VercelResponse) {
         return res.status(400).json({ message: 'Registration has closed' });
     }
 
-    // 3. (Mock) Verify Payment
-    // In production, we would verify the signature/status using paymentData and the manager's keys.
-    // Assuming payment success for this MVP/Task.
-    const paymentId = paymentData?.payment_id || `mock_${Date.now()}`;
-    const amount = event.price;
-
-    // 4. Create Ticket
+    // 3. Create Ticket (PENDING)
     const ticketId = crypto.randomUUID();
-    const qrData = JSON.stringify({
+    const amount = event.price;
+    const initialQrData = JSON.stringify({
         ticketId,
         eventId,
         userId: user._id,
-        status: 'confirmed'
+        status: 'pending' // Initial status
     });
-
-    // Generate QR Code Image (Data URL)
-    const qrCodeImage = await QRCode.toDataURL(qrData);
 
     const { data: ticket, error } = await supabase.from('tickets').insert({
         id: ticketId,
         event_id: eventId,
         user_id: user._id,
-        status: 'confirmed',
-        payment_id: paymentId,
+        status: 'pending',
         gateway: gateway || 'razorpay',
-        qr_code_data: qrData,
+        qr_code_data: initialQrData,
         amount: amount,
         created_at: new Date().toISOString()
     }).select().single();
 
     if (error) throw error;
 
-    // 5. Update Booked Slots
-    await supabase.from('events').update({
-        booked_slots: (event.booked_slots || 0) + 1
-    }).eq('_id', eventId);
+    // 4. Verify Payment & Update Status
+    // In a real scenario, we verify the signature using the manager's secret.
+    // For this implementation, we will trust the client's 'success' for now but mark as failed if explicitly requested or invalid.
 
-    // 6. Send Email
+    let finalStatus = 'failed';
+    let paymentId = paymentData?.payment_id || null;
+
+    // SIMULATION/VALIDATION LOGIC
+    if (paymentData && paymentData.payment_id && !paymentData.force_fail) {
+        finalStatus = 'confirmed'; // 'paid' can be mapped to 'confirmed' or we just use 'confirmed' vs 'failed'
+        paymentId = paymentData.payment_id;
+    } else {
+        // Payment Failed or User cancelled/mock fail
+        finalStatus = 'failed';
+    }
+
+    // 5. Update Ticket Status
+    const finalQrData = JSON.stringify({
+        ticketId,
+        eventId,
+        userId: user._id,
+        status: finalStatus
+    });
+
+    // If Confirmed, Generate QR Image
+    let qrCodeImage = null;
+    if (finalStatus === 'confirmed') {
+        qrCodeImage = await QRCode.toDataURL(finalQrData);
+
+        // Update Booked Slots Only if Confirmed
+        await supabase.from('events').update({
+            booked_slots: (event.booked_slots || 0) + 1
+        }).eq('_id', eventId);
+    }
+
+    // Update Ticket in DB
+    await supabase.from('tickets').update({
+        status: finalStatus,
+        payment_id: paymentId,
+        qr_code_data: finalQrData,
+        // Store QR Image link if we had storage, but we don't.
+    }).eq('id', ticketId);
+
+
+    // 6. Send Email Notification
     try {
-        await transporter.sendMail({
-            from: '"UniNotes Tickets" <tickets@trilliontip.com>',
-            to: user.email,
-            subject: `Ticket Confirmed: ${event.title}`,
-            html: `
-                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px;">
-                    <h2 style="color: #4f46e5; margin-bottom: 24px;">Your Ticket is Confirmed! 🎉</h2>
-                    <p style="color: #374151; font-size: 16px;">Hello <b>${user.name}</b>,</p>
-                    <p style="color: #374151;">You have successfully booked a ticket for <b>${event.title}</b>.</p>
-                    
-                    <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 24px 0;">
-                        <p style="margin: 0 0 8px 0;"><b>Date:</b> ${new Date(event.date).toLocaleDateString()}</p>
-                        <p style="margin: 0 0 8px 0;"><b>Location:</b> ${event.location}</p>
-                        <p style="margin: 0 0 8px 0;"><b>Price:</b> ${event.currency} ${event.price}</p>
-                        <p style="margin: 0;"><b>Ticket ID:</b> ${ticketId}</p>
-                    </div>
+        if (finalStatus === 'confirmed' && qrCodeImage) {
+            // SUCCESS EMAIL
+            await transporter.sendMail({
+                from: '"UniNotes Tickets" <tickets@trilliontip.com>',
+                to: user.email,
+                subject: `Ticket Confirmed: ${event.title}`,
+                html: `
+                    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px;">
+                        <h2 style="color: #10b981; margin-bottom: 24px;">Your Ticket is Confirmed! 🎉</h2>
+                        <p style="color: #374151; font-size: 16px;">Hello <b>${user.name}</b>,</p>
+                        <p style="color: #374151;">You have successfully booked a ticket for <b>${event.title}</b>.</p>
+                        
+                        <div style="background-color: #f0fdf4; padding: 20px; border-radius: 8px; margin: 24px 0; border: 1px solid #bbf7d0;">
+                            <p style="margin: 0 0 8px 0;"><b>Date:</b> ${new Date(event.date).toLocaleDateString()}</p>
+                            <p style="margin: 0 0 8px 0;"><b>Location:</b> ${event.location}</p>
+                            <p style="margin: 0 0 8px 0;"><b>Price:</b> ${event.currency} ${event.price}</p>
+                            <p style="margin: 0 0 8px 0;"><b>Ticket ID:</b> ${ticketId}</p>
+                            <p style="margin: 0;"><b>Payment ID:</b> ${paymentId}</p>
+                        </div>
 
-                    <div style="text-align: center; margin: 32px 0;">
-                        <img src="${qrCodeImage}" alt="Ticket QR Code" style="width: 200px; height: 200px;" />
-                        <p style="font-size: 12px; color: #6b7280; margin-top: 8px;">Scan this QR code at the venue entry</p>
-                    </div>
+                        <div style="text-align: center; margin: 32px 0;">
+                            <img src="${qrCodeImage}" alt="Ticket QR Code" style="width: 200px; height: 200px;" />
+                            <p style="font-size: 12px; color: #6b7280; margin-top: 8px;">Scan this QR code at the venue entry</p>
+                        </div>
+                        
+                         <p style="color: #6b7280; font-size: 14px; text-align: center;">Please keep this email safe.</p>
 
-                    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;" />
-                    <p style="color: #6b7280; font-size: 12px; text-align: center;">© 2025 UniNotes Events</p>
-                </div>
-            `,
-            attachments: [
-                {
-                    filename: 'ticket_qr.png',
-                    content: qrCodeImage.split("base64,")[1],
-                    encoding: 'base64'
-                }
-            ]
-        });
+                        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;" />
+                        <p style="color: #6b7280; font-size: 12px; text-align: center;">© 2025 UniNotes Events</p>
+                    </div>
+                `,
+                attachments: [
+                    {
+                        filename: 'ticket_qr.png',
+                        content: qrCodeImage.split("base64,")[1],
+                        encoding: 'base64'
+                    }
+                ]
+            });
+        } else {
+            // FAILURE EMAIL
+            await transporter.sendMail({
+                from: '"UniNotes Tickets" <tickets@trilliontip.com>',
+                to: user.email,
+                subject: `Payment Failed: ${event.title}`,
+                html: `
+                    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px;">
+                        <h2 style="color: #ef4444; margin-bottom: 24px;">Payment Failed ❌</h2>
+                        <p style="color: #374151; font-size: 16px;">Hello <b>${user.name}</b>,</p>
+                        <p style="color: #374151;">We could not complete your booking for <b>${event.title}</b>.</p>
+                        
+                        <div style="background-color: #fef2f2; padding: 20px; border-radius: 8px; margin: 24px 0; border: 1px solid #fecaca;">
+                            <p style="margin: 0 0 8px 0; color: #b91c1c;">The transaction failed or was cancelled.</p>
+                            <p style="margin: 0;">Please try booking again.</p>
+                        </div>
+
+                        <p style="color: #6b7280; font-size: 14px;">If money was deducted, it will be refunded within 5-7 business days.</p>
+
+                        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;" />
+                        <p style="color: #6b7280; font-size: 12px; text-align: center;">© 2025 UniNotes Events</p>
+                    </div>
+                `
+            });
+        }
+
     } catch (e) {
         console.error("Failed to send ticket email", e);
     }
 
-    return res.status(200).json({ message: 'Ticket booked successfully', ticket });
+    return res.status(200).json({
+        message: finalStatus === 'confirmed' ? 'Ticket booked successfully' : 'Payment failed',
+        ticket: { ...ticket, status: finalStatus },
+        status: finalStatus
+    });
 }
