@@ -58,11 +58,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             // Get public approved events
             const { data: events, error } = await supabase
                 .from('events')
-                .select('*, organizer:users(name, avatar)')
+                .select('*')
                 .eq('status', 'approved')
-                .order('date', { ascending: true }); // Detailed view shows upcoming first? or created? Date makes sense.
+                .order('date', { ascending: true });
 
             if (error) throw error;
+
+            // Manually fetch organizer data for each event
+            if (events && events.length > 0) {
+                const organizerIds = [...new Set(events.map(e => e.organizer_id))];
+                const { data: organizers } = await supabase
+                    .from('users')
+                    .select('_id, name, avatar')
+                    .in('_id', organizerIds);
+
+                const organizerMap = new Map(organizers?.map(o => [o._id, o]) || []);
+                events.forEach(event => {
+                    event.organizer = organizerMap.get(event.organizer_id) || null;
+                });
+            }
+
             return res.status(200).json({ events });
         }
 
@@ -86,11 +101,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             // Get MY Tickets (User)
             const { data: tickets, error } = await supabase
                 .from('tickets')
-                .select('*, event:events(*)')
+                .select('*')
                 .eq('user_id', user._id)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
+
+            // Manually fetch event data
+            if (tickets && tickets.length > 0) {
+                const eventIds = [...new Set(tickets.map(t => t.event_id))];
+                const { data: events } = await supabase
+                    .from('events')
+                    .select('*')
+                    .in('_id', eventIds);
+
+                const eventMap = new Map(events?.map(e => [e._id, e]) || []);
+                tickets.forEach(ticket => {
+                    ticket.event = eventMap.get(ticket.event_id) || null;
+                });
+            }
+
             return res.status(200).json({ tickets });
 
         } else if (req.method === 'GET' && action === 'config') {
@@ -136,9 +166,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         return res.status(400).json({ message: 'Invalid action' });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Events API Error:', error);
-        return res.status(500).json({ message: 'Server error', error: String(error) });
+        return res.status(500).json({ message: 'Server error', error: error.message || String(error), stack: error.stack });
     }
 }
 
