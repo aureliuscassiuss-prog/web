@@ -110,7 +110,8 @@ export default function PdfGeneratorPage() {
                     throw new Error(errData.message || 'Daily limit reached.');
                 }
 
-                throw new Error(errData.message || 'Failed to generate PDF');
+                // Display the specific error message from the backend (e.g. "Unable to structure...")
+                throw new Error(errData.message || 'Failed to generate PDF. Please try a more specific prompt.');
             }
 
             // Extract filename from Content-Disposition

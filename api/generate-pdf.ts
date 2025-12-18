@@ -143,37 +143,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const selectedWeight = fontConfig.weight;
 
         // Step 1: Use AI to generate detailed document specification
-        const systemPrompt = `You are a PROFESSIONAL DOCUMENT FORMATTER. Your goal is to create a STRICTLY PROFESSIONAL, COMPACT PDF structure.
+        const systemPrompt = `You are an INDIAN CORPORATE DOCUMENT SPECIALIST. Your goal is to create PROFESSIONAL, SINGLE-PAGE, INDIA-STANDARD layouts.
 
-**CORE PHILOSOPHY**:
-- **PROFESSIONALISM**: Use ONLY Black & White (Grayscale). NO colors.
-- **COMPACTNESS**: fit as much on ONE PAGE as possible. Single spacing.
-- **HEADINGS**: Standard Formal Headings (Size 12-14). NO HUGE SCARY HEADERS.
-- **NO ACCENTS**: Do not use colored accent backgrounds. Keep it clean and formal (Indian Standard).
+**STRICT LAYOUT RULES (Indian Standard)**:
+1.  **SENDER INFO**: ALWAYS placed on the **TOP RIGHT** (Right Aligned), unless it's a Header.
+2.  **RECIPIENT INFO**: ALWAYS placed on the **LEFT**.
+3.  **DATE**: Placed relative to Sender info (Right) or just below it.
+4.  **SPACING**: STRICT SINGLE SPACING. No double gaps. Compact.
+5.  **COLORS**: BLACK ONLY.
+6.  **ROBUSTNESS**: Return FLAT JSON. Do not nest aggressively. 
 
-**JSON STRUCTURE (The Blueprint):**
+**JSON STRUCTURE**:
 {
   "config": {
-    "draw_border": boolean, // Default false
-    "margin": number, // Default 15
-    "colors": {
-       "accent": "#000000", // STRICTLY BLACK
-       "text": "#000000",   // STRICTLY BLACK
-       "secondary": "#333333" // Dark Gray
-    },
-    "styles": {
-       "heading_underline": boolean, 
-       "table_striping": boolean     // Default false for formal look
-    }
+    "draw_border": false,
+    "margin": 15,
+    "colors": { "accent": "#000000", "text": "#000000" }
   },
-  "title": "Main Title (Centered, uppercase, size 16)", 
-  "watermark": "", // Avoid unless requested
+  "title": "TITLE (CENTERED)",
   
-  // OPTIONAL: Standard Letter Structure
+  // KEY: Structure for Indian Letters/Docs
   "letter_details": {
-    "sender_address": ["Line 1", "Line 2"],
-    "to_block": ["To,", "Name", "Address"],
-    "date": "DD/MM/YYYY",
+    "sender_address": ["Line 1", "Line 2"], // Will be RIGHT ALIGNED by renderer
+    "to_block": ["To,", "Name", "Address"], // LEFT ALIGNED
+    "date": "15 May 2015",
     "subject": "Subject: ...",
     "salutation": "Dear...",
     "body_paragraphs": ["..."],
@@ -181,32 +174,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     "signature_block": ["Name", "Title"]
   },
 
-  // THE CORE: List of sections to build the document. 
   "sections": [
-    {
-      "type": "heading",
-      "text": "Experience / Subject",
-      "align": "left",
-      "size": 12 // Max 14
-    },
-    {
-      "type": "text",
-      "content": ["Paragraph 1...", "Paragraph 2..."],
-      "align": "justify" 
-    },
-    {
-      "type": "table",
-      "tableData": {
-        "headers": ["Date", "Activity", "Cost"],
-        "rows": [ ["12/10", "Flight", "$500"] ]
-      }
-    },
-    {
-      "type": "list",
-      "items": ["Point 1", "Point 2"]
-    }
+    { "type": "heading", "text": "Heading (Left)", "align": "left", "size": 12 },
+    { "type": "text", "content": ["Compact paragraph."], "align": "justify" },
+    { "type": "table", "tableData": { "headers": ["A"], "rows": [["1"]] } }
   ],
-  "filename": "document.pdf"
+  "filename": "doc.pdf"
 }
 
 RETURN ONLY VALID JSON.`;
@@ -217,7 +190,7 @@ RETURN ONLY VALID JSON.`;
                 { role: 'user', content: prompt }
             ],
             model: 'llama-3.3-70b-versatile',
-            temperature: 0.3, // Lower temp for more consistent/formal output
+            temperature: 0.2, // Very strict
             max_tokens: 3000,
         });
 
@@ -226,24 +199,13 @@ RETURN ONLY VALID JSON.`;
         // Robust JSON Extraction
         let docContent: any = {};
         try {
-            const jsonMatch = aiResponse.match(/\{[\s\S]*\}/); // Greedier simple match for object
+            const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
             const cleanResponse = jsonMatch ? jsonMatch[0] : aiResponse;
             docContent = JSON.parse(cleanResponse);
         } catch (parseError) {
             console.error("JSON Parse Error:", parseError, "Raw Response:", aiResponse);
-            // Fallback content if parsing completely fails
-            docContent = {
-                type: 'note',
-                title: 'Conversion Error',
-                filename: 'error_log.pdf',
-                letter_details: {
-                    body_paragraphs: [
-                        "We encountered an error processing the AI response.",
-                        "Raw Output:",
-                        aiResponse.substring(0, 500) + "..."
-                    ]
-                }
-            };
+            // STRICT ERROR: Do not generate PDF, tell user to fix prompt
+            throw new Error('Unable to structure document from this prompt. Please provide clear details.');
         }
 
         // Sanitize filename
@@ -367,27 +329,33 @@ RETURN ONLY VALID JSON.`;
             const details = docContent.letter_details;
             pdf.setTextColor(0, 0, 0);
 
-            // SENDER
+            // SENDER: INDIAN STANDARD -> TOP RIGHT
             if (details.sender_address) {
                 pdf.setFontSize(10);
                 pdf.setFont(selectedFont, 'bold');
                 pdf.setTextColor(0, 0, 0);
+
                 details.sender_address.forEach((line: string) => {
-                    pdf.text(line, margin, yPosition);
+                    // Right Align Calculation
+                    // jsPDF 'right' alignment needs x to be the right bound
+                    pdf.text(line, pageWidth - margin, yPosition, { align: 'right' });
                     yPosition += 4;
                 });
-                pdf.setTextColor(0, 0, 0);
                 yPosition += 4;
             }
 
-            // DATE
+            // DATE: Often on Right or Left. Standardize to Right below sender or Left. 
+            // Let's stick to Right if Sender is Right, or prompt driven. 
+            // For now, let's keep Date Left aligned for clarity unless 'config' overrides, 
+            // BUT user Example 1 had date on Right. Example 2 had date on Left.
+            // Let's put Date on RIGHT to match Example 1 (Resignation Letter).
             if (details.date) {
                 pdf.setFont(selectedFont, selectedWeight);
-                pdf.text(details.date, margin, yPosition);
-                yPosition += 8;
+                pdf.text(details.date, pageWidth - margin, yPosition, { align: 'right' });
+                yPosition += 10;
             }
 
-            // TO BLOCK
+            // TO BLOCK: ALWAYS LEFT
             if (details.to_block) {
                 details.to_block.forEach((line: string) => {
                     pdf.text(line, margin, yPosition);
@@ -399,6 +367,7 @@ RETURN ONLY VALID JSON.`;
             // SUBJECT
             if (details.subject) {
                 pdf.setFont(selectedFont, 'bold');
+                // Center or underlined? User Example 2 has it bold left.
                 pdf.text(details.subject, margin, yPosition);
                 pdf.setFont(selectedFont, selectedWeight);
                 yPosition += 8;
@@ -407,19 +376,19 @@ RETURN ONLY VALID JSON.`;
             // SALUTATION
             if (details.salutation) {
                 pdf.text(details.salutation, margin, yPosition);
-                yPosition += 8;
+                yPosition += 6; // Tight gap
             }
 
             // BODY
             if (details.body_paragraphs) {
                 details.body_paragraphs.forEach((para: string) => {
                     addText(para, 11, 'normal', 'justify'); // Size 11 text
-                    yPosition += 4; // Minimal paragraph gap
+                    yPosition += 2; // VERY Tight paragraph gap
                 });
                 yPosition += 4;
             }
 
-            // CLOSING & SIGNATURE
+            // CLOSING & SIGNATURE (Left aligned usually in India, or Right? Example 1 is Left.)
             if (details.closing) {
                 pdf.text(details.closing, margin, yPosition);
                 yPosition += 10;
