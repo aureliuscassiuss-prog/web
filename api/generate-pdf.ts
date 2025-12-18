@@ -253,8 +253,20 @@ RETURN ONLY VALID JSON.`;
         const contentWidth = pageWidth - (margin * 2);
         let yPosition = margin;
 
+        // Helper: Sanitize Text for jsPDF (Standard Fonts don't support Unicode like ₹)
+        const sanitizeText = (text: any): string => {
+            if (!text) return '';
+            let str = String(text);
+            // Replace INR Symbol with Rs.
+            str = str.replace(/₹/g, 'Rs. ');
+            // Replace other common problematic symbols if needed
+            // str = str.replace(/©/g, '(c)'); 
+            return str;
+        };
+
         // Improved Text Render Function with Justification
         const addText = (text: string, fontSize: number, fontStyle: string, align: 'left' | 'center' | 'right' | 'justify' = 'left', isBold: boolean = false) => {
+            const safeText = sanitizeText(text); // Sanitize 
             pdf.setFontSize(fontSize);
             // Use selected font and weight, override with bold if requested
             const weight = isBold ? 'bold' : (fontStyle === 'bold' ? 'bold' : selectedWeight);
@@ -264,7 +276,7 @@ RETURN ONLY VALID JSON.`;
             const lineHeight = fontSize * 0.4;
 
             if (align === 'justify') {
-                const lines = pdf.splitTextToSize(text, contentWidth);
+                const lines = pdf.splitTextToSize(safeText, contentWidth);
                 lines.forEach((line: string) => {
                     // Check page break
                     if (yPosition > pageHeight - margin) {
@@ -276,7 +288,7 @@ RETURN ONLY VALID JSON.`;
                 });
             } else {
                 // Center/Right/Left handled standard
-                const lines = pdf.splitTextToSize(text, contentWidth);
+                const lines = pdf.splitTextToSize(safeText, contentWidth);
                 lines.forEach((line: string) => {
                     if (yPosition > pageHeight - margin) {
                         pdf.addPage();
@@ -339,7 +351,7 @@ RETURN ONLY VALID JSON.`;
             pdf.setFontSize(16); // Professional Size
             pdf.setFont(selectedFont, 'bold');
             pdf.setTextColor(0, 0, 0);
-            pdf.text(docContent.title.toUpperCase(), pageWidth / 2, yPosition, { align: 'center' });
+            pdf.text(sanitizeText(docContent.title).toUpperCase(), pageWidth / 2, yPosition, { align: 'center' });
             yPosition += 10;
 
             // Separator Line (if enabled or default)
@@ -347,7 +359,7 @@ RETURN ONLY VALID JSON.`;
                 pdf.setDrawColor(0, 0, 0);
                 pdf.setLineWidth(0.5);
                 pdf.line(margin + 40, yPosition - 4, pageWidth - margin - 40, yPosition - 4);
-                yPosition += 10; // Increased spacing after title
+                yPosition += 4;
             }
         }
 
@@ -362,7 +374,7 @@ RETURN ONLY VALID JSON.`;
                 pdf.setFont(selectedFont, 'bold');
                 pdf.setTextColor(0, 0, 0);
                 details.sender_address.forEach((line: string) => {
-                    pdf.text(line, margin, yPosition);
+                    pdf.text(sanitizeText(line), margin, yPosition);
                     yPosition += 4;
                 });
                 pdf.setTextColor(0, 0, 0);
@@ -372,14 +384,14 @@ RETURN ONLY VALID JSON.`;
             // DATE
             if (details.date) {
                 pdf.setFont(selectedFont, selectedWeight);
-                pdf.text(details.date, margin, yPosition);
+                pdf.text(sanitizeText(details.date), margin, yPosition);
                 yPosition += 8;
             }
 
             // TO BLOCK
             if (details.to_block) {
                 details.to_block.forEach((line: string) => {
-                    pdf.text(line, margin, yPosition);
+                    pdf.text(sanitizeText(line), margin, yPosition);
                     yPosition += 5;
                 });
                 yPosition += 8;
@@ -388,21 +400,21 @@ RETURN ONLY VALID JSON.`;
             // SUBJECT
             if (details.subject) {
                 pdf.setFont(selectedFont, 'bold');
-                pdf.text(details.subject, margin, yPosition);
+                pdf.text(sanitizeText(details.subject), margin, yPosition);
                 pdf.setFont(selectedFont, selectedWeight);
                 yPosition += 8;
             }
 
             // SALUTATION
             if (details.salutation) {
-                pdf.text(details.salutation, margin, yPosition);
+                pdf.text(sanitizeText(details.salutation), margin, yPosition);
                 yPosition += 8;
             }
 
             // BODY
             if (details.body_paragraphs) {
                 details.body_paragraphs.forEach((para: string) => {
-                    addText(para, 11, 'normal', 'justify'); // Size 11 text
+                    addText(para, 11, 'normal', 'justify'); // Sanitized inside addText
                     yPosition += 4; // Minimal paragraph gap
                 });
                 yPosition += 4;
@@ -410,13 +422,13 @@ RETURN ONLY VALID JSON.`;
 
             // CLOSING & SIGNATURE
             if (details.closing) {
-                pdf.text(details.closing, margin, yPosition);
+                pdf.text(sanitizeText(details.closing), margin, yPosition);
                 yPosition += 10;
             }
 
             if (details.signature_block) {
                 details.signature_block.forEach((line: string) => {
-                    pdf.text(line, margin, yPosition);
+                    pdf.text(sanitizeText(line), margin, yPosition);
                     yPosition += 5;
                 });
             }
@@ -442,7 +454,7 @@ RETURN ONLY VALID JSON.`;
                     if (headAlign === 'center') xPos = pageWidth / 2;
                     if (headAlign === 'right') xPos = pageWidth - margin;
 
-                    pdf.text(headText, xPos, yPosition, { align: headAlign });
+                    pdf.text(sanitizeText(headText), xPos, yPosition, { align: headAlign });
 
                     pdf.setFont(selectedFont, selectedWeight);
                     pdf.setTextColor(0, 0, 0);
@@ -461,7 +473,7 @@ RETURN ONLY VALID JSON.`;
                         pdf.setFontSize(fontSize);
                         row.forEach((cell) => {
                             // Ensure cell is string
-                            const cellStr = String(cell || '');
+                            const cellStr = sanitizeText(cell || '');
                             const lines = pdf.splitTextToSize(cellStr, colWidth - 2);
                             if (lines.length > maxLines) maxLines = lines.length;
                         });
@@ -486,7 +498,7 @@ RETURN ONLY VALID JSON.`;
                     pdf.setTextColor(0, 0, 0);
 
                     section.tableData.headers.forEach((header: string, i: number) => {
-                        const cellLines = pdf.splitTextToSize(String(header), colWidth - 2);
+                        const cellLines = pdf.splitTextToSize(sanitizeText(header), colWidth - 2);
                         pdf.text(cellLines, margin + (i * colWidth) + 1, yPosition + 4);
                     });
 
@@ -505,7 +517,7 @@ RETURN ONLY VALID JSON.`;
                         }
 
                         row.forEach((cell: string, i: number) => {
-                            const cellStr = String(cell || '');
+                            const cellStr = sanitizeText(cell || '');
                             const cellLines = pdf.splitTextToSize(cellStr, colWidth - 2);
                             pdf.text(cellLines, margin + (i * colWidth) + 1, yPosition + 3);
                         });
@@ -524,7 +536,7 @@ RETURN ONLY VALID JSON.`;
                     const items = section.items || section.content;
                     items.forEach((item: string) => {
                         pdf.text('•', margin + 5, yPosition);
-                        const lines = pdf.splitTextToSize(item, contentWidth - 10);
+                        const lines = pdf.splitTextToSize(sanitizeText(item), contentWidth - 10);
                         lines.forEach((line: string) => {
                             pdf.text(line, margin + 8, yPosition);
                             yPosition += 4;
