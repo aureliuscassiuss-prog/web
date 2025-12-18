@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, Settings, Calendar, Ticket, ArrowRight } from 'lucide-react';
+import { Plus, Settings, Calendar, Ticket, Search, TrendingUp } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import EventCard from './EventCard';
 import EventDetailsModal from './EventDetailsModal';
 import CreateEventModal from './CreateEventModal';
 import TyreLoader from './TyreLoader';
 import TicketCard from './TicketCard';
+
 
 // Custom Star Icon for animations
 const FourPointStar = ({ className }: { className?: string }) => (
@@ -25,6 +26,10 @@ export default function EventsPage() {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showConfig, setShowConfig] = useState(false);
     const [configData, setConfigData] = useState({ keyId: '', keySecret: '' });
+
+    // Search and Filter State
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterType, setFilterType] = useState<'all' | 'trending'>('all');
 
     const isManager = (user as any)?.role === 'event-manager' || user?.role === 'admin';
 
@@ -60,6 +65,32 @@ export default function EventsPage() {
         }
         fetchEvents();
     }, [view, token, isManager]);
+
+    // --- Search & Filter Logic ---
+    const getFilteredEvents = () => {
+        let filtered = [...events];
+
+        // 1. Search (Title or Description) or Location or Organizer
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            filtered = filtered.filter(e =>
+                e.title?.toLowerCase().includes(query) ||
+                e.description?.toLowerCase().includes(query) ||
+                e.location?.toLowerCase().includes(query) ||
+                e.organizer?.name?.toLowerCase().includes(query)
+            );
+        }
+
+        // 2. Trending Filter (Most booked)
+        if (filterType === 'trending') {
+            // Sort by booked_slots desc
+            filtered.sort((a, b) => (b.booked_slots || 0) - (a.booked_slots || 0));
+        }
+
+        return filtered;
+    };
+
+    const filteredEvents = getFilteredEvents();
 
     const handleDelete = async (id: string) => {
         if (!confirm("Are you sure you want to delete this event?")) return;
@@ -128,7 +159,7 @@ export default function EventsPage() {
                 <div className="mb-8 px-4 py-1.5 rounded-full border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-white/5 backdrop-blur-md shadow-sm dark:shadow-2xl">
                     <span className="text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-2">
                         <FourPointStar className="w-3 h-3 text-yellow-500" />
-                        UniNotes Events
+                        Extrovert Events
                     </span>
                 </div>
 
@@ -137,7 +168,7 @@ export default function EventsPage() {
                     {/* Header Section */}
                     <div className="text-center space-y-4 mb-10">
                         <h1 className="font-serif text-4xl sm:text-6xl text-slate-900 dark:text-white tracking-tight">
-                            Campus <span className="italic text-transparent bg-clip-text bg-gradient-to-br from-blue-500 via-cyan-500 to-teal-500 dark:from-blue-300 dark:via-cyan-200 dark:to-teal-300">Experiences</span>
+                            Extrovert <span className="italic text-transparent bg-clip-text bg-gradient-to-br from-blue-500 via-cyan-500 to-teal-500 dark:from-blue-300 dark:via-cyan-200 dark:to-teal-300">Events</span>
                         </h1>
                         <p className="text-slate-600 dark:text-zinc-500 text-lg sm:text-xl max-w-2xl mx-auto font-light leading-relaxed">
                             Discover workshops, fests, and cultural events.
@@ -159,43 +190,81 @@ export default function EventsPage() {
                             <div className="bg-slate-50 dark:bg-[#09090b] rounded-[22px] sm:rounded-[30px] min-h-[600px] flex flex-col">
 
                                 {/* Console Header / Tabs */}
-                                <div className="px-6 py-4 border-b border-gray-200 dark:border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
-                                    {/* Tabs */}
-                                    <div className="flex bg-white dark:bg-zinc-900/50 p-1 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm">
+                                <div className="px-6 py-4 border-b border-gray-200 dark:border-white/5 flex flex-col lg:flex-row items-center justify-between gap-4">
+
+                                    {/* Left: View Switcher */}
+                                    <div className="flex bg-white dark:bg-zinc-900/50 p-1 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm w-full lg:w-auto overflow-x-auto">
                                         <button
                                             onClick={() => setView('browse')}
-                                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${view === 'browse' ? 'bg-black text-white dark:bg-white dark:text-black shadow-md' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                                            className={`flex-1 lg:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${view === 'browse' ? 'bg-black text-white dark:bg-white dark:text-black shadow-md' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                                         >
                                             Browse
                                         </button>
                                         <button
                                             onClick={() => setView('tickets')}
-                                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${view === 'tickets' ? 'bg-black text-white dark:bg-white dark:text-black shadow-md' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                                            className={`flex-1 lg:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 whitespace-nowrap ${view === 'tickets' ? 'bg-black text-white dark:bg-white dark:text-black shadow-md' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                                         >
                                             My Tickets
-                                            {tickets.length > 0 && <span className="bg-blue-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{tickets.length}</span>}
+                                            {/* Badge HIDDEN as per user request */}
                                         </button>
                                         {isManager && (
                                             <button
                                                 onClick={() => setView('manage')}
-                                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${view === 'manage' ? 'bg-black text-white dark:bg-white dark:text-black shadow-md' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                                                className={`flex-1 lg:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${view === 'manage' ? 'bg-black text-white dark:bg-white dark:text-black shadow-md' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                                             >
                                                 Manage
                                             </button>
                                         )}
                                     </div>
 
-                                    {/* Manager Actions */}
-                                    {isManager && view === 'manage' && (
-                                        <div className="flex items-center gap-2">
-                                            <button onClick={() => setShowConfig(true)} className="p-2 hover:bg-gray-200 dark:hover:bg-zinc-800 rounded-lg text-gray-500 transition-colors">
-                                                <Settings size={18} />
-                                            </button>
-                                            <button onClick={() => setShowCreateModal(true)} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all">
-                                                <Plus size={14} /> Create Event
-                                            </button>
-                                        </div>
-                                    )}
+                                    {/* Center/Right: Action Bar */}
+                                    <div className="flex flex-col md:flex-row items-center gap-3 w-full lg:w-auto">
+
+                                        {/* Search & Filter (Only in Browse Mode) */}
+                                        {view === 'browse' && (
+                                            <div className="flex items-center gap-2 w-full md:w-auto">
+                                                {/* Filter Toggle */}
+                                                <div className="flex bg-white dark:bg-zinc-900/50 p-1 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm shrink-0">
+                                                    <button
+                                                        onClick={() => setFilterType('all')}
+                                                        className={`px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all ${filterType === 'all' ? 'bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-white' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                    >
+                                                        All
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setFilterType('trending')}
+                                                        className={`px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1 ${filterType === 'trending' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                    >
+                                                        <TrendingUp size={12} /> Trending
+                                                    </button>
+                                                </div>
+
+                                                {/* Search Bar */}
+                                                <div className="relative flex-1 md:w-48 lg:w-60">
+                                                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Search events..."
+                                                        value={searchQuery}
+                                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                                        className="w-full bg-white dark:bg-zinc-900/50 border border-gray-200 dark:border-zinc-800 rounded-xl pl-9 pr-3 py-2 text-xs font-medium focus:outline-none focus:border-blue-500 transition-colors"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Manager Actions */}
+                                        {isManager && view === 'manage' && (
+                                            <div className="flex items-center gap-2 w-full md:w-auto">
+                                                <button onClick={() => setShowConfig(true)} className="p-2 hover:bg-gray-200 dark:hover:bg-zinc-800 rounded-lg text-gray-500 transition-colors">
+                                                    <Settings size={18} />
+                                                </button>
+                                                <button onClick={() => setShowCreateModal(true)} className="flex-1 md:flex-none px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all">
+                                                    <Plus size={14} /> Create
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* Content Grid */}
@@ -208,7 +277,7 @@ export default function EventsPage() {
                                     ) : (
                                         <AnimatePresence mode="wait">
                                             <motion.div
-                                                key={view}
+                                                key={view + filterType + searchQuery}
                                                 initial={{ opacity: 0, scale: 0.98 }}
                                                 animate={{ opacity: 1, scale: 1 }}
                                                 exit={{ opacity: 0, scale: 0.98 }}
@@ -216,7 +285,7 @@ export default function EventsPage() {
                                                 className="h-full"
                                             >
                                                 {/* EMPTY STATES */}
-                                                {((view === 'tickets' && tickets.length === 0) || (view !== 'tickets' && events.length === 0)) && (
+                                                {((view === 'tickets' && tickets.length === 0) || (view !== 'tickets' && filteredEvents.length === 0)) && (
                                                     <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center">
                                                         <div className="w-16 h-16 bg-gray-100 dark:bg-zinc-900/50 rounded-full flex items-center justify-center mb-4">
                                                             {view === 'tickets' ? <Ticket className="text-gray-300 w-8 h-8" /> : <Calendar className="text-gray-300 w-8 h-8" />}
@@ -234,7 +303,7 @@ export default function EventsPage() {
                                                 <div className={`grid gap-4 ${view === 'tickets' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2'}`}>
                                                     {view === 'tickets'
                                                         ? tickets.map(t => <TicketCard key={t.id} ticket={t} />)
-                                                        : events.map(e => (
+                                                        : filteredEvents.map(e => (
                                                             <EventCard
                                                                 key={e._id}
                                                                 event={e}
@@ -257,7 +326,7 @@ export default function EventsPage() {
 
                 {/* Footer */}
                 <div className="mt-12 text-center text-[10px] text-gray-400 dark:text-zinc-600">
-                    <p>Powered by UniNotes Event Engine</p>
+                    <p>Powered by Extrovert Engines</p>
                 </div>
 
             </div>
