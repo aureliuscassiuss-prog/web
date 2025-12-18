@@ -1567,6 +1567,7 @@ function UsersView({ users, processingId, onAction }: any) {
                                                             <option value="semi-admin">Semi Admin</option>
                                                             <option value="content-reviewer">Content Reviewer</option>
                                                             <option value="structure-manager">Structure Manager</option>
+                                                            <option value="event-manager">Event Manager</option>
                                                             <option value="user">User</option>
                                                         </select>
                                                         <button

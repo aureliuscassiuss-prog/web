@@ -38,6 +38,7 @@ import CoffeeChat from './components/CoffeeChat';
 import VideoChat from './pages/VideoChat';
 import PdfGeneratorPage from './components/PdfGeneratorPage';
 import MedicalGeneratorPage from './components/MedicalGeneratorPage';
+import EventsPage from './components/EventsPage';
 
 import SEO from './components/SEO'
 import AttendanceManager from './components/attendance/AttendanceManager'
@@ -478,6 +479,17 @@ function AppContent() {
               />
               <VideoChat />
             </ProtectedRoute>
+          } />
+
+          {/* Events Route (Public + Manager Dashboard handled internally) */}
+          <Route path="/events" element={
+            <>
+              <SEO
+                title="Events - Book Tickets for College Events"
+                description="Browse and book tickets for upcoming college events, workshops, and parties."
+              />
+              <EventsPage />
+            </>
           } />
 
           {/* PDF Generator Route (Public with rate limit) */}
