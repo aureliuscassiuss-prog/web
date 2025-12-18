@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Plus, Settings, LayoutGrid, Calendar, Ticket } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
 import EventCard from './EventCard';
 import EventDetailsModal from './EventDetailsModal';
 import CreateEventModal from './CreateEventModal';
