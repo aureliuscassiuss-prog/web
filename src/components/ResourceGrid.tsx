@@ -803,15 +803,28 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
         }
     }
 
-    // --- MAIN RENDER ---
-    if (isLoading) {
-        return (
-            <div className="flex h-64 flex-col items-center justify-center space-y-4">
-                <TyreLoader size={50} />
-                <p className="text-sm font-medium text-gray-400 animate-pulse tracking-widest uppercase text-[10px]">Loading Resources</p>
-            </div>
-        )
+    const handleResourceUpdate = (updatedResource: any) => {
+        // Update local state
+        setResources(prev => prev.map(r => r._id === updatedResource._id ? updatedResource : r))
+
+        // Update cache
+        Object.keys(dataCache.current).forEach(key => {
+            const cachedList = dataCache.current[key]
+            if (Array.isArray(cachedList)) {
+                const index = cachedList.findIndex((r: any) => r._id === updatedResource._id)
+                if (index !== -1) {
+                    const newList = [...cachedList]
+                    newList[index] = updatedResource
+                    dataCache.current[key] = newList
+                }
+            }
+        })
     }
+
+
+
+    // --- MAIN RENDER ---
+
 
     if (view === 'uploads') return <UploadsView uploads={uploads} onUploadRequest={onUploadRequest} onDelete={handleDelete} />
     if (view === 'leaderboard') return <LeaderboardView leaderboard={leaderboard} />
@@ -876,93 +889,105 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                         </div>
                     </div>
 
-                    {/* ERROR BANNER */}
-                    {error && (
-                        <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-lg text-red-600 dark:text-red-400 text-xs font-medium animate-in slide-in-from-top-2 fade-in">
-                            <AlertTriangle size={14} className="flex-shrink-0" />
-                            <span>{error}</span>
-                            <button onClick={() => setError(null)} className="ml-auto p-1 hover:bg-black/5 rounded">
-                                <X size={12} />
-                            </button>
-                        </div>
-                    )}
-                    {/* Mobile Generate Button */}
-                    {activeTab === 'pyqs' && (
-                        <button
-                            onClick={handleGeneratePaper}
-                            disabled={generating}
-                            className="flex sm:hidden w-full items-center justify-center gap-2 mt-3 px-4 py-3 bg-zinc-900 dark:bg-white text-white dark:text-black text-sm font-medium rounded-xl hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                        >
-                            {generating ? (
-                                <TyreLoader size={16} />
-                            ) : (
-                                <div className="flex items-center justify-center w-5 h-5 rounded-full bg-green-500/10 text-green-500 text-[10px] font-bold ring-1 ring-green-500/50">
-                                    {user?.role === 'admin' ? '∞' : attemptsLeft}
-                                </div>
-                            )}
-                            <span>{generating ? 'Generating Paper...' : 'Generate Sample Paper'}</span>
-                        </button>
-                    )}
-
-
-                    {activeTab === 'pyqs' && !selectedPyqYear ? (
-                        // YEAR SELECTION FOLDER VIEW
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            {['2025', '2024', '2023', '2022', '2021', 'Older'].map((year) => (
-                                <button
-                                    key={year}
-                                    onClick={() => setSelectedPyqYear(year)}
-                                    className="group flex flex-col items-center justify-center p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl hover:border-black dark:hover:border-white transition-all shadow-sm hover:shadow-md"
-                                >
-                                    <div className="w-12 h-12 mb-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                                        <div className="relative">
-                                            <FileText className="w-6 h-6" />
-                                            <div className="absolute -bottom-1 -right-1 bg-white dark:bg-gray-900 rounded-full p-0.5">
-                                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                                        {year}
-                                    </h3>
-                                    <p className="text-xs text-gray-500 font-medium">View Papers</p>
-                                </button>
-                            ))}
+                    {isLoading ? (
+                        <div className="flex h-64 flex-col items-center justify-center space-y-4">
+                            <TyreLoader size={50} />
+                            <p className="text-sm font-medium text-gray-400 animate-pulse tracking-widest uppercase text-[10px]">Loading Resources</p>
                         </div>
                     ) : (
-                        // RESOURCE LIST OR EMPTY STATE
                         <>
-                            {/* Back Button for PYQs */}
-                            {activeTab === 'pyqs' && selectedPyqYear && (
-                                <div className="mb-4">
-                                    <button
-                                        onClick={() => setSelectedPyqYear(null)}
-                                        className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-black dark:hover:text-white transition-colors"
-                                    >
-                                        <ChevronRight className="w-4 h-4 rotate-180" />
-                                        Back to Years
+                            {error && (
+                                <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-lg text-red-600 dark:text-red-400 text-xs font-medium animate-in slide-in-from-top-2 fade-in">
+                                    <AlertTriangle size={14} className="flex-shrink-0" />
+                                    <span>{error}</span>
+                                    <button onClick={() => setError(null)} className="ml-auto p-1 hover:bg-black/5 rounded">
+                                        <X size={12} />
                                     </button>
                                 </div>
                             )}
+                            {/* Mobile Generate Button */}
+                            {activeTab === 'pyqs' && (
+                                <button
+                                    onClick={handleGeneratePaper}
+                                    disabled={generating}
+                                    className="flex sm:hidden w-full items-center justify-center gap-2 mt-3 px-4 py-3 bg-zinc-900 dark:bg-white text-white dark:text-black text-sm font-medium rounded-xl hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                                >
+                                    {generating ? (
+                                        <TyreLoader size={16} />
+                                    ) : (
+                                        <div className="flex items-center justify-center w-5 h-5 rounded-full bg-green-500/10 text-green-500 text-[10px] font-bold ring-1 ring-green-500/50">
+                                            {user?.role === 'admin' ? '∞' : attemptsLeft}
+                                        </div>
+                                    )}
+                                    <span>{generating ? 'Generating Paper...' : 'Generate Sample Paper'}</span>
+                                </button>
+                            )}
 
-                            {resources.length === 0 ? (
-                                <EmptyState
-                                    icon={FileQuestion}
-                                    title={`No content found for ${selectedPyqYear || 'this selection'}`}
-                                    description={`Be the first to upload for this subject.`}
-                                    onUploadRequest={onUploadRequest}
-                                    filters={filters}
-                                    activeTab={activeTab}
-                                    onGeneratePaper={handleGeneratePaper}
-                                    isGenerating={generating}
-                                />
-                            ) : (
-                                // Grid Layout: 1 column mobile, 2 columns desktop
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in">
-                                    {resources.map((resource) => (
-                                        <ResourceCard key={resource._id} resource={resource} />
+
+                            {activeTab === 'pyqs' && !selectedPyqYear ? (
+                                // YEAR SELECTION FOLDER VIEW
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                    {['2025', '2024', '2023', '2022', '2021', 'Older'].map((year) => (
+                                        <button
+                                            key={year}
+                                            onClick={() => setSelectedPyqYear(year)}
+                                            className="group flex flex-col items-center justify-center p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl hover:border-black dark:hover:border-white transition-all shadow-sm hover:shadow-md"
+                                        >
+                                            <div className="w-12 h-12 mb-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                <div className="relative">
+                                                    <FileText className="w-6 h-6" />
+                                                    <div className="absolute -bottom-1 -right-1 bg-white dark:bg-gray-900 rounded-full p-0.5">
+                                                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                                {year}
+                                            </h3>
+                                            <p className="text-xs text-gray-500 font-medium">View Papers</p>
+                                        </button>
                                     ))}
                                 </div>
+                            ) : (
+                                // RESOURCE LIST OR EMPTY STATE
+                                <>
+                                    {/* Back Button for PYQs */}
+                                    {activeTab === 'pyqs' && selectedPyqYear && (
+                                        <div className="mb-4">
+                                            <button
+                                                onClick={() => setSelectedPyqYear(null)}
+                                                className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-black dark:hover:text-white transition-colors"
+                                            >
+                                                <ChevronRight className="w-4 h-4 rotate-180" />
+                                                Back to Years
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {resources.length === 0 ? (
+                                        <EmptyState
+                                            icon={FileQuestion}
+                                            title={`No content found for ${selectedPyqYear || 'this selection'}`}
+                                            description={`Be the first to upload for this subject.`}
+                                            onUploadRequest={onUploadRequest}
+                                            filters={filters}
+                                            activeTab={activeTab}
+                                            onGeneratePaper={handleGeneratePaper}
+                                            isGenerating={generating}
+                                        />
+                                    ) : (
+                                        // Grid Layout: 1 column mobile, 2 columns desktop
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in">
+                                            {resources.map((resource) => (
+                                                <ResourceCard
+                                                    key={resource._id}
+                                                    resource={resource}
+                                                    onUpdate={handleResourceUpdate}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </>
                     )}
@@ -1069,8 +1094,9 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                         </div>
                     </div>
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     )
 }
 

@@ -14,6 +14,7 @@ interface ResourceCardProps {
     isSelected?: boolean;
     onToggleSelect?: () => void;
     onLoginRequest?: () => void;
+    onUpdate?: (updatedResource: any) => void;
 }
 
 export default function ResourceCard({
@@ -24,7 +25,8 @@ export default function ResourceCard({
     isSelectionMode = false,
     isSelected = false,
     onToggleSelect,
-    onLoginRequest
+    onLoginRequest,
+    onUpdate
 }: ResourceCardProps) {
     const { token } = useAuth();
 
@@ -89,6 +91,20 @@ export default function ResourceCard({
                         dislikes: r.dislikes,
                         downloads: r.downloads,
                         flags: r.flags
+                    });
+                }
+                // Propagate update to parent
+                if (onUpdate) {
+                    onUpdate({
+                        ...resource,
+                        likes: r.likes,
+                        dislikes: r.dislikes,
+                        downloads: r.downloads,
+                        flags: r.flags,
+                        userLiked: action === 'like' ? value : (action === 'dislike' ? false : resource.userLiked),
+                        userDisliked: action === 'dislike' ? value : (action === 'like' ? false : resource.userDisliked),
+                        userSaved: action === 'save' ? value : resource.userSaved,
+                        userFlagged: action === 'flag' ? value : resource.userFlagged
                     });
                 }
                 return true;
