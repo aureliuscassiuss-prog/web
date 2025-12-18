@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, RotateCcw, CheckCircle, Plus, Trash2, Code, BookOpen, Coffee, X, Maximize, Minimize, Settings, Save } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -100,11 +100,27 @@ export default function PomodoroPage() {
         localStorage.setItem('pomodoroLastMode', mode);
     }, [mode]);
 
+    // Audio Ref
+    const alarmAudioRef = useRef<HTMLAudioElement | null>(null);
+
+    useEffect(() => {
+        // Initialize Audio securely
+        alarmAudioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'); // Louder Digital Alert
+        alarmAudioRef.current.preload = 'auto';
+    }, []);
+
+    const playAlarm = () => {
+        if (alarmAudioRef.current) {
+            alarmAudioRef.current.currentTime = 0;
+            alarmAudioRef.current.play().catch((e: unknown) => console.error("Alarm play failed:", e));
+        }
+    };
+
     useEffect(() => {
         document.title = `${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, '0')} - ${mode.charAt(0).toUpperCase() + mode.slice(1)}`;
 
         // --- Timer Logic (Per Mode) ---
-        let interval: NodeJS.Timeout | null = null;
+        let interval: ReturnType<typeof setInterval> | null = null;
         let expectedEndTime: number | null = null;
 
         // Ensure accurate end time reference from storage or calculate it
@@ -127,9 +143,10 @@ export default function PomodoroPage() {
                 if (newTimeLeft === 0) {
                     setIsActive(false);
                     saveModeState(mode, false, 0);
-                    // Play end sound
-                    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3'); // Pleasant bell chime
-                    audio.play().catch(e => console.log('Timer end audio failed', e));
+
+                    // Play end sound using the Ref
+                    playAlarm();
+
                     if (interval) clearInterval(interval);
                 }
             }, 1000); // Check every second
@@ -526,9 +543,20 @@ export default function PomodoroPage() {
                                     ))}
                                 </div>
 
+                                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+                                    <button
+                                        onClick={playAlarm}
+                                        type="button"
+                                        className="w-full py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                                        Test Alarm Sound
+                                    </button>
+                                </div>
+
                                 <button
                                     onClick={updateConfig}
-                                    className="w-full mt-8 py-3 bg-gray-900 dark:bg-white text-white dark:text-black rounded-xl font-medium hover:opacity-90 flex items-center justify-center gap-2"
+                                    className="w-full mt-4 py-3 bg-gray-900 dark:bg-white text-white dark:text-black rounded-xl font-medium hover:opacity-90 flex items-center justify-center gap-2"
                                 >
                                     <Save size={18} />
                                     Save Changes
