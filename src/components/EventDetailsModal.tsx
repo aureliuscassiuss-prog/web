@@ -3,6 +3,7 @@ import { X, Calendar, MapPin, Clock, ShieldCheck, ArrowLeft, Ticket } from 'luci
 import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import TyreLoader from './TyreLoader';
+import PaymentStatus from './PaymentStatus';
 
 interface Event {
     _id: string;
@@ -28,7 +29,11 @@ export default function EventDetailsModal({ event, onClose, onBookingSuccess }: 
     const [step, setStep] = useState<'details' | 'payment'>('details');
     const [selectedGateway, setSelectedGateway] = useState<string>('');
     const [isProcessing, setIsProcessing] = useState(false);
-    const [simulateFailure] = useState(false); // For Dev Testing
+
+    // Payment Status State
+    const [paymentStatus, setPaymentStatus] = useState<'none' | 'success' | 'failed'>('none');
+    const [ticketData, setTicketData] = useState<any>(null);
+    const [statusMessage, setStatusMessage] = useState('');
 
     // SCROLL LOCK: Prevent background scrolling when modal is open
     useEffect(() => {
@@ -56,6 +61,17 @@ export default function EventDetailsModal({ event, onClose, onBookingSuccess }: 
         });
     };
 
+    const handleBookingSuccess = (ticket: any, message: string) => {
+        setTicketData(ticket);
+        setStatusMessage(message);
+        setPaymentStatus('success');
+    };
+
+    const handleBookingFailure = (message: string) => {
+        setStatusMessage(message);
+        setPaymentStatus('failed');
+    };
+
     const handleBook = async () => {
         // @ts-ignore
         if (typeof process !== 'undefined' && process.env.NODE_ENV && !user) {
@@ -81,7 +97,7 @@ export default function EventDetailsModal({ event, onClose, onBookingSuccess }: 
             const data = await res.json();
 
             if (!res.ok) {
-                alert(data.message || "Booking failed");
+                handleBookingFailure(data.message || "Booking failed");
                 setIsProcessing(false);
                 return;
             }
@@ -89,7 +105,7 @@ export default function EventDetailsModal({ event, onClose, onBookingSuccess }: 
             // 2. Load Razorpay SDK
             const isLoaded = await loadRazorpay();
             if (!isLoaded) {
-                alert("Razorpay SDK failed to load. Check internet connection.");
+                handleBookingFailure("Razorpay SDK failed to load. Check internet connection.");
                 setIsProcessing(false);
                 return;
             }
@@ -101,7 +117,6 @@ export default function EventDetailsModal({ event, onClose, onBookingSuccess }: 
                 currency: data.currency,
                 name: "Extrovert Events",
                 description: `Ticket for ${event.title}`,
-                image: "https://your-logo-url.com/logo.png", // Replace with app logo if available or keep generic
                 order_id: data.order_id,
                 handler: async function (response: any) {
                     // 4. Verify Payment (Confirm Booking)
@@ -125,15 +140,14 @@ export default function EventDetailsModal({ event, onClose, onBookingSuccess }: 
 
                         const verifyData = await verifyRes.json();
                         if (verifyRes.ok && verifyData.status === 'confirmed') {
-                            onBookingSuccess();
-                            alert("🎉 Ticket Confirmed! Check your email.");
-                            onClose();
+                            handleBookingSuccess(verifyData.ticket, "Your ticket is confirmed!");
+                            if (onBookingSuccess) onBookingSuccess();
                         } else {
-                            alert("Payment Verification Failed. Contact Support.");
+                            handleBookingFailure("Payment Verification Failed. Contact Support.");
                         }
                     } catch (e) {
                         console.error("Verification Error", e);
-                        alert("Verification Error. Please contact support.");
+                        handleBookingFailure("Verification Error. Please contact support.");
                     } finally {
                         setIsProcessing(false);
                     }
@@ -156,14 +170,14 @@ export default function EventDetailsModal({ event, onClose, onBookingSuccess }: 
             // @ts-ignore
             const rzp1 = new (window as any).Razorpay(options);
             rzp1.on('payment.failed', function (response: any) {
-                alert(`Payment Failed: ${response.error.description}`);
+                handleBookingFailure(`Payment Failed: ${response.error.description}`);
                 setIsProcessing(false);
             });
             rzp1.open();
 
         } catch (error) {
             console.error(error);
-            alert("Payment initialization failed");
+            handleBookingFailure("Payment initialization failed");
             setIsProcessing(false);
         }
     }
@@ -231,131 +245,149 @@ export default function EventDetailsModal({ event, onClose, onBookingSuccess }: 
                     {/* Content Body */}
                     <div className="p-6 md:p-8 bg-white dark:bg-[#0a0a0a]">
 
-                        {/* Meta Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                            <div className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-zinc-900/50 border border-slate-100 dark:border-zinc-800">
-                                <div className="p-2.5 bg-blue-100 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400">
-                                    <Calendar size={20} />
-                                </div>
-                                <div>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Date</p>
-                                    <p className="text-sm font-bold text-gray-900 dark:text-white">{new Date(event.date).toLocaleDateString()}</p>
-                                </div>
+                        {/* PAYMENT STATUS OVERLAY (Replaces content if active) */}
+                        {paymentStatus !== 'none' ? (
+                            <div className="py-12">
+                                <PaymentStatus
+                                    status={paymentStatus === 'success' ? 'success' : 'failed'}
+                                    message={statusMessage}
+                                    ticketId={ticketData?.id}
+                                    onDownload={() => {
+                                        onClose();
+                                    }}
+                                    onRetry={() => {
+                                        setPaymentStatus('none');
+                                        setStep('payment'); // Go back to payment selection
+                                    }}
+                                    onClose={onClose}
+                                />
                             </div>
-                            <div className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-zinc-900/50 border border-slate-100 dark:border-zinc-800">
-                                <div className="p-2.5 bg-purple-100 dark:bg-purple-900/30 rounded-xl text-purple-600 dark:text-purple-400">
-                                    <Clock size={20} />
+                        ) : (
+                            <>
+                                {/* Meta Grid */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-zinc-900/50 border border-slate-100 dark:border-zinc-800">
+                                        <div className="p-2.5 bg-blue-100 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400">
+                                            <Calendar size={20} />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Date</p>
+                                            <p className="text-sm font-bold text-gray-900 dark:text-white">{new Date(event.date).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-zinc-900/50 border border-slate-100 dark:border-zinc-800">
+                                        <div className="p-2.5 bg-purple-100 dark:bg-purple-900/30 rounded-xl text-purple-600 dark:text-purple-400">
+                                            <Clock size={20} />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Time</p>
+                                            <p className="text-sm font-bold text-gray-900 dark:text-white">{new Date(event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-zinc-900/50 border border-slate-100 dark:border-zinc-800">
+                                        <div className="p-2.5 bg-rose-100 dark:bg-rose-900/30 rounded-xl text-rose-600 dark:text-rose-400">
+                                            <MapPin size={20} />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Location</p>
+                                            <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{event.location}</p>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Time</p>
-                                    <p className="text-sm font-bold text-gray-900 dark:text-white">{new Date(event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-zinc-900/50 border border-slate-100 dark:border-zinc-800">
-                                <div className="p-2.5 bg-rose-100 dark:bg-rose-900/30 rounded-xl text-rose-600 dark:text-rose-400">
-                                    <MapPin size={20} />
-                                </div>
-                                <div>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Location</p>
-                                    <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{event.location}</p>
-                                </div>
-                            </div>
-                        </div>
 
-                        {/* Rich Text Description */}
-                        <div className="space-y-4 mb-20 text-gray-700 dark:text-gray-300 prose dark:prose-invert max-w-none">
-                            <h3 className="text-xl font-bold flex items-center gap-2 text-gray-900 dark:text-white">
-                                About Event
-                            </h3>
-                            <div className="w-full h-px bg-gray-100 dark:bg-zinc-800 mb-4" />
-                            {/* DANGEROUSLY SET HTML FOR RICH TEXT */}
-                            <div
-                                className="text-sm md:text-base leading-relaxed p-1"
-                                dangerouslySetInnerHTML={{ __html: event.description }}
-                            />
-                        </div>
+                                {/* Rich Text Description */}
+                                <div className="space-y-4 mb-20 text-gray-700 dark:text-gray-300 prose dark:prose-invert max-w-none">
+                                    <h3 className="text-xl font-bold flex items-center gap-2 text-gray-900 dark:text-white">
+                                        About Event
+                                    </h3>
+                                    <div className="w-full h-px bg-gray-100 dark:bg-zinc-800 mb-4" />
+                                    {/* DANGEROUSLY SET HTML FOR RICH TEXT */}
+                                    <div
+                                        className="text-sm md:text-base leading-relaxed p-1"
+                                        dangerouslySetInnerHTML={{ __html: event.description }}
+                                    />
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
 
-                {/* Sticky Footer */}
-                <div className="p-4 md:p-6 border-t border-gray-100 dark:border-zinc-800 bg-white dark:bg-[#0a0a0a] shrink-0 z-20 shadow-[0_-5px_20px_-5px_rgba(0,0,0,0.1)]">
-                    <AnimatePresence mode='wait'>
-                        {step === 'details' ? (
-                            <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className="flex items-center justify-between gap-6"
-                            >
-                                <div className="flex flex-col">
-                                    <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">Total Price</span>
-                                    <span className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-                                        {event.currency === 'INR' ? '₹' : event.currency}{event.price}
-                                    </span>
-                                </div>
-                                <button
-                                    onClick={() => setStep('payment')}
-                                    disabled={isSoldOut || isDeadlinePassed}
-                                    className={`px-8 py-4 rounded-xl font-bold text-base flex-1 shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transform transition-all active:scale-[0.98] ${isSoldOut || isDeadlinePassed
-                                        ? 'bg-gray-100 dark:bg-zinc-800 text-gray-400 cursor-not-allowed'
-                                        : 'bg-black dark:bg-white text-white dark:text-black hover:opacity-90'
-                                        }`}
+                {/* Sticky Footer (Only show if not in status view) */}
+                {paymentStatus === 'none' && (
+                    <div className="p-4 md:p-6 border-t border-gray-100 dark:border-zinc-800 bg-white dark:bg-[#0a0a0a] shrink-0 z-20 shadow-[0_-5px_20px_-5px_rgba(0,0,0,0.1)]">
+                        <AnimatePresence mode='wait'>
+                            {step === 'details' ? (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    className="flex items-center justify-between gap-6"
                                 >
-                                    <Ticket size={20} strokeWidth={2.5} />
-                                    {isSoldOut ? 'Sold Out' : isDeadlinePassed ? 'Registration Closed' : 'Book Ticket'}
-                                </button>
-                            </motion.div>
-                        ) : (
-                            <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className="space-y-4"
-                            >
-                                <div className="flex items-center justify-between mb-2">
-                                    <h3 className="text-sm font-bold text-gray-900 dark:text-white">Select Payment Method</h3>
-                                    {/* DEV: SIMULATE FAILURE TOGGLE - Hidden but functional */}
-                                    {/* <label className="flex items-center gap-2 text-[10px] text-gray-400">
-                                        <input type="checkbox" checked={simulateFailure} onChange={e => setSimulateFailure(e.target.checked)} />
-                                        Simulate Fail
-                                    </label> */}
-                                </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">Total Price</span>
+                                        <span className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+                                            {event.currency === 'INR' ? '₹' : event.currency}{event.price}
+                                        </span>
+                                    </div>
+                                    <button
+                                        onClick={() => setStep('payment')}
+                                        disabled={isSoldOut || isDeadlinePassed}
+                                        className={`px-8 py-4 rounded-xl font-bold text-base flex-1 shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transform transition-all active:scale-[0.98] ${isSoldOut || isDeadlinePassed
+                                            ? 'bg-gray-100 dark:bg-zinc-800 text-gray-400 cursor-not-allowed'
+                                            : 'bg-black dark:bg-white text-white dark:text-black hover:opacity-90'
+                                            }`}
+                                    >
+                                        <Ticket size={20} strokeWidth={2.5} />
+                                        {isSoldOut ? 'Sold Out' : isDeadlinePassed ? 'Registration Closed' : 'Book Ticket'}
+                                    </button>
+                                </motion.div>
+                            ) : (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    className="space-y-4"
+                                >
+                                    <div className="flex items-center justify-between mb-2">
+                                        <h3 className="text-sm font-bold text-gray-900 dark:text-white">Select Payment Method</h3>
+                                    </div>
 
-                                <div className="grid grid-cols-1 gap-2 max-h-32 overflow-y-auto mb-2 pr-1">
-                                    {(event.accepted_payment_methods || ['razorpay']).map(method => (
+                                    <div className="grid grid-cols-1 gap-2 max-h-32 overflow-y-auto mb-2 pr-1">
+                                        {(event.accepted_payment_methods || ['razorpay']).map(method => (
+                                            <button
+                                                key={method}
+                                                onClick={() => setSelectedGateway(method)}
+                                                className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all ${selectedGateway === method ? 'border-black dark:border-white bg-black/5 dark:bg-white/10 ring-1 ring-black dark:ring-white' : 'border-gray-200 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-900'}`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <span className="font-bold capitalize text-sm text-gray-900 dark:text-white">{method}</span>
+                                                </div>
+                                                {selectedGateway === method && <div className="w-5 h-5 rounded-full bg-black dark:bg-white flex items-center justify-center"><ShieldCheck size={12} className="text-white dark:text-black" /></div>}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
                                         <button
-                                            key={method}
-                                            onClick={() => setSelectedGateway(method)}
-                                            className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all ${selectedGateway === method ? 'border-black dark:border-white bg-black/5 dark:bg-white/10 ring-1 ring-black dark:ring-white' : 'border-gray-200 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-900'}`}
+                                            onClick={() => setStep('details')}
+                                            className="py-3.5 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:text-gray-200 dark:hover:bg-zinc-700 transition-colors"
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <span className="font-bold capitalize text-sm text-gray-900 dark:text-white">{method}</span>
-                                            </div>
-                                            {selectedGateway === method && <div className="w-5 h-5 rounded-full bg-black dark:bg-white flex items-center justify-center"><ShieldCheck size={12} className="text-white dark:text-black" /></div>}
+                                            Back
                                         </button>
-                                    ))}
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-3">
-                                    <button
-                                        onClick={() => setStep('details')}
-                                        className="py-3.5 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:text-gray-200 dark:hover:bg-zinc-700 transition-colors"
-                                    >
-                                        Back
-                                    </button>
-                                    <button
-                                        onClick={handleBook}
-                                        disabled={!selectedGateway || isProcessing}
-                                        className="py-3.5 rounded-xl font-bold bg-black text-white dark:bg-white dark:text-black hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-                                    >
-                                        {isProcessing ? <TyreLoader size={20} /> : <ShieldCheck size={18} />}
-                                        {isProcessing ? 'Processing' : 'Confirm & Pay'}
-                                    </button>
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
+                                        <button
+                                            onClick={handleBook}
+                                            disabled={!selectedGateway || isProcessing}
+                                            className="py-3.5 rounded-xl font-bold bg-black text-white dark:bg-white dark:text-black hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                                        >
+                                            {isProcessing ? <TyreLoader size={20} /> : <ShieldCheck size={18} />}
+                                            {isProcessing ? 'Processing' : 'Confirm & Pay'}
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                )}
             </motion.div>
         </div>
     );
