@@ -448,15 +448,18 @@ function AppContent() {
             </>
           } />
 
-          {/* CoffeeChat Route (Public/Protected) */}
+          {/* CoffeeChat Route (Protected) */}
           <Route path="/chat" element={
-            <>
+            <ProtectedRoute onAuthRequired={() => {
+              setAuthModalInitialView('login')
+              setIsAuthModalOpen(true)
+            }}>
               <SEO
                 title="Group Chat (GC) - Medicaps Student Community"
                 description="Join the live group chat for Medicaps University students. Discuss exams, events, and campus life."
               />
               <CoffeeChat />
-            </>
+            </ProtectedRoute>
           } />
 
           {/* Video Chat Route (Protected) */}
