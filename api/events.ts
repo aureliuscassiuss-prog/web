@@ -147,6 +147,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return await handleSaveConfig(user, body, res);
             } else if (bodyAction === 'book-ticket') {
                 return await handleBookTicket(user, body, res);
+            } else if (bodyAction === 'confirm-booking') {
+                return await handleConfirmBooking(user, body, res);
             }
         } else if (req.method === 'DELETE') {
             const { id } = req.query;
@@ -264,9 +266,9 @@ async function handleSaveConfig(user: any, body: any, res: VercelResponse) {
 }
 
 async function handleBookTicket(user: any, body: any, res: VercelResponse) {
-    const { eventId, gateway, paymentData } = body; // paymentData would be the success response from Razorpay/Cashfree
+    const { eventId } = body;
 
-    // 1. Fetch Event
+    // 1. Fetch Event & Organizer
     const { data: event } = await supabase.from('events').select('*').eq('_id', eventId).single();
     if (!event) return res.status(404).json({ message: 'Event not found' });
 
@@ -279,147 +281,168 @@ async function handleBookTicket(user: any, body: any, res: VercelResponse) {
         return res.status(400).json({ message: 'Registration has closed' });
     }
 
-    // 3. Create Ticket (PENDING)
-    const ticketId = crypto.randomUUID();
-    const amount = event.price;
-    const initialQrData = JSON.stringify({
-        ticketId,
-        eventId,
-        userId: user._id,
-        status: 'pending' // Initial status
-    });
+    // 3. Get Organizer's Razorpay Config
+    const { data: config } = await supabase
+        .from('payment_configs')
+        .select('*')
+        .eq('user_id', event.organizer_id)
+        .single();
 
-    const { data: ticket, error } = await supabase.from('tickets').insert({
-        id: ticketId,
-        event_id: eventId,
-        user_id: user._id,
-        status: 'pending',
-        gateway: gateway || 'razorpay',
-        qr_code_data: initialQrData,
-        amount: amount,
-        created_at: new Date().toISOString()
-    }).select().single();
-
-    if (error) throw error;
-
-    // 4. Verify Payment & Update Status
-    // In a real scenario, we verify the signature using the manager's secret.
-    // For this implementation, we will trust the client's 'success' for now but mark as failed if explicitly requested or invalid.
-
-    let finalStatus = 'failed';
-    let paymentId = paymentData?.payment_id || null;
-
-    // SIMULATION/VALIDATION LOGIC
-    if (paymentData && paymentData.payment_id && !paymentData.force_fail) {
-        finalStatus = 'confirmed'; // 'paid' can be mapped to 'confirmed' or we just use 'confirmed' vs 'failed'
-        paymentId = paymentData.payment_id;
-    } else {
-        // Payment Failed or User cancelled/mock fail
-        finalStatus = 'failed';
+    if (!config || !config.key_id || !config.key_secret) {
+        return res.status(500).json({ message: 'Event Organizer has not configured payments' });
     }
 
-    // 5. Update Ticket Status
+    // 4. Create Razorpay Order
+    const Razorpay = require('razorpay');
+    const razorpay = new Razorpay({
+        key_id: config.key_id,
+        key_secret: config.key_secret // Encrypted? Assumed plain for MVP as per strict instructions
+    });
+
+    const amount = event.price * 100; // In paise
+    const currency = event.currency || 'INR';
+    const receipt = `rcpt_${Date.now()}_${user._id.substring(0, 5)}`;
+
+    try {
+        const order = await razorpay.orders.create({
+            amount,
+            currency,
+            receipt,
+            notes: {
+                eventId: eventId,
+                userId: user._id,
+                userEmail: user.email
+            }
+        });
+
+        if (!order) throw new Error("Failed to create Razorpay order");
+
+        // 5. Create Ticket (PENDING)
+        const ticketId = crypto.randomUUID();
+        const initialQrData = JSON.stringify({
+            ticketId,
+            eventId,
+            userId: user._id,
+            status: 'pending'
+        });
+
+        const { data: ticket, error } = await supabase.from('tickets').insert({
+            id: ticketId,
+            event_id: eventId,
+            user_id: user._id,
+            status: 'pending',
+            gateway: 'razorpay',
+            qr_code_data: initialQrData,
+            amount: event.price,
+            created_at: new Date().toISOString()
+        }).select().single();
+
+        if (error) throw error;
+
+        // Return Order Details to Client
+        return res.status(200).json({
+            status: 'order_created',
+            order_id: order.id,
+            key_id: config.key_id, // Send Public Key to Client
+            amount: amount,
+            currency: currency,
+            ticket_id: ticketId,
+            user_details: {
+                name: user.name,
+                email: user.email,
+                phone: user.phone || '' // Assuming phone exists or empty
+            }
+        });
+
+    } catch (razorpayError: any) {
+        console.error("Razorpay Error:", razorpayError);
+        return res.status(500).json({ message: 'Payment Gateway Error', error: razorpayError.message });
+    }
+}
+
+async function handleConfirmBooking(user: any, body: any, res: VercelResponse) {
+    const { ticketId, paymentData } = body;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = paymentData;
+
+    // 1. Fetch Ticket & Event
+    const { data: ticket } = await supabase.from('tickets').select('*').eq('id', ticketId).single();
+    if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+
+    const { data: event } = await supabase.from('events').select('*').eq('_id', ticket.event_id).single();
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+
+    // 2. Fetch Organizer Config (To verify signature)
+    const { data: config } = await supabase.from('payment_configs').select('key_secret').eq('user_id', event.organizer_id).single();
+    if (!config) return res.status(500).json({ message: 'Configuration mismatch' });
+
+    // 3. Verify Signature
+    const crypto = require('crypto');
+    const hmac = crypto.createHmac('sha256', config.key_secret);
+    hmac.update(razorpay_order_id + "|" + razorpay_payment_id);
+    const generated_signature = hmac.digest('hex');
+
+    if (generated_signature !== razorpay_signature) {
+        return res.status(400).json({ message: 'Payment verification failed: Invalid Signature' });
+    }
+
+    // 4. Confirm Ticket
     const finalQrData = JSON.stringify({
-        ticketId,
-        eventId,
+        ticketId: ticket.id,
+        eventId: event._id,
         userId: user._id,
-        status: finalStatus
+        status: 'confirmed',
+        paymentId: razorpay_payment_id
     });
 
-    // If Confirmed, Generate QR Image
+    // Generate QR
     let qrCodeImage = null;
-    if (finalStatus === 'confirmed') {
+    try {
         qrCodeImage = await QRCode.toDataURL(finalQrData);
+    } catch (e) { console.error("QR Gen Error", e); }
 
-        // Update Booked Slots Only if Confirmed
-        await supabase.from('events').update({
-            booked_slots: (event.booked_slots || 0) + 1
-        }).eq('_id', eventId);
-    }
-
-    // Update Ticket in DB
+    // Update DB
+    await supabase.from('events').update({ booked_slots: (event.booked_slots || 0) + 1 }).eq('_id', event._id);
     await supabase.from('tickets').update({
-        status: finalStatus,
-        payment_id: paymentId,
-        qr_code_data: finalQrData,
-        // Store QR Image link if we had storage, but we don't.
+        status: 'confirmed',
+        payment_id: razorpay_payment_id,
+        qr_code_data: finalQrData
     }).eq('id', ticketId);
 
-
-    // 6. Send Email Notification
-    try {
-        if (finalStatus === 'confirmed' && qrCodeImage) {
-            // SUCCESS EMAIL
+    // 5. Send Success Email
+    if (qrCodeImage) {
+        try {
             await transporter.sendMail({
-                from: '"UniNotes Tickets" <tickets@trilliontip.com>',
+                from: '"Extrovert Tickets" <tickets@trilliontip.com>',
                 to: user.email,
                 subject: `Ticket Confirmed: ${event.title}`,
                 html: `
-                    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px;">
-                        <h2 style="color: #10b981; margin-bottom: 24px;">Your Ticket is Confirmed! 🎉</h2>
-                        <p style="color: #374151; font-size: 16px;">Hello <b>${user.name}</b>,</p>
-                        <p style="color: #374151;">You have successfully booked a ticket for <b>${event.title}</b>.</p>
+                    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; border-top: 6px solid #10b981;">
+                        <h2 style="color: #10b981; margin-bottom: 24px;">Booking Confirmed! 🎉</h2>
+                        <p style="color: #374151; font-size: 16px;">Hi <b>${user.name}</b>,</p>
+                        <p style="color: #374151;">You're all set for <b>${event.title}</b>.</p>
                         
-                        <div style="background-color: #f0fdf4; padding: 20px; border-radius: 8px; margin: 24px 0; border: 1px solid #bbf7d0;">
+                        <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 24px 0; border: 1px dashed #cbd5e1;">
                             <p style="margin: 0 0 8px 0;"><b>Date:</b> ${new Date(event.date).toLocaleDateString()}</p>
-                            <p style="margin: 0 0 8px 0;"><b>Location:</b> ${event.location}</p>
-                            <p style="margin: 0 0 8px 0;"><b>Price:</b> ${event.currency} ${event.price}</p>
-                            <p style="margin: 0 0 8px 0;"><b>Ticket ID:</b> ${ticketId}</p>
-                            <p style="margin: 0;"><b>Payment ID:</b> ${paymentId}</p>
+                            <p style="margin: 0 0 8px 0;"><b>Time:</b> ${new Date(event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                            <p style="margin: 0 0 8px 0;"><b>Venue:</b> ${event.location}</p>
+                            <p style="margin: 0 0 8px 0;"><b>Ticket ID:</b> ${ticket.id}</p>
                         </div>
 
                         <div style="text-align: center; margin: 32px 0;">
-                            <img src="${qrCodeImage}" alt="Ticket QR Code" style="width: 200px; height: 200px;" />
-                            <p style="font-size: 12px; color: #6b7280; margin-top: 8px;">Scan this QR code at the venue entry</p>
+                            <img src="${qrCodeImage}" alt="Ticket QR Code" style="width: 220px; height: 220px; border-radius: 8px; border: 1px solid #eee;" />
+                            <p style="font-size: 12px; color: #6b7280; margin-top: 12px; font-weight: bold;">Present this QR code at the entrance</p>
                         </div>
-                        
-                         <p style="color: #6b7280; font-size: 14px; text-align: center;">Please keep this email safe.</p>
 
                         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;" />
-                        <p style="color: #6b7280; font-size: 12px; text-align: center;">© 2025 UniNotes Events</p>
+                        <p style="color: #9ca3af; font-size: 12px; text-align: center;">© 2025 Extrovert Events</p>
                     </div>
                 `,
-                attachments: [
-                    {
-                        filename: 'ticket_qr.png',
-                        content: qrCodeImage.split("base64,")[1],
-                        encoding: 'base64'
-                    }
-                ]
+                attachments: [{ filename: 'ticket_qr.png', content: qrCodeImage.split("base64,")[1], encoding: 'base64' }]
             });
-        } else {
-            // FAILURE EMAIL
-            await transporter.sendMail({
-                from: '"UniNotes Tickets" <tickets@trilliontip.com>',
-                to: user.email,
-                subject: `Payment Failed: ${event.title}`,
-                html: `
-                    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px;">
-                        <h2 style="color: #ef4444; margin-bottom: 24px;">Payment Failed ❌</h2>
-                        <p style="color: #374151; font-size: 16px;">Hello <b>${user.name}</b>,</p>
-                        <p style="color: #374151;">We could not complete your booking for <b>${event.title}</b>.</p>
-                        
-                        <div style="background-color: #fef2f2; padding: 20px; border-radius: 8px; margin: 24px 0; border: 1px solid #fecaca;">
-                            <p style="margin: 0 0 8px 0; color: #b91c1c;">The transaction failed or was cancelled.</p>
-                            <p style="margin: 0;">Please try booking again.</p>
-                        </div>
-
-                        <p style="color: #6b7280; font-size: 14px;">If money was deducted, it will be refunded within 5-7 business days.</p>
-
-                        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;" />
-                        <p style="color: #6b7280; font-size: 12px; text-align: center;">© 2025 UniNotes Events</p>
-                    </div>
-                `
-            });
+        } catch (e) {
+            console.error("Email Error", e);
         }
-
-    } catch (e) {
-        console.error("Failed to send ticket email", e);
     }
 
-    return res.status(200).json({
-        message: finalStatus === 'confirmed' ? 'Ticket booked successfully' : 'Payment failed',
-        ticket: { ...ticket, status: finalStatus },
-        status: finalStatus
-    });
+    return res.status(200).json({ status: 'confirmed' });
 }

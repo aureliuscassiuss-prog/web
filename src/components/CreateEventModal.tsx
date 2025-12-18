@@ -216,6 +216,15 @@ export default function CreateEventModal({ isOpen, onClose, onSuccess, token }: 
                                         onChange={(value) => setFormData({ ...formData, description: value })}
                                         className="h-[250px] mb-12 text-gray-800 dark:text-gray-200"
                                         placeholder="Write a compelling description... (Style it bold, colorful!)"
+                                        modules={{
+                                            toolbar: [
+                                                [{ 'header': [1, 2, false] }],
+                                                ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+                                                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                                                ['link', 'image'], // Added image button
+                                                ['clean']
+                                            ],
+                                        }}
                                     />
                                 </div>
                             </div>

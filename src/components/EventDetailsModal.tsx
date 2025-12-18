@@ -46,12 +46,26 @@ export default function EventDetailsModal({ event, onClose, onBookingSuccess }: 
     const isSoldOut = availableSlots <= 0;
     const isDeadlinePassed = event.registration_deadline ? new Date() > new Date(event.registration_deadline) : false;
 
+    const loadRazorpay = () => {
+        return new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+            script.onload = () => resolve(true);
+            script.onerror = () => resolve(false);
+            document.body.appendChild(script);
+        });
+    };
+
     const handleBook = async () => {
         // @ts-ignore
-        if (typeof process !== 'undefined' && process.env.NODE_ENV && !user) return; // Should be protected anyway
+        if (typeof process !== 'undefined' && process.env.NODE_ENV && !user) {
+            alert("Please login to book tickets.");
+            return;
+        }
 
         setIsProcessing(true);
         try {
+            // 1. Create Order
             const res = await fetch('/api/events', {
                 method: 'POST',
                 headers: {
@@ -60,36 +74,96 @@ export default function EventDetailsModal({ event, onClose, onBookingSuccess }: 
                 },
                 body: JSON.stringify({
                     action: 'book-ticket',
-                    eventId: event._id,
-                    gateway: selectedGateway,
-                    paymentData: {
-                        method: 'mock',
-                        payment_id: 'mock_' + Date.now(),
-                        force_fail: simulateFailure
-                    }
+                    eventId: event._id
                 })
             });
 
             const data = await res.json();
 
-            if (res.ok) {
-                if (data.status === 'confirmed') {
-                    // Success
-                    onBookingSuccess();
-                    alert("🎉 Ticket Confirmed! Check your email.");
-                    onClose();
-                } else {
-                    // Failed
-                    alert("❌ Payment Failed. Please try again.");
-                }
-            } else {
+            if (!res.ok) {
                 alert(data.message || "Booking failed");
+                setIsProcessing(false);
+                return;
             }
+
+            // 2. Load Razorpay SDK
+            const isLoaded = await loadRazorpay();
+            if (!isLoaded) {
+                alert("Razorpay SDK failed to load. Check internet connection.");
+                setIsProcessing(false);
+                return;
+            }
+
+            // 3. Open Razorpay
+            const options = {
+                key: data.key_id,
+                amount: data.amount,
+                currency: data.currency,
+                name: "Extrovert Events",
+                description: `Ticket for ${event.title}`,
+                image: "https://your-logo-url.com/logo.png", // Replace with app logo if available or keep generic
+                order_id: data.order_id,
+                handler: async function (response: any) {
+                    // 4. Verify Payment (Confirm Booking)
+                    try {
+                        const verifyRes = await fetch('/api/events', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                                action: 'confirm-booking',
+                                ticketId: data.ticket_id,
+                                paymentData: {
+                                    razorpay_order_id: response.razorpay_order_id,
+                                    razorpay_payment_id: response.razorpay_payment_id,
+                                    razorpay_signature: response.razorpay_signature
+                                }
+                            })
+                        });
+
+                        const verifyData = await verifyRes.json();
+                        if (verifyRes.ok && verifyData.status === 'confirmed') {
+                            onBookingSuccess();
+                            alert("🎉 Ticket Confirmed! Check your email.");
+                            onClose();
+                        } else {
+                            alert("Payment Verification Failed. Contact Support.");
+                        }
+                    } catch (e) {
+                        console.error("Verification Error", e);
+                        alert("Verification Error. Please contact support.");
+                    } finally {
+                        setIsProcessing(false);
+                    }
+                },
+                prefill: {
+                    name: data.user_details.name,
+                    email: data.user_details.email,
+                    contact: data.user_details.phone
+                },
+                theme: {
+                    color: "#000000"
+                },
+                modal: {
+                    ondismiss: function () {
+                        setIsProcessing(false);
+                    }
+                }
+            };
+
+            // @ts-ignore
+            const rzp1 = new (window as any).Razorpay(options);
+            rzp1.on('payment.failed', function (response: any) {
+                alert(`Payment Failed: ${response.error.description}`);
+                setIsProcessing(false);
+            });
+            rzp1.open();
 
         } catch (error) {
             console.error(error);
-            alert("Payment failed");
-        } finally {
+            alert("Payment initialization failed");
             setIsProcessing(false);
         }
     }

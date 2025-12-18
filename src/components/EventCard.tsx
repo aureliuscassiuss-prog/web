@@ -52,6 +52,16 @@ export default function EventCard({ event, onBook, isManager, onDelete }: EventC
                 <div className="absolute top-1.5 left-1.5 px-2 py-0.5 bg-black/60 backdrop-blur-sm rounded text-[10px] font-bold text-white border border-white/10">
                     {event.currency === 'INR' ? '₹' : event.currency}{event.price}
                 </div>
+
+                {/* Manager Status Badge */}
+                {isManager && event.status && event.status !== 'approved' && (
+                    <div className={`absolute bottom-1.5 left-1.5 px-2 py-0.5 backdrop-blur-sm rounded text-[8px] font-bold uppercase tracking-wider border ${event.status === 'pending'
+                            ? 'bg-yellow-500/80 text-white border-yellow-400/50'
+                            : 'bg-red-500/80 text-white border-red-400/50'
+                        }`}>
+                        {event.status}
+                    </div>
+                )}
             </div>
 
             {/* Content Section */}
@@ -99,8 +109,8 @@ export default function EventCard({ event, onBook, isManager, onDelete }: EventC
                             onClick={() => onBook(event)}
                             disabled={isSoldOut || isDeadlinePassed}
                             className={`px-3 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 transition-colors ${isSoldOut || isDeadlinePassed
-                                    ? 'bg-gray-100 text-gray-400 dark:bg-zinc-800'
-                                    : 'bg-black text-white dark:bg-white dark:text-black hover:opacity-80'
+                                ? 'bg-gray-100 text-gray-400 dark:bg-zinc-800'
+                                : 'bg-black text-white dark:bg-white dark:text-black hover:opacity-80'
                                 }`}
                         >
                             {isSoldOut ? 'Full' : isDeadlinePassed ? 'Closed' : 'Book'} <Ticket size={10} />

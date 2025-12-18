@@ -267,6 +267,29 @@ export default function EventsPage() {
                                     </div>
                                 </div>
 
+                                {/* FULL WIDTH DASHBOARD BANNER */}
+                                {view === 'browse' && (
+                                    <div className="relative w-full h-48 sm:h-64 overflow-hidden border-b border-gray-100 dark:border-white/5 group">
+                                        <img
+                                            src="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=2670&auto=format&fit=crop"
+                                            alt="Events Banner"
+                                            className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                        <div className="absolute bottom-0 left-0 p-6 sm:p-8">
+                                            <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-blue-500 text-white shadow-lg mb-3 inline-block">
+                                                FEATURED
+                                            </span>
+                                            <h2 className="text-2xl sm:text-4xl font-bold text-white tracking-tight mb-2 drop-shadow-md">
+                                                University Fest 2025
+                                            </h2>
+                                            <p className="text-gray-200 text-sm sm:text-base max-w-xl font-medium drop-shadow-sm">
+                                                Join the biggest cultural celebration of the year. Music, Dance, and Art.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Content Grid */}
                                 <div className="p-6 md:p-8 flex-1">
                                     {loading ? (
