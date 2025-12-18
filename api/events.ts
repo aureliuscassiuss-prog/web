@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
+import QRCode from 'qrcode'; // Check if installed
 
 dotenv.config();
 
@@ -20,9 +21,6 @@ const transporter = nodemailer.createTransport({
         pass: process.env.BREVO_PASS
     }
 });
-
-// Admin Emails to notify
-const ADMIN_EMAILS = ['trilliontip@gmail.com'];
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Content-Type', 'application/json');
@@ -84,6 +82,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (error) throw error;
             return res.status(200).json({ events });
 
+        } else if (req.method === 'GET' && action === 'tickets') {
+            // Get MY Tickets (User)
+            const { data: tickets, error } = await supabase
+                .from('tickets')
+                .select('*, event:events(*)')
+                .eq('user_id', user._id)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            return res.status(200).json({ tickets });
+
         } else if (req.method === 'GET' && action === 'config') {
             // Get payment config
             const { data: config } = await supabase
@@ -106,6 +115,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return await handleCreateEvent(user, body, res);
             } else if (bodyAction === 'save-config') {
                 return await handleSaveConfig(user, body, res);
+            } else if (bodyAction === 'book-ticket') {
+                return await handleBookTicket(user, body, res);
             }
         } else if (req.method === 'DELETE') {
             const { id } = req.query;
@@ -136,7 +147,7 @@ async function handleCreateEvent(user: any, body: any, res: VercelResponse) {
         return res.status(403).json({ message: 'Only Event Managers can create events. Request this role in Admin.' });
     }
 
-    const { title, description, image, date, location, price, currency, paymentConfigId } = body;
+    const { title, description, image, date, location, price, currency, total_slots, registration_deadline, accepted_payment_methods } = body;
 
     if (!title || !date || !price) {
         return res.status(400).json({ message: 'Title, Date, and Price are required' });
@@ -151,9 +162,12 @@ async function handleCreateEvent(user: any, body: any, res: VercelResponse) {
         location,
         price,
         currency: currency || 'INR',
+        total_slots: total_slots ? parseInt(total_slots) : 100,
+        booked_slots: 0,
+        registration_deadline: registration_deadline || date, // Default deadline is event start
+        accepted_payment_methods: accepted_payment_methods || ['razorpay'],
         organizer_id: user._id,
         status: 'pending', // Default to pending
-        payment_config_id: paymentConfigId || null,
         created_at: new Date().toISOString()
     }).select().single();
 
@@ -217,4 +231,100 @@ async function handleSaveConfig(user: any, body: any, res: VercelResponse) {
     }
 
     return res.status(200).json({ message: 'Payment configuration saved' });
+}
+
+async function handleBookTicket(user: any, body: any, res: VercelResponse) {
+    const { eventId, gateway, paymentData } = body; // paymentData would be the success response from Razorpay/Cashfree
+
+    // 1. Fetch Event
+    const { data: event } = await supabase.from('events').select('*').eq('_id', eventId).single();
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+
+    // 2. Checks
+    if (event.total_slots && event.booked_slots >= event.total_slots) {
+        return res.status(400).json({ message: 'Event is fully booked' });
+    }
+
+    if (new Date() > new Date(event.registration_deadline)) {
+        return res.status(400).json({ message: 'Registration has closed' });
+    }
+
+    // 3. (Mock) Verify Payment
+    // In production, we would verify the signature/status using paymentData and the manager's keys.
+    // Assuming payment success for this MVP/Task.
+    const paymentId = paymentData?.payment_id || `mock_${Date.now()}`;
+    const amount = event.price;
+
+    // 4. Create Ticket
+    const ticketId = crypto.randomUUID();
+    const qrData = JSON.stringify({
+        ticketId,
+        eventId,
+        userId: user._id,
+        status: 'confirmed'
+    });
+
+    // Generate QR Code Image (Data URL)
+    const qrCodeImage = await QRCode.toDataURL(qrData);
+
+    const { data: ticket, error } = await supabase.from('tickets').insert({
+        id: ticketId,
+        event_id: eventId,
+        user_id: user._id,
+        status: 'confirmed',
+        payment_id: paymentId,
+        gateway: gateway || 'razorpay',
+        qr_code_data: qrData,
+        amount: amount,
+        created_at: new Date().toISOString()
+    }).select().single();
+
+    if (error) throw error;
+
+    // 5. Update Booked Slots
+    await supabase.from('events').update({
+        booked_slots: (event.booked_slots || 0) + 1
+    }).eq('_id', eventId);
+
+    // 6. Send Email
+    try {
+        await transporter.sendMail({
+            from: '"UniNotes Tickets" <tickets@trilliontip.com>',
+            to: user.email,
+            subject: `Ticket Confirmed: ${event.title}`,
+            html: `
+                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px;">
+                    <h2 style="color: #4f46e5; margin-bottom: 24px;">Your Ticket is Confirmed! 🎉</h2>
+                    <p style="color: #374151; font-size: 16px;">Hello <b>${user.name}</b>,</p>
+                    <p style="color: #374151;">You have successfully booked a ticket for <b>${event.title}</b>.</p>
+                    
+                    <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 24px 0;">
+                        <p style="margin: 0 0 8px 0;"><b>Date:</b> ${new Date(event.date).toLocaleDateString()}</p>
+                        <p style="margin: 0 0 8px 0;"><b>Location:</b> ${event.location}</p>
+                        <p style="margin: 0 0 8px 0;"><b>Price:</b> ${event.currency} ${event.price}</p>
+                        <p style="margin: 0;"><b>Ticket ID:</b> ${ticketId}</p>
+                    </div>
+
+                    <div style="text-align: center; margin: 32px 0;">
+                        <img src="${qrCodeImage}" alt="Ticket QR Code" style="width: 200px; height: 200px;" />
+                        <p style="font-size: 12px; color: #6b7280; margin-top: 8px;">Scan this QR code at the venue entry</p>
+                    </div>
+
+                    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;" />
+                    <p style="color: #6b7280; font-size: 12px; text-align: center;">© 2025 UniNotes Events</p>
+                </div>
+            `,
+            attachments: [
+                {
+                    filename: 'ticket_qr.png',
+                    content: qrCodeImage.split("base64,")[1],
+                    encoding: 'base64'
+                }
+            ]
+        });
+    } catch (e) {
+        console.error("Failed to send ticket email", e);
+    }
+
+    return res.status(200).json({ message: 'Ticket booked successfully', ticket });
 }

@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, Settings, LayoutGrid, Calendar } from 'lucide-react';
+import { Plus, Settings, LayoutGrid, Calendar, Ticket } from 'lucide-react';
 import EventCard from './EventCard';
 import EventDetailsModal from './EventDetailsModal';
 import CreateEventModal from './CreateEventModal';
 import TyreLoader from './TyreLoader';
+import TicketCard from './TicketCard'; // New Component
 
 export default function EventsPage() {
     const { user, token } = useAuth();
-    const [view, setView] = useState<'browse' | 'manage'>('browse');
+    const [view, setView] = useState<'browse' | 'tickets' | 'manage'>('browse');
     const [events, setEvents] = useState<any[]>([]);
+    const [tickets, setTickets] = useState<any[]>([]); // New state for tickets
     const [loading, setLoading] = useState(true);
     const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -23,16 +25,21 @@ export default function EventsPage() {
     const fetchEvents = async () => {
         setLoading(true);
         try {
-            // If in manage view, fetch my events
-            const endpoint = view === 'manage' ? '/api/events?action=manager' : '/api/events';
+            // Determine Endpoint
+            let endpoint = '/api/events';
+            if (view === 'manage') endpoint = '/api/events?action=manager';
+            else if (view === 'tickets') endpoint = '/api/events?action=tickets'; // New endpoint action
+
             const headers: any = {};
             if (token) headers['Authorization'] = `Bearer ${token}`;
 
             const res = await fetch(endpoint, { headers });
             const data = await res.json();
 
-            if (data.events) {
-                setEvents(data.events);
+            if (view === 'tickets') {
+                setTickets(data.tickets || []);
+            } else {
+                setEvents(data.events || []);
             }
         } catch (error) {
             console.error(error);
@@ -42,8 +49,12 @@ export default function EventsPage() {
     };
 
     useEffect(() => {
+        if (view === 'manage' && !isManager) {
+            setView('browse');
+            return;
+        }
         fetchEvents();
-    }, [view, token]);
+    }, [view, token, isManager]);
 
     const handleDelete = async (id: string) => {
         if (!confirm("Are you sure you want to delete this event?")) return;
@@ -100,52 +111,59 @@ export default function EventsPage() {
                                 University Events
                             </div>
                             <h1 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tight mb-4">
-                                Discover Experiences
+                                {view === 'tickets' ? 'My Tickets' : view === 'manage' ? 'Manager Dashboard' : 'Discover Experiences'}
                             </h1>
                             <p className="text-lg text-gray-500 dark:text-gray-400 max-w-xl leading-relaxed">
-                                Join workshops, hackathons, and cultural fests happening around you.
+                                {view === 'tickets' ? 'View and manage your booked event tickets.' : 'Join workshops, hackathons, and cultural fests happening around you.'}
                             </p>
                         </div>
 
-                        {/* Manager Actions */}
-                        {isManager && (
-                            <div className="flex items-center gap-3">
-                                {/* Toggle View */}
-                                <div className="p-1 bg-gray-100 dark:bg-gray-900 rounded-xl flex items-center border border-gray-200 dark:border-gray-800">
-                                    <button
-                                        onClick={() => setView('browse')}
-                                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${view === 'browse' ? 'bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
-                                    >
-                                        Browse
-                                    </button>
+                        {/* View Toggles */}
+                        <div className="flex items-center gap-3">
+                            {/* Standard Nav */}
+                            <div className="p-1 bg-gray-100 dark:bg-gray-900 rounded-xl flex items-center border border-gray-200 dark:border-gray-800">
+                                <button
+                                    onClick={() => setView('browse')}
+                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${view === 'browse' ? 'bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
+                                >
+                                    Browse
+                                </button>
+                                <button
+                                    onClick={() => setView('tickets')}
+                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${view === 'tickets' ? 'bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
+                                >
+                                    My Tickets
+                                </button>
+                                {isManager && (
                                     <button
                                         onClick={() => setView('manage')}
                                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${view === 'manage' ? 'bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
                                     >
-                                        My Dashboard
+                                        Dashboard
                                     </button>
-                                </div>
-
-                                {view === 'manage' && (
-                                    <>
-                                        <button
-                                            onClick={() => setShowConfig(true)}
-                                            className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                                            title="Payment Settings"
-                                        >
-                                            <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                                        </button>
-                                        <button
-                                            onClick={() => setShowCreateModal(true)}
-                                            className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 flex items-center gap-2 transition-transform active:scale-95"
-                                        >
-                                            <Plus size={20} />
-                                            <span className="hidden sm:inline">Create Event</span>
-                                        </button>
-                                    </>
                                 )}
                             </div>
-                        )}
+
+                            {/* Manager Actions */}
+                            {isManager && view === 'manage' && (
+                                <>
+                                    <button
+                                        onClick={() => setShowConfig(true)}
+                                        className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                        title="Payment Settings"
+                                    >
+                                        <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                                    </button>
+                                    <button
+                                        onClick={() => setShowCreateModal(true)}
+                                        className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 flex items-center gap-2 transition-transform active:scale-95"
+                                    >
+                                        <Plus size={20} />
+                                        <span className="hidden sm:inline">Create Event</span>
+                                    </button>
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -155,44 +173,78 @@ export default function EventsPage() {
                 {loading ? (
                     <div className="h-64 flex flex-col items-center justify-center">
                         <TyreLoader size={48} />
-                        <p className="mt-4 text-sm text-gray-400 font-medium animate-pulse">Loading Events...</p>
-                    </div>
-                ) : events.length === 0 ? (
-                    <div className="text-center py-20 bg-gray-50 dark:bg-white/5 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800">
-                        <LayoutGrid className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No events found</h3>
-                        <p className="text-gray-500 max-w-sm mx-auto">
-                            {view === 'manage'
-                                ? "You haven't created any events yet. Click 'Create Event' to get started."
-                                : "There are no upcoming events at the moment. Check back later!"}
-                        </p>
+                        <p className="mt-4 text-sm text-gray-400 font-medium animate-pulse">Loading...</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                        {events.map(event => (
-                            <EventCard
-                                key={event._id}
-                                event={event}
-                                onClick={() => setSelectedEvent(event)}
-                                isOwner={view === 'manage'}
-                                onDelete={() => handleDelete(event._id)}
-                            />
-                        ))}
-                    </div>
+                    <>
+                        {/* TICKETS VIEW */}
+                        {view === 'tickets' && (
+                            tickets.length === 0 ? (
+                                <div className="text-center py-20 bg-gray-50 dark:bg-white/5 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800">
+                                    <Ticket className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No tickets yet</h3>
+                                    <p className="text-gray-500 max-w-sm mx-auto mb-6">You haven't booked any events. Browse the feed to find something interesting!</p>
+                                    <button onClick={() => setView('browse')} className="px-6 py-2 bg-black text-white dark:bg-white dark:text-black rounded-xl font-bold">Browse Events</button>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    {tickets.map(ticket => (
+                                        <TicketCard key={ticket.id} ticket={ticket} />
+                                    ))}
+                                </div>
+                            )
+                        )}
+
+                        {/* EVENTS VIEW */}
+                        {(view === 'browse' || view === 'manage') && (
+                            events.length === 0 ? (
+                                <div className="text-center py-20 bg-gray-50 dark:bg-white/5 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800">
+                                    <LayoutGrid className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No events found</h3>
+                                    <p className="text-gray-500 max-w-sm mx-auto">
+                                        {view === 'manage'
+                                            ? "You haven't created any events yet. Click 'Create Event' to get started."
+                                            : "There are no upcoming events at the moment. Check back later!"}
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                                    {events.map(event => (
+                                        <EventCard
+                                            key={event._id}
+                                            event={event}
+                                            onBook={() => setSelectedEvent(event)} // Open modal on book click
+                                            isManager={view === 'manage'}
+                                            onDelete={() => handleDelete(event._id)}
+                                        />
+                                    ))}
+                                </div>
+                            )
+                        )}
+                    </>
                 )}
             </div>
 
             {/* Modals */}
-            <EventDetailsModal
-                event={selectedEvent}
-                onClose={() => setSelectedEvent(null)}
-                onBuy={(evt) => alert(`Redirecting to payment gateway for ${evt.title}... (Integration Pending)`)}
-            />
+            <AnimatePresence>
+                {selectedEvent && (
+                    <EventDetailsModal
+                        event={selectedEvent}
+                        onClose={() => setSelectedEvent(null)}
+                        onBookingSuccess={() => {
+                            setSelectedEvent(null);
+                            setView('tickets'); // Redirect to tickets after booking
+                            fetchEvents(); // Refresh data
+                        }}
+                    />
+                )}
+            </AnimatePresence>
 
             {showCreateModal && (
                 <CreateEventModal
+                    isOpen={showCreateModal}
                     onClose={() => setShowCreateModal(false)}
-                    onSuccess={fetchEvents}
+                    onEventCreated={fetchEvents}
                 />
             )}
 
