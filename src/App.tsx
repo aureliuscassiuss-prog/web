@@ -251,6 +251,7 @@ function AppContent() {
   const [searchQuery] = useState('')
   const [toast, setToast] = useState<{ message: string; show: boolean }>({ message: '', show: false })
   const [uploadInitialData, setUploadInitialData] = useState<any>(null)
+  const [lastUploadTime, setLastUploadTime] = useState<number>(0)
 
   // Spotlight State
   const [spotlight] = useState<string | null>(null)
@@ -360,7 +361,10 @@ function AppContent() {
                 description="Comprehensive collection of Medicaps University notes and study materials. Filter by branch (CSE, IT, ME) and year. Download for free."
                 url="https://extrovert.site/resources"
               />
-              <BrowseResources onUploadRequest={handleUploadWithData} />
+              <BrowseResources
+                onUploadRequest={handleUploadWithData}
+                lastUploadTime={lastUploadTime}
+              />
             </>
           } />
 
@@ -536,7 +540,12 @@ function AppContent() {
                     <span>Upload More</span>
                   </button>
                 </div>
-                <ResourceGrid view="uploads" searchQuery={searchQuery} onUploadRequest={handleUploadWithData} />
+                <ResourceGrid
+                  view="uploads"
+                  searchQuery={searchQuery}
+                  onUploadRequest={handleUploadWithData}
+                  lastUploadTime={lastUploadTime}
+                />
               </div>
             </ProtectedRoute>
           } />
@@ -610,6 +619,7 @@ function AppContent() {
         onSuccess={(title) => {
           setIsUploadModalOpen(false)
           showToast(`✅ "${title}" uploaded successfully!`)
+          setLastUploadTime(Date.now())
         }}
         initialData={uploadInitialData}
       />
@@ -623,7 +633,7 @@ function AppContent() {
       <Toast message={toast.message} show={toast.show} />
 
       {!user && <CookieBanner />}
-    </BrowserRouter>
+    </BrowserRouter >
   )
 }
 

@@ -26,6 +26,7 @@ interface ResourceGridProps {
     }
     searchQuery?: string
     onUploadRequest?: (data: any) => void
+    lastUploadTime?: number
 }
 
 interface Message {
@@ -111,7 +112,7 @@ const EmptyState = ({ icon: Icon, title, description, onUploadRequest, filters, 
     </div>
 )
 
-export default function ResourceGrid({ view, filters, searchQuery = '', onUploadRequest }: ResourceGridProps) {
+export default function ResourceGrid({ view, filters, searchQuery = '', onUploadRequest, lastUploadTime }: ResourceGridProps) {
     const { token, user } = useAuth()
     const chatEndRef = useRef<HTMLDivElement>(null)
 
@@ -120,6 +121,9 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
     const [uploads, setUploads] = useState<any[]>([])
     const [leaderboard, setLeaderboard] = useState<any[]>([])
     const [isLoading, setIsLoading] = useState(false)
+
+    // Cache for resources to prevent re-fetching on tab switch
+    const dataCache = useRef<Record<string, any>>({})
 
     // UI States
     const [activeTab, setActiveTab] = useState<'notes' | 'pyqs' | 'formula' | 'ai'>('notes')
@@ -219,6 +223,27 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
         setChatMessages([{ role: 'assistant', content: "Chat cleared. How can I help you now?" }])
     }
 
+    // React to global upload events
+    useEffect(() => {
+        if (lastUploadTime && lastUploadTime > 0) {
+            // Invalidate cache
+            dataCache.current = {}
+            setResources([]) // Optional: clear current view or just let it refresh
+            // fetchData will be triggered because we might want to force it
+            // However, fetchData depends on view/activeTab. 
+            // We can just clear cache, but we need to trigger the effect.
+            // Actually, we can just invalidate cache and let the user browse, 
+            // OR we can force a re-fetch if we are on the relevant page.
+
+            // To force re-fetch, we can temporarily set isLoading to true or just call fetchData if we extracted it.
+            // Since fetchData is inside useEffect, we can't call it directly.
+            // But if we clear the cache and we are currently viewing the list, we want it to update.
+
+            // Simplest way: The useEffect above depends on `lastUploadTime` if we add it to dependency array.
+            // WE NEED TO ADD `lastUploadTime` TO THE DEPENDENCY ARRAY OF THE FETCH EFFECT.
+        }
+    }, [lastUploadTime])
+
     // --- DATA FETCHING ---
     useEffect(() => {
         let isMounted = true
@@ -235,6 +260,8 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
 
         setIsLoading(true)
 
+
+
         const fetchData = async () => {
             try {
                 if (view === 'resources' && activeTab !== 'ai') {
@@ -248,16 +275,35 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                     }
 
                     let typeParam = activeTab === 'notes' ? 'notes' : activeTab === 'pyqs' ? 'pyq' : 'formula-sheet'
+                    const queryParams = buildQueryParams(typeParam).toString()
+                    const cacheKey = `resources-${queryParams}`
+
+                    // Check cache first
+                    if (dataCache.current[cacheKey]) {
+                        if (isMounted) {
+                            setResources(dataCache.current[cacheKey])
+                            setIsLoading(false)
+                        }
+                        return
+                    }
+
                     const headers: any = {}
                     if (token) {
                         headers['Authorization'] = `Bearer ${token}`
                     }
-                    const res = await fetch(`/api/resources?${buildQueryParams(typeParam)}`, { headers, signal })
+                    const res = await fetch(`/api/resources?${queryParams}`, { headers, signal })
                     const data = await res.json()
-                    // Filter duplicates if any
-                    if (isMounted) setResources(data.resources || [])
+
+                    if (isMounted) {
+                        const newResources = data.resources || []
+                        // Update cache
+                        dataCache.current[cacheKey] = newResources
+                        setResources(newResources)
+                    }
                 }
                 else if (view === 'uploads' && token) {
+                    // We don't verify strict caching for uploads as they might change more frequently
+                    // but we can cache to avoid flicker if needed. For now, let's keep it fresh.
                     const res = await fetch('/api/profile?action=uploads', {
                         headers: { 'Authorization': `Bearer ${token}` },
                         signal
@@ -274,9 +320,26 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
                     }
                 }
                 else if (view === 'leaderboard') {
-                    const res = await fetch('/api/resources?action=leaderboard', { signal })
+                    const headers: any = {}
+                    if (token) headers['Authorization'] = `Bearer ${token}`
+
+                    // Check cache for leaderboard
+                    const cacheKey = 'leaderboard'
+                    if (dataCache.current[cacheKey]) {
+                        if (isMounted) {
+                            setLeaderboard(dataCache.current[cacheKey])
+                            setIsLoading(false)
+                        }
+                        return
+                    }
+
+                    const res = await fetch('/api/resources?action=leaderboard', { headers, signal })
                     const data = await res.json()
-                    if (isMounted) setLeaderboard(data.leaderboard || [])
+                    if (isMounted) {
+                        const newLeaderboard = data.leaderboard || []
+                        dataCache.current[cacheKey] = newLeaderboard
+                        setLeaderboard(newLeaderboard)
+                    }
                 }
             } catch (err: any) {
                 if (err.name !== 'AbortError') {
@@ -295,7 +358,8 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
             controller.abort()
             clearTimeout(safetyTimeout)
         }
-    }, [view, activeTab, searchQuery, filters, token, user, selectedPyqYear])
+
+    }, [view, activeTab, searchQuery, filters, token, user, selectedPyqYear, lastUploadTime])
 
     // AI Paper Generation Functions
     const transformDataForPdf = (aiData: any, filters: any) => {
@@ -726,6 +790,9 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
             if (response.ok) {
                 setUploads(prev => prev.filter(r => r._id !== resourceId))
                 setResources(prev => prev.filter(r => r._id !== resourceId))
+
+                // Invalidate cache
+                dataCache.current = {}
             } else {
                 const data = await response.json()
                 alert(data.message || 'Failed to delete resource')

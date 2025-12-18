@@ -12,9 +12,10 @@ import TyreLoader from './TyreLoader';
 
 interface BrowseResourcesProps {
     onUploadRequest?: (data: any) => void;
+    lastUploadTime?: number;
 }
 
-export default function BrowseResources({ onUploadRequest }: BrowseResourcesProps) {
+export default function BrowseResources({ onUploadRequest, lastUploadTime }: BrowseResourcesProps) {
     // --- State with localStorage persistence ---
     const [step, setStep] = useState(() => {
         const saved = localStorage.getItem('browseResourcesStep');
@@ -591,6 +592,7 @@ export default function BrowseResources({ onUploadRequest }: BrowseResourcesProp
                                 }}
                                 searchQuery=""
                                 onUploadRequest={onUploadRequest}
+                                lastUploadTime={lastUploadTime}
                             />
                         </div>
                     )}
