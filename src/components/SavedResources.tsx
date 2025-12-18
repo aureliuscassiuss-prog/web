@@ -97,8 +97,13 @@ export default function SavedResources() {
             const body: any = {};
             if (isSelectionMode && selectedIds.size > 0) {
                 body.resourceIds = Array.from(selectedIds);
-                if (note) body.note = note;
+            } else {
+                // FAILSAFE: If creating a general link, create a snapshot of all current resources
+                // This avoids issues if the user.shareSlug column is missing in the DB
+                body.resourceIds = resources.map(r => r._id);
             }
+
+            if (note) body.note = note;
 
             const res = await fetch('/api/resources?action=share', {
                 method: 'POST',
