@@ -533,7 +533,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 }
             }
 
+
             // --- Standard Upload Logic continues... ---
+            // SAFEGUARD: If this is a share or interaction request, don't validate upload fields
+            if (req.body.action || req.query.action || req.body.resourceIds || req.body.resourceId) {
+                console.error('[API] Request with action/resourceIds reached upload section. This should not happen.');
+                console.error('[API] Body:', req.body);
+                console.error('[API] Query:', req.query);
+                return res.status(400).json({
+                    message: 'Invalid request - action not recognized',
+                    debug: {
+                        action: req.body.action || req.query.action,
+                        hasResourceIds: !!req.body.resourceIds,
+                        hasResourceId: !!req.body.resourceId
+                    }
+                });
+            }
+
             if (!process.env.JWT_SECRET) {
                 return res.status(500).json({ message: 'Server misconfiguration' });
             }
