@@ -42,6 +42,8 @@ import MedicalGeneratorPage from './components/MedicalGeneratorPage';
 import SEO from './components/SEO'
 import AttendanceManager from './components/attendance/AttendanceManager'
 import CookieBanner from './components/CookieBanner'
+import NotFoundPage from './components/NotFoundPage'
+
 
 
 function Layout({
@@ -592,7 +594,9 @@ function AppContent() {
           <Route path="/share/subject" element={<SharedUnitPage />} />
 
           {/* Catch all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* Catch all - Now serves 404 page instead of redirecting to Home for better SEO (no Soft 404s) */}
+          <Route path="*" element={<NotFoundPage />} />
+
         </Routes>
       </Layout>
 
