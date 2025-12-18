@@ -389,7 +389,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             // Handle Interactions (Like, Save, etc)
             const { resourceId, action: interactionAction, value, type: voteType } = req.body;
             // We check interactionAction OR query action or infer from body
+            // DEBUG LOGS
+            console.log(`[API] POST Action Request. Query: ${JSON.stringify(req.query)}, BodyAction: ${req.body.action}`);
+
             const effectiveAction = interactionAction || (req.query.action === 'interact' || req.query.action === 'share' ? (req.query.action === 'share' ? 'share' : req.body.action) : null);
+            console.log(`[API] Effective Action: ${effectiveAction}`);
 
             if (effectiveAction && ['like', 'dislike', 'save', 'flag', 'rate', 'download', 'share'].includes(effectiveAction)) {
                 if (!process.env.JWT_SECRET) return res.status(500).json({ message: 'Server error' });
@@ -410,12 +414,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                         if (Array.isArray(resourceIds) && resourceIds.length > 0) {
                             const slug = crypto.randomBytes(4).toString('hex');
-                            await supabase.from('shared_lists').insert({
+                            const { error: insertError } = await supabase.from('shared_lists').insert({
                                 slug, ownerId: userId, resources: resourceIds, note: note || ''
                             });
+
+                            if (insertError) {
+                                console.error('Shared List Insert Error:', insertError);
+                                // If table missing or other error, fallback to user slug or error out
+                                // But better to error out so we know
+                                return res.status(500).json({ message: 'Failed to create shared list', error: insertError });
+                            }
+
                             return res.status(200).json({ slug });
                         }
 
+                        // Legacy / Full profile share
                         if (user.shareSlug) return res.status(200).json({ slug: user.shareSlug });
 
                         const slug = crypto.randomBytes(4).toString('hex');

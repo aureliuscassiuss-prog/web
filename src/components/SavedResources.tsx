@@ -102,6 +102,8 @@ export default function SavedResources() {
                 // This avoids issues if the user.shareSlug column is missing in the DB
                 body.resourceIds = resources.map(r => r._id);
             }
+            // Explicitly add action to body as backup
+            body.action = 'share';
 
             if (note) body.note = note;
 
