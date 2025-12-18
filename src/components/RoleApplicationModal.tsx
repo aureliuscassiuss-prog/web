@@ -3,6 +3,8 @@ import { X, Send, ShieldCheck, UserCheck, BookOpen, AlertCircle, CheckCircle2 } 
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../contexts/AuthContext'
 import TyreLoader from './TyreLoader'
+import useLockBodyScroll from '../hooks/useLockBodyScroll'
+
 
 interface RoleApplicationModalProps {
     isOpen: boolean
@@ -17,7 +19,11 @@ export default function RoleApplicationModal({ isOpen, onClose }: RoleApplicatio
     const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
     const [errorMessage, setErrorMessage] = useState('')
 
+    // Prevent body scroll when modal is open
+    useLockBodyScroll(isOpen);
+
     if (!isOpen) return null
+
 
     const ROLES = [
         {

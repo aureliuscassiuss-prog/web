@@ -3,6 +3,8 @@ import { X, Upload as UploadIcon, Link as LinkIcon, FileText, Layers, Calendar, 
 import TyreLoader from './TyreLoader'
 import { useAuth } from '../contexts/AuthContext'
 import Toast from './Toast'
+import useLockBodyScroll from '../hooks/useLockBodyScroll'
+
 
 // --- CUSTOM SELECT COMPONENT ---
 interface Option {
@@ -145,8 +147,14 @@ export default function UploadModal({ isOpen, onClose, onSuccess, initialData }:
     const [isUploading, setIsUploading] = useState(false)
     const [structure, setStructure] = useState<any>(null)
     const [isLoadingStructure, setIsLoadingStructure] = useState(false)
+
     const [activeField, setActiveField] = useState<string | null>(null)
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error', show: boolean }>({ message: '', type: 'success', show: false })
+
+    // Prevent body scroll when modal is open
+    useLockBodyScroll(isOpen);
+
+
 
     // Close dropdowns on outside click
     useEffect(() => {

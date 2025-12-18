@@ -3,6 +3,8 @@ import { X, Mail, Lock, User, ArrowRight } from 'lucide-react'
 import TyreLoader from './TyreLoader'
 import { useAuth } from '../contexts/AuthContext'
 import { useGoogleLogin } from '@react-oauth/google'
+import useLockBodyScroll from '../hooks/useLockBodyScroll'
+
 
 
 interface AuthModalProps {
@@ -38,7 +40,12 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess, initialVie
         onError: (error) => setError('Google login failed: ' + error)
     });
 
+
+    // Prevent body scroll when modal is open
+    useLockBodyScroll(isOpen);
+
     if (!isOpen) return null
+
 
     const handleGoogleSuccess = async (accessToken: string) => {
         setIsLoading(true)
