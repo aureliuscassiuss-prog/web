@@ -392,8 +392,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             // DEBUG LOGS
             console.log(`[API] POST Action Request. Query: ${JSON.stringify(req.query)}, Body:`, req.body);
 
-            // Simplified action detection: check body.action first, then query param
-            const effectiveAction = req.body.action || interactionAction || req.query.action;
+            // Simplified action detection: check body.action first, then query param, then infer from payload
+            const effectiveAction = req.body.action || interactionAction || req.query.action || (req.body.resourceIds ? 'share' : null);
             console.log(`[API] Effective Action: ${effectiveAction}`);
 
             if (effectiveAction && ['like', 'dislike', 'save', 'flag', 'rate', 'download', 'share'].includes(effectiveAction)) {
