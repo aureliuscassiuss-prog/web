@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import Cropper from 'react-easy-crop';
-import { Slider } from './ui/Slider'; // Assuming we can make a simple slider or use standard range input
-import { Button } from './ui/Button'; // Or standard button
+
 import { X, Check } from 'lucide-react';
 import { getCroppedImg } from '../lib/cropImage'; // We need to create this util
 
