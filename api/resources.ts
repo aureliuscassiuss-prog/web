@@ -388,11 +388,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (req.method === 'POST') {
             // Handle Interactions (Like, Save, etc)
             const { resourceId, action: interactionAction, value, type: voteType } = req.body;
-            // We check interactionAction OR query action or infer from body
-            // DEBUG LOGS
-            console.log(`[API] POST Action Request. Query: ${JSON.stringify(req.query)}, BodyAction: ${req.body.action}`);
 
-            const effectiveAction = interactionAction || (req.query.action === 'interact' || req.query.action === 'share' ? (req.query.action === 'share' ? 'share' : req.body.action) : null);
+            // DEBUG LOGS
+            console.log(`[API] POST Action Request. Query: ${JSON.stringify(req.query)}, Body:`, req.body);
+
+            // Simplified action detection: check body.action first, then query param
+            const effectiveAction = req.body.action || interactionAction || req.query.action;
             console.log(`[API] Effective Action: ${effectiveAction}`);
 
             if (effectiveAction && ['like', 'dislike', 'save', 'flag', 'rate', 'download', 'share'].includes(effectiveAction)) {
