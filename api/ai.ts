@@ -249,9 +249,8 @@ Subject: ${subject}, Program: ${program}, Year: ${formattedYear}, Branch: ${bran
             'groq/compound',
             'llama-3.2-90b-vision-preview',
             'llama-3.2-11b-vision-preview',
-            // OpenRouter Models
-            'deepseek/deepseek-r1',
-            'deepseek/deepseek-v3'
+            'llama-3.2-90b-vision-preview',
+            'llama-3.2-11b-vision-preview',
         ];
 
         // If image is present, force a vision model (currently Groq supports Llama 3.2 vision or similar, let's use a safe default if specific vision model is needed)
