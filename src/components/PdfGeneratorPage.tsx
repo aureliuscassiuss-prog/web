@@ -239,7 +239,39 @@ export default function PdfGeneratorPage() {
                                             disabled={isGenerating}
                                         />
 
-                                        <div className="flex items-center justify-center mt-2 pt-4 border-t border-slate-200 dark:border-white/5 relative overflow-visible">
+                                        <div className="flex items-center justify-between mt-2 pt-4 border-t border-slate-200 dark:border-white/5 relative overflow-visible gap-4">
+
+                                            {/* Model Dropdown */}
+                                            <div className="relative">
+                                                <button
+                                                    onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
+                                                    className="flex items-center gap-2 bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 text-xs font-medium px-4 py-2 rounded-lg border border-transparent hover:border-slate-200 dark:hover:border-zinc-700 hover:bg-slate-200 dark:hover:bg-zinc-800 transition-all outline-none"
+                                                >
+                                                    <span className="truncate max-w-[150px]">{models.find(m => m.id === selectedModel)?.name}</span>
+                                                    <ChevronDown size={14} className={`text-slate-400 dark:text-zinc-500 transition-transform ${isModelMenuOpen ? 'rotate-180' : ''}`} />
+                                                </button>
+
+                                                {isModelMenuOpen && (
+                                                    <div className="absolute left-0 bottom-full mb-2 w-64 bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border border-slate-200 dark:border-zinc-800 p-1 z-[100] animate-in fade-in slide-in-from-bottom-2 duration-200 max-h-72 overflow-y-auto">
+                                                        {models.map((m) => (
+                                                            <button
+                                                                key={m.id}
+                                                                onClick={() => {
+                                                                    setSelectedModel(m.id);
+                                                                    setIsModelMenuOpen(false);
+                                                                }}
+                                                                className={`w-full text-left px-3 py-2.5 text-sm rounded-lg transition-colors flex items-center justify-between ${selectedModel === m.id
+                                                                    ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
+                                                                    : 'text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                                                                    }`}
+                                                            >
+                                                                <span>{m.name}</span>
+                                                                {selectedModel === m.id && <CheckCircle size={14} className="ml-2 flex-shrink-0" />}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
 
                                             {/* Font Dropdown */}
                                             <div className="relative" ref={fontDropdownRef}>
