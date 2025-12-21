@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { MessageCircle, X, Send, Sparkles, RotateCcw, Bot, Paperclip, Image as ImageIcon, ChevronDown } from 'lucide-react'
+import { MessageCircle, X, Send, Sparkles, RotateCcw, Bot, Paperclip, ChevronDown } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import ReactMarkdown from 'react-markdown'
 
@@ -32,17 +32,16 @@ export default function AIAssistant() {
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const models = [
-        { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (Default)' },
-        { id: 'llama-3.1-70b-versatile', name: 'Llama 3.1 70B' },
+        { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (Recommended)' },
         { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B (Fast)' },
         { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B' },
         { id: 'gemma2-9b-it', name: 'Gemma 2 9B' },
         { id: 'llama-3.2-90b-vision-preview', name: 'Llama 3.2 90B (Vision)' },
         { id: 'llama-3.2-11b-vision-preview', name: 'Llama 3.2 11B (Vision)' },
-        { id: 'llama-3.2-3b-preview', name: 'Llama 3.2 3B' },
-        { id: 'llama-3.2-1b-preview', name: 'Llama 3.2 1B' },
-        { id: 'deepseek-r1-distill-llama-70b', name: 'Thinking HSOE (DeepSeek)' },
-        { id: 'image-generation', name: 'Image Generation' }
+        { id: 'llama-3.2-3b-preview', name: 'Llama 3.2 3B (Mobile)' },
+        { id: 'llama-3.2-1b-preview', name: 'Llama 3.2 1B (Mobile)' },
+        { id: 'qwen-2.5-32b', name: 'Qwen 2.5 32B' },
+        { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 (Thinking)' },
     ]
 
     const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
@@ -197,9 +196,6 @@ export default function AIAssistant() {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({
-                    action: 'chat',
-                    question: userMessageText,
-                    image: userImage, // Current image
                     action: 'chat',
                     question: userMessageText,
                     image: userImage, // Current image

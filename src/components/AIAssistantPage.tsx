@@ -45,17 +45,16 @@ export default function AIAssistantPage() {
     const [isModelMenuOpen, setIsModelMenuOpen] = useState(false)
 
     const models = [
-        { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (Default)' },
-        { id: 'llama-3.1-70b-versatile', name: 'Llama 3.1 70B' },
+        { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (Recommended)' },
         { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B (Fast)' },
         { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B' },
         { id: 'gemma2-9b-it', name: 'Gemma 2 9B' },
         { id: 'llama-3.2-90b-vision-preview', name: 'Llama 3.2 90B (Vision)' },
         { id: 'llama-3.2-11b-vision-preview', name: 'Llama 3.2 11B (Vision)' },
-        { id: 'llama-3.2-3b-preview', name: 'Llama 3.2 3B' },
-        { id: 'llama-3.2-1b-preview', name: 'Llama 3.2 1B' },
-        { id: 'deepseek-r1-distill-llama-70b', name: 'Thinking HSOE (DeepSeek)' },
-        { id: 'image-generation', name: 'Image Generation' }
+        { id: 'llama-3.2-3b-preview', name: 'Llama 3.2 3B (Mobile)' },
+        { id: 'llama-3.2-1b-preview', name: 'Llama 3.2 1B (Mobile)' },
+        { id: 'qwen-2.5-32b', name: 'Qwen 2.5 32B' },
+        { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 (Thinking)' },
     ]
 
     // --- Refs ---
@@ -262,8 +261,6 @@ export default function AIAssistantPage() {
                     action: 'chat',
                     question: userMessage,
                     image: userImage,
-                    question: userMessage,
-                    image: userImage,
                     conversationHistory: activeHistory,
                     model: selectedModel
                 }),
@@ -437,8 +434,8 @@ export default function AIAssistantPage() {
                                             setIsModelMenuOpen(false)
                                         }}
                                         className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-50 dark:border-gray-800 last:border-0 ${selectedModel === model.id
-                                                ? 'text-blue-600 dark:text-blue-400 font-medium bg-blue-50/50 dark:bg-blue-900/10'
-                                                : 'text-gray-700 dark:text-gray-300'
+                                            ? 'text-blue-600 dark:text-blue-400 font-medium bg-blue-50/50 dark:bg-blue-900/10'
+                                            : 'text-gray-700 dark:text-gray-300'
                                             }`}
                                     >
                                         <div className="font-medium">{model.name}</div>
