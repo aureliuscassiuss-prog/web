@@ -296,65 +296,57 @@ Subject: ${subject}, Program: ${program}, Year: ${formattedYear}, Branch: ${bran
                 stop: null
             });
         }
-    } else {
-        chatCompletion = await groq.chat.completions.create({
-            messages,
-            model: model,
-            temperature: 0.7,
-            max_tokens: req.body.maxTokens || (type === 'generate-paper' ? 2048 : 2048),
-            stop: null
-        });
-    }
 
-    const answer = chatCompletion.choices[0]?.message?.content || 'Error generating response';
 
-    if (userId && isChat) {
-        const userContent = image
-            ? [{ type: 'text', text: question || "Analyze this image." }, { type: 'image_url', image_url: { url: image } }]
-            : question;
+        const answer = chatCompletion.choices[0]?.message?.content || 'Error generating response';
 
-        const newMessages = [
-            { role: 'user', content: userContent },
-            { role: 'assistant', content: answer }
-        ];
+        if (userId && isChat) {
+            const userContent = image
+                ? [{ type: 'text', text: question || "Analyze this image." }, { type: 'image_url', image_url: { url: image } }]
+                : question;
 
-        // Append to messages using a simpler fetch-update approach for now since Postgres array append is cleaner but we stored JSONB.
-        // We can use a stored procedure or just read-modify-write.
-        // Read-modify-write is safest without complex SQL.
-        const { data: existing } = await supabase.from('ai_conversations').select('messages').eq('userId', userId).single();
-        const updatedMsgs = existing ? [...existing.messages, ...newMessages] : newMessages;
-
-        // Upsert
-        const { error } = await supabase.from('ai_conversations').upsert({
-            userId,
-            messages: updatedMsgs,
-            updatedAt: new Date()
-        }, { onConflict: 'userId' });
-    }
-
-    if (isChat) {
-        const userHistoryContent = image
-            ? [{ type: 'text', text: question || "Analyze this image." }, { type: 'image_url', image_url: { url: image } }]
-            : question;
-
-        res.json({
-            answer,
-            conversationHistory: [
-                ...(conversationHistory || []),
-                { role: 'user', content: userHistoryContent },
+            const newMessages = [
+                { role: 'user', content: userContent },
                 { role: 'assistant', content: answer }
-            ]
-        });
-    } else {
-        res.status(200).json({ answer });
-    }
+            ];
 
-} catch (error: any) {
-    console.error('AI Error details:', error);
-    // Return more specific error for debugging
-    res.status(500).json({
-        message: error?.message || 'AI service error',
-        details: error?.response?.data || error?.toString()
-    });
-}
+            // Append to messages using a simpler fetch-update approach for now since Postgres array append is cleaner but we stored JSONB.
+            // We can use a stored procedure or just read-modify-write.
+            // Read-modify-write is safest without complex SQL.
+            const { data: existing } = await supabase.from('ai_conversations').select('messages').eq('userId', userId).single();
+            const updatedMsgs = existing ? [...existing.messages, ...newMessages] : newMessages;
+
+            // Upsert
+            const { error } = await supabase.from('ai_conversations').upsert({
+                userId,
+                messages: updatedMsgs,
+                updatedAt: new Date()
+            }, { onConflict: 'userId' });
+        }
+
+        if (isChat) {
+            const userHistoryContent = image
+                ? [{ type: 'text', text: question || "Analyze this image." }, { type: 'image_url', image_url: { url: image } }]
+                : question;
+
+            res.json({
+                answer,
+                conversationHistory: [
+                    ...(conversationHistory || []),
+                    { role: 'user', content: userHistoryContent },
+                    { role: 'assistant', content: answer }
+                ]
+            });
+        } else {
+            res.status(200).json({ answer });
+        }
+
+    } catch (error: any) {
+        console.error('AI Error details:', error);
+        // Return more specific error for debugging
+        res.status(500).json({
+            message: error?.message || 'AI service error',
+            details: error?.response?.data || error?.toString()
+        });
+    }
 }
