@@ -216,7 +216,7 @@ RETURN ONLY VALID JSON.`;
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: prompt }
             ],
-            model: 'llama-3.3-70b-versatile',
+            model: 'deepseek-r1-distill-llama-70b',
             temperature: 0.3, // Lower temp for more consistent/formal output
             max_tokens: 3000,
         });
