@@ -243,12 +243,25 @@ Subject: ${subject}, Program: ${program}, Year: ${formattedYear}, Branch: ${bran
         const validModels = [
             'llama-3.3-70b-versatile',
             'llama-3.1-8b-instant',
+            'meta-llama/llama-guard-4-12b',
+            'openai/gpt-oss-120b',
+            'openai/gpt-oss-20b',
+            'groq/compound',
+            'groq/compound-mini',
+            'canopylabs/orpheus-arabic-saudi',
+            'meta-llama/llama-4-maverick-17b-128e-instruct',
+            'meta-llama/llama-4-scout-17b-16e-instruct',
+            'moonshotai/kimi-k2-instruct-0905',
+            'openai/gpt-oss-safeguard-20b',
+            'qwen/qwen3-32b',
             'llama-3.2-90b-vision-preview',
             'llama-3.2-11b-vision-preview',
+            // OpenRouter Models
+            'deepseek/deepseek-r1',
+            'deepseek/deepseek-v3'
         ];
 
-        // If image is present, force a vision model (currently Groq supports Llama 3.2 vision or similar, let's use a safe default if specific vision model is needed)
-        // For now, if image is present, we try 'llama-3.2-11b-vision-preview' or falls back. 
+        // If image is present, force a vision model
         if (image) {
             model = 'llama-3.2-90b-vision-preview';
         } else if (!validModels.includes(model)) {
@@ -263,31 +276,18 @@ Subject: ${subject}, Program: ${program}, Year: ${formattedYear}, Branch: ${bran
         let chatCompletion;
 
         // Route to appropriate client
-        if (model.startsWith('deepseek/') || model.startsWith('openai/') || model.includes('/')) {
-            // Assume OpenRouter for namespaced models (except if it was a custom groq one? Groq doesn't usually use slashes like deepseek/ in this app context except for openai/gpt-oss maybe? 
-            // user's "openai/gpt-oss-120b" was from Groq previously. 
-            // Actually, "openai/gpt-oss-120b" IS ON GROQ? The user provided that list for Groq previously.
-            // "deepseek/..." is definitely OpenRouter.
-
-            if (model.startsWith('deepseek/')) {
-                chatCompletion = await openrouter.chat.completions.create({
-                    messages,
-                    model: model,
-                    temperature: 0.7,
-                    max_tokens: req.body.maxTokens || (type === 'generate-paper' ? 2048 : 2048),
-                    stop: null
-                });
-            } else {
-                // Fallback to Groq for others like openai/gpt-oss-120b (Groq supported)
-                chatCompletion = await groq.chat.completions.create({
-                    messages,
-                    model: model,
-                    temperature: 0.7,
-                    max_tokens: req.body.maxTokens || (type === 'generate-paper' ? 2048 : 2048),
-                    stop: null
-                });
-            }
+        // ONLY DeepSeek goes to OpenRouter. 
+        // User confirmed "openai/gpt-oss" etc. are Groq models.
+        if (model.startsWith('deepseek/')) {
+            chatCompletion = await openrouter.chat.completions.create({
+                messages,
+                model: model,
+                temperature: 0.7,
+                max_tokens: req.body.maxTokens || 340,
+                stop: null
+            });
         } else {
+            // Fallback to Groq for others like openai/gpt-oss-120b (Groq supported)
             chatCompletion = await groq.chat.completions.create({
                 messages,
                 model: model,
@@ -296,56 +296,65 @@ Subject: ${subject}, Program: ${program}, Year: ${formattedYear}, Branch: ${bran
                 stop: null
             });
         }
-
-        const answer = chatCompletion.choices[0]?.message?.content || 'Error generating response';
-
-        if (userId && isChat) {
-            const userContent = image
-                ? [{ type: 'text', text: question || "Analyze this image." }, { type: 'image_url', image_url: { url: image } }]
-                : question;
-
-            const newMessages = [
-                { role: 'user', content: userContent },
-                { role: 'assistant', content: answer }
-            ];
-
-            // Append to messages using a simpler fetch-update approach for now since Postgres array append is cleaner but we stored JSONB.
-            // We can use a stored procedure or just read-modify-write.
-            // Read-modify-write is safest without complex SQL.
-            const { data: existing } = await supabase.from('ai_conversations').select('messages').eq('userId', userId).single();
-            const updatedMsgs = existing ? [...existing.messages, ...newMessages] : newMessages;
-
-            // Upsert
-            const { error } = await supabase.from('ai_conversations').upsert({
-                userId,
-                messages: updatedMsgs,
-                updatedAt: new Date()
-            }, { onConflict: 'userId' });
-        }
-
-        if (isChat) {
-            const userHistoryContent = image
-                ? [{ type: 'text', text: question || "Analyze this image." }, { type: 'image_url', image_url: { url: image } }]
-                : question;
-
-            res.json({
-                answer,
-                conversationHistory: [
-                    ...(conversationHistory || []),
-                    { role: 'user', content: userHistoryContent },
-                    { role: 'assistant', content: answer }
-                ]
-            });
-        } else {
-            res.status(200).json({ answer });
-        }
-
-    } catch (error: any) {
-        console.error('AI Error details:', error);
-        // Return more specific error for debugging
-        res.status(500).json({
-            message: error?.message || 'AI service error',
-            details: error?.response?.data || error?.toString()
+    } else {
+        chatCompletion = await groq.chat.completions.create({
+            messages,
+            model: model,
+            temperature: 0.7,
+            max_tokens: req.body.maxTokens || (type === 'generate-paper' ? 2048 : 2048),
+            stop: null
         });
     }
+
+    const answer = chatCompletion.choices[0]?.message?.content || 'Error generating response';
+
+    if (userId && isChat) {
+        const userContent = image
+            ? [{ type: 'text', text: question || "Analyze this image." }, { type: 'image_url', image_url: { url: image } }]
+            : question;
+
+        const newMessages = [
+            { role: 'user', content: userContent },
+            { role: 'assistant', content: answer }
+        ];
+
+        // Append to messages using a simpler fetch-update approach for now since Postgres array append is cleaner but we stored JSONB.
+        // We can use a stored procedure or just read-modify-write.
+        // Read-modify-write is safest without complex SQL.
+        const { data: existing } = await supabase.from('ai_conversations').select('messages').eq('userId', userId).single();
+        const updatedMsgs = existing ? [...existing.messages, ...newMessages] : newMessages;
+
+        // Upsert
+        const { error } = await supabase.from('ai_conversations').upsert({
+            userId,
+            messages: updatedMsgs,
+            updatedAt: new Date()
+        }, { onConflict: 'userId' });
+    }
+
+    if (isChat) {
+        const userHistoryContent = image
+            ? [{ type: 'text', text: question || "Analyze this image." }, { type: 'image_url', image_url: { url: image } }]
+            : question;
+
+        res.json({
+            answer,
+            conversationHistory: [
+                ...(conversationHistory || []),
+                { role: 'user', content: userHistoryContent },
+                { role: 'assistant', content: answer }
+            ]
+        });
+    } else {
+        res.status(200).json({ answer });
+    }
+
+} catch (error: any) {
+    console.error('AI Error details:', error);
+    // Return more specific error for debugging
+    res.status(500).json({
+        message: error?.message || 'AI service error',
+        details: error?.response?.data || error?.toString()
+    });
+}
 }

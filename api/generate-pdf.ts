@@ -226,7 +226,8 @@ RETURN ONLY VALID JSON. DO NOT INCLUDE MARKDOWN FORMATTING. DO NOT INCLUDE COMME
         const isDeepSeek = modelArg.startsWith('deepseek/');
         const maxTokens = isDeepSeek ? 340 : 4096; // Reduced tokens for DeepSeek
 
-        if (isDeepSeek || modelArg.includes('/')) {
+        // Route only DeepSeek to OpenRouter. All others (including openai/ prefixes if on Groq) go to Groq.
+        if (isDeepSeek) {
             completion = await openrouter.chat.completions.create({
                 messages: [
                     { role: 'system', content: systemPrompt },

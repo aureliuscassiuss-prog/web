@@ -39,14 +39,19 @@ export default function AIAssistant() {
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const models = [
-        { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (Recommended)' },
-        { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B (Fast)' },
+        { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B' },
+        { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B' },
+        { id: 'meta-llama/llama-guard-4-12b', name: 'Llama Guard 4 12B' },
         { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B' },
         { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B' },
+        { id: 'groq/compound', name: 'Groq Compound' },
+        { id: 'groq/compound-mini', name: 'Groq Compound Mini' },
+        { id: 'canopylabs/orpheus-arabic-saudi', name: 'Orpheus Arabic Saudi' },
+        { id: 'meta-llama/llama-4-maverick-17b-128e-instruct', name: 'Llama 4 Maverick 17B' },
         { id: 'meta-llama/llama-4-scout-17b-16e-instruct', name: 'Llama 4 Scout 17B' },
         { id: 'moonshotai/kimi-k2-instruct-0905', name: 'Kimi K2' },
+        { id: 'openai/gpt-oss-safeguard-20b', name: 'Safety GPT OSS 20B' },
         { id: 'qwen/qwen3-32b', name: 'Qwen 3 32B' },
-        { id: 'groq/compound', name: 'Groq Compound' },
     ]
 
     const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
