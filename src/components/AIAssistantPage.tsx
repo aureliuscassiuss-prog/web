@@ -49,7 +49,6 @@ export default function AIAssistantPage() {
         { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B (Fast)' },
         { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B' },
         { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B' },
-        { id: 'meta-llama/llama-4-maverick-17b-128e-instruct', name: 'Llama 4 Maverick 17B' },
         { id: 'meta-llama/llama-4-scout-17b-16e-instruct', name: 'Llama 4 Scout 17B' },
         { id: 'moonshotai/kimi-k2-instruct-0905', name: 'Kimi K2' },
         { id: 'qwen/qwen3-32b', name: 'Qwen 3 32B' },
