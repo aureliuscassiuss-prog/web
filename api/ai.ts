@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import Groq from 'groq-sdk';
+import OpenAI from 'openai';
 
 dotenv.config();
 
@@ -12,6 +13,11 @@ const supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', 
 
 const groq = new Groq({
     apiKey: process.env.GROQ_API_KEY || process.env.VITE_GROQ_API_KEY
+});
+
+const openrouter = new OpenAI({
+    apiKey: process.env.OPENROUTER_API_KEY,
+    baseURL: 'https://openrouter.ai/api/v1'
 });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -242,28 +248,61 @@ Subject: ${subject}, Program: ${program}, Year: ${formattedYear}, Branch: ${bran
             'qwen/qwen3-32b',
             'groq/compound',
             'llama-3.2-90b-vision-preview',
-            'llama-3.2-11b-vision-preview'
+            'llama-3.2-11b-vision-preview',
+            // OpenRouter Models
+            'deepseek/deepseek-r1',
+            'deepseek/deepseek-v3'
         ];
 
         // If image is present, force a vision model (currently Groq supports Llama 3.2 vision or similar, let's use a safe default if specific vision model is needed)
         // For now, if image is present, we try 'llama-3.2-11b-vision-preview' or falls back. 
-        // Note: The previous code used 'meta-llama/llama-4-scout-17b-16e-instruct' which might be custom or a specific preview.
-        // Let's stick to the user's requested model UNLESS it's an image, in which case we must use a vision model.
         if (image) {
-            model = 'llama-3.2-90b-vision-preview'; // Updated to a known valid vision model on Groq or keep previous if known working
+            model = 'llama-3.2-90b-vision-preview';
         } else if (!validModels.includes(model)) {
-            model = 'llama-3.3-70b-versatile';
+            // Keep user choice if it looks like a custom ID, otherwise default
+            if (!model.startsWith('deepseek/')) {
+                model = 'llama-3.3-70b-versatile';
+            }
         }
 
         console.log('Using Model:', model);
 
-        const chatCompletion = await groq.chat.completions.create({
-            messages,
-            model: model,
-            temperature: 0.7,
-            max_tokens: req.body.maxTokens || (type === 'generate-paper' ? 2048 : 2048),
-            stop: null
-        });
+        let chatCompletion;
+
+        // Route to appropriate client
+        if (model.startsWith('deepseek/') || model.startsWith('openai/') || model.includes('/')) {
+            // Assume OpenRouter for namespaced models (except if it was a custom groq one? Groq doesn't usually use slashes like deepseek/ in this app context except for openai/gpt-oss maybe? 
+            // user's "openai/gpt-oss-120b" was from Groq previously. 
+            // Actually, "openai/gpt-oss-120b" IS ON GROQ? The user provided that list for Groq previously.
+            // "deepseek/..." is definitely OpenRouter.
+
+            if (model.startsWith('deepseek/')) {
+                chatCompletion = await openrouter.chat.completions.create({
+                    messages,
+                    model: model,
+                    temperature: 0.7,
+                    max_tokens: req.body.maxTokens || (type === 'generate-paper' ? 2048 : 2048),
+                    stop: null
+                });
+            } else {
+                // Fallback to Groq for others like openai/gpt-oss-120b (Groq supported)
+                chatCompletion = await groq.chat.completions.create({
+                    messages,
+                    model: model,
+                    temperature: 0.7,
+                    max_tokens: req.body.maxTokens || (type === 'generate-paper' ? 2048 : 2048),
+                    stop: null
+                });
+            }
+        } else {
+            chatCompletion = await groq.chat.completions.create({
+                messages,
+                model: model,
+                temperature: 0.7,
+                max_tokens: req.body.maxTokens || (type === 'generate-paper' ? 2048 : 2048),
+                stop: null
+            });
+        }
 
         const answer = chatCompletion.choices[0]?.message?.content || 'Error generating response';
 

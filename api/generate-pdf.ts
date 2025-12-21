@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import Groq from 'groq-sdk';
+import OpenAI from 'openai';
 import { jsPDF } from 'jspdf';
 
 dotenv.config();
@@ -20,8 +21,14 @@ const supabaseAdmin = createClient(
     supabaseServiceKey || supabaseKey || 'placeholder'
 );
 
+
 const groq = new Groq({
     apiKey: process.env.GROQ_API_KEY || process.env.VITE_GROQ_API_KEY
+});
+
+const openrouter = new OpenAI({
+    apiKey: process.env.OPENROUTER_API_KEY,
+    baseURL: 'https://openrouter.ai/api/v1'
 });
 
 // ... interface ...
@@ -211,12 +218,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 RETURN ONLY VALID JSON. DO NOT INCLUDE MARKDOWN FORMATTING. DO NOT INCLUDE COMMENTARY. JUST THE RAW JSON OBJECT.`;
 
-        const completion = await groq.chat.completions.create({
+        // Use OpenRouter with DeepSeek V3 as requested ("Deepseek 31")
+        const completion = await openrouter.chat.completions.create({
             messages: [
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: prompt }
             ],
-            model: 'openai/gpt-oss-120b',
+            model: 'deepseek/deepseek-v3',
             temperature: 0.1, // Very low temp for strict JSON
             max_tokens: 4096
         });
