@@ -224,7 +224,7 @@ RETURN ONLY VALID JSON. DO NOT INCLUDE MARKDOWN FORMATTING. DO NOT INCLUDE COMME
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: prompt }
             ],
-            model: 'deepseek/deepseek-v3',
+            model: 'deepseek/deepseek-chat',
             temperature: 0.1, // Very low temp for strict JSON
             max_tokens: 4096
         });

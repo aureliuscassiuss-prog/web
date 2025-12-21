@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { MessageCircle, X, Send, Sparkles, RotateCcw, Bot, Paperclip, ChevronDown } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import ReactMarkdown from 'react-markdown'
 
 interface Message {
     id: string
@@ -13,6 +12,14 @@ interface Message {
 interface ConversationMessage {
     role: 'user' | 'assistant'
     content: string | Array<any>
+}
+
+interface Message {
+    id: string
+    text: string
+    sender: 'user' | 'bot'
+    image?: string
+    thinking?: string // Format: <think>...</think> content
 }
 
 export default function AIAssistant() {
@@ -148,6 +155,54 @@ export default function AIAssistant() {
         });
     };
 
+    const formatMessage = (text: string, thinking?: string) => {
+        // Simple markdown parsing with code block support
+        const parts = text.split(/(```[\s\S]*?```)/g)
+
+        return (
+            <div className="space-y-2">
+                {thinking && (
+                    <div className="mb-2 rounded-lg border border-gray-200 bg-gray-50 p-2 dark:border-gray-800 dark:bg-gray-900/50">
+                        <details className="group">
+                            <summary className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                <div className="flex items-center gap-1">
+                                    <Bot className="h-3 w-3" />
+                                    <span>Thinking Process</span>
+                                </div>
+                                <ChevronDown className="h-3 w-3 transition-transform group-open:rotate-180" />
+                            </summary>
+                            <div className="mt-2 text-xs leading-relaxed text-gray-600 dark:text-gray-300 whitespace-pre-wrap">
+                                {thinking}
+                            </div>
+                        </details>
+                    </div>
+                )}
+                {parts.map((part, index) => {
+                    if (part.startsWith('```')) {
+                        // ... code block logic ...
+                        const match = part.match(/```(\w*)\n([\s\S]*?)```/)
+                        const lang = match ? match[1] : ''
+                        const code = match ? match[2] : part.slice(3, -3)
+
+                        return (
+                            <div key={index} className="my-2 overflow-hidden rounded-md bg-gray-900 text-white dark:bg-black border border-gray-700">
+                                <div className="flex items-center justify-between bg-gray-800 px-3 py-1.5 text-xs text-gray-400">
+                                    <span>{lang}</span>
+                                    <button onClick={() => navigator.clipboard.writeText(code)} className="hover:text-white">Copy</button>
+                                </div>
+                                <pre className="overflow-x-auto p-3 text-xs font-mono">
+                                    <code>{code}</code>
+                                </pre>
+                            </div>
+                        )
+                    }
+                    // Basic formatting
+                    return <p key={index} className="whitespace-pre-wrap leading-relaxed">{part}</p>
+                })}
+            </div>
+        )
+    }
+
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) {
@@ -214,10 +269,20 @@ export default function AIAssistant() {
             setIsTyping(false);
             const botMsgId = (Date.now() + 1).toString();
 
-            setMessages(prev => [...prev, { id: botMsgId, text: '', sender: 'bot' }]);
+            // Check for <think> tags
+            let thinkingContent = undefined;
+            let finalAnswer = data.answer;
+
+            const thinkMatch = data.answer.match(/<think>([\s\S]*?)<\/think>/);
+            if (thinkMatch) {
+                thinkingContent = thinkMatch[1].trim();
+                finalAnswer = data.answer.replace(/<think>[\s\S]*?<\/think>/, '').trim();
+            }
+
+            setMessages(prev => [...prev, { id: botMsgId, text: '', sender: 'bot', thinking: thinkingContent }]);
 
             let i = -1;
-            const fullText = data.answer;
+            const fullText = finalAnswer;
             const typingSpeed = 15;
 
             const interval = setInterval(() => {
@@ -370,9 +435,7 @@ export default function AIAssistant() {
 
                                         {msg.sender === 'bot' ? (
                                             <div className="prose prose-sm max-w-none dark:prose-invert">
-                                                <ReactMarkdown>
-                                                    {msg.text}
-                                                </ReactMarkdown>
+                                                {formatMessage(msg.text, msg.thinking)}
                                             </div>
                                         ) : (
                                             msg.text
