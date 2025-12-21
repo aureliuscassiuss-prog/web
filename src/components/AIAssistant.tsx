@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { MessageCircle, X, Send, Sparkles, RotateCcw, Bot, Paperclip, Image as ImageIcon } from 'lucide-react'
+import { MessageCircle, X, Send, Sparkles, RotateCcw, Bot, Paperclip, Image as ImageIcon, ChevronDown } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import ReactMarkdown from 'react-markdown'
 
@@ -26,8 +26,24 @@ export default function AIAssistant() {
     const [selectedImage, setSelectedImage] = useState<string | null>(null)
     const [isTyping, setIsTyping] = useState(false)
     const [isLoadingHistory, setIsLoadingHistory] = useState(false)
+    const [selectedModel, setSelectedModel] = useState('llama-3.3-70b-versatile')
+    const [isModelMenuOpen, setIsModelMenuOpen] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
+
+    const models = [
+        { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (Default)' },
+        { id: 'llama-3.1-70b-versatile', name: 'Llama 3.1 70B' },
+        { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B (Fast)' },
+        { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B' },
+        { id: 'gemma2-9b-it', name: 'Gemma 2 9B' },
+        { id: 'llama-3.2-90b-vision-preview', name: 'Llama 3.2 90B (Vision)' },
+        { id: 'llama-3.2-11b-vision-preview', name: 'Llama 3.2 11B (Vision)' },
+        { id: 'llama-3.2-3b-preview', name: 'Llama 3.2 3B' },
+        { id: 'llama-3.2-1b-preview', name: 'Llama 3.2 1B' },
+        { id: 'deepseek-r1-distill-llama-70b', name: 'Thinking HSOE (DeepSeek)' },
+        { id: 'image-generation', name: 'Image Generation' }
+    ]
 
     const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
         messagesEndRef.current?.scrollIntoView({ behavior })
@@ -184,7 +200,11 @@ export default function AIAssistant() {
                     action: 'chat',
                     question: userMessageText,
                     image: userImage, // Current image
-                    conversationHistory: textOnlyHistory // Lightweight history
+                    action: 'chat',
+                    question: userMessageText,
+                    image: userImage, // Current image
+                    conversationHistory: textOnlyHistory, // Lightweight history
+                    model: selectedModel
                 })
             })
 
@@ -276,14 +296,39 @@ export default function AIAssistant() {
                                 <Bot className="h-5 w-5 text-gray-900 dark:text-gray-100" />
                             </div>
                             <div>
-                                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">AI Assistant</h3>
+                                <div className="flex items-center gap-1 cursor-pointer" onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}>
+                                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                                        {models.find(m => m.id === selectedModel)?.name.split('(')[0].trim() || 'AI Assistant'}
+                                    </h3>
+                                    <ChevronDown className={`h-3 w-3 transition-transform ${isModelMenuOpen ? 'rotate-180' : ''}`} />
+                                </div>
                                 <div className="flex items-center gap-1.5">
                                     <span className="relative flex h-2 w-2">
                                         <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                                         <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                                     </span>
-                                    <span className="text-xs text-gray-500 dark:text-gray-400">Online</span>
+                                    <span className="text-[10px] text-gray-500 dark:text-gray-400">Online</span>
                                 </div>
+
+                                {isModelMenuOpen && (
+                                    <div className="absolute top-14 left-4 w-48 bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-100 dark:border-gray-800 animate-in fade-in zoom-in-95 duration-100 overflow-hidden z-50">
+                                        {models.map(model => (
+                                            <button
+                                                key={model.id}
+                                                onClick={() => {
+                                                    setSelectedModel(model.id)
+                                                    setIsModelMenuOpen(false)
+                                                }}
+                                                className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${selectedModel === model.id
+                                                    ? 'text-blue-600 dark:text-blue-400 font-medium'
+                                                    : 'text-gray-700 dark:text-gray-300'
+                                                    }`}
+                                            >
+                                                {model.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <button
@@ -317,7 +362,7 @@ export default function AIAssistant() {
                                 >
                                     <div
                                         className={`
-                                            max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm flex flex-col gap-2
+                                            max-w-[85%] rounded-2xl px-3 py-2 text-xs sm:text-sm leading-relaxed shadow-sm flex flex-col gap-1
                                             ${msg.sender === 'user'
                                                 ? 'bg-black text-white dark:bg-white dark:text-black rounded-tr-none'
                                                 : 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100 rounded-tl-none border border-gray-200 dark:border-gray-700'
@@ -344,7 +389,7 @@ export default function AIAssistant() {
 
                         {isTyping && (
                             <div className="flex justify-start">
-                                <div className="flex items-center gap-1 rounded-2xl rounded-tl-none bg-gray-100 px-4 py-3 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                                <div className="flex items-center gap-1 rounded-2xl rounded-tl-none bg-gray-100 px-3 py-2 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                                     <span className="text-xs text-gray-500 animate-pulse font-medium">Thinking...</span>
                                 </div>
                             </div>
@@ -359,7 +404,7 @@ export default function AIAssistant() {
                                 <button
                                     key={action.label}
                                     onClick={() => setInput(action.prompt)}
-                                    className="flex items-center gap-1 whitespace-nowrap rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-600 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+                                    className="flex items-center gap-1 whitespace-nowrap rounded-full border border-gray-200 bg-white px-2 py-1 text-[10px] sm:text-xs font-medium text-gray-600 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
                                 >
                                     <Sparkles className="h-3 w-3" />
                                     {action.label}
@@ -373,12 +418,12 @@ export default function AIAssistant() {
                         {/* Image Preview */}
                         {selectedImage && (
                             <div className="mb-3 relative inline-block">
-                                <img src={selectedImage} alt="Preview" className="h-16 w-auto rounded-lg border border-gray-200 dark:border-gray-700 object-cover" />
+                                <img src={selectedImage} alt="Preview" className="h-12 w-auto rounded-lg border border-gray-200 dark:border-gray-700 object-cover" />
                                 <button
                                     onClick={() => setSelectedImage(null)}
                                     className="absolute -top-1.5 -right-1.5 bg-gray-900 text-white rounded-full p-0.5 shadow-md hover:bg-red-500 transition-colors"
                                 >
-                                    <X className="h-3 w-3" />
+                                    <X className="h-2.5 w-2.5" />
                                 </button>
                             </div>
                         )}
@@ -394,7 +439,7 @@ export default function AIAssistant() {
 
                             <button
                                 onClick={() => fileInputRef.current?.click()}
-                                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors"
+                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors"
                                 title="Upload Image"
                             >
                                 <Paperclip className="h-5 w-5" />
@@ -410,13 +455,13 @@ export default function AIAssistant() {
                                     }
                                 }}
                                 placeholder={selectedImage ? "Ask about this image..." : "Ask anything..."}
-                                className="flex-1 max-h-32 min-h-[44px] resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-gray-300 focus:outline-none focus:ring-0 dark:border-gray-800 dark:bg-gray-900 dark:text-white dark:placeholder-gray-400 dark:focus:border-gray-700"
+                                className="flex-1 max-h-32 min-h-[36px] resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs sm:text-sm focus:border-gray-300 focus:outline-none focus:ring-0 dark:border-gray-800 dark:bg-gray-900 dark:text-white dark:placeholder-gray-400 dark:focus:border-gray-700"
                                 rows={1}
                             />
                             <button
                                 onClick={handleSend}
                                 disabled={(!input.trim() && !selectedImage) || isTyping}
-                                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black text-white hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-white dark:text-black dark:hover:bg-gray-200 transition-colors"
+                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-black text-white hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-white dark:text-black dark:hover:bg-gray-200 transition-colors"
                             >
                                 <Send className="h-5 w-5" />
                             </button>

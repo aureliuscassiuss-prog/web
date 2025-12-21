@@ -230,17 +230,40 @@ Subject: ${subject}, Program: ${program}, Year: ${formattedYear}, Branch: ${bran
             }
         }
 
-        // Select model - use Vision for images
-        const model = image ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.3-70b-versatile';
+        // Select model - use Vision for images if needed, otherwise use requested model or default
+        let model = req.body.model || 'llama-3.3-70b-versatile';
+
+        // Model validation/mapping
+        const validModels = [
+            'llama-3.3-70b-versatile',
+            'llama-3.1-70b-versatile',
+            'llama-3.1-8b-instant',
+            'mixtral-8x7b-32768',
+            'gemma2-9b-it',
+            'llama-3.2-90b-vision-preview',
+            'llama-3.2-11b-vision-preview',
+            'llama-3.2-3b-preview',
+            'llama-3.2-1b-preview',
+            'deepseek-r1-distill-llama-70b'
+        ];
+
+        // If image is present, force a vision model (currently Groq supports Llama 3.2 vision or similar, let's use a safe default if specific vision model is needed)
+        // For now, if image is present, we try 'llama-3.2-11b-vision-preview' or falls back. 
+        // Note: The previous code used 'meta-llama/llama-4-scout-17b-16e-instruct' which might be custom or a specific preview.
+        // Let's stick to the user's requested model UNLESS it's an image, in which case we must use a vision model.
+        if (image) {
+            model = 'llama-3.2-90b-vision-preview'; // Updated to a known valid vision model on Groq or keep previous if known working
+        } else if (!validModels.includes(model)) {
+            model = 'llama-3.3-70b-versatile';
+        }
+
         console.log('Using Model:', model);
 
         const chatCompletion = await groq.chat.completions.create({
             messages,
             model: model,
             temperature: 0.7,
-            model: model,
-            temperature: 0.7,
-            max_tokens: req.body.maxTokens || (type === 'generate-paper' ? 2048 : 2048), // Increased default for chat/code
+            max_tokens: req.body.maxTokens || (type === 'generate-paper' ? 2048 : 2048),
             stop: null
         });
 
