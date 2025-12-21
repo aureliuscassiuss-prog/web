@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import {
     Send, Sparkles, RotateCcw, Bot, Copy, Check,
-    User, ThumbsUp, ThumbsDown, Paperclip, X, Square
+    User, ThumbsUp, ThumbsDown, Paperclip, X, Square, ChevronDown
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import ReactMarkdown from 'react-markdown'
@@ -41,6 +41,22 @@ export default function AIAssistantPage() {
     const [isWaiting, setIsWaiting] = useState(false)
     const [isLoadingHistory, setIsLoadingHistory] = useState(true)
     const [copiedId, setCopiedId] = useState<string | null>(null)
+    const [selectedModel, setSelectedModel] = useState('llama-3.3-70b-versatile')
+    const [isModelMenuOpen, setIsModelMenuOpen] = useState(false)
+
+    const models = [
+        { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (Default)' },
+        { id: 'llama-3.1-70b-versatile', name: 'Llama 3.1 70B' },
+        { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B (Fast)' },
+        { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B' },
+        { id: 'gemma2-9b-it', name: 'Gemma 2 9B' },
+        { id: 'llama-3.2-90b-vision-preview', name: 'Llama 3.2 90B (Vision)' },
+        { id: 'llama-3.2-11b-vision-preview', name: 'Llama 3.2 11B (Vision)' },
+        { id: 'llama-3.2-3b-preview', name: 'Llama 3.2 3B' },
+        { id: 'llama-3.2-1b-preview', name: 'Llama 3.2 1B' },
+        { id: 'deepseek-r1-distill-llama-70b', name: 'Thinking HSOE (DeepSeek)' },
+        { id: 'image-generation', name: 'Image Generation' }
+    ]
 
     // --- Refs ---
     const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -246,7 +262,10 @@ export default function AIAssistantPage() {
                     action: 'chat',
                     question: userMessage,
                     image: userImage,
-                    conversationHistory: activeHistory
+                    question: userMessage,
+                    image: userImage,
+                    conversationHistory: activeHistory,
+                    model: selectedModel
                 }),
                 signal: abortControllerRef.current.signal
             })
@@ -397,11 +416,37 @@ export default function AIAssistantPage() {
                         <Bot size={18} strokeWidth={2.5} />
                     </div>
                     <div>
-                        <h1 className="text-sm font-bold leading-tight">AI Tutor</h1>
+                        <div className="flex items-center gap-1 cursor-pointer" onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}>
+                            <h1 className="text-sm font-bold leading-tight">
+                                {models.find(m => m.id === selectedModel)?.name.split('(')[0].trim() || 'AI Tutor'}
+                            </h1>
+                            <ChevronDown className={`h-3 w-3 transition-transform ${isModelMenuOpen ? 'rotate-180' : ''}`} />
+                        </div>
                         <div className="flex items-center gap-1">
                             <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse"></span>
                             <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">Online</span>
                         </div>
+
+                        {isModelMenuOpen && (
+                            <div className="absolute top-12 left-4 w-56 bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-100 dark:border-gray-800 animate-in fade-in zoom-in-95 duration-100 overflow-hidden z-50 max-h-[60vh] overflow-y-auto">
+                                {models.map(model => (
+                                    <button
+                                        key={model.id}
+                                        onClick={() => {
+                                            setSelectedModel(model.id)
+                                            setIsModelMenuOpen(false)
+                                        }}
+                                        className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-50 dark:border-gray-800 last:border-0 ${selectedModel === model.id
+                                                ? 'text-blue-600 dark:text-blue-400 font-medium bg-blue-50/50 dark:bg-blue-900/10'
+                                                : 'text-gray-700 dark:text-gray-300'
+                                            }`}
+                                    >
+                                        <div className="font-medium">{model.name}</div>
+                                        <div className="text-[10px] text-gray-400 truncate">{model.id}</div>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
                 <button
@@ -466,7 +511,7 @@ export default function AIAssistantPage() {
                                     {/* Content Bubble (Compact) */}
                                     <div className="flex flex-col gap-1 min-w-0">
                                         <div className={`
-                                        rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap shadow-sm flex flex-col gap-2
+                                        rounded-2xl px-3 py-2 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap shadow-sm flex flex-col gap-1
                                         ${msg.sender === 'user'
                                                 ? 'bg-black text-white rounded-tr-sm dark:bg-[#ffffff] dark:text-black font-medium'
                                                 : 'bg-white text-gray-800 border border-gray-100 rounded-tl-sm dark:bg-gray-900 dark:border-white/10 dark:text-gray-100'}
@@ -616,7 +661,7 @@ export default function AIAssistantPage() {
                                 }
                             }}
                             placeholder={selectedImage ? "Ask about this image..." : "Type a message..."}
-                            className="flex-1 max-h-[100px] min-h-[40px] w-full resize-none bg-transparent px-3 py-2.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
+                            className="flex-1 max-h-[100px] min-h-[36px] w-full resize-none bg-transparent px-3 py-2.5 text-xs sm:text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
                             rows={1}
                         />
                         <button
