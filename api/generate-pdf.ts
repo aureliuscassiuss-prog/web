@@ -298,8 +298,31 @@ RETURN ONLY VALID JSON. DO NOT INCLUDE MARKDOWN FORMATTING. DO NOT INCLUDE COMME
         const sanitizeText = (text: any): string => {
             if (!text) return '';
             let str = String(text);
-            // Replace INR Symbol with Rs.
-            str = str.replace(/₹/g, 'Rs. ');
+
+            // normalize unicode characters to NFKC form (helps with some compatibility)
+            str = str.normalize('NFKC');
+
+            // 1. Quotes and Apostrophes
+            str = str.replace(/[\u2018\u2019\u201a\u201b\u00b4]/g, "'"); // Smart single quotes
+            str = str.replace(/[\u201c\u201d\u201e\u201f]/g, '"'); // Smart double quotes
+
+            // 2. Dashes and Hyphens
+            str = str.replace(/[\u2013\u2014]/g, "-"); // En-dash, Em-dash
+            str = str.replace(/\u2212/g, "-"); // Minus sign
+
+            // 3. Bullets and Lists
+            str = str.replace(/[\u2022\u25e6\u2023]/g, "•"); // Bullets cast to standard bullet
+
+            // 4. White space and controls
+            str = str.replace(/\u00a0/g, " "); // Non-breaking space
+            str = str.replace(/[\u200b\u200c\u200d\ufeff]/g, ""); // Zero-width spaces
+
+            // 5. Symbols
+            str = str.replace(/…/g, "..."); // Ellipsis
+            str = str.replace(/©/g, "(c)");
+            str = str.replace(/®/g, "(r)");
+            str = str.replace(/™/g, "(tm)");
+            str = str.replace(/₹/g, "Rs. "); // Indian Rupee
             // Replace other common problematic symbols if needed
             // str = str.replace(/©/g, '(c)'); 
             return str;
