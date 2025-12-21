@@ -41,13 +41,11 @@ export default function PdfGeneratorPage() {
     const [isRateLimited, setIsRateLimited] = useState(false);
     const [fileName, setFileName] = useState('generated_document.pdf');
     const [font, setFont] = useState('helvetica');
-    const [selectedModel, setSelectedModel] = useState('deepseek/deepseek-chat');
+    const [selectedModel, setSelectedModel] = useState('llama-3.3-70b-versatile');
     const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
 
     const models = [
-        { id: 'deepseek/deepseek-chat', name: 'DeepSeek V3 (Default)' },
-        { id: 'deepseek/deepseek-r1', name: 'DeepSeek R1 (Reasoning)' },
-        { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B' },
+        { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (Default)' },
         { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B' },
         { id: 'qwen/qwen3-32b', name: 'Qwen 3 32B' },
         { id: 'groq/compound', name: 'Groq Compound' },

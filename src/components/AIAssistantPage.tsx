@@ -50,7 +50,6 @@ export default function AIAssistantPage() {
         { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B' },
         { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B' },
         { id: 'meta-llama/llama-4-scout-17b-16e-instruct', name: 'Llama 4 Scout 17B' },
-        { id: 'deepseek/deepseek-r1', name: 'DeepSeek R1 (DeepSeek 41)' },
         { id: 'moonshotai/kimi-k2-instruct-0905', name: 'Kimi K2' },
         { id: 'qwen/qwen3-32b', name: 'Qwen 3 32B' },
         { id: 'groq/compound', name: 'Groq Compound' },

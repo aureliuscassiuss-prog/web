@@ -218,8 +218,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 RETURN ONLY VALID JSON. DO NOT INCLUDE MARKDOWN FORMATTING. DO NOT INCLUDE COMMENTARY. JUST THE RAW JSON OBJECT.`;
 
-        // Use requested model or default to DeepSeek V3
-        const modelArg = req.body.model || 'deepseek/deepseek-chat';
+        // Use requested model or default to Llama 3.3
+        const modelArg = req.body.model || 'llama-3.3-70b-versatile';
         console.log(`Generating PDF using model: ${modelArg}`);
 
         let completion;
