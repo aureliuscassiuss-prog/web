@@ -237,14 +237,15 @@ Subject: ${subject}, Program: ${program}, Year: ${formattedYear}, Branch: ${bran
         const validModels = [
             'llama-3.3-70b-versatile',
             'llama-3.1-8b-instant',
-            'mixtral-8x7b-32768',
-            'gemma2-9b-it',
+            'openai/gpt-oss-120b',
+            'openai/gpt-oss-20b',
+            'meta-llama/llama-4-maverick-17b-128e-instruct',
+            'meta-llama/llama-4-scout-17b-16e-instruct',
+            'moonshotai/kimi-k2-instruct-0905',
+            'qwen/qwen3-32b',
+            'groq/compound',
             'llama-3.2-90b-vision-preview',
-            'llama-3.2-11b-vision-preview',
-            'llama-3.2-3b-preview',
-            'llama-3.2-1b-preview',
-            'qwen-2.5-32b',
-            'deepseek-r1-distill-llama-70b'
+            'llama-3.2-11b-vision-preview'
         ];
 
         // If image is present, force a vision model (currently Groq supports Llama 3.2 vision or similar, let's use a safe default if specific vision model is needed)

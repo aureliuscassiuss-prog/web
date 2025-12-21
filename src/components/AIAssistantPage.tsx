@@ -47,14 +47,13 @@ export default function AIAssistantPage() {
     const models = [
         { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (Recommended)' },
         { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B (Fast)' },
-        { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B' },
-        { id: 'gemma2-9b-it', name: 'Gemma 2 9B' },
-        { id: 'llama-3.2-90b-vision-preview', name: 'Llama 3.2 90B (Vision)' },
-        { id: 'llama-3.2-11b-vision-preview', name: 'Llama 3.2 11B (Vision)' },
-        { id: 'llama-3.2-3b-preview', name: 'Llama 3.2 3B (Mobile)' },
-        { id: 'llama-3.2-1b-preview', name: 'Llama 3.2 1B (Mobile)' },
-        { id: 'qwen-2.5-32b', name: 'Qwen 2.5 32B' },
-        { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 (Thinking)' },
+        { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B' },
+        { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B' },
+        { id: 'meta-llama/llama-4-maverick-17b-128e-instruct', name: 'Llama 4 Maverick 17B' },
+        { id: 'meta-llama/llama-4-scout-17b-16e-instruct', name: 'Llama 4 Scout 17B' },
+        { id: 'moonshotai/kimi-k2-instruct-0905', name: 'Kimi K2' },
+        { id: 'qwen/qwen3-32b', name: 'Qwen 3 32B' },
+        { id: 'groq/compound', name: 'Groq Compound' },
     ]
 
     // --- Refs ---
