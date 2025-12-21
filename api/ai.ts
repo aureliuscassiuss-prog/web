@@ -245,10 +245,10 @@ Subject: ${subject}, Program: ${program}, Year: ${formattedYear}, Branch: ${bran
             'llama-3.1-8b-instant',
             'openai/gpt-oss-120b',
             'openai/gpt-oss-20b',
+            'meta-llama/llama-4-scout-17b-16e-instruct',
+            'moonshotai/kimi-k2-instruct-0905',
             'qwen/qwen3-32b',
             'groq/compound',
-            'llama-3.2-90b-vision-preview',
-            'llama-3.2-11b-vision-preview',
             'llama-3.2-90b-vision-preview',
             'llama-3.2-11b-vision-preview',
         ];
