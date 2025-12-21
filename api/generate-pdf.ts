@@ -218,16 +218,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 RETURN ONLY VALID JSON. DO NOT INCLUDE MARKDOWN FORMATTING. DO NOT INCLUDE COMMENTARY. JUST THE RAW JSON OBJECT.`;
 
-        // Use OpenRouter with DeepSeek V3 as requested ("Deepseek 31")
-        const completion = await openrouter.chat.completions.create({
-            messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: prompt }
-            ],
-            model: 'deepseek/deepseek-chat',
-            temperature: 0.1, // Very low temp for strict JSON
-            max_tokens: 4096
-        });
+        // Use requested model or default to DeepSeek V3
+        const modelArg = req.body.model || 'deepseek/deepseek-chat';
+        console.log(`Generating PDF using model: ${modelArg}`);
+
+        let completion;
+        const isDeepSeek = modelArg.startsWith('deepseek/');
+        const maxTokens = isDeepSeek ? 340 : 4096; // Reduced tokens for DeepSeek
+
+        if (isDeepSeek || modelArg.includes('/')) {
+            completion = await openrouter.chat.completions.create({
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: prompt }
+                ],
+                model: modelArg,
+                temperature: 0.1,
+                max_tokens: maxTokens
+            });
+        } else {
+            completion = await groq.chat.completions.create({
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: prompt }
+                ],
+                model: modelArg,
+                temperature: 0.1,
+                max_tokens: maxTokens
+            });
+        }
 
         const aiResponse = completion.choices[0]?.message?.content || '{}';
 
