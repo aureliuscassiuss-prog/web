@@ -39,6 +39,9 @@ import VideoChat from './pages/VideoChat';
 import PdfGeneratorPage from './components/PdfGeneratorPage';
 import MedicalGeneratorPage from './components/MedicalGeneratorPage';
 import EventsPage from './components/EventsPage';
+import EventDetailsPage from './components/EventDetailsPage';
+
+
 
 import SEO from './components/SEO'
 import AttendanceManager from './components/attendance/AttendanceManager'
@@ -118,7 +121,7 @@ function Layout({
       </div>
 
       {/* Footer */}
-      {location.pathname !== '/chat' && <Footer />}
+      {(location.pathname !== '/chat' && !location.pathname.includes('/events/')) && <Footer />}
 
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
@@ -489,6 +492,17 @@ function AppContent() {
                 description="Browse and book tickets for upcoming college events, workshops, and parties."
               />
               <EventsPage />
+            </>
+          } />
+
+          {/* Single Event Details Route */}
+          <Route path="/events/:eventId" element={
+            <>
+              <SEO
+                title="Event Details - Extrovert Events"
+                description="View event details and book tickets."
+              />
+              <EventDetailsPage />
             </>
           } />
 

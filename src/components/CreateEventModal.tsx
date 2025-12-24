@@ -21,6 +21,7 @@ export default function CreateEventModal({ isOpen, onClose, onSuccess, token }: 
         image: '', // Base64 string
         date: '',
         location: '',
+        location_url: '', // New Field
         price: '',
         currency: 'INR',
         total_slots: '100',
@@ -201,6 +202,16 @@ export default function CreateEventModal({ isOpen, onClose, onSuccess, token }: 
                                             />
                                         </div>
                                     </div>
+                                    <div className="col-span-2">
+                                        <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5 ml-1">Map Link (Optional)</label>
+                                        <input
+                                            type="url"
+                                            placeholder="https://maps.google.com/..."
+                                            value={formData.location_url}
+                                            onChange={e => setFormData({ ...formData, location_url: e.target.value })}
+                                            className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-sm font-medium"
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -334,7 +345,7 @@ export default function CreateEventModal({ isOpen, onClose, onSuccess, token }: 
                     </div>
 
                 </form>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }

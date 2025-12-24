@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X, Calendar, MapPin, Clock, ShieldCheck, ArrowLeft, Ticket } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import TyreLoader from './TyreLoader';
 import PaymentStatus from './PaymentStatus';
+import useLockBodyScroll from '../hooks/useLockBodyScroll';
 
 interface Event {
     _id: string;
@@ -35,15 +36,8 @@ export default function EventDetailsModal({ event, onClose, onBookingSuccess }: 
     const [ticketData, setTicketData] = useState<any>(null);
     const [statusMessage, setStatusMessage] = useState('');
 
-    // SCROLL LOCK: Prevent background scrolling when modal is open
-    useEffect(() => {
-        if (event) {
-            document.body.style.overflow = 'hidden';
-            return () => {
-                document.body.style.overflow = 'unset';
-            };
-        }
-    }, [event]);
+    // SCROLL LOCK: Prevent background scrolling securely
+    useLockBodyScroll(!!event);
 
     if (!event) return null;
 
@@ -183,50 +177,57 @@ export default function EventDetailsModal({ event, onClose, onBookingSuccess }: 
     }
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center p-0 md:p-4 bg-black/60 backdrop-blur-md animate-fade-in transition-opacity">
-            {/* Backdrop click to close */}
-            <div className="absolute inset-0" onClick={onClose} />
+        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-4 perspective-1000">
+            {/* Backdrop */}
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                className="absolute inset-0 bg-black/60 backdrop-blur-md"
+                onClick={onClose}
+            />
 
             <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                className="relative w-full max-w-4xl bg-white dark:bg-[#0a0a0a] rounded-t-[2rem] md:rounded-[2rem] shadow-2xl border-t md:border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col h-[90vh] md:h-[85vh] z-10"
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                className="relative w-full max-w-4xl bg-white dark:bg-[#0a0a0a] rounded-t-[2rem] md:rounded-[2rem] shadow-2xl border-t md:border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col max-h-[90vh] z-10 will-change-transform"
             >
+                {/* FIXED NAV BAR - Always visible */}
+                <div className="absolute top-0 left-0 right-0 p-4 md:p-6 flex justify-between items-start z-50 pointer-events-none">
+                    <button
+                        onClick={onClose}
+                        className="pointer-events-auto md:hidden p-2.5 bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-full text-white transition-all border border-white/10 shadow-lg active:scale-95"
+                    >
+                        <ArrowLeft size={20} />
+                    </button>
+
+                    <button
+                        onClick={onClose}
+                        className="pointer-events-auto hidden md:flex p-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full text-black dark:text-white transition-all border border-black/5 dark:border-white/10 shadow-lg ml-auto active:scale-95 group"
+                    >
+                        <X size={20} className="group-hover:rotate-90 transition-transform duration-300" />
+                    </button>
+                </div>
+
                 {/* Scrollable Content */}
                 <div className="flex-1 overflow-y-auto overflow-x-hidden relative scrollbar-hide">
 
                     {/* Hero Section (Full Width Banner) */}
-                    <div className="relative h-64 md:h-80 w-full shrink-0 group">
+                    <div className="relative h-72 md:h-96 w-full shrink-0">
                         <img
                             src={event.image || '/placeholder-event.jpg'}
                             alt={event.title}
-                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            className="w-full h-full object-cover"
                         />
-                        {/* Stronger Gradient for Readability */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-black/40 to-black/10" />
-
-                        {/* Top Bar (Close/Back) */}
-                        <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start z-20">
-                            <button
-                                onClick={onClose}
-                                className="md:hidden p-2 bg-black/30 hover:bg-black/50 backdrop-blur-md rounded-full text-white transition-colors border border-white/10"
-                            >
-                                <ArrowLeft size={20} />
-                            </button>
-
-                            <button
-                                onClick={onClose}
-                                className="hidden md:flex p-2 bg-black/30 hover:bg-black/50 backdrop-blur-md rounded-full text-white transition-colors border border-white/10 ml-auto"
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
+                        {/* Gradient Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-black/20 to-transparent" />
 
                         {/* Title & Badge Overlay */}
-                        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 z-20">
-                            <div className="flex gap-2 mb-3">
+                        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10 z-20">
+                            <div className="flex flex-wrap gap-2 mb-4">
                                 <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-white/90 dark:bg-zinc-800/90 text-black dark:text-white shadow-lg backdrop-blur-sm border border-white/10">
                                     {event.organizer?.name || 'College Event'}
                                 </span>
@@ -236,28 +237,26 @@ export default function EventDetailsModal({ event, onClose, onBookingSuccess }: 
                                     </span>
                                 )}
                             </div>
-                            <h2 className="text-3xl md:text-5xl font-bold leading-tight text-white tracking-tight drop-shadow-md">
+                            <h2 className="text-3xl md:text-5xl font-black leading-tight text-white tracking-tight drop-shadow-lg max-w-3xl">
                                 {event.title}
                             </h2>
                         </div>
                     </div>
 
                     {/* Content Body */}
-                    <div className="p-6 md:p-8 bg-white dark:bg-[#0a0a0a]">
+                    <div className="p-6 md:p-10 bg-white dark:bg-[#0a0a0a]">
 
-                        {/* PAYMENT STATUS OVERLAY (Replaces content if active) */}
+                        {/* PAYMENT STATUS OVERLAY */}
                         {paymentStatus !== 'none' ? (
                             <div className="py-12">
                                 <PaymentStatus
                                     status={paymentStatus === 'success' ? 'success' : 'failed'}
                                     message={statusMessage}
                                     ticketId={ticketData?.id}
-                                    onDownload={() => {
-                                        onClose();
-                                    }}
+                                    onDownload={() => onClose()}
                                     onRetry={() => {
                                         setPaymentStatus('none');
-                                        setStep('payment'); // Go back to payment selection
+                                        setStep('payment');
                                     }}
                                     onClose={onClose}
                                 />
@@ -265,56 +264,59 @@ export default function EventDetailsModal({ event, onClose, onBookingSuccess }: 
                         ) : (
                             <>
                                 {/* Meta Grid */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-zinc-900/50 border border-slate-100 dark:border-zinc-800">
-                                        <div className="p-2.5 bg-blue-100 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+                                    {/* Date */}
+                                    <div className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/50">
+                                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
                                             <Calendar size={20} />
                                         </div>
                                         <div>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Date</p>
-                                            <p className="text-sm font-bold text-gray-900 dark:text-white">{new Date(event.date).toLocaleDateString()}</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-0.5">Date</p>
+                                            <p className="text-sm font-bold text-gray-900 dark:text-white">{new Date(event.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-zinc-900/50 border border-slate-100 dark:border-zinc-800">
-                                        <div className="p-2.5 bg-purple-100 dark:bg-purple-900/30 rounded-xl text-purple-600 dark:text-purple-400">
+
+                                    {/* Time */}
+                                    <div className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/50">
+                                        <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
                                             <Clock size={20} />
                                         </div>
                                         <div>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Time</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-0.5">Time</p>
                                             <p className="text-sm font-bold text-gray-900 dark:text-white">{new Date(event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-zinc-900/50 border border-slate-100 dark:border-zinc-800">
-                                        <div className="p-2.5 bg-rose-100 dark:bg-rose-900/30 rounded-xl text-rose-600 dark:text-rose-400">
+
+                                    {/* Location */}
+                                    <div className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/50">
+                                        <div className="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
                                             <MapPin size={20} />
                                         </div>
                                         <div>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Location</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-0.5">Location</p>
                                             <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{event.location}</p>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Rich Text Description */}
-                                <div className="space-y-4 mb-20 text-gray-700 dark:text-gray-300 prose dark:prose-invert max-w-none">
-                                    <h3 className="text-xl font-bold flex items-center gap-2 text-gray-900 dark:text-white">
-                                        About Event
+                                <div className="mb-24">
+                                    <h3 className="text-xl font-bold mb-6 text-gray-900 dark:text-white flex items-center gap-2">
+                                        About This Event
                                     </h3>
-                                    <div className="w-full h-px bg-gray-100 dark:bg-zinc-800 mb-4" />
-                                    {/* DANGEROUSLY SET HTML FOR RICH TEXT */}
-                                    <div
-                                        className="text-sm md:text-base leading-relaxed p-1"
-                                        dangerouslySetInnerHTML={{ __html: event.description }}
-                                    />
+
+                                    <div className="prose prose-lg dark:prose-invert max-w-none prose-p:text-gray-600 dark:prose-p:text-gray-400 prose-headings:text-gray-900 dark:prose-headings:text-white prose-a:text-blue-600 dark:prose-a:text-blue-400">
+                                        <div dangerouslySetInnerHTML={{ __html: event.description }} />
+                                    </div>
                                 </div>
                             </>
                         )}
                     </div>
                 </div>
 
-                {/* Sticky Footer (Only show if not in status view) */}
+                {/* Sticky Footer */}
                 {paymentStatus === 'none' && (
-                    <div className="p-4 md:p-6 border-t border-gray-100 dark:border-zinc-800 bg-white dark:bg-[#0a0a0a] shrink-0 z-20 shadow-[0_-5px_20px_-5px_rgba(0,0,0,0.1)]">
+                    <div className="p-4 md:p-6 border-t border-gray-100 dark:border-zinc-800 bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-lg shrink-0 z-20">
                         <AnimatePresence mode='wait'>
                             {step === 'details' ? (
                                 <motion.div
@@ -348,8 +350,14 @@ export default function EventDetailsModal({ event, onClose, onBookingSuccess }: 
                                     exit={{ opacity: 0, y: -10 }}
                                     className="space-y-4"
                                 >
-                                    <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center justify-between">
                                         <h3 className="text-sm font-bold text-gray-900 dark:text-white">Select Payment Method</h3>
+                                        <button
+                                            onClick={() => setStep('details')}
+                                            className="text-xs font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
                                     </div>
 
                                     <div className="grid grid-cols-1 gap-2 max-h-32 overflow-y-auto mb-2 pr-1">
@@ -357,7 +365,7 @@ export default function EventDetailsModal({ event, onClose, onBookingSuccess }: 
                                             <button
                                                 key={method}
                                                 onClick={() => setSelectedGateway(method)}
-                                                className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all ${selectedGateway === method ? 'border-black dark:border-white bg-black/5 dark:bg-white/10 ring-1 ring-black dark:ring-white' : 'border-gray-200 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-900'}`}
+                                                className={`w-full p-4 rounded-xl border text-left flex items-center justify-between transition-all ${selectedGateway === method ? 'border-black dark:border-white bg-black/5 dark:bg-white/10' : 'border-gray-200 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-900'}`}
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <span className="font-bold capitalize text-sm text-gray-900 dark:text-white">{method}</span>
@@ -367,22 +375,14 @@ export default function EventDetailsModal({ event, onClose, onBookingSuccess }: 
                                         ))}
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <button
-                                            onClick={() => setStep('details')}
-                                            className="py-3.5 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:text-gray-200 dark:hover:bg-zinc-700 transition-colors"
-                                        >
-                                            Back
-                                        </button>
-                                        <button
-                                            onClick={handleBook}
-                                            disabled={!selectedGateway || isProcessing}
-                                            className="py-3.5 rounded-xl font-bold bg-black text-white dark:bg-white dark:text-black hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-                                        >
-                                            {isProcessing ? <TyreLoader size={20} /> : <ShieldCheck size={18} />}
-                                            {isProcessing ? 'Processing' : 'Confirm & Pay'}
-                                        </button>
-                                    </div>
+                                    <button
+                                        onClick={handleBook}
+                                        disabled={!selectedGateway || isProcessing}
+                                        className="w-full py-4 rounded-xl font-bold bg-black text-white dark:bg-white dark:text-black hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                                    >
+                                        {isProcessing ? <TyreLoader size={20} /> : <ShieldCheck size={18} />}
+                                        {isProcessing ? 'Processing' : 'Confirm & Pay'}
+                                    </button>
                                 </motion.div>
                             )}
                         </AnimatePresence>

@@ -163,7 +163,7 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess, initialVie
     }
 
     const getModalDescription = () => {
-        if (showOtp) return `We sent a 4-digit code to ${formData.email}`
+        if (showOtp) return `We sent a 6-digit code to ${formData.email}`
         if (showForgotPassword) return 'Enter your email to receive a password reset code'
         if (showResetPassword) return `Enter the code sent to ${formData.email} and your new password`
         return isLogin ? 'Enter your email below to sign in to your account' : 'Enter your details below to create your account'
@@ -299,11 +299,11 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess, initialVie
                                     <input
                                         type="text"
                                         required
-                                        maxLength={4}
+                                        maxLength={6}
                                         value={otp}
                                         onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
                                         className={`${inputClass} tracking-widest text-center text-lg`}
-                                        placeholder="0000"
+                                        placeholder="000000"
                                     />
                                 </div>
                             </div>
@@ -346,7 +346,7 @@ export default function AuthModal({ isOpen, onClose, onSignupSuccess, initialVie
 
                             <button
                                 type="submit"
-                                disabled={isLoading || otp.length !== 4}
+                                disabled={isLoading || otp.length !== 6}
                                 className="btn btn-primary w-full h-9 md:h-10 text-sm md:text-base"
                             >
                                 {isLoading ? (

@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, MapPin, QrCode, Download, Loader2, Share2 } from 'lucide-react';
+import { Calendar, MapPin, Download, Loader2, Clock, User } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
@@ -27,11 +27,11 @@ export default function TicketCard({ ticket }: { ticket: Ticket }) {
     const [qrUrl, setQrUrl] = useState<string>('');
 
     // Generate QR for display
-    useState(() => {
+    useEffect(() => {
         if (ticket.status === 'confirmed' && ticket.qr_code_data) {
-            QRCode.toDataURL(ticket.qr_code_data).then(setQrUrl);
+            QRCode.toDataURL(ticket.qr_code_data, { width: 256, margin: 2 }).then(setQrUrl);
         }
-    });
+    }, [ticket.status, ticket.qr_code_data]);
 
     const handleDownload = async () => {
         if (!ticketRef.current) return;
@@ -39,16 +39,16 @@ export default function TicketCard({ ticket }: { ticket: Ticket }) {
 
         try {
             const canvas = await html2canvas(ticketRef.current, {
-                scale: 2, // Higher resolution
+                scale: 2,
                 backgroundColor: null,
-                useCORS: true // Allow cross-origin images
+                useCORS: true
             });
 
             const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF({
-                orientation: 'landscape',
+                orientation: 'portrait',
                 unit: 'px',
-                format: [canvas.width / 2, canvas.height / 2] // Match canvas aspect ratio
+                format: [canvas.width / 2, canvas.height / 2]
             });
 
             pdf.addImage(imgData, 'PNG', 0, 0, canvas.width / 2, canvas.height / 2);
@@ -61,102 +61,145 @@ export default function TicketCard({ ticket }: { ticket: Ticket }) {
         }
     };
 
+    const eventDate = new Date(ticket.event.date);
+
     return (
         <motion.div
             layout
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="group relative"
+            className="group relative max-w-md mx-auto"
         >
             {/* TICKET CONTAINER (Captured for PDF) */}
             <div
                 ref={ticketRef}
-                className="bg-white dark:bg-zinc-900 rounded-3xl overflow-hidden shadow-xl border border-gray-200 dark:border-zinc-800 flex flex-col sm:flex-row relative max-w-2xl mx-auto sm:h-64"
+                className="bg-gradient-to-br from-white to-gray-50 dark:from-zinc-900 dark:to-black rounded-3xl overflow-hidden shadow-2xl border border-gray-200 dark:border-zinc-800 relative"
             >
-                {/* --- LEFT: Event Image & Main Info --- */}
-                <div className="relative w-full sm:w-[65%] h-48 sm:h-full bg-gray-100 dark:bg-black overflow-hidden">
-                    <img
-                        src={ticket.event.image || '/placeholder-event.jpg'}
-                        alt={ticket.event.title}
-                        className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-700"
-                        crossOrigin="anonymous" // Important for html2canvas
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
-
-                    {/* Content Overlay */}
-                    <div className="absolute inset-0 p-6 flex flex-col justify-end text-white">
-                        <div className="mb-auto pt-2 grid grid-cols-2 gap-4 opacity-70 text-[10px] uppercase tracking-widest font-bold">
-                            <div>
-                                <span className="block text-white/50">Date</span>
-                                {new Date(ticket.event.date).toLocaleDateString()}
-                            </div>
-                            <div>
-                                <span className="block text-white/50">Time</span>
-                                {new Date(ticket.event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </div>
-                        </div>
-
-                        <h3 className="text-2xl sm:text-3xl font-black tracking-tight leading-none mb-2">{ticket.event.title}</h3>
-                        <div className="flex items-center gap-2 text-sm font-medium text-gray-300">
-                            <MapPin size={14} />
-                            <span className="truncate">{ticket.event.location}</span>
-                        </div>
-                    </div>
-
-                    {/* Status Badge */}
-                    <div className={`absolute top-4 left-4 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md border border-white/20 shadow-lg ${ticket.status === 'confirmed' ? 'bg-green-500/20 text-green-400' :
-                            ticket.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'
-                        }`}>
-                        {ticket.status === 'confirmed' ? 'Admit One' : ticket.status}
-                    </div>
+                {/* Status Badge - Top Right */}
+                <div className={`absolute top-4 right-4 z-20 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-xl border shadow-lg ${ticket.status === 'confirmed'
+                        ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                        : ticket.status === 'pending'
+                            ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                            : 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30'
+                    }`}>
+                    {ticket.status === 'confirmed' ? '✓ Confirmed' : ticket.status}
                 </div>
 
-                {/* --- PERFORATION & DIVIDER (Visual only) --- */}
-                <div className="hidden sm:block w-8 h-full bg-white dark:bg-zinc-900 relative z-10 -ml-4 skew-x-[-10deg] border-l border-dashed border-gray-300 dark:border-zinc-700 mx-[-1px]">
-                    {/* Cutout circles */}
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-[#f8fafc] dark:bg-black" />
-                    <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-[#f8fafc] dark:bg-black" />
-                </div>
-
-                {/* --- RIGHT: Stub & QR --- */}
-                <div className="flex-1 bg-white dark:bg-zinc-900 p-6 flex flex-col items-center justify-center text-center relative border-t sm:border-t-0 border-dashed border-gray-200 dark:border-zinc-800">
+                {/* QR Code Section - Top */}
+                <div className="relative bg-white dark:bg-zinc-950 p-8 flex flex-col items-center border-b-4 border-dashed border-gray-200 dark:border-zinc-800">
                     {/* QR Code */}
-                    <div className="w-24 h-24 bg-white p-2 rounded-xl mb-4 shadow-sm border border-gray-100">
+                    <div className="w-40 h-40 bg-white p-3 rounded-2xl shadow-xl border-4 border-gray-100 dark:border-zinc-800 mb-4">
                         {qrUrl ? (
-                            <img src={qrUrl} alt="QR" className="w-full h-full object-contain" />
+                            <img src={qrUrl} alt="QR Code" className="w-full h-full object-contain" />
                         ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gray-50 text-xs text-gray-400">
-                                {ticket.status === 'confirmed' ? <Loader2 className="animate-spin" /> : <QrCode />}
+                            <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-zinc-900 rounded-lg">
+                                {ticket.status === 'confirmed' ? (
+                                    <Loader2 className="animate-spin text-gray-400" size={32} />
+                                ) : (
+                                    <div className="text-center text-xs text-gray-400">
+                                        <MapPin size={24} className="mx-auto mb-2 opacity-30" />
+                                        No QR
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
 
+                    {/* Ticket ID */}
                     <div className="text-center">
-                        <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Ticket ID</p>
-                        <p className="font-mono text-xs font-bold text-gray-900 dark:text-white select-all">{ticket.id.split('-')[0]}</p>
+                        <p className="text-xs text-gray-400 dark:text-zinc-500 font-bold uppercase tracking-widest mb-1">Ticket ID</p>
+                        <p className="font-mono text-sm font-bold text-gray-900 dark:text-white bg-gray-100 dark:bg-zinc-800 px-4 py-1 rounded-lg">
+                            {ticket.id.substring(0, 12).toUpperCase()}
+                        </p>
+                    </div>
+                </div>
+
+                {/* Event Details Section */}
+                <div className="p-6 space-y-4">
+                    {/* Event Title */}
+                    <div className="text-center">
+                        <h3 className="text-2xl font-black text-gray-900 dark:text-white leading-tight mb-1">
+                            {ticket.event.title}
+                        </h3>
+                        {ticket.event.organizer?.name && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1">
+                                <User size={12} />
+                                {ticket.event.organizer.name}
+                            </p>
+                        )}
                     </div>
 
-                    {/* Stub Detail */}
-                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-zinc-800 w-full">
-                        <div className="flex justify-between text-[10px] font-bold text-gray-500 uppercase">
-                            <span>{ticket.event.currency} {ticket.event.price}</span>
-                            <span>{ticket.event.organizer?.name?.split(' ')[0] || 'Extrovert'}</span>
+                    {/* Info Grid */}
+                    <div className="grid grid-cols-2 gap-3">
+                        {/* Date */}
+                        <div className="bg-blue-50 dark:bg-blue-950/30 rounded-xl p-3 border border-blue-100 dark:border-blue-900/50">
+                            <div className="flex items-center gap-2 mb-1">
+                                <Calendar size={14} className="text-blue-600 dark:text-blue-400" />
+                                <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase">Date</span>
+                            </div>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white">
+                                {eventDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </p>
+                        </div>
+
+                        {/* Time */}
+                        <div className="bg-purple-50 dark:bg-purple-950/30 rounded-xl p-3 border border-purple-100 dark:border-purple-900/50">
+                            <div className="flex items-center gap-2 mb-1">
+                                <Clock size={14} className="text-purple-600 dark:text-purple-400" />
+                                <span className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase">Time</span>
+                            </div>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white">
+                                {eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                        </div>
+
+                        {/* Location */}
+                        <div className="col-span-2 bg-rose-50 dark:bg-rose-950/30 rounded-xl p-3 border border-rose-100 dark:border-rose-900/50">
+                            <div className="flex items-center gap-2 mb-1">
+                                <MapPin size={14} className="text-rose-600 dark:text-rose-400" />
+                                <span className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase">Venue</span>
+                            </div>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                                {ticket.event.location}
+                            </p>
                         </div>
                     </div>
+
+                    {/* Price */}
+                    <div className="bg-gray-100 dark:bg-zinc-800 rounded-xl p-4 flex items-center justify-between">
+                        <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Amount Paid</span>
+                        <span className="text-2xl font-black text-gray-900 dark:text-white">
+                            {ticket.event.currency === 'INR' ? '₹' : ticket.event.currency}{ticket.event.price}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Watermark */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 opacity-5 dark:opacity-10 pointer-events-none">
+                    <p className="text-6xl font-black text-gray-900 dark:text-white">TICKET</p>
                 </div>
             </div>
 
-            {/* ACTION BAR (Outside of printable area) */}
-            <div className="absolute top-4 right-4 sm:top-auto sm:bottom-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+            {/* Download Button - Floating */}
+            {ticket.status === 'confirmed' && (
                 <button
                     onClick={handleDownload}
-                    disabled={downloading || ticket.status !== 'confirmed'}
-                    className="p-2.5 bg-white text-black dark:bg-white dark:text-black rounded-full shadow-lg hover:scale-110 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Download Ticket"
+                    disabled={downloading}
+                    className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-6 py-3 bg-black dark:bg-white text-white dark:text-black rounded-full font-bold shadow-2xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 z-30"
                 >
-                    {downloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                    {downloading ? (
+                        <>
+                            <Loader2 size={18} className="animate-spin" />
+                            Generating...
+                        </>
+                    ) : (
+                        <>
+                            <Download size={18} />
+                            Download PDF
+                        </>
+                    )}
                 </button>
-            </div>
+            )}
         </motion.div>
-    )
+    );
 }

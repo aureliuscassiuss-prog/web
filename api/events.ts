@@ -425,6 +425,7 @@ async function handleConfirmBooking(user: any, body: any, res: VercelResponse) {
                             <p style="margin: 0 0 8px 0;"><b>Date:</b> ${new Date(event.date).toLocaleDateString()}</p>
                             <p style="margin: 0 0 8px 0;"><b>Time:</b> ${new Date(event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                             <p style="margin: 0 0 8px 0;"><b>Venue:</b> ${event.location}</p>
+                            ${event.location_url ? `<p style="margin: 8px 0 0 0;"><a href="${event.location_url}" target="_blank" style="display: inline-block; background-color: #3b82f6; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px;">📍 View on Map</a></p>` : ''}
                             <p style="margin: 0 0 8px 0;"><b>Ticket ID:</b> ${ticket.id}</p>
                         </div>
 
