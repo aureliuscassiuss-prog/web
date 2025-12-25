@@ -491,23 +491,23 @@ export default function CreateEventPage() {
                                     </div>
                                 </div>
                             </div>
-
-                            {/* --- FIXED BOTTOM BAR --- */}
-                            <div className="absolute bottom-4 left-4 right-4 z-40">
-                                <div className="max-w-2xl mx-auto bg-black/80 dark:bg-white/10 backdrop-blur-xl p-3 pl-6 rounded-full shadow-2xl border border-white/10 flex items-center justify-between gap-4">
-                                    <div>
-                                        <span className="block text-[10px] text-gray-400 font-bold uppercase tracking-wider">Total Price</span>
-                                        <span className="text-xl sm:text-2xl font-black text-white dark:text-white">
-                                            {mockEvent.currency === 'INR' ? '₹' : mockEvent.currency}{mockEvent.price}
-                                        </span>
-                                    </div>
-                                    <button className="px-8 h-12 rounded-full font-bold text-sm bg-white text-black hover:bg-gray-200 shadow-lg flex items-center justify-center gap-2 pointer-events-none">
-                                        Book Ticket
-                                    </button>
-                                </div>
-                            </div>
-
                         </div>
+
+                        {/* --- FIXED BOTTOM BAR (Outside Scrollable Area) --- */}
+                        <div className="absolute bottom-4 left-4 right-4 z-40">
+                            <div className="max-w-2xl mx-auto bg-black/80 dark:bg-white/10 backdrop-blur-xl p-3 pl-6 rounded-full shadow-2xl border border-white/10 flex items-center justify-between gap-4">
+                                <div>
+                                    <span className="block text-[10px] text-gray-400 font-bold uppercase tracking-wider">Total Price</span>
+                                    <span className="text-xl sm:text-2xl font-black text-white dark:text-white">
+                                        {mockEvent.currency === 'INR' ? '₹' : mockEvent.currency}{mockEvent.price}
+                                    </span>
+                                </div>
+                                <button className="px-8 h-12 rounded-full font-bold text-sm bg-white text-black hover:bg-gray-200 shadow-lg flex items-center justify-center gap-2 pointer-events-none">
+                                    Book Ticket
+                                </button>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
