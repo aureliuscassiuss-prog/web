@@ -355,8 +355,8 @@ export default function CreateEventPage() {
                 <div className="flex-1 overflow-y-auto w-full flex items-center justify-center p-8 custom-scrollbar">
                     <div
                         className={`transition-all duration-500 ease-in-out border-[8px] border-gray-900 dark:border-zinc-800 bg-white dark:bg-black shadow-2xl overflow-hidden relative shrink-0 ${simulatorView === 'mobile'
-                            ? 'w-[375px] h-[750px] rounded-[3rem] scale-[0.8] 2xl:scale-100'
-                            : 'w-[1024px] h-[640px] rounded-xl scale-[0.6] lg:scale-[0.7] xl:scale-[0.85] 2xl:scale-100'
+                            ? 'w-[375px] h-[750px] rounded-[3rem] scale-[0.7] lg:scale-[0.8] 2xl:scale-100'
+                            : 'w-[1024px] h-[640px] rounded-xl scale-[0.55] lg:scale-[0.7] xl:scale-[0.85] 2xl:scale-100'
                             }`}
                     >
                         {/* Status Bar simulation for Mobile */}
