@@ -115,7 +115,7 @@ export default function CreateEventPage() {
     };
 
     return (
-        <div className="h-screen fixed inset-0 bg-gray-50 dark:bg-black text-slate-900 dark:text-white flex flex-col md:flex-row overflow-hidden">
+        <div className="h-[calc(100vh-6rem)] w-full bg-gray-50 dark:bg-black text-slate-900 dark:text-white flex flex-col md:flex-row overflow-hidden rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-sm">
 
             {/* Cropper Overlay */}
             {showCropper && tempImageSrc && (
