@@ -418,7 +418,7 @@ export default function CreateEventPage() {
                     )}
 
                     {/* --- CONTENT AREA --- */}
-                    <div className={`w-full h-full bg-white dark:bg-black overflow-y-auto overflow-x-hidden ${simulatorView === 'mobile' ? 'scrollbar-hide' : 'rounded-xl'}`}>
+                    <div className={`w-full h-full bg-white dark:bg-black overflow-y-auto overflow-x-hidden touch-pan-y ${simulatorView === 'mobile' ? 'rounded-[2.8rem] scrollbar-hide' : 'rounded-xl'}`}>
 
                         {/* Event Image */}
                         <div className="relative">
