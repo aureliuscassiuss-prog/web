@@ -40,6 +40,7 @@ import PdfGeneratorPage from './components/PdfGeneratorPage';
 import MedicalGeneratorPage from './components/MedicalGeneratorPage';
 import EventsPage from './components/EventsPage';
 import EventDetailsPage from './components/EventDetailsPage';
+import CreateEventPage from './components/CreateEventPage';
 
 
 
@@ -504,6 +505,17 @@ function AppContent() {
               />
               <EventDetailsPage />
             </>
+          } />
+
+          {/* Create Event Route (Protected) */}
+          <Route path="/events/create" element={
+            <ProtectedRoute onAuthRequired={() => {
+              setAuthModalInitialView('login')
+              setIsAuthModalOpen(true)
+            }}>
+              <SEO title="Create Event - Host an Experience" />
+              <CreateEventPage />
+            </ProtectedRoute>
           } />
 
           {/* PDF Generator Route (Public with rate limit) */}

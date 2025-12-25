@@ -5,7 +5,7 @@ import { Plus, Settings, Calendar, Ticket, Search, TrendingUp } from 'lucide-rea
 import { AnimatePresence, motion } from 'framer-motion';
 import EventCard from './EventCard';
 
-import CreateEventModal from './CreateEventModal';
+// import CreateEventModal from './CreateEventModal';
 import TyreLoader from './TyreLoader';
 import TicketCard from './TicketCard';
 
@@ -24,7 +24,7 @@ export default function EventsPage() {
     const [events, setEvents] = useState<any[]>([]);
     const [tickets, setTickets] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [showCreateModal, setShowCreateModal] = useState(false);
+    // const [showCreateModal, setShowCreateModal] = useState(false);
     const [showConfig, setShowConfig] = useState(false);
     const [configData, setConfigData] = useState({ keyId: '', keySecret: '' });
 
@@ -238,7 +238,7 @@ export default function EventsPage() {
                                         <Settings size={18} />
                                     </button>
                                     <button
-                                        onClick={() => setShowCreateModal(true)}
+                                        onClick={() => navigate('/events/create')}
                                         className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl flex items-center gap-2 shadow-lg shadow-blue-500/20"
                                     >
                                         <Plus size={16} /> Create
@@ -305,16 +305,7 @@ export default function EventsPage() {
                 <p>Powered by Extrovert Engines</p>
             </div>
 
-            {
-                showCreateModal && (
-                    <CreateEventModal
-                        isOpen={showCreateModal}
-                        onClose={() => setShowCreateModal(false)}
-                        onSuccess={fetchEvents}
-                        token={token}
-                    />
-                )
-            }
+            {/* Modal removed - using page */}
 
             {/* Payment Config Modal */}
             {
