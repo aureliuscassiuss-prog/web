@@ -1,18 +1,24 @@
-import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom'; // Changed from onSuccess/onClose to navigate
-import { Upload, Calendar, MapPin, DollarSign, Image as ImageIcon, Sparkles, CreditCard, Users, Smartphone, Monitor, ChevronLeft, Clock } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+    Upload, Calendar, MapPin, DollarSign, Image as ImageIcon,
+    Sparkles, CreditCard, Users, Smartphone, Monitor, ChevronLeft, Clock, X
+} from 'lucide-react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+
+// Assume these exist or replace with simple placeholders if missing
 import ImageCropper from './ImageCropper';
 import TyreLoader from './TyreLoader';
-import { useAuth } from '../contexts/AuthContext'; // Import auth
-// import EventCard from './EventCard'; // Reuse EventCard for preview if suitable, or build custom simulated view
+import { useAuth } from '../contexts/AuthContext';
 
 export default function CreateEventPage() {
     const navigate = useNavigate();
-    const { token } = useAuth();
+    // Safety check in case Auth context is missing or loading
+    const auth = useAuth();
+    const token = auth?.token;
 
-    // --- Form State (Same as Modal) ---
+    // --- Form State ---
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -24,13 +30,13 @@ export default function CreateEventPage() {
         currency: 'INR',
         total_slots: '100',
         registration_deadline: '',
-        accepted_payment_methods: ['razorpay'],
+        accepted_payment_methods: ['razorpay'], // Default
     });
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [simulatorView, setSimulatorView] = useState<'mobile' | 'desktop'>('mobile');
 
-    // --- Image Upload Logic (Same as Modal) ---
+    // --- Image Upload Logic ---
     const [showCropper, setShowCropper] = useState(false);
     const [tempImageSrc, setTempImageSrc] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -57,11 +63,18 @@ export default function CreateEventPage() {
         reader.readAsDataURL(croppedBlob);
     };
 
+    // Toggle logic: Allows switching or selecting multiple if your backend supports it
     const togglePaymentMethod = (method: string) => {
-        setFormData(prev => ({
-            ...prev,
-            accepted_payment_methods: [method]
-        }));
+        setFormData(prev => {
+            const current = prev.accepted_payment_methods;
+            if (current.includes(method)) {
+                // Prevent removing if it's the only one (optional UX choice)
+                if (current.length === 1) return prev;
+                return { ...prev, accepted_payment_methods: current.filter(m => m !== method) };
+            } else {
+                return { ...prev, accepted_payment_methods: [...current, method] };
+            }
+        });
     };
 
     // --- Submit Logic ---
@@ -88,8 +101,6 @@ export default function CreateEventPage() {
                 const error = await response.json();
                 throw new Error(error.message || 'Failed to create event');
             }
-
-            // Success redirect
             navigate('/events');
         } catch (error) {
             console.error('Create Event Error:', error);
@@ -99,45 +110,48 @@ export default function CreateEventPage() {
         }
     };
 
-    // --- Mock Event Object for Simulator ---
-    const mockEvent = {
-        _id: 'preview',
-        title: formData.title || 'Event Title Preview',
-        description: formData.description || 'Event description will appear here...',
-        image: formData.image, // Can be empty, EventCard handles fallback? Maybe need a placeholder
-        date: formData.date || new Date().toISOString(),
-        location: formData.location || 'Location Preview',
-        price: parseFloat(formData.price) || 0,
-        currency: formData.currency,
-        booked_slots: 0,
-        total_slots: parseInt(formData.total_slots) || 100,
-        organizer: { name: 'You (Organizer)' }
+    // Helper for safe date rendering
+    const getFormattedDate = (dateString: string) => {
+        if (!dateString) return { date: 'Select Date', time: 'Select Time' };
+        const date = new Date(dateString);
+        return {
+            date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            time: date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+        };
     };
 
+    const displayDate = getFormattedDate(formData.date);
+
     return (
-        <div className="h-[calc(100vh-6rem)] w-full bg-gray-50 dark:bg-black text-slate-900 dark:text-white flex flex-col md:flex-row overflow-hidden rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-sm">
+        // Fixed: Adjusted height calculation to fit viewport perfectly
+        <div className="h-[calc(100vh-2rem)] w-full bg-gray-50 dark:bg-black text-slate-900 dark:text-white flex flex-col md:flex-row overflow-hidden rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-sm relative">
 
             {/* Cropper Overlay */}
             {showCropper && tempImageSrc && (
-                <div className="fixed inset-0 z-[100]">
-                    <ImageCropper
-                        imageSrc={tempImageSrc}
-                        aspectStats={16 / 9}
-                        onCropComplete={handleCropComplete}
-                        onCancel={() => {
-                            setShowCropper(false);
-                            setTempImageSrc(null);
-                            if (fileInputRef.current) fileInputRef.current.value = '';
-                        }}
-                    />
+                <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl w-full max-w-2xl">
+                        <div className="h-[400px] w-full bg-black rounded-lg overflow-hidden">
+                            <ImageCropper
+                                imageSrc={tempImageSrc}
+                                aspectStats={16 / 9}
+                                onCropComplete={handleCropComplete}
+                                onCancel={() => {
+                                    setShowCropper(false);
+                                    setTempImageSrc(null);
+                                    if (fileInputRef.current) fileInputRef.current.value = '';
+                                }}
+                            />
+                        </div>
+                    </div>
                 </div>
             )}
 
-            {/* --- LEFT PANE: EDITOR (Scrollable) --- */}
-            <div className="w-full md:w-1/2 lg:w-[55%] h-full flex flex-col border-r border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950/50 backdrop-blur-xl z-10">
+            {/* --- LEFT PANE: EDITOR --- */}
+            <div className="w-full md:w-1/2 lg:w-[55%] h-full flex flex-col border-r border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 z-10">
                 {/* Header */}
                 <div className="flex-none p-4 sm:p-6 border-b border-gray-200 dark:border-zinc-800 flex items-center gap-4 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md sticky top-0 z-20">
                     <button
+                        type="button"
                         onClick={() => navigate('/events')}
                         className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-500 transition-colors"
                     >
@@ -151,26 +165,28 @@ export default function CreateEventPage() {
 
                 {/* Scrollable Form Area */}
                 <div className="flex-1 overflow-y-auto p-4 sm:p-8 custom-scrollbar">
-                    <form onSubmit={handleSubmit} className="space-y-8 max-w-2xl mx-auto pb-20">
+                    <form onSubmit={handleSubmit} className="space-y-8 max-w-2xl mx-auto pb-10">
 
                         {/* Image Upload */}
-                        <div className="group relative w-full aspect-video bg-gray-50 dark:bg-zinc-900 rounded-2xl border-2 border-dashed border-gray-200 dark:border-zinc-800 hover:border-blue-500 transition-colors cursor-pointer overflow-hidden shadow-sm"
+                        <div className="group relative w-full aspect-video bg-gray-50 dark:bg-zinc-900 rounded-2xl border-2 border-dashed border-gray-200 dark:border-zinc-800 hover:border-blue-500 transition-all cursor-pointer overflow-hidden shadow-sm"
                             onClick={() => fileInputRef.current?.click()}
                         >
                             {formData.image ? (
                                 <>
                                     <img src={formData.image} alt="Event Preview" className="w-full h-full object-cover" />
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <p className="text-white font-medium flex items-center gap-2"><ImageIcon size={18} /> Change Banner</p>
+                                        <p className="text-white font-medium flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-md rounded-full"><ImageIcon size={18} /> Change Banner</p>
                                     </div>
                                 </>
                             ) : (
-                                <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 gap-2">
-                                    <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-500">
-                                        <Upload size={20} />
+                                <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 gap-3">
+                                    <div className="w-14 h-14 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-500 mb-1">
+                                        <Upload size={24} />
                                     </div>
-                                    <p className="text-sm font-medium">Click to upload banner</p>
-                                    <p className="text-xs opacity-60">16:9 Aspect Ratio recommended</p>
+                                    <div className="text-center">
+                                        <p className="text-sm font-bold text-gray-600 dark:text-gray-300">Click to upload banner</p>
+                                        <p className="text-xs opacity-60 mt-1">SVG, PNG, JPG or GIF (rec. 16:9)</p>
+                                    </div>
                                 </div>
                             )}
                             <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleFileChange} />
@@ -186,15 +202,15 @@ export default function CreateEventPage() {
                                     placeholder="e.g. Annual Tech Summit 2025"
                                     value={formData.title}
                                     onChange={e => setFormData({ ...formData, title: e.target.value })}
-                                    className="w-full px-5 py-3.5 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-bold text-xl md:text-2xl"
+                                    className="w-full px-5 py-3.5 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-bold text-lg md:text-xl"
                                 />
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                 <div>
                                     <label className="block text-xs font-bold uppercase text-gray-500 mb-2 ml-1">Date & Time</label>
-                                    <div className="relative">
-                                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                                    <div className="relative group">
+                                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
                                         <input
                                             type="datetime-local"
                                             required
@@ -206,12 +222,12 @@ export default function CreateEventPage() {
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold uppercase text-gray-500 mb-2 ml-1">Location</label>
-                                    <div className="relative">
-                                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                                    <div className="relative group">
+                                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
                                         <input
                                             type="text"
                                             required
-                                            placeholder="Venue name"
+                                            placeholder="Venue or 'Online'"
                                             value={formData.location}
                                             onChange={e => setFormData({ ...formData, location: e.target.value })}
                                             className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-sm font-medium"
@@ -221,20 +237,21 @@ export default function CreateEventPage() {
                             </div>
                         </div>
 
-                        {/* Description */}
+                        {/* Description - Custom Styled Wrapper */}
                         <div>
                             <label className="block text-xs font-bold uppercase text-gray-500 mb-2 ml-1">Event Description</label>
-                            <div className="bg-gray-50 dark:bg-zinc-900 rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-800 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all">
+                            <div className="bg-gray-50 dark:bg-zinc-900 rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-800 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all [&_.ql-toolbar]:border-none [&_.ql-container]:border-none [&_.ql-editor]:min-h-[200px]">
                                 <ReactQuill
                                     theme="snow"
                                     value={formData.description}
                                     onChange={(value) => setFormData({ ...formData, description: value })}
-                                    className="h-[300px] mb-12 text-gray-800 dark:text-gray-200"
+                                    className="text-gray-800 dark:text-gray-200"
+                                    placeholder="Tell people what this event is about..."
                                     modules={{
                                         toolbar: [
                                             [{ 'header': [1, 2, false] }],
-                                            ['bold', 'italic', 'underline', 'list', 'link'],
-                                            ['clean']
+                                            ['bold', 'italic', 'underline', 'list'],
+                                            ['link', 'clean']
                                         ],
                                     }}
                                 />
@@ -315,6 +332,7 @@ export default function CreateEventPage() {
                 {/* Bottom Action Bar */}
                 <div className="flex-none p-4 sm:p-6 border-t border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex justify-end gap-3 z-20">
                     <button
+                        type="button"
                         onClick={() => navigate('/events')}
                         className="px-6 py-3 rounded-xl font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
                     >
@@ -325,193 +343,155 @@ export default function CreateEventPage() {
                         disabled={isSubmitting}
                         className="px-8 py-3 bg-black dark:bg-white text-white dark:text-black rounded-xl font-bold hover:shadow-xl hover:shadow-black/20 dark:hover:shadow-white/10 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                     >
-                        {isSubmitting ? <TyreLoader size={20} /> : <Sparkles size={18} />}
+                        {isSubmitting ? (
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current"></div>
+                        ) : <Sparkles size={18} />}
                         Publish Now
                     </button>
                 </div>
             </div>
 
-            {/* --- RIGHT PANE: SIMULATOR (Fixed) --- */}
-            <div className="hidden md:flex flex-col flex-1 bg-gray-100 dark:bg-[#0a0a0a] relative overflow-hidden">
-                {/* Simulator Toolbar */}
-                <div className="flex-none p-4 flex items-center justify-center gap-4 relative z-10">
-                    <div className="bg-white dark:bg-zinc-900 p-1 rounded-full border border-gray-200 dark:border-zinc-800 shadow-sm flex items-center">
-                        <button
-                            onClick={() => setSimulatorView('mobile')}
-                            className={`p-2 rounded-full transition-all ${simulatorView === 'mobile' ? 'bg-black text-white dark:bg-white dark:text-black shadow-md' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-                        >
-                            <Smartphone size={18} />
-                        </button>
-                        <button
-                            onClick={() => setSimulatorView('desktop')}
-                            className={`p-2 rounded-full transition-all ${simulatorView === 'desktop' ? 'bg-black text-white dark:bg-white dark:text-black shadow-md' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-                        >
-                            <Monitor size={18} />
-                        </button>
-                    </div>
+            {/* --- RIGHT PANE: SIMULATOR --- */}
+            <div className="hidden md:flex flex-col flex-1 bg-gray-100 dark:bg-[#0a0a0a] relative overflow-hidden items-center justify-center">
+
+                {/* View Switcher */}
+                <div className="absolute top-6 z-20 bg-white dark:bg-zinc-900 p-1.5 rounded-full border border-gray-200 dark:border-zinc-800 shadow-sm flex items-center">
+                    <button
+                        onClick={() => setSimulatorView('mobile')}
+                        className={`p-2 rounded-full transition-all ${simulatorView === 'mobile' ? 'bg-black text-white dark:bg-white dark:text-black shadow-md' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                    >
+                        <Smartphone size={18} />
+                    </button>
+                    <button
+                        onClick={() => setSimulatorView('desktop')}
+                        className={`p-2 rounded-full transition-all ${simulatorView === 'desktop' ? 'bg-black text-white dark:bg-white dark:text-black shadow-md' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                    >
+                        <Monitor size={18} />
+                    </button>
                 </div>
 
-                {/* Simulator Viewport */}
-                <div className="flex-1 overflow-y-auto w-full flex items-center justify-center p-8 custom-scrollbar">
-                    <div
-                        className={`transition-all duration-500 ease-in-out border-[8px] border-gray-900 dark:border-zinc-800 bg-white dark:bg-black shadow-2xl overflow-hidden relative shrink-0 ${simulatorView === 'mobile'
-                            ? 'w-[300px] h-[600px] rounded-[2.5rem] lg:w-[375px] lg:h-[750px] lg:rounded-[3rem]'
-                            : 'w-[640px] h-[400px] rounded-xl lg:w-[1024px] lg:h-[640px]'
-                            }`}
-                    >
-                        {/* Status Bar simulation for Mobile */}
-                        {simulatorView === 'mobile' && (
-                            <div className="absolute top-0 inset-x-0 h-7 bg-black z-50 flex justify-between px-6 items-center">
-                                <span className="text-[10px] text-white font-medium">9:41</span>
-                                <div className="flex gap-1.5">
-                                    <div className="w-1 h-3 rounded-full bg-white" />
-                                    <div className="w-1 h-3 rounded-full bg-white" />
-                                    <div className="w-1 h-3 rounded-full bg-white" />
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Simulated Content - Full Event Details Page Layout */}
-                        <div className={`w-full h-full overflow-y-auto overscroll-y-contain bg-white dark:bg-black ${simulatorView === 'mobile' ? 'pt-7' : ''} relative`}>
-
-                            {/* --- HERO SECTION --- */}
-                            <div className="p-3 md:p-4 pb-0">
-                                <div className="relative w-full bg-black rounded-[1.5rem] overflow-hidden group">
-                                    <div className="relative w-full">
-                                        {mockEvent.image ? (
-                                            <img
-                                                src={mockEvent.image}
-                                                alt="Event Preview"
-                                                className="w-full h-auto object-contain block max-h-[50vh]"
-                                            />
-                                        ) : (
-                                            <div className="aspect-video bg-gray-100 dark:bg-zinc-800 flex items-center justify-center text-gray-400">
-                                                <div className="flex flex-col items-center gap-2">
-                                                    <ImageIcon size={48} />
-                                                    <span className="text-xs font-medium">Cover Image</span>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Mock Navigation */}
-                                    <div className="absolute top-4 left-0 right-0 px-4 flex justify-between items-center z-30 w-full">
-                                        <div className="w-10 h-10 flex items-center justify-center bg-black/30 backdrop-blur-xl rounded-full text-white border border-white/20">
-                                            <ChevronLeft size={20} />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* --- CONTENT SECTION --- */}
-                            <div className="relative z-20 px-5 py-6 pb-32">
-                                <div className="max-w-2xl mx-auto space-y-8">
-
-                                    {/* Title */}
-                                    <div className="space-y-2 text-left">
-                                        <h1 className="text-3xl font-black text-gray-900 dark:text-white leading-tight tracking-tight">
-                                            {mockEvent.title || 'Event Title'}
-                                        </h1>
-                                    </div>
-
-                                    {/* Meta Grid */}
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="bg-gray-50 dark:bg-zinc-900/50 rounded-2xl p-4 flex flex-col justify-center gap-2">
-                                            <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                                                <Calendar size={16} />
-                                            </div>
-                                            <div>
-                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Date</p>
-                                                <p className="text-xs font-bold text-gray-900 dark:text-white">
-                                                    {mockEvent.date ? new Date(mockEvent.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Select Date'}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <div className="bg-gray-50 dark:bg-zinc-900/50 rounded-2xl p-4 flex flex-col justify-center gap-2">
-                                            <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center text-purple-600 dark:text-purple-400">
-                                                <Clock size={16} />
-                                            </div>
-                                            <div>
-                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Time</p>
-                                                <p className="text-xs font-bold text-gray-900 dark:text-white">
-                                                    {mockEvent.date ? new Date(mockEvent.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Select Time'}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <div className="bg-gray-50 dark:bg-zinc-900/50 rounded-2xl p-4 flex flex-col justify-center gap-2 col-span-1">
-                                            <div className="w-8 h-8 rounded-full bg-rose-100 dark:bg-rose-900/20 flex items-center justify-center text-rose-600 dark:text-rose-400">
-                                                <MapPin size={16} />
-                                            </div>
-                                            <div>
-                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Location</p>
-                                                <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
-                                                    {mockEvent.location || 'Venue Name'}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="bg-gray-50 dark:bg-zinc-900/50 rounded-2xl p-4 flex flex-col justify-center gap-2">
-                                            <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                                                <Users size={16} />
-                                            </div>
-                                            <div>
-                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Seats</p>
-                                                <p className="text-xs font-bold text-gray-900 dark:text-white">
-                                                    {mockEvent.total_slots} available
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* About Section */}
-                                    <div className="pb-4">
-                                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">About Event</h3>
-                                        <div className="prose prose-sm dark:prose-invert max-w-none text-gray-600 dark:text-gray-400 leading-relaxed text-xs sm:text-sm">
-                                            {mockEvent.description ? (
-                                                <div dangerouslySetInnerHTML={{ __html: mockEvent.description }} />
-                                            ) : (
-                                                <p className="italic opacity-50">Description will appear here...</p>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Organizer Section */}
-                                    <div className="border-t border-gray-100 dark:border-zinc-800 pt-6">
-                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Organized By</h3>
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-lg">
-                                                Y
-                                            </div>
-                                            <div>
-                                                <p className="text-base font-bold text-gray-900 dark:text-white">You (Organizer)</p>
-                                                <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Verified Organizer</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                {/* Device Frame */}
+                <div
+                    className={`transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] border-[10px] border-gray-900 dark:border-zinc-800 bg-white dark:bg-black shadow-2xl relative shrink-0 ${simulatorView === 'mobile'
+                        ? 'w-[320px] h-[650px] rounded-[3rem] lg:w-[375px] lg:h-[720px]'
+                        : 'w-[640px] h-[400px] rounded-[1rem] lg:w-[800px] lg:h-[500px]'
+                        }`}
+                >
+                    {/* Notch & Status Bar (Mobile Only) */}
+                    {simulatorView === 'mobile' && (
+                        <div className="absolute top-0 inset-x-0 h-10 bg-white dark:bg-black z-50 flex justify-between px-6 items-center rounded-t-[2.5rem] pointer-events-none">
+                            <span className="text-[10px] font-semibold text-gray-900 dark:text-white">9:41</span>
+                            <div className="w-16 h-5 bg-black dark:bg-zinc-800 rounded-full absolute left-1/2 -translate-x-1/2 top-2" />
+                            <div className="flex gap-1">
+                                <div className="w-4 h-2.5 rounded-[1px] border border-gray-300 dark:border-zinc-700" />
                             </div>
                         </div>
+                    )}
 
-                        {/* --- FIXED BOTTOM BAR (Outside Scrollable Area) --- */}
-                        <div className="absolute bottom-4 left-4 right-4 z-40">
-                            <div className="max-w-2xl mx-auto bg-black/80 dark:bg-white/10 backdrop-blur-xl p-3 pl-6 rounded-full shadow-2xl border border-white/10 flex items-center justify-between gap-4">
-                                <div>
-                                    <span className="block text-[10px] text-gray-400 font-bold uppercase tracking-wider">Total Price</span>
-                                    <span className="text-xl sm:text-2xl font-black text-white dark:text-white">
-                                        {mockEvent.currency === 'INR' ? '₹' : mockEvent.currency}{mockEvent.price}
-                                    </span>
-                                </div>
-                                <button className="px-8 h-12 rounded-full font-bold text-sm bg-white text-black hover:bg-gray-200 shadow-lg flex items-center justify-center gap-2 pointer-events-none">
-                                    Book Ticket
+                    {/* Content Scroll Area */}
+                    <div className={`w-full h-full overflow-y-auto overflow-x-hidden bg-white dark:bg-black ${simulatorView === 'mobile' ? 'pt-10 scrollbar-hide' : ''}`}>
+
+                        {/* Event Image */}
+                        <div className="p-4 pb-0">
+                            <div className="w-full aspect-video bg-gray-100 dark:bg-zinc-900 rounded-2xl overflow-hidden relative shadow-sm">
+                                {formData.image ? (
+                                    <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 gap-2">
+                                        <ImageIcon size={32} opacity={0.5} />
+                                        <span className="text-[10px] font-medium uppercase tracking-wider">Cover Image</span>
+                                    </div>
+                                )}
+                                <button className="absolute top-4 left-4 w-8 h-8 bg-white/30 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20">
+                                    <ChevronLeft size={16} />
                                 </button>
                             </div>
                         </div>
 
+                        {/* Event Details */}
+                        <div className="px-5 py-6 pb-32 space-y-6">
+                            <h2 className="text-2xl font-black text-gray-900 dark:text-white leading-tight">
+                                {formData.title || 'Event Title Preview'}
+                            </h2>
+
+                            {/* Info Grid */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                                        <Calendar size={14} strokeWidth={2.5} />
+                                    </div>
+                                    <div className="overflow-hidden">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase">Date</p>
+                                        <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{displayDate.date}</p>
+                                    </div>
+                                </div>
+
+                                <div className="p-3 bg-purple-50 dark:bg-purple-900/10 rounded-xl flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                                        <Clock size={14} strokeWidth={2.5} />
+                                    </div>
+                                    <div className="overflow-hidden">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase">Time</p>
+                                        <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{displayDate.time}</p>
+                                    </div>
+                                </div>
+
+                                <div className="p-3 bg-rose-50 dark:bg-rose-900/10 rounded-xl flex items-center gap-3 col-span-2">
+                                    <div className="w-8 h-8 rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                                        <MapPin size={14} strokeWidth={2.5} />
+                                    </div>
+                                    <div className="overflow-hidden">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase">Location</p>
+                                        <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
+                                            {formData.location || 'Location Preview'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="p-3 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl flex items-center gap-3 col-span-2">
+                                    <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                                        <Users size={14} strokeWidth={2.5} />
+                                    </div>
+                                    <div className="overflow-hidden">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase">Availability</p>
+                                        <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
+                                            {formData.total_slots} Seats Available
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* About */}
+                            <div>
+                                <h3 className="text-base font-bold text-gray-900 dark:text-white mb-2">About Event</h3>
+                                <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed prose prose-sm dark:prose-invert">
+                                    {formData.description ? (
+                                        <div dangerouslySetInnerHTML={{ __html: formData.description }} />
+                                    ) : (
+                                        <p className="opacity-50 italic text-xs">Event description will appear here...</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
                     </div>
+
+                    {/* Fixed Bottom Bar in Simulator */}
+                    <div className="absolute bottom-5 left-5 right-5 z-40">
+                        <div className="bg-gray-900 dark:bg-white text-white dark:text-black p-4 rounded-2xl shadow-xl flex items-center justify-between">
+                            <div>
+                                <p className="text-[10px] font-medium opacity-70 uppercase tracking-wider">Total Price</p>
+                                <p className="text-xl font-bold">
+                                    {formData.currency === 'INR' ? '₹' : '$'}{formData.price || '0'}
+                                </p>
+                            </div>
+                            <div className="bg-white dark:bg-black text-black dark:text-white px-6 py-2 rounded-xl font-bold text-sm cursor-default">
+                                Book Ticket
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
-
         </div>
     );
 }
