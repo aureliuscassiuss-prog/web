@@ -213,3 +213,68 @@ img {
   -webkit-user-drag: none;
   user-select: none;
 }
+
+/* --- React Quill Custom Styles --- */
+.quill-wrapper {
+  background: transparent;
+}
+
+.ql-container {
+  font-family: inherit;
+  font-size: 0.875rem;
+  min-height: 200px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.ql-editor {
+  min-height: 200px;
+  padding: 1rem;
+}
+
+.ql-toolbar {
+  border-color: rgb(229 231 235) !important;
+  /* gray-200 */
+  border-radius: 0.75rem 0.75rem 0 0;
+}
+
+.dark .ql-toolbar {
+  border-color: rgb(39 39 42) !important;
+  /* zinc-800 */
+  background: rgb(9 9 11);
+  /* zinc-950 */
+}
+
+.ql-container {
+  border-color: rgb(229 231 235) !important;
+  border-radius: 0 0 0.75rem 0.75rem;
+}
+
+.dark .ql-container {
+  border-color: rgb(39 39 42) !important;
+  background: rgb(0 0 0);
+}
+
+.dark .ql-editor {
+  color: rgb(229 231 235);
+}
+
+.dark .ql-snow .ql-stroke {
+  stroke: rgb(161 161 170);
+}
+
+.dark .ql-snow .ql-fill {
+  fill: rgb(161 161 170);
+}
+
+/* --- Utilities --- */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

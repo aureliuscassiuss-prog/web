@@ -2,19 +2,17 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Upload, Calendar, MapPin, DollarSign, Image as ImageIcon,
-    Sparkles, CreditCard, Users, Smartphone, Monitor, ChevronLeft, Clock, X
+    Sparkles, CreditCard, Users, Smartphone, Monitor, ChevronLeft, Clock, X, Check
 } from 'lucide-react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
-// Assume these exist or replace with simple placeholders if missing
+// Assume these exist
 import ImageCropper from './ImageCropper';
-import TyreLoader from './TyreLoader';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function CreateEventPage() {
     const navigate = useNavigate();
-    // Safety check in case Auth context is missing or loading
     const auth = useAuth();
     const token = auth?.token;
 
@@ -33,6 +31,7 @@ export default function CreateEventPage() {
         accepted_payment_methods: ['razorpay'], // Default
     });
 
+    const [errors, setErrors] = useState<Record<string, string>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [simulatorView, setSimulatorView] = useState<'mobile' | 'desktop'>('mobile');
 
@@ -63,12 +62,10 @@ export default function CreateEventPage() {
         reader.readAsDataURL(croppedBlob);
     };
 
-    // Toggle logic: Allows switching or selecting multiple if your backend supports it
     const togglePaymentMethod = (method: string) => {
         setFormData(prev => {
             const current = prev.accepted_payment_methods;
             if (current.includes(method)) {
-                // Prevent removing if it's the only one (optional UX choice)
                 if (current.length === 1) return prev;
                 return { ...prev, accepted_payment_methods: current.filter(m => m !== method) };
             } else {
@@ -77,9 +74,23 @@ export default function CreateEventPage() {
         });
     };
 
-    // --- Submit Logic ---
+    // --- Validation & Submit Logic ---
+    const validateForm = () => {
+        const newErrors: Record<string, string> = {};
+        if (!formData.title.trim()) newErrors.title = 'Event title is required';
+        if (!formData.date) newErrors.date = 'Date and time are required';
+        if (!formData.location.trim()) newErrors.location = 'Location is required';
+        if (!formData.price) newErrors.price = 'Price is required';
+        if (!formData.total_slots) newErrors.total_slots = 'Total slots are required';
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!validateForm()) return;
+
         setIsSubmitting(true);
 
         try {
@@ -123,14 +134,15 @@ export default function CreateEventPage() {
     const displayDate = getFormattedDate(formData.date);
 
     return (
-        // Fixed: Adjusted height calculation to fit viewport perfectly
-        <div className="h-[calc(100vh-2rem)] w-full bg-gray-50 dark:bg-black text-slate-900 dark:text-white flex flex-col md:flex-row overflow-hidden rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-sm relative">
+        // Layout Fix: Use flex-col (mobile) to row (desktop) and proper height calc to prevent overflow
+        // We use h-[calc(100vh-6rem)] to account for the Main Layout header (~4rem) and padding/margins
+        <div className="flex flex-col lg:flex-row h-[calc(100vh-6rem)] bg-white dark:bg-black overflow-hidden rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-sm relative">
 
-            {/* Cropper Overlay */}
+            {/* Cropper Overlay Fix: z-index increased */}
             {showCropper && tempImageSrc && (
-                <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl w-full max-w-2xl">
-                        <div className="h-[400px] w-full bg-black rounded-lg overflow-hidden">
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+                    <div className="relative w-full max-w-4xl max-h-[90vh] overflow-auto bg-white dark:bg-zinc-900 rounded-2xl p-4">
+                        <div className="h-[500px] w-full bg-black rounded-lg overflow-hidden">
                             <ImageCropper
                                 imageSrc={tempImageSrc}
                                 aspectStats={16 / 9}
@@ -147,8 +159,10 @@ export default function CreateEventPage() {
             )}
 
             {/* --- LEFT PANE: EDITOR --- */}
-            <div className="w-full md:w-1/2 lg:w-[55%] h-full flex flex-col border-r border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 z-10">
-                {/* Header */}
+            {/* Editor Pane Layout Fix: Flex col with independent scroll area */}
+            <div className="w-full lg:w-[55%] flex flex-col h-full overflow-hidden border-r border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 z-10 relative">
+
+                {/* Header - Fixed */}
                 <div className="flex-none p-4 sm:p-6 border-b border-gray-200 dark:border-zinc-800 flex items-center gap-4 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md sticky top-0 z-20">
                     <button
                         type="button"
@@ -163,18 +177,19 @@ export default function CreateEventPage() {
                     </div>
                 </div>
 
-                {/* Scrollable Form Area */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-8 custom-scrollbar">
-                    <form onSubmit={handleSubmit} className="space-y-8 max-w-2xl mx-auto pb-10">
+                {/* Scrollable Form Content */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                    <form onSubmit={handleSubmit} className="p-4 sm:p-8 space-y-8 max-w-2xl mx-auto pb-10">
 
-                        {/* Image Upload */}
-                        <div className="group relative w-full aspect-video bg-gray-50 dark:bg-zinc-900 rounded-2xl border-2 border-dashed border-gray-200 dark:border-zinc-800 hover:border-blue-500 transition-all cursor-pointer overflow-hidden shadow-sm"
+                        {/* Image Upload Fix: Z-index and relative positioning */}
+                        <div
+                            className="group relative w-full aspect-video bg-gray-50 dark:bg-zinc-900 rounded-2xl border-2 border-dashed border-gray-200 dark:border-zinc-800 hover:border-blue-500 transition-all cursor-pointer overflow-hidden shadow-sm"
                             onClick={() => fileInputRef.current?.click()}
                         >
                             {formData.image ? (
                                 <>
                                     <img src={formData.image} alt="Event Preview" className="w-full h-full object-cover" />
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10">
                                         <p className="text-white font-medium flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-md rounded-full"><ImageIcon size={18} /> Change Banner</p>
                                     </div>
                                 </>
@@ -189,7 +204,7 @@ export default function CreateEventPage() {
                                     </div>
                                 </div>
                             )}
-                            <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleFileChange} />
+                            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                         </div>
 
                         {/* Title & Basics */}
@@ -202,8 +217,12 @@ export default function CreateEventPage() {
                                     placeholder="e.g. Annual Tech Summit 2025"
                                     value={formData.title}
                                     onChange={e => setFormData({ ...formData, title: e.target.value })}
-                                    className="w-full px-5 py-3.5 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-bold text-lg md:text-xl"
+                                    className={`w-full px-5 py-3.5 bg-gray-50 dark:bg-zinc-900 border rounded-xl outline-none transition-all font-bold text-lg md:text-xl ${errors.title
+                                            ? 'border-red-500 focus:ring-2 focus:ring-red-500/20'
+                                            : 'border-gray-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'
+                                        }`}
                                 />
+                                {errors.title && <p className="mt-1 text-xs text-red-500 font-medium ml-1">{errors.title}</p>}
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -216,8 +235,12 @@ export default function CreateEventPage() {
                                             required
                                             value={formData.date}
                                             onChange={e => setFormData({ ...formData, date: e.target.value })}
-                                            className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-sm font-medium"
+                                            className={`w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-zinc-900 border rounded-xl outline-none text-sm font-medium ${errors.date
+                                                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20'
+                                                    : 'border-gray-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'
+                                                }`}
                                         />
+                                        {errors.date && <p className="mt-1 text-xs text-red-500 font-medium ml-1">{errors.date}</p>}
                                     </div>
                                 </div>
                                 <div>
@@ -230,8 +253,12 @@ export default function CreateEventPage() {
                                             placeholder="Venue or 'Online'"
                                             value={formData.location}
                                             onChange={e => setFormData({ ...formData, location: e.target.value })}
-                                            className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-sm font-medium"
+                                            className={`w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-zinc-900 border rounded-xl outline-none text-sm font-medium ${errors.location
+                                                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20'
+                                                    : 'border-gray-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'
+                                                }`}
                                         />
+                                        {errors.location && <p className="mt-1 text-xs text-red-500 font-medium ml-1">{errors.location}</p>}
                                     </div>
                                 </div>
                             </div>
@@ -240,7 +267,7 @@ export default function CreateEventPage() {
                         {/* Description - Custom Styled Wrapper */}
                         <div>
                             <label className="block text-xs font-bold uppercase text-gray-500 mb-2 ml-1">Event Description</label>
-                            <div className="bg-gray-50 dark:bg-zinc-900 rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-800 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all [&_.ql-toolbar]:border-none [&_.ql-container]:border-none [&_.ql-editor]:min-h-[200px]">
+                            <div className="bg-gray-50 dark:bg-zinc-900 rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-800 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all">
                                 <ReactQuill
                                     theme="snow"
                                     value={formData.description}
@@ -276,7 +303,10 @@ export default function CreateEventPage() {
                                             required
                                             value={formData.price}
                                             onChange={e => setFormData({ ...formData, price: e.target.value })}
-                                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-lg outline-none focus:border-blue-500 text-sm font-bold"
+                                            className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-black border rounded-lg outline-none text-sm font-bold ${errors.price
+                                                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20'
+                                                    : 'border-gray-200 dark:border-zinc-800 focus:border-blue-500'
+                                                }`}
                                         />
                                     </div>
                                 </div>
@@ -290,7 +320,10 @@ export default function CreateEventPage() {
                                             required
                                             value={formData.total_slots}
                                             onChange={e => setFormData({ ...formData, total_slots: e.target.value })}
-                                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-lg outline-none focus:border-blue-500 text-sm font-bold"
+                                            className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-black border rounded-lg outline-none text-sm font-bold ${errors.total_slots
+                                                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20'
+                                                    : 'border-gray-200 dark:border-zinc-800 focus:border-blue-500'
+                                                }`}
                                         />
                                     </div>
                                 </div>
@@ -329,8 +362,8 @@ export default function CreateEventPage() {
                     </form>
                 </div>
 
-                {/* Bottom Action Bar */}
-                <div className="flex-none p-4 sm:p-6 border-t border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex justify-end gap-3 z-20">
+                {/* Bottom Action Bar - Fixed */}
+                <div className="flex-none p-4 sm:p-6 border-t border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex justify-end gap-3 z-30 relative">
                     <button
                         type="button"
                         onClick={() => navigate('/events')}
@@ -352,7 +385,8 @@ export default function CreateEventPage() {
             </div>
 
             {/* --- RIGHT PANE: SIMULATOR --- */}
-            <div className="hidden md:flex flex-col flex-1 bg-gray-100 dark:bg-[#0a0a0a] relative overflow-hidden items-center justify-center p-4">
+            {/* Mobile Layout Fix: Hidden on mobile, flex on desktop */}
+            <div className="hidden lg:flex flex-col flex-1 bg-gray-100 dark:bg-[#0a0a0a] relative overflow-hidden items-center justify-center p-4">
 
                 {/* View Switcher */}
                 <div className="absolute top-6 z-20 bg-white dark:bg-zinc-900 p-1.5 rounded-full border border-gray-200 dark:border-zinc-800 shadow-sm flex items-center mb-4">
@@ -371,29 +405,24 @@ export default function CreateEventPage() {
                 </div>
 
                 {/* Device Frame */}
-                {/* Mobile: iPhone 15 Pro Max Style Frame */}
-                {/* Desktop: MacBook Air Style Frame */}
+                {/* Simulator Viewport Fix: Updated dimensions and overflow handling */}
                 <div
                     className={`transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] relative shrink-0 shadow-2xl bg-black ${simulatorView === 'mobile'
                         ? 'w-[320px] h-[650px] rounded-[3.5rem] lg:w-[380px] lg:h-[750px] border-[12px] border-gray-900 shadow-[0_0_0_2px_#3f3f46,0_20px_50px_-10px_rgba(0,0,0,0.5)]'
-                        : 'w-[640px] h-[400px] rounded-[1.5rem] lg:w-[900px] lg:h-[580px] border-[12px] border-gray-900 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)]'
+                        : 'w-[90%] max-w-[900px] aspect-[16/10] max-h-[600px] rounded-[1.5rem] border-[12px] border-gray-900 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)]'
                         }`}
                 >
                     {/* --- MOBILE SPECIFIC DETAILS --- */}
                     {simulatorView === 'mobile' && (
                         <>
-                            {/* Dynamic Island / Notch */}
+                            {/* Dynamic Island / Notch Fix: Solid black pill */}
                             <div className="absolute top-3 left-1/2 -translate-x-1/2 w-[100px] h-[28px] bg-black rounded-full z-[60] flex items-center justify-center pointer-events-none">
-                                {/* Solid Black Pill */}
                             </div>
 
                             {/* Side Buttons (Fake) */}
-                            {/* Power Button */}
                             <div className="absolute top-[180px] -right-[15px] w-[3px] h-[60px] bg-gray-800 rounded-r-md" />
-                            {/* Volume Buttons */}
                             <div className="absolute top-[150px] -left-[15px] w-[3px] h-[40px] bg-gray-800 rounded-l-md" />
                             <div className="absolute top-[200px] -left-[15px] w-[3px] h-[40px] bg-gray-800 rounded-l-md" />
-                            {/* Silent Switch */}
                             <div className="absolute top-[100px] -left-[15px] w-[3px] h-[20px] bg-gray-800 rounded-l-md" />
 
                             {/* Status Bar */}
@@ -418,7 +447,8 @@ export default function CreateEventPage() {
                     )}
 
                     {/* --- CONTENT AREA --- */}
-                    <div className={`w-full h-full bg-white dark:bg-black overflow-y-auto overflow-x-hidden touch-pan-y ${simulatorView === 'mobile' ? 'rounded-[2.8rem] scrollbar-hide' : 'rounded-xl'}`}>
+                    {/* Simulator Scroll Fix: touch-pan-y and scrollbar-hide */}
+                    <div className={`w-full h-full bg-white dark:bg-black overflow-y-auto overflow-x-hidden touch-pan-y pb-20 ${simulatorView === 'mobile' ? 'rounded-[2.8rem] scrollbar-hide' : 'rounded-xl'}`}>
 
                         {/* Event Image */}
                         <div className="relative">
@@ -431,7 +461,6 @@ export default function CreateEventPage() {
                                         <span className="text-[10px] font-medium uppercase tracking-wider">Cover Image</span>
                                     </div>
                                 )}
-                                {/* Back Button Simulation */}
                                 <button className="absolute top-12 left-5 w-8 h-8 bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:bg-black/40 transition-colors z-40">
                                     <ChevronLeft size={18} />
                                 </button>
@@ -439,7 +468,7 @@ export default function CreateEventPage() {
                         </div>
 
                         {/* Event Details */}
-                        <div className="px-5 py-6 pb-32 space-y-6">
+                        <div className="px-5 py-6 space-y-6">
                             <h2 className="text-2xl font-black text-gray-900 dark:text-white leading-tight">
                                 {formData.title || 'Event Title Preview'}
                             </h2>
