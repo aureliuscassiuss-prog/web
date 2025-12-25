@@ -384,7 +384,7 @@ export default function CreateEventPage() {
                         <>
                             {/* Dynamic Island / Notch */}
                             <div className="absolute top-3 left-1/2 -translate-x-1/2 w-[100px] h-[28px] bg-black rounded-full z-[60] flex items-center justify-center pointer-events-none">
-                                <div className="w-2/3 h-2/3 rounded-full bg-black/50" />
+                                {/* Solid Black Pill */}
                             </div>
 
                             {/* Side Buttons (Fake) */}
