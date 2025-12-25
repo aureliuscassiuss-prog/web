@@ -352,10 +352,10 @@ export default function CreateEventPage() {
             </div>
 
             {/* --- RIGHT PANE: SIMULATOR --- */}
-            <div className="hidden md:flex flex-col flex-1 bg-gray-100 dark:bg-[#0a0a0a] relative overflow-hidden items-center justify-center">
+            <div className="hidden md:flex flex-col flex-1 bg-gray-100 dark:bg-[#0a0a0a] relative overflow-hidden items-center justify-center p-4">
 
                 {/* View Switcher */}
-                <div className="absolute top-6 z-20 bg-white dark:bg-zinc-900 p-1.5 rounded-full border border-gray-200 dark:border-zinc-800 shadow-sm flex items-center">
+                <div className="absolute top-6 z-20 bg-white dark:bg-zinc-900 p-1.5 rounded-full border border-gray-200 dark:border-zinc-800 shadow-sm flex items-center mb-4">
                     <button
                         onClick={() => setSimulatorView('mobile')}
                         className={`p-2 rounded-full transition-all ${simulatorView === 'mobile' ? 'bg-black text-white dark:bg-white dark:text-black shadow-md' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
@@ -371,29 +371,58 @@ export default function CreateEventPage() {
                 </div>
 
                 {/* Device Frame */}
+                {/* Mobile: iPhone 15 Pro Max Style Frame */}
+                {/* Desktop: MacBook Air Style Frame */}
                 <div
-                    className={`transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] border-[10px] border-gray-900 dark:border-zinc-800 bg-white dark:bg-black shadow-2xl relative shrink-0 ${simulatorView === 'mobile'
-                        ? 'w-[320px] h-[650px] rounded-[3rem] lg:w-[375px] lg:h-[720px]'
-                        : 'w-[640px] h-[400px] rounded-[1rem] lg:w-[800px] lg:h-[500px]'
+                    className={`transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] relative shrink-0 shadow-2xl bg-black ${simulatorView === 'mobile'
+                        ? 'w-[320px] h-[650px] rounded-[3.5rem] lg:w-[380px] lg:h-[750px] border-[12px] border-gray-900 shadow-[0_0_0_2px_#3f3f46,0_20px_50px_-10px_rgba(0,0,0,0.5)]'
+                        : 'w-[640px] h-[400px] rounded-[1.5rem] lg:w-[900px] lg:h-[580px] border-[12px] border-gray-900 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)]'
                         }`}
                 >
-                    {/* Notch & Status Bar (Mobile Only) */}
+                    {/* --- MOBILE SPECIFIC DETAILS --- */}
                     {simulatorView === 'mobile' && (
-                        <div className="absolute top-0 inset-x-0 h-10 bg-white dark:bg-black z-50 flex justify-between px-6 items-center rounded-t-[2.5rem] pointer-events-none">
-                            <span className="text-[10px] font-semibold text-gray-900 dark:text-white">9:41</span>
-                            <div className="w-16 h-5 bg-black dark:bg-zinc-800 rounded-full absolute left-1/2 -translate-x-1/2 top-2" />
-                            <div className="flex gap-1">
-                                <div className="w-4 h-2.5 rounded-[1px] border border-gray-300 dark:border-zinc-700" />
+                        <>
+                            {/* Dynamic Island / Notch */}
+                            <div className="absolute top-3 left-1/2 -translate-x-1/2 w-[100px] h-[28px] bg-black rounded-full z-[60] flex items-center justify-center pointer-events-none">
+                                <div className="w-2/3 h-2/3 rounded-full bg-black/50" />
                             </div>
-                        </div>
+
+                            {/* Side Buttons (Fake) */}
+                            {/* Power Button */}
+                            <div className="absolute top-[180px] -right-[15px] w-[3px] h-[60px] bg-gray-800 rounded-r-md" />
+                            {/* Volume Buttons */}
+                            <div className="absolute top-[150px] -left-[15px] w-[3px] h-[40px] bg-gray-800 rounded-l-md" />
+                            <div className="absolute top-[200px] -left-[15px] w-[3px] h-[40px] bg-gray-800 rounded-l-md" />
+                            {/* Silent Switch */}
+                            <div className="absolute top-[100px] -left-[15px] w-[3px] h-[20px] bg-gray-800 rounded-l-md" />
+
+                            {/* Status Bar */}
+                            <div className="absolute top-2 inset-x-0 h-10 px-8 flex justify-between items-center z-50 pointer-events-none mix-blend-difference text-white">
+                                <span className="text-[12px] font-bold">9:41</span>
+                                <div className="flex gap-1.5 items-center">
+                                    <div className="flex gap-0.5 items-end h-3">
+                                        <div className="w-1 h-1 bg-current rounded-sm" />
+                                        <div className="w-1 h-2 bg-current rounded-sm" />
+                                        <div className="w-1 h-3 bg-current rounded-sm" />
+                                        <div className="w-1 h-2.5 bg-current rounded-sm opacity-50" />
+                                    </div>
+                                    <div className="w-5 h-2.5 border border-current rounded-[4px] relative">
+                                        <div className="absolute inset-0.5 bg-current rounded-[2px] w-3/4" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Home Indicator */}
+                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-[120px] h-[4px] bg-black/90 dark:bg-white/90 rounded-full z-[60] pointer-events-none mix-blend-difference" />
+                        </>
                     )}
 
-                    {/* Content Scroll Area */}
-                    <div className={`w-full h-full overflow-y-auto overflow-x-hidden bg-white dark:bg-black ${simulatorView === 'mobile' ? 'pt-10 scrollbar-hide' : ''}`}>
+                    {/* --- CONTENT AREA --- */}
+                    <div className={`w-full h-full bg-white dark:bg-black overflow-y-auto overflow-x-hidden touch-pan-y ${simulatorView === 'mobile' ? 'rounded-[2.8rem] scrollbar-hide' : 'rounded-xl'}`}>
 
                         {/* Event Image */}
-                        <div className="p-4 pb-0">
-                            <div className="w-full aspect-video bg-gray-100 dark:bg-zinc-900 rounded-2xl overflow-hidden relative shadow-sm">
+                        <div className="relative">
+                            <div className="w-full aspect-video bg-gray-100 dark:bg-zinc-900 overflow-hidden relative">
                                 {formData.image ? (
                                     <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
                                 ) : (
@@ -402,8 +431,9 @@ export default function CreateEventPage() {
                                         <span className="text-[10px] font-medium uppercase tracking-wider">Cover Image</span>
                                     </div>
                                 )}
-                                <button className="absolute top-4 left-4 w-8 h-8 bg-white/30 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20">
-                                    <ChevronLeft size={16} />
+                                {/* Back Button Simulation */}
+                                <button className="absolute top-12 left-5 w-8 h-8 bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:bg-black/40 transition-colors z-40">
+                                    <ChevronLeft size={18} />
                                 </button>
                             </div>
                         </div>
@@ -475,16 +505,17 @@ export default function CreateEventPage() {
                         </div>
                     </div>
 
-                    {/* Fixed Bottom Bar in Simulator */}
-                    <div className="absolute bottom-5 left-5 right-5 z-40">
-                        <div className="bg-gray-900 dark:bg-white text-white dark:text-black p-4 rounded-2xl shadow-xl flex items-center justify-between">
+                    {/* Fixed Bottom Bar in Simulator (Sticky Footer) */}
+                    <div className={`absolute bottom-6 left-4 right-4 z-50 transition-transform duration-300 ${simulatorView === 'mobile' ? 'translate-y-0' : 'translate-y-2'}`}>
+                        {/* Safe Area Spacer for Home Indicator */}
+                        <div className="bg-gray-900 dark:bg-white text-white dark:text-black p-4 rounded-2xl shadow-2xl shadow-black/20 flex items-center justify-between backdrop-blur-xl">
                             <div>
                                 <p className="text-[10px] font-medium opacity-70 uppercase tracking-wider">Total Price</p>
                                 <p className="text-xl font-bold">
                                     {formData.currency === 'INR' ? '₹' : '$'}{formData.price || '0'}
                                 </p>
                             </div>
-                            <div className="bg-white dark:bg-black text-black dark:text-white px-6 py-2 rounded-xl font-bold text-sm cursor-default">
+                            <div className="bg-white dark:bg-black text-black dark:text-white px-6 py-2 rounded-xl font-bold text-sm cursor-default hover:scale-105 transition-transform">
                                 Book Ticket
                             </div>
                         </div>
