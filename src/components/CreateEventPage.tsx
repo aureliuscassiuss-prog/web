@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom'; // Changed from onSuccess/onClose to navigate
-import { Upload, Calendar, MapPin, DollarSign, Image as ImageIcon, Sparkles, CreditCard, Users, Smartphone, Monitor, ChevronLeft, Eye } from 'lucide-react';
+import { Upload, Calendar, MapPin, DollarSign, Image as ImageIcon, Sparkles, CreditCard, Users, Smartphone, Monitor, ChevronLeft, Clock } from 'lucide-react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import ImageCropper from './ImageCropper';
@@ -371,61 +371,142 @@ export default function CreateEventPage() {
                             </div>
                         )}
 
-                        {/* Simulated Content */}
-                        <div className={`w-full h-full overflow-y-auto bg-gray-50 dark:bg-black ${simulatorView === 'mobile' ? 'pt-7' : ''}`}>
-                            {/* Mock App Header */}
-                            <div className="p-4 bg-white dark:bg-black border-b border-gray-100 dark:border-zinc-800 flex justify-between items-center sticky top-0 z-30">
-                                <span className="font-bold text-lg dark:text-white">Events</span>
-                                <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-zinc-800" />
-                            </div>
+                        {/* Simulated Content - Full Event Details Page Layout */}
+                        <div className={`w-full h-full overflow-y-auto bg-white dark:bg-black ${simulatorView === 'mobile' ? 'pt-7' : ''} relative`}>
 
-                            <div className="p-4 space-y-4">
-                                {/* Simulated Event Card */}
-                                <div className="bg-white dark:bg-zinc-900 rounded-3xl overflow-hidden border border-gray-100 dark:border-zinc-800 shadow-sm relative group">
-                                    {/* Image */}
-                                    <div className="relative aspect-[4/3] sm:aspect-video overflow-hidden bg-gray-100 dark:bg-zinc-800">
+                            {/* --- HERO SECTION --- */}
+                            <div className="p-3 md:p-4 pb-0">
+                                <div className="relative w-full bg-black rounded-[1.5rem] overflow-hidden group">
+                                    <div className="relative w-full">
                                         {mockEvent.image ? (
-                                            <img src={mockEvent.image} className="w-full h-full object-cover" alt="Preview" />
+                                            <img
+                                                src={mockEvent.image}
+                                                alt="Event Preview"
+                                                className="w-full h-auto object-contain block max-h-[50vh]"
+                                            />
                                         ) : (
-                                            <div className="absolute inset-0 flex items-center justify-center text-gray-300 dark:text-zinc-700">
-                                                <ImageIcon size={48} />
-                                            </div>
-                                        )}
-                                        <div className="absolute top-3 right-3 bg-white/90 dark:bg-black/80 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold shadow-sm">
-                                            {mockEvent.currency} {mockEvent.price}
-                                        </div>
-                                    </div>
-
-                                    {/* Content */}
-                                    <div className="p-5">
-                                        <div className="flex justify-between items-start gap-4 mb-3">
-                                            <div>
-                                                <h3 className="text-lg font-bold text-gray-900 dark:text-white leading-tight mb-1">{mockEvent.title}</h3>
-                                                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                                                    <Calendar size={12} />
-                                                    <span>{mockEvent.date ? new Date(mockEvent.date).toLocaleDateString() : 'Date'} at {mockEvent.date ? new Date(mockEvent.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Time'}</span>
+                                            <div className="aspect-video bg-gray-100 dark:bg-zinc-800 flex items-center justify-center text-gray-400">
+                                                <div className="flex flex-col items-center gap-2">
+                                                    <ImageIcon size={48} />
+                                                    <span className="text-xs font-medium">Cover Image</span>
                                                 </div>
                                             </div>
-                                        </div>
+                                        )}
+                                    </div>
 
-                                        <div className="flex items-center gap-2 text-xs text-gray-500 mb-4">
-                                            <MapPin size={12} />
-                                            <span className="truncate">{mockEvent.location}</span>
+                                    {/* Mock Navigation */}
+                                    <div className="absolute top-4 left-0 right-0 px-4 flex justify-between items-center z-30 w-full">
+                                        <div className="w-10 h-10 flex items-center justify-center bg-black/30 backdrop-blur-xl rounded-full text-white border border-white/20">
+                                            <ChevronLeft size={20} />
                                         </div>
-
-                                        <button className="w-full py-2.5 bg-black dark:bg-white text-white dark:text-black rounded-xl text-sm font-bold flex items-center justify-center gap-2">
-                                            <Sparkles size={14} /> Book Ticket
-                                        </button>
                                     </div>
                                 </div>
+                            </div>
 
-                                {/* Helper Text */}
-                                <div className="text-center p-8 opacity-40">
-                                    <Eye size={24} className="mx-auto mb-2" />
-                                    <p className="text-sm font-medium">Live Preview</p>
-                                    <p className="text-xs">This is how your event will appear to students.</p>
+                            {/* --- CONTENT SECTION --- */}
+                            <div className="relative z-20 px-5 py-6 pb-32">
+                                <div className="max-w-2xl mx-auto space-y-8">
+
+                                    {/* Title */}
+                                    <div className="space-y-2 text-left">
+                                        <h1 className="text-3xl font-black text-gray-900 dark:text-white leading-tight tracking-tight">
+                                            {mockEvent.title || 'Event Title'}
+                                        </h1>
+                                    </div>
+
+                                    {/* Meta Grid */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="bg-gray-50 dark:bg-zinc-900/50 rounded-2xl p-4 flex flex-col justify-center gap-2">
+                                            <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                                                <Calendar size={16} />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Date</p>
+                                                <p className="text-xs font-bold text-gray-900 dark:text-white">
+                                                    {mockEvent.date ? new Date(mockEvent.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Select Date'}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-gray-50 dark:bg-zinc-900/50 rounded-2xl p-4 flex flex-col justify-center gap-2">
+                                            <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                                                <Clock size={16} />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Time</p>
+                                                <p className="text-xs font-bold text-gray-900 dark:text-white">
+                                                    {mockEvent.date ? new Date(mockEvent.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Select Time'}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-gray-50 dark:bg-zinc-900/50 rounded-2xl p-4 flex flex-col justify-center gap-2 col-span-1">
+                                            <div className="w-8 h-8 rounded-full bg-rose-100 dark:bg-rose-900/20 flex items-center justify-center text-rose-600 dark:text-rose-400">
+                                                <MapPin size={16} />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Location</p>
+                                                <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
+                                                    {mockEvent.location || 'Venue Name'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="bg-gray-50 dark:bg-zinc-900/50 rounded-2xl p-4 flex flex-col justify-center gap-2">
+                                            <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                                                <Users size={16} />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Seats</p>
+                                                <p className="text-xs font-bold text-gray-900 dark:text-white">
+                                                    {mockEvent.total_slots} available
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* About Section */}
+                                    <div className="pb-4">
+                                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">About Event</h3>
+                                        <div className="prose prose-sm dark:prose-invert max-w-none text-gray-600 dark:text-gray-400 leading-relaxed text-xs sm:text-sm">
+                                            {mockEvent.description ? (
+                                                <div dangerouslySetInnerHTML={{ __html: mockEvent.description }} />
+                                            ) : (
+                                                <p className="italic opacity-50">Description will appear here...</p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Organizer Section */}
+                                    <div className="border-t border-gray-100 dark:border-zinc-800 pt-6">
+                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Organized By</h3>
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                                                Y
+                                            </div>
+                                            <div>
+                                                <p className="text-base font-bold text-gray-900 dark:text-white">You (Organizer)</p>
+                                                <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Verified Organizer</p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+
+                            {/* --- FIXED BOTTOM BAR --- */}
+                            <div className="absolute bottom-4 left-4 right-4 z-40">
+                                <div className="max-w-2xl mx-auto bg-black/80 dark:bg-white/10 backdrop-blur-xl p-3 pl-6 rounded-full shadow-2xl border border-white/10 flex items-center justify-between gap-4">
+                                    <div>
+                                        <span className="block text-[10px] text-gray-400 font-bold uppercase tracking-wider">Total Price</span>
+                                        <span className="text-xl sm:text-2xl font-black text-white dark:text-white">
+                                            {mockEvent.currency === 'INR' ? '₹' : mockEvent.currency}{mockEvent.price}
+                                        </span>
+                                    </div>
+                                    <button className="px-8 h-12 rounded-full font-bold text-sm bg-white text-black hover:bg-gray-200 shadow-lg flex items-center justify-center gap-2 pointer-events-none">
+                                        Book Ticket
+                                    </button>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
                 </div>
