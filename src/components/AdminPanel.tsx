@@ -129,7 +129,7 @@ export default function AdminPanel() {
     const [editingId, setEditingId] = useState<string | null>(null)
 
     // Loading State
-    const [isLoading, setIsLoading] = useState(false)
+    const [isLoading, setIsLoading] = useState(true)
     const [processingId, setProcessingId] = useState<string | null>(null)
     const [removingId, setRemovingId] = useState<string | null>(null)
     const [renamingId, setRenamingId] = useState<string | null>(null)
