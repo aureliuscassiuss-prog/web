@@ -352,9 +352,9 @@ export default function CreateEventPage() {
                 </div>
 
                 {/* Simulator Viewport */}
-                <div className="flex-1 overflow-y-auto w-full flex items-start justify-center p-8 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto w-full flex items-center justify-center p-8 custom-scrollbar">
                     <div
-                        className={`transition-all duration-500 ease-in-out border-[8px] border-gray-900 dark:border-zinc-800 bg-white dark:bg-black shadow-2xl overflow-hidden relative ${simulatorView === 'mobile'
+                        className={`transition-all duration-500 ease-in-out border-[8px] border-gray-900 dark:border-zinc-800 bg-white dark:bg-black shadow-2xl overflow-hidden relative shrink-0 ${simulatorView === 'mobile'
                             ? 'w-[375px] h-[750px] rounded-[3rem]'
                             : 'w-[1024px] h-[640px] rounded-xl'
                             }`}
@@ -372,7 +372,7 @@ export default function CreateEventPage() {
                         )}
 
                         {/* Simulated Content - Full Event Details Page Layout */}
-                        <div className={`w-full h-full overflow-y-auto bg-white dark:bg-black ${simulatorView === 'mobile' ? 'pt-7' : ''} relative`}>
+                        <div className={`w-full h-full overflow-y-auto overscroll-y-contain bg-white dark:bg-black ${simulatorView === 'mobile' ? 'pt-7' : ''} relative`}>
 
                             {/* --- HERO SECTION --- */}
                             <div className="p-3 md:p-4 pb-0">
