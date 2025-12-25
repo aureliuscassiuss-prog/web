@@ -191,6 +191,7 @@ export default function AdminPanel() {
 
     // Fetch Data on Tab Change
     useEffect(() => {
+        if (!token) return
         const fetchData = async () => {
             setIsLoading(true)
             try {
@@ -204,7 +205,7 @@ export default function AdminPanel() {
             }
         }
         fetchData()
-    }, [activeTab])
+    }, [activeTab, token])
 
     // Detect changes in pendingResources or roleRequests and re-combine
     // This useEffect is no longer needed as role requests are now part of pendingResources
