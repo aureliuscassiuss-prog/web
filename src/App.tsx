@@ -121,8 +121,8 @@ function Layout({
         </main>
       </div>
 
-      {/* Footer */}
-      {(location.pathname !== '/chat' && !location.pathname.includes('/events/')) && <Footer />}
+      {/* Footer - Hides on specific pages */}
+      {!['/', '/resources', '/preparation', '/ai-assistant', '/ai-papers', '/attendance', '/cgpa-calculator', '/pomodoro', '/pdf-generator', '/medical-generator', '/coffessions', '/chat', '/video-chat', '/events', '/leaderboard', '/profile', '/uploads', '/saved-resources'].some(path => location.pathname === path || location.pathname.startsWith(path + '/')) && <Footer />}
 
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
