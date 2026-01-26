@@ -149,7 +149,22 @@ export default function AttendanceManager() {
 
         if (existingLogIndex >= 0) {
             const oldStatus = logs[existingLogIndex].status
-            if (oldStatus === status) return // No change
+
+            // If clicking the same status, remove the log (unselect)
+            if (oldStatus === status) {
+                // Revert stats
+                if (oldStatus === 'present') {
+                    updatedSubject.attendedClasses--
+                    updatedSubject.totalClasses--
+                } else if (oldStatus === 'absent') {
+                    updatedSubject.totalClasses--
+                }
+                // Remove log
+                newLogs.splice(existingLogIndex, 1)
+                setLogs(newLogs)
+                updateSubject(updatedSubject)
+                return
+            }
 
             // Revert old stats
             if (oldStatus === 'present') {

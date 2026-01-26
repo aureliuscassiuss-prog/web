@@ -70,20 +70,20 @@ export default function Sidebar({ onMobileMenuClose, isDark, toggleTheme, spotli
             label: "Academic",
             items: [
                 { path: '/preparation', label: 'Preparation', icon: GraduationCap },
-                { path: '/ai-assistant', label: 'AI Assistant', icon: Bot, badge: 'New' },
-                { path: '/ai-papers', label: 'AI Papers', icon: FileText, badge: 'Beta' },
+                { path: '/ai-assistant', label: 'AI Assistant', icon: Bot },
+                { path: '/ai-papers', label: 'AI Papers', icon: FileText },
                 { path: '/attendance', label: 'Attendance', icon: CheckCircle2 },
                 { path: '/cgpa-calculator', label: 'CGPA Calculator', icon: Calculator },
-                { path: '/pomodoro', label: 'Pomodoro Timer', icon: Timer, badge: 'New' },
-                { path: '/pdf-generator', label: 'AI PDF', icon: FileText, badge: 'AI' },
-                { path: '/medical-generator', label: 'Medical Generator', icon: FileText, badge: 'New' },
+                { path: '/pomodoro', label: 'Pomodoro Timer', icon: Timer },
+                { path: '/pdf-generator', label: 'AI PDF', icon: FileText },
+                { path: '/medical-generator', label: 'Medical Generator', icon: FileText },
             ]
         },
         {
             label: "Social",
             items: [
-                { path: '/chat', label: 'Group Chat (GC)', icon: MessageCircle, badge: 'Live' },
-                { path: '/video-chat', label: 'Omex', icon: Video, badge: 'New' },
+                { path: '/chat', label: 'Group Chat', icon: MessageCircle },
+                { path: '/video-chat', label: 'Omex', icon: Video },
                 { path: '/leaderboard', label: 'Leaderboard', icon: BarChart3 },
             ]
         },
