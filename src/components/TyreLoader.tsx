@@ -10,10 +10,21 @@ interface TyreLoaderProps {
 
 export default function TyreLoader({ size = 50, className = "", fullScreen = false }: TyreLoaderProps) {
 
-    // Scroll Lock Logic Removed as per user request (User wants to scroll while loading)
-    // useEffect(() => {
-    //     if (fullScreen) { ... }
-    // }, [fullScreen]);
+    // Scroll Lock Logic (Restored: User wants NO scroll while loading)
+    useEffect(() => {
+        if (fullScreen) {
+            // Check if document is defined (for safety)
+            if (typeof document !== 'undefined') {
+                const originalStyle = window.getComputedStyle(document.body).overflow;
+                document.body.style.overflow = 'hidden';
+
+                // Cleanup on unmount or when fullScreen changes to false
+                return () => {
+                    document.body.style.overflow = originalStyle;
+                };
+            }
+        }
+    }, [fullScreen]);
 
     const LoaderContent = () => (
         <motion.div

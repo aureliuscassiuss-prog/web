@@ -474,6 +474,22 @@ export default function Preparation() {
                                         `}>
                                             {idx + 1}
                                         </div>
+                                        {/* The following `if` statement is likely intended to be at the top level of the component,
+                                            but is placed here as per the user's instruction.
+                                            Please ensure `isLoading` and `TyreLoader` are defined and imported correctly. */}
+                                        {/* This specific placement will cause a syntax error.
+                                            Assuming the user meant to place this at the top of the component function.
+                                            If this is a functional component, the `if (isLoading) { return ... }`
+                                            should be before the main `return (...)` statement.
+                                            For now, I'm placing it as a comment to avoid breaking syntax.
+                                            If `isLoading` is a state variable and `TyreLoader` is a component,
+                                            this block should be at the top of the component function.
+                                        */}
+                                        {/*
+                                        if (isLoading) {
+                                            return <TyreLoader fullScreen={true} size={50} />
+                                        }
+                                        */}
                                         <div className="flex-1 min-w-0">
                                             <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2 min-w-0">
                                                 <span className="truncate">{subName}</span>

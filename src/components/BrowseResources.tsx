@@ -304,12 +304,7 @@ export default function BrowseResources({ onUploadRequest, lastUploadTime }: Bro
     }, [searchResults]);
 
     if (isLoadingStructure) {
-        return (
-            <div className="flex h-[50vh] flex-col items-center justify-center gap-4 text-gray-500">
-                <TyreLoader size={50} />
-                <p className="text-sm font-medium animate-pulse">Loading academic data...</p>
-            </div>
-        );
+        return <TyreLoader fullScreen={true} size={50} />
     }
 
     return (

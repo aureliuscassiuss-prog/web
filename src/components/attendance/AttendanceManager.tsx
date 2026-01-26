@@ -320,8 +320,8 @@ function SubjectCard({ subject }: { subject: Subject }) {
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             className={`bg-white dark:bg-gray-900 rounded-2xl border transition-all duration-300 overflow-hidden ${isExpanded
-                    ? 'border-blue-500/30 shadow-lg ring-1 ring-blue-500/30 col-span-1 md:col-span-2 lg:col-span-1 row-span-2'
-                    : 'border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md hover:border-blue-200 dark:hover:border-blue-800'
+                ? 'border-blue-500/30 shadow-lg ring-1 ring-blue-500/30 col-span-1 md:col-span-2 lg:col-span-1 row-span-2'
+                : 'border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md hover:border-blue-200 dark:hover:border-blue-800'
                 }`}
         >
             <div
@@ -339,8 +339,8 @@ function SubjectCard({ subject }: { subject: Subject }) {
                 </div>
 
                 <div className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 transition-colors ${isLow
-                        ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
-                        : 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400'
+                    ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
+                    : 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400'
                     }`}>
                     {percentage}%
                     {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
