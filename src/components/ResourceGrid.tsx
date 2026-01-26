@@ -839,7 +839,11 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
     }
 
     if (isLoading) {
-        return <TyreLoader fullScreen={true} size={32} />
+        return (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <TyreLoader size={32} />
+            </div>
+        )
     }
 
     return (

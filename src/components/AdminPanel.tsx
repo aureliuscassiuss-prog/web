@@ -890,7 +890,9 @@ export default function AdminPanel() {
 
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                     {isLoading ? (
-                        <TyreLoader fullScreen={true} size={32} />
+                        <div className="flex items-center justify-center min-h-[60vh]">
+                            <TyreLoader size={32} />
+                        </div>
                     ) : (
                         <>
                             {activeTab === 'pending' && <motion.div key="pending" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}><PendingView resources={pendingResources} events={pendingEvents} processingId={processingId} onAction={handleResourceAction} onEventAction={handleEventAction} /></motion.div>}
