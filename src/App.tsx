@@ -118,7 +118,7 @@ function Layout({
       </div>
 
       {/* Footer - Hides on specific pages */}
-      {!['/', '/resources', '/preparation', '/ai-assistant', '/ai-papers', '/attendance', '/cgpa-calculator', '/pomodoro', '/pdf-generator', '/medical-generator', '/chat', '/video-chat', '/leaderboard', '/profile', '/uploads', '/saved-resources'].some(path => location.pathname === path || location.pathname.startsWith(path + '/')) && <Footer />}
+      {!['/', '/resources', '/preparation', '/ai-assistant', '/ai-papers', '/attendance', '/cgpa-calculator', '/pomodoro', '/pdf-generator', '/medical-generator', '/chat', '/video-chat', '/leaderboard', '/profile', '/uploads', '/saved-resources', '/coffessions', '/events', '/omex', '/contact', '/about', '/our-team', '/docs', '/privacy', '/terms', '/share'].some(path => location.pathname === path || location.pathname.startsWith(path + '/')) && <Footer />}
 
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>

@@ -148,12 +148,7 @@ export default function SavedResources() {
     // ... Loading and Auth checks ...
 
     if (isLoading) {
-        return (
-            <div className="flex h-64 flex-col items-center justify-center space-y-3">
-                <TyreLoader size={40} />
-                <p className="text-sm text-gray-500">Loading saved resources...</p>
-            </div>
-        );
+        return <TyreLoader fullScreen={true} size={50} />
     }
 
     if (!token) {

@@ -877,10 +877,7 @@ export default function AIPapers() {
                                         `}
                                     >
                                         {generating ? (
-                                            <>
-                                                <TyreLoader size={18} />
-                                                <span>Designing Question Paper...</span>
-                                            </>
+                                            <TyreLoader fullScreen={true} size={50} />
                                         ) : (
                                             <>
                                                 <FileText size={18} />
