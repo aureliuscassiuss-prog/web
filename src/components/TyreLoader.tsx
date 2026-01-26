@@ -8,17 +8,14 @@ interface TyreLoaderProps {
     fullScreen?: boolean; // New prop to toggle full-screen overlay & scroll lock
 }
 
-export default function TyreLoader({ size = 50, className = "", fullScreen = false }: TyreLoaderProps) {
+export default function TyreLoader({ size = 32, className = "", fullScreen = false }: TyreLoaderProps) {
 
-    // Scroll Lock Logic (Restored: User wants NO scroll while loading)
+    // Scroll Lock Logic (User wants NO scroll while loading)
     useEffect(() => {
         if (fullScreen) {
-            // Check if document is defined (for safety)
             if (typeof document !== 'undefined') {
                 const originalStyle = window.getComputedStyle(document.body).overflow;
                 document.body.style.overflow = 'hidden';
-
-                // Cleanup on unmount or when fullScreen changes to false
                 return () => {
                     document.body.style.overflow = originalStyle;
                 };
@@ -27,37 +24,24 @@ export default function TyreLoader({ size = 50, className = "", fullScreen = fal
     }, [fullScreen]);
 
     const LoaderContent = () => (
-        <motion.div
+        <div
             className={`relative flex items-center justify-center ${className}`}
             style={{ width: size, height: size }}
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
         >
-            <svg
-                viewBox="0 0 100 100"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-full h-full text-gray-900 dark:text-gray-100"
-            >
-                {/* Outer Tyre Circle */}
-                <circle cx="50" cy="50" r="42" stroke="currentColor" strokeWidth="12" className="opacity-100" />
-
-                {/* Treads / Cuts - Simple cutout pattern to make it look like a tyre */}
-                {/* We use specific strokeDasharray to create gaps in a thinner overlay circle or just use lines */}
-                {/* Let's use simple lines radiating from center for "spokes/treads" visual */}
-                <circle cx="50" cy="50" r="42" stroke="white" strokeWidth="4" strokeDasharray="10 15" className="dark:stroke-black opacity-30" />
-
-                {/* Inner Hub */}
-                <circle cx="50" cy="50" r="15" fill="currentColor" className="opacity-100" />
-            </svg>
-        </motion.div>
+            <div className="absolute inset-0 rounded-full border-2 border-gray-200 dark:border-gray-800" />
+            <motion.div
+                className="absolute inset-0 rounded-full border-2 border-transparent border-t-black dark:border-t-white"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+            />
+        </div>
     );
 
     if (fullScreen) {
         return (
-            <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/80 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+            // Z-index lowered to 20 to sit BEHIND the Header (which is z-30)
+            <div className="fixed inset-0 z-[20] flex flex-col items-center justify-center bg-white/90 dark:bg-black/90 backdrop-blur-sm animate-in fade-in duration-200">
                 <LoaderContent />
-                <p className="mt-4 text-xs font-medium text-gray-500 uppercase tracking-widest animate-pulse">Loading</p>
             </div>
         );
     }
