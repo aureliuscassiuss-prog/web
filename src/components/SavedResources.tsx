@@ -148,7 +148,7 @@ export default function SavedResources() {
     // ... Loading and Auth checks ...
 
     if (isLoading) {
-        return <TyreLoader fullScreen={true} size={50} />
+        return <TyreLoader fullScreen={true} size={32} />
     }
 
     if (!token) {

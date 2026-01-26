@@ -482,7 +482,7 @@ export default function ProfilePage() {
                                 <button onClick={handleSave} disabled={isSaving} className="px-3 py-1.5 bg-white text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-50 shadow-lg flex items-center gap-2 disabled:opacity-70 transition-all hover:scale-105 active:scale-95">
                                     {isSaving ? (
                                         <>
-                                            <TyreLoader size={12} />
+                                            <TyreLoader size={16} />
                                             Saving...
                                         </>
                                     ) : (

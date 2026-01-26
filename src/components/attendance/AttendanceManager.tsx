@@ -193,12 +193,7 @@ export default function AttendanceManager() {
     )
 
     if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center gap-3 bg-white dark:bg-black">
-                <TyreLoader size={24} />
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Loading Attendance...</span>
-            </div>
-        )
+        return <TyreLoader fullScreen={true} size={32} />
     }
 
     return (

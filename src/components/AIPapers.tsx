@@ -877,7 +877,7 @@ export default function AIPapers() {
                                         `}
                                     >
                                         {generating ? (
-                                            <TyreLoader fullScreen={true} size={50} />
+                                            <TyreLoader fullScreen={true} size={32} />
                                         ) : (
                                             <>
                                                 <FileText size={18} />

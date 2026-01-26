@@ -238,7 +238,7 @@ export default function EventDetailsPage() {
     };
 
     if (loading) {
-        return <TyreLoader fullScreen={true} size={50} />
+        return <TyreLoader fullScreen={true} size={32} />
     }
 
     if (error || !event) {
