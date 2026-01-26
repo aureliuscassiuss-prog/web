@@ -33,14 +33,11 @@ import SharedResourcesPage from './components/SharedResourcesPage'
 import SharedUnitPage from './components/SharedUnitPage';
 import OurTeam from './components/OurTeam';
 import PomodoroPage from './components/PomodoroPage';
-import CoffessionsPage from './components/CoffessionsPage';
 import CoffeeChat from './components/CoffeeChat';
 import VideoChat from './pages/VideoChat';
 import PdfGeneratorPage from './components/PdfGeneratorPage';
 import MedicalGeneratorPage from './components/MedicalGeneratorPage';
-import EventsPage from './components/EventsPage';
-import EventDetailsPage from './components/EventDetailsPage';
-import CreateEventPage from './components/CreateEventPage';
+
 
 
 
@@ -64,7 +61,6 @@ function Layout({
 }: any) {
   const navigate = useNavigate()
   const location = useLocation()
-  const isCoffessionsPage = location.pathname === '/coffessions'
   const isStanadalonePage = location.pathname === '/video-chat'
   const isChatPage = location.pathname === '/chat'
 
@@ -99,7 +95,7 @@ function Layout({
       <div className={
         isStanadalonePage ? "w-full flex-1"
           : isChatPage ? "flex flex-1 w-full overflow-hidden"
-            : `flex flex-1 items-start gap-10 ${isCoffessionsPage ? 'px-0 sm:px-6 pt-0' : 'px-4 sm:px-6 pt-6'} md:px-8 max-w-[1600px] mx-auto w-full`
+            : `flex flex-1 items-start gap-10 px-4 sm:px-6 pt-6 md:px-8 max-w-[1600px] mx-auto w-full`
       }>
 
         {/* 2. Sticky Left Sidebar (Hidden on Mobile) - Hidden on Standalone Pages */}
@@ -122,7 +118,7 @@ function Layout({
       </div>
 
       {/* Footer - Hides on specific pages */}
-      {!['/', '/resources', '/preparation', '/ai-assistant', '/ai-papers', '/attendance', '/cgpa-calculator', '/pomodoro', '/pdf-generator', '/medical-generator', '/coffessions', '/chat', '/video-chat', '/events', '/leaderboard', '/profile', '/uploads', '/saved-resources'].some(path => location.pathname === path || location.pathname.startsWith(path + '/')) && <Footer />}
+      {!['/', '/resources', '/preparation', '/ai-assistant', '/ai-papers', '/attendance', '/cgpa-calculator', '/pomodoro', '/pdf-generator', '/medical-generator', '/chat', '/video-chat', '/leaderboard', '/profile', '/uploads', '/saved-resources'].some(path => location.pathname === path || location.pathname.startsWith(path + '/')) && <Footer />}
 
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
@@ -446,16 +442,7 @@ function AppContent() {
             </ProtectedRoute>
           } />
 
-          {/* Coffessions Route (Public but requires auth to post, Page handles it) */}
-          <Route path="/coffessions" element={
-            <>
-              <SEO
-                title="Coffessions - Anonymous College Confessions"
-                description="Share your campus secrets and thoughts anonymously on Coffessions. Safe, fun, and disappearing in 48 hours."
-              />
-              <CoffessionsPage />
-            </>
-          } />
+
 
           {/* CoffeeChat Route (Protected) */}
           <Route path="/chat" element={
@@ -485,38 +472,7 @@ function AppContent() {
             </ProtectedRoute>
           } />
 
-          {/* Events Route (Public + Manager Dashboard handled internally) */}
-          <Route path="/events" element={
-            <>
-              <SEO
-                title="Events - Book Tickets for College Events"
-                description="Browse and book tickets for upcoming college events, workshops, and parties."
-              />
-              <EventsPage />
-            </>
-          } />
 
-          {/* Single Event Details Route */}
-          <Route path="/events/:eventId" element={
-            <>
-              <SEO
-                title="Event Details - Extrovert Events"
-                description="View event details and book tickets."
-              />
-              <EventDetailsPage />
-            </>
-          } />
-
-          {/* Create Event Route (Protected) */}
-          <Route path="/events/create" element={
-            <ProtectedRoute onAuthRequired={() => {
-              setAuthModalInitialView('login')
-              setIsAuthModalOpen(true)
-            }}>
-              <SEO title="Create Event - Host an Experience" />
-              <CreateEventPage />
-            </ProtectedRoute>
-          } />
 
           {/* PDF Generator Route (Public with rate limit) */}
           <Route path="/pdf-generator" element={

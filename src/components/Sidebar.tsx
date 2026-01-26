@@ -5,7 +5,7 @@ import {
     Upload,
     ShieldCheck,
     Library,
-    Coffee,
+    Video,
     Sun,
     Moon,
     Bot,
@@ -17,9 +17,7 @@ import {
     Bookmark,
     CheckCircle2,
     Timer,
-    MessageCircle,
-    Video,
-    Calendar
+    MessageCircle
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -84,9 +82,7 @@ export default function Sidebar({ onMobileMenuClose, isDark, toggleTheme, spotli
         {
             label: "Social",
             items: [
-                { path: '/coffessions', label: 'Coffessions', icon: Coffee, badge: 'Hot' },
                 { path: '/chat', label: 'Group Chat (GC)', icon: MessageCircle, badge: 'Live' },
-                { path: '/events', label: 'Events Booking', icon: Calendar, badge: 'New' },
                 { path: '/video-chat', label: 'Omex', icon: Video, badge: 'New' },
                 { path: '/leaderboard', label: 'Leaderboard', icon: BarChart3 },
             ]
@@ -121,7 +117,7 @@ export default function Sidebar({ onMobileMenuClose, isDark, toggleTheme, spotli
                     {menuGroups.map((group) => (
                         <div
                             key={group.label}
-                            className={`space-y-2 transition-opacity duration-300 ${spotlight ? 'opacity-30' : 'opacity-100'}`}
+                            className={`space - y - 2 transition - opacity duration - 300 ${spotlight ? 'opacity-30' : 'opacity-100'} `}
                         >
                             <h3 className="px-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                                 {group.label}
@@ -146,9 +142,9 @@ export default function Sidebar({ onMobileMenuClose, isDark, toggleTheme, spotli
                                                 ${isActive ? activeLinkClass : inactiveLinkClass}
                                                 ${itemOpacity}
                                                 ${isSpotlighted ? 'scale-105 shadow-lg shadow-blue-500/20 ring-2 ring-blue-500 dark:ring-blue-400 z-10 bg-white dark:bg-gray-900' : ''}
-                                            `}
+`}
                                         >
-                                            <Icon className={`w-4 h-4 transition-colors ${spotlight === item.id ? 'text-blue-500' : ''}`} />
+                                            <Icon className={`w - 4 h - 4 transition - colors ${spotlight === item.id ? 'text-blue-500' : ''} `} />
                                             <span className="flex-1">{item.label}</span>
 
                                             {/* Optional Badge for AI Assistant or new features */}
@@ -167,21 +163,21 @@ export default function Sidebar({ onMobileMenuClose, isDark, toggleTheme, spotli
                 </div>
 
                 {/* Footer - Theme Toggle (Now inside the scrollable wrapper) */}
-                <div className={`mt-auto p-4 border-t border-gray-200 dark:border-gray-800 transition-opacity duration-300 ${spotlight ? 'opacity-30' : 'opacity-100'}`}>
+                <div className={`mt - auto p - 4 border - t border - gray - 200 dark: border - gray - 800 transition - opacity duration - 300 ${spotlight ? 'opacity-30' : 'opacity-100'} `}>
                     <button
                         onClick={toggleTheme}
                         className="group flex w-full items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-all duration-200 border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
                     >
                         <div className="flex items-center gap-3">
-                            <div className={`p-1.5 rounded-md ${isDark ? 'bg-[#1a1a1a] text-yellow-400' : 'bg-orange-100 text-orange-500'}`}>
+                            <div className={`p - 1.5 rounded - md ${isDark ? 'bg-[#1a1a1a] text-yellow-400' : 'bg-orange-100 text-orange-500'} `}>
                                 {isDark ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
                             </div>
                             <span>{isDark ? 'Dark Mode' : 'Light Mode'}</span>
                         </div>
 
                         {/* Visual Toggle Switch */}
-                        <div className={`w-8 h-4 rounded-full relative transition-colors duration-300 ${isDark ? 'bg-blue-600' : 'bg-gray-300'}`}>
-                            <div className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-300 ${isDark ? 'translate-x-4' : 'translate-x-0'}`} />
+                        <div className={`w - 8 h - 4 rounded - full relative transition - colors duration - 300 ${isDark ? 'bg-blue-600' : 'bg-gray-300'} `}>
+                            <div className={`absolute top - 0.5 left - 0.5 w - 3 h - 3 rounded - full bg - white shadow - sm transition - transform duration - 300 ${isDark ? 'translate-x-4' : 'translate-x-0'} `} />
                         </div>
                     </button>
                 </div>
