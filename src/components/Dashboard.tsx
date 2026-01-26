@@ -231,7 +231,6 @@ export default function Dashboard() {
     }, []);
 
     const quickActions = [
-        { title: 'Confessions', description: 'Anonymous sharing', icon: Coffee, link: '/coffessions', color: 'from-pink-500 to-rose-500', bgColor: 'bg-pink-50/70 dark:bg-pink-900/20', badge: 'Hot' },
         { title: 'Omex', description: 'Random video chat', icon: Video, link: '/video-chat', color: 'from-cyan-500 to-blue-500', bgColor: 'bg-cyan-50/70 dark:bg-cyan-900/20', badge: 'New' },
         { title: 'Browse Resources', description: 'Notes & materials', icon: BookOpen, link: '/resources', color: 'from-blue-500 to-cyan-500', bgColor: 'bg-blue-50/70 dark:bg-blue-900/20' },
         { title: 'AI Assistant', description: 'Get instant help', icon: Bot, link: '/ai-assistant', color: 'from-purple-500 to-pink-500', bgColor: 'bg-purple-50/70 dark:bg-purple-900/20', badge: 'New' },
