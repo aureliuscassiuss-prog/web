@@ -258,9 +258,8 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
             }
         }, 12000)
 
+
         setIsLoading(true)
-
-
 
         const fetchData = async () => {
             try {
@@ -837,6 +836,10 @@ export default function ResourceGrid({ view, filters, searchQuery = '', onUpload
             )
         }
         return <LeaderboardView leaderboard={leaderboard} />
+    }
+
+    if (isLoading) {
+        return <TyreLoader fullScreen={true} size={50} />
     }
 
     return (

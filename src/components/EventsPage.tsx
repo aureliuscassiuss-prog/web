@@ -253,12 +253,9 @@ export default function EventsPage() {
 
                     {/* Content Grid */}
                     <div className="px-4 sm:px-8">
-                        {loading ? (
-                            <div className="flex flex-col items-center justify-center min-h-[400px]">
-                                <TyreLoader size={40} />
-                                <p className="mt-4 text-xs text-gray-400 font-mono animate-pulse">Loading Events...</p>
-                            </div>
-                        ) : (
+                        {loading && <TyreLoader fullScreen={true} size={50} />}
+
+                        {!loading && (
                             <AnimatePresence mode="wait">
                                 <motion.div
                                     key={view + filterType + searchQuery}
