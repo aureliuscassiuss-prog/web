@@ -110,7 +110,7 @@ export default function Sidebar({ onMobileMenuClose, isDark, toggleTheme, spotli
     return (
         <nav className="h-full w-full flex flex-col bg-white dark:bg-black">
             {/* NEW Wrapper for all scrollable content (Menu Groups + Footer) */}
-            <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-700">
+            <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-700 pb-24">
 
                 {/* Scrollable Navigation Area (Original Content) */}
                 <div className="py-6 px-4 space-y-8">
