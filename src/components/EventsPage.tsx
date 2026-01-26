@@ -254,8 +254,9 @@ export default function EventsPage() {
                     {/* Content Grid */}
                     <div className="px-4 sm:px-8">
                         {loading ? (
-                            <div className="flex items-center justify-center min-h-[60vh]">
+                            <div className="flex flex-col items-center justify-center gap-3 min-h-[60vh]">
                                 <TyreLoader size={32} />
+                                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Loading Events...</p>
                             </div>
                         ) : (
                             <AnimatePresence mode="wait">
