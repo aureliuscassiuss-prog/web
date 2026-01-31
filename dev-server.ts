@@ -12,6 +12,8 @@ import aiHandler from './api/ai.ts';
 // import leaderboardHandler from './api/leaderboard.ts'; // File does not exist, leaderboard handled in resources.ts
 import statsHandler from './api/stats.ts';
 import attendanceHandler from './api/attendance.ts';
+import templatesHandler from './api/templates.ts';
+import fontsHandler from './api/fonts.ts';
 
 // Handler adapter for Vercel-style handlers
 const adaptHandler = (handler: any) => async (req: Request, res: Response) => {
@@ -100,6 +102,26 @@ app.all('/api/coffessions', jsonParser, adaptHandler(coffessionsHandler));
 import eventsHandler from './api/events.ts';
 app.all('/api/events', jsonParser, adaptHandler(eventsHandler));
 
+// 12. Templates
+app.all('/api/templates', (req, res, next) => {
+    // Skip JSON parser for multipart (uploads)
+    if (req.method === 'POST' && req.headers['content-type']?.includes('multipart/form-data')) {
+        next();
+    } else {
+        jsonParser(req, res, next);
+    }
+}, adaptHandler(templatesHandler));
+app.all('/api/templates/upload', (req, res, next) => next(), adaptHandler(templatesHandler)); // Alias for upload
+
+// 13. Fonts
+app.all('/api/fonts', (req, res, next) => {
+    if (req.method === 'POST' && req.headers['content-type']?.includes('multipart/form-data')) {
+        next();
+    } else {
+        jsonParser(req, res, next);
+    }
+}, adaptHandler(fontsHandler));
+
 // Listen on 0.0.0.0 to be accessible from network
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`
@@ -114,6 +136,8 @@ Endpoints:
 - AI:          http://localhost:${PORT}/api/ai
 - Coffessions: http://localhost:${PORT}/api/coffessions
 - Events:      http://localhost:${PORT}/api/events
+- Templates:   http://localhost:${PORT}/api/templates
+- Fonts:       http://localhost:${PORT}/api/fonts
 - Leaderboard: http://localhost:${PORT}/api/leaderboard
 - Stats:       http://localhost:${PORT}/api/stats
     `);
